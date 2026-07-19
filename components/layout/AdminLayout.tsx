@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
 import SidebarNav from "./SidebarNav";
+import { getSessionUser } from "@/lib/auth";
+import { logoutAction } from "@/app/logout/actions";
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  const user = await getSessionUser();
+
   return (
     <div className="min-h-screen flex bg-surface text-on-surface">
       <SidebarNav />
@@ -33,10 +37,29 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             >
               <span className="material-symbols-outlined">help</span>
             </button>
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-primary-container flex items-center justify-center">
-              <span className="material-symbols-outlined text-on-primary text-[18px]">
-                person
-              </span>
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="font-label-md text-label-md text-on-surface">
+                  {user?.user_name ?? "Admin"}
+                </span>
+                <span className="font-label-sm text-label-sm text-on-surface-variant">
+                  {user?.role ?? "Administrator"}
+                </span>
+              </div>
+              <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-primary-container flex items-center justify-center">
+                <span className="material-symbols-outlined text-on-primary text-[18px]">
+                  person
+                </span>
+              </div>
+              <form action={logoutAction}>
+                <button
+                  type="submit"
+                  className="text-on-surface-variant hover:bg-surface-variant rounded-full p-2 transition-all"
+                  aria-label="Log out"
+                >
+                  <span className="material-symbols-outlined">logout</span>
+                </button>
+              </form>
             </div>
           </div>
         </header>

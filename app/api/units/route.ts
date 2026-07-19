@@ -29,6 +29,7 @@ export async function POST(request: Request) {
       unit_type: body.unit_type,
       floor_number: body.floor_number,
       area_sqft: body.area_sqft,
+      monthly_rent: body.monthly_rent,
       status: body.status,
     });
 
@@ -52,6 +53,7 @@ export async function PUT(request: Request) {
       unit_type: body.unit_type,
       floor_number: body.floor_number,
       area_sqft: body.area_sqft,
+      monthly_rent: body.monthly_rent,
       status: body.status,
     });
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getDashboardStats } from "@/lib/dashboard";
+import { requireUser } from "@/lib/auth";
 import KpiCard from "@/components/dashboard/KpiCard";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 
@@ -22,6 +23,7 @@ function formatDate(date: Date) {
 }
 
 export default async function AdminDashboardPage() {
+  await requireUser(["Admin"]);
   const stats = await getDashboardStats();
 
   return (

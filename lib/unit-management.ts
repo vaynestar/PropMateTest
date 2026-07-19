@@ -8,6 +8,7 @@ type UnitInput = {
   unit_type: string;
   floor_number: number | string;
   area_sqft: number | string;
+  monthly_rent?: number | string;
   status?: string | null;
 };
 
@@ -50,6 +51,17 @@ function parseAreaSqft(value: number | string) {
 function normalizeStatus(status?: string | null) {
   const trimmed = status?.trim();
   return trimmed || 'Vacant';
+}
+
+function parseMonthlyRent(value?: number | string) {
+  const raw = value === undefined || value === null ? '' : String(value).trim();
+  const parsed = raw ? Number(raw) : 0;
+
+  if (Number.isNaN(parsed) || parsed < 0) {
+    throw new Error('Monthly rent must be a valid non-negative number');
+  }
+
+  return new Prisma.Decimal(parsed.toFixed(2));
 }
 
 export async function listUnits() {
@@ -107,6 +119,7 @@ export async function createUnit(input: UnitInput) {
       unit_type: requireText(input.unit_type, 'Unit type'),
       floor_number: parseFloorNumber(input.floor_number),
       area_sqft: parseAreaSqft(input.area_sqft),
+      monthly_rent: parseMonthlyRent(input.monthly_rent),
       status: normalizeStatus(input.status),
     },
     include: { property: true },
@@ -130,6 +143,7 @@ export async function updateUnit(input: UpdateUnitInput) {
       unit_type: requireText(input.unit_type, 'Unit type'),
       floor_number: parseFloorNumber(input.floor_number),
       area_sqft: parseAreaSqft(input.area_sqft),
+      monthly_rent: parseMonthlyRent(input.monthly_rent),
       status: normalizeStatus(input.status),
     },
     include: { property: true },

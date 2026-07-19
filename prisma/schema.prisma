@@ -45,6 +45,7 @@ model Unit {
   unit_type    String   @db.VarChar
   floor_number Int
   area_sqft    Decimal  @db.Decimal(10, 2)
+  monthly_rent Decimal  @db.Decimal(10, 2)
   status       String   @default("Vacant") @db.VarChar
 
   // Audit Trail
