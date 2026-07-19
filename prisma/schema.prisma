@@ -1,0 +1,481 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// DOMAIN 1: PROPERTY
+// ==========================================
+
+model PropertyMaster {
+  property_id   String   @id @default(uuid()) @db.Uuid
+  property_name String   @db.VarChar
+  property_type String   @db.VarChar
+  address       String   @db.Text
+  city          String   @db.VarChar
+  state         String   @db.VarChar
+  country       String   @db.VarChar
+  postal_code   String   @db.VarChar
+  total_units   Int
+
+  // Audit Trail
+  created_at    DateTime @default(now())
+  created_by    String?  @db.Uuid
+  creator       User?    @relation("PropertyCreatedBy", fields: [created_by], references: [user_id])
+  modified_at   DateTime @updatedAt @map("_modified_at")
+  modified_by   String?  @db.Uuid @map("_modified_by")
+  modifier      User?    @relation("PropertyModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  units         Unit[]
+  facilities    Facility[]
+  announcements Announcement[]
+
+  @@map("property_master")
+}
+
+model Unit {
+  unit_id      String   @id @default(uuid()) @db.Uuid
+  property_id  String   @db.Uuid
+  unit_number  String   @db.VarChar
+  unit_type    String   @db.VarChar
+  floor_number Int
+  area_sqft    Decimal  @db.Decimal(10, 2)
+  status       String   @default("Vacant") @db.VarChar
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("UnitCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("UnitModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  property     PropertyMaster @relation(fields: [property_id], references: [property_id])
+  leases       TenantLease[]
+
+  @@map("units")
+}
+
+// ==========================================
+// DOMAIN 2: IDENTITY
+// ==========================================
+
+model User {
+  user_id       String   @id @default(uuid()) @db.Uuid
+  user_name     String   @db.VarChar
+  user_email    String   @unique @db.VarChar
+  password_hash String   @db.VarChar
+  phone_number  String?  @db.VarChar
+  role          String   @db.VarChar
+  is_active     Boolean  @default(true)
+
+  // Audit Trail
+  created_at    DateTime @default(now())
+  created_by    String?  @db.Uuid
+  creator       User?    @relation("UserCreatedBy", fields: [created_by], references: [user_id])
+  modified_at   DateTime @updatedAt @map("_modified_at")
+  modified_by   String?  @db.Uuid @map("_modified_by")
+  modifier      User?    @relation("UserModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Core Operational Relations
+  tenant_leases      TenantLease[]      @relation("TenantLeases")
+  reported_tickets   Ticket[]           @relation("TicketReporter")
+  assigned_tickets   Ticket[]           @relation("TicketAssignee")
+  ticket_comments    TicketComment[]    @relation("CommentAuthor")
+  ticket_attachments TicketAttachment[] @relation("AttachmentUploader")
+  notifications      Notification[]     @relation("NotificationRecipient")
+  bookings           Booking[]          @relation("BookingUser")
+  announcements      Announcement[]     @relation("AnnouncementAuthor")
+
+  // ==========================================
+  // PRISMA REQUIRED AUDIT INVERSE RELATIONS
+  // ==========================================
+  created_users          User[] @relation("UserCreatedBy")
+  modified_users         User[] @relation("UserModifiedBy")
+  created_properties     PropertyMaster[] @relation("PropertyCreatedBy")
+  modified_properties    PropertyMaster[] @relation("PropertyModifiedBy")
+  created_units          Unit[] @relation("UnitCreatedBy")
+  modified_units         Unit[] @relation("UnitModifiedBy")
+  created_leases         TenantLease[] @relation("LeaseCreatedBy")
+  modified_leases        TenantLease[] @relation("LeaseModifiedBy")
+  created_invoices       Invoice[] @relation("InvoiceCreatedBy")
+  modified_invoices      Invoice[] @relation("InvoiceModifiedBy")
+  created_invoice_det    InvoiceDetail[] @relation("InvoiceDetailCreatedBy")
+  modified_invoice_det   InvoiceDetail[] @relation("InvoiceDetailModifiedBy")
+  created_transactions   PaymentTransaction[] @relation("TransactionCreatedBy")
+  modified_transactions  PaymentTransaction[] @relation("TransactionModifiedBy")
+  created_charges        ChargeMaster[] @relation("ChargeCreatedBy")
+  modified_charges       ChargeMaster[] @relation("ChargeModifiedBy")
+  created_tickets        Ticket[] @relation("TicketCreatedBy")
+  modified_tickets       Ticket[] @relation("TicketModifiedBy")
+  created_comments       TicketComment[] @relation("CommentCreatedBy")
+  modified_comments      TicketComment[] @relation("CommentModifiedBy")
+  created_attachments    TicketAttachment[] @relation("AttachmentCreatedBy")
+  modified_attachments   TicketAttachment[] @relation("AttachmentModifiedBy")
+  created_visitors       Visitor[] @relation("VisitorCreatedBy")
+  modified_visitors      Visitor[] @relation("VisitorModifiedBy")
+  created_bookings       Booking[] @relation("BookingCreatedBy")
+  modified_bookings      Booking[] @relation("BookingModifiedBy")
+  created_facilities     Facility[] @relation("FacilityCreatedBy")
+  modified_facilities    Facility[] @relation("FacilityModifiedBy")
+  created_announcements  Announcement[] @relation("AnnouncementCreatedBy")
+  modified_announcements Announcement[] @relation("AnnouncementModifiedBy")
+
+  @@map("users")
+}
+
+// ==========================================
+// DOMAIN 3: LEASING
+// ==========================================
+
+model TenantLease {
+  lease_id      String    @id @default(uuid()) @db.Uuid
+  unit_id       String    @db.Uuid
+  user_id       String    @db.Uuid
+  move_in_date  DateTime  @db.Date
+  move_out_date DateTime? @db.Date
+  status        String    @default("Active") @db.VarChar
+
+  // Audit Trail
+  created_at    DateTime  @default(now())
+  created_by    String?   @db.Uuid
+  creator       User?     @relation("LeaseCreatedBy", fields: [created_by], references: [user_id])
+  modified_at   DateTime  @updatedAt @map("_modified_at")
+  modified_by   String?   @db.Uuid @map("_modified_by")
+  modifier      User?     @relation("LeaseModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  unit          Unit      @relation(fields: [unit_id], references: [unit_id])
+  tenant        User      @relation("TenantLeases", fields: [user_id], references: [user_id])
+
+  invoices      Invoice[]
+  tickets       Ticket[]
+  visitors      Visitor[]
+  bookings      Booking[]
+  notifications Notification[]
+
+  @@map("tenant_leases")
+}
+
+// ==========================================
+// DOMAIN 4: BILLING
+// ==========================================
+
+model Invoice {
+  invoice_id   String   @id @default(uuid()) @db.Uuid
+  lease_id     String   @db.Uuid
+  invoice_no   String   @db.VarChar
+  invoice_date DateTime @db.Date
+  due_date     DateTime @db.Date
+  total_amount Decimal  @db.Decimal(10, 2)
+  status       String   @default("Unpaid") @db.VarChar
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("InvoiceCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("InvoiceModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  lease        TenantLease @relation(fields: [lease_id], references: [lease_id])
+  details      InvoiceDetail[]
+  transactions PaymentTransaction[]
+
+  @@map("invoices")
+}
+
+model InvoiceDetail {
+  detail_id   String   @id @default(uuid()) @db.Uuid
+  invoice_id  String   @db.Uuid
+  charge_id   String   @db.Uuid
+  description String   @db.VarChar
+  uom         String   @db.VarChar
+  unit_price  Decimal  @db.Decimal(10, 2)
+  quantity    Decimal  @db.Decimal(10, 2)
+  total_price Decimal  @db.Decimal(10, 2)
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("InvoiceDetailCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("InvoiceDetailModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  invoice      Invoice      @relation(fields: [invoice_id], references: [invoice_id], onDelete: Cascade)
+  charge       ChargeMaster @relation(fields: [charge_id], references: [charge_id])
+
+  @@map("invoices_details")
+}
+
+model PaymentTransaction {
+  transaction_id     String   @id @default(uuid()) @db.Uuid
+  invoice_id         String   @db.Uuid
+  transaction_type   String   @db.VarChar
+  payment_date       DateTime @db.Date
+  transaction_amount Decimal  @db.Decimal(10, 2)
+  payment_method     String   @db.VarChar
+  reference_number   String?  @db.VarChar
+  transaction_status String   @default("Pending") @db.VarChar
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("TransactionCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("TransactionModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  invoice            Invoice  @relation(fields: [invoice_id], references: [invoice_id])
+
+  @@map("payment_transactions")
+}
+
+model ChargeMaster {
+  charge_id      String   @id @default(uuid()) @db.Uuid
+  charge_name    String   @db.VarChar
+  charge_type    String   @db.VarChar
+  uom            String   @db.VarChar
+  default_amount Decimal  @db.Decimal(10, 2)
+  description    String?  @db.Text
+  is_active      Boolean  @default(true)
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("ChargeCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("ChargeModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  invoice_details InvoiceDetail[]
+
+  @@map("charge_master")
+}
+
+// ==========================================
+// DOMAIN 5: MAINTENANCE
+// ==========================================
+
+model Ticket {
+  ticket_id         String    @id @default(uuid()) @db.Uuid
+  lease_id          String    @db.Uuid
+  requester_id      String    @db.Uuid
+  assigned_to       String?   @db.Uuid
+  unit_id           String?   @db.Uuid 
+  requester_name    String?   @db.VarChar
+  requester_contact String?   @db.VarChar
+  title             String    @db.VarChar
+  description       String    @db.Text
+  ticket_category   String    @db.VarChar
+  priority          String    @db.VarChar
+  status            String    @default("Open") @db.VarChar
+  resolved_at       DateTime?
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("TicketCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("TicketModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  lease        TenantLease @relation(fields: [lease_id], references: [lease_id])
+  reporter     User        @relation("TicketReporter", fields: [requester_id], references: [user_id])
+  assignee     User?       @relation("TicketAssignee", fields: [assigned_to], references: [user_id])
+  
+  comments     TicketComment[]
+  attachments  TicketAttachment[]
+
+  @@map("tickets")
+}
+
+model TicketComment {
+  comment_id   String   @id @default(uuid()) @db.Uuid
+  ticket_id    String   @db.Uuid
+  user_id      String   @db.Uuid
+  message_text String   @db.Text
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("CommentCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("CommentModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  ticket       Ticket   @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
+  author       User     @relation("CommentAuthor", fields: [user_id], references: [user_id])
+  attachments  TicketAttachment[]
+
+  @@map("ticket_comments")
+}
+
+model TicketAttachment {
+  attachment_id String   @id @default(uuid()) @db.Uuid
+  ticket_id     String   @db.Uuid
+  comment_id    String?  @db.Uuid
+  uploaded_by   String   @db.Uuid
+  file_name     String   @db.VarChar
+  file_url      String   @db.Text
+  file_type     String   @db.VarChar
+  file_size     Int
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("AttachmentCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("AttachmentModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  ticket       Ticket         @relation(fields: [ticket_id], references: [ticket_id], onDelete: Cascade)
+  comment      TicketComment? @relation(fields: [comment_id], references: [comment_id])
+  uploader     User           @relation("AttachmentUploader", fields: [uploaded_by], references: [user_id])
+
+  @@map("ticket_attachments")
+}
+
+// ==========================================
+// DOMAIN 6: ACCESS & FACILITIES
+// ==========================================
+
+model Visitor {
+  visitor_id     String    @id @default(uuid()) @db.Uuid
+  lease_id       String    @db.Uuid
+  visitor_name   String    @db.VarChar
+  visitor_ic_no  String    @db.VarChar
+  vehicle_plate  String?   @db.VarChar
+  visit_purpose  String?   @db.VarChar
+  visit_date     DateTime? @db.Date
+  check_in_time  DateTime? 
+  check_out_time DateTime? 
+  status         String?   @db.VarChar
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("VisitorCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("VisitorModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  lease          TenantLease @relation(fields: [lease_id], references: [lease_id])
+
+  @@map("visitors")
+}
+
+model Booking {
+  booking_id          String   @id @default(uuid()) @db.Uuid
+  facility_id         String   @db.Uuid
+  user_id             String   @db.Uuid
+  lease_id            String?  @db.Uuid
+  booking_date        DateTime @db.Date
+  booking_status      String   @default("Pending") @db.VarChar
+  start_time          DateTime 
+  end_time            DateTime 
+  pax_count           Int      
+  cancellation_reason String?  @db.VarChar
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("BookingCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("BookingModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  facility     Facility     @relation(fields: [facility_id], references: [facility_id])
+  user         User         @relation("BookingUser", fields: [user_id], references: [user_id])
+  lease        TenantLease? @relation(fields: [lease_id], references: [lease_id])
+
+  @@map("booking")
+}
+
+model Facility {
+  facility_id     String   @id @default(uuid()) @db.Uuid
+  property_id     String   @db.Uuid
+  facility_name   String   @db.VarChar
+  facility_status String?  @db.VarChar
+  facility_type   String   @db.VarChar
+  max_capacity    Int
+  is_bookable     Boolean  @default(true)
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("FacilityCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("FacilityModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  property     PropertyMaster @relation(fields: [property_id], references: [property_id])
+  bookings     Booking[]
+
+  @@map("facilities")
+}
+
+// ==========================================
+// DOMAIN 7: COMMUNICATION
+// ==========================================
+
+model Announcement {
+  announcement_id String   @id @default(uuid()) @db.Uuid
+  property_id     String   @db.Uuid 
+  title           String   @db.VarChar
+  content         String   @db.Text
+  image_url       String?  @db.Text
+  publish_date    DateTime @db.Date
+  expiry_date     DateTime @db.Date
+
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("AnnouncementCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("AnnouncementModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  property     PropertyMaster @relation(fields: [property_id], references: [property_id])
+  
+  // THE FIX: Added the `map` argument to prevent constraint name collision
+  author       User?          @relation("AnnouncementAuthor", fields: [created_by], references: [user_id], map: "announcement_author_custom_fkey")
+
+  @@map("announcements")
+}
+
+model Notification {
+  notification_id   String   @id @default(uuid()) @db.Uuid
+  user_id           String   @db.Uuid
+  lease_id          String?  @db.Uuid 
+  notification_type String   @db.VarChar
+  title             String   @db.VarChar
+  message           String   @db.Text
+  is_read           Boolean  @default(false)
+  sent_at           DateTime @default(now())
+  created_at        DateTime @default(now())
+
+  // Relations
+  user              User         @relation("NotificationRecipient", fields: [user_id], references: [user_id], onDelete: Cascade)
+  lease             TenantLease? @relation(fields: [lease_id], references: [lease_id])
+
+  @@map("notifications")
+}
