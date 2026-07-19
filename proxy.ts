@@ -1,25 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { jwtVerify } from "jose";
 
 const SESSION_COOKIE = "propmate_session";
 
-async function unsign(signed: string | undefined): Promise<boolean> {
-  if (!signed) return false;
-  const secret = process.env.SESSION_SECRET ?? "dev-insecure-secret-change-me";
-  const idx = signed.lastIndexOf(".");
-  if (idx === -1) return false;
-  const value = signed.slice(0, idx);
-  const mac = signed.slice(idx + 1);
-
-  const encoder = new TextEncoder();
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    encoder.encode(value + secret)
-  );
-  const expected = Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-
-  return expected.length === mac.length && expected === mac;
+async function hasValidToken(raw: string | undefined): Promise<boolean> {
+  if (!raw) return false;
+  const secret =
+    process.env.SESSION_SECRET ?? "dev-insecure-secret-change-me";
+  const key = new TextEncoder().encode(secret);
+  try {
+    await jwtVerify(raw, key);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function proxy(req: NextRequest) {
@@ -31,7 +25,7 @@ export async function proxy(req: NextRequest) {
   if (!isProtected) return NextResponse.next();
 
   const raw = req.cookies.get(SESSION_COOKIE)?.value;
-  if (!(await unsign(raw))) {
+  if (!(await hasValidToken(raw))) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);

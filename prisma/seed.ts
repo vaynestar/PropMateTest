@@ -16,10 +16,12 @@ async function main() {
   await prisma.ticketComment.deleteMany();
   await prisma.ticketAttachment.deleteMany();
   await prisma.paymentTransaction.deleteMany();
+  await prisma.booking.deleteMany();
   await prisma.invoiceDetail.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.ticket.deleteMany();
   await prisma.tenantLease.deleteMany();
+  await prisma.facility.deleteMany();
   await prisma.unit.deleteMany();
   await prisma.propertyMaster.deleteMany();
   await prisma.user.deleteMany();
@@ -286,7 +288,42 @@ async function main() {
     });
   }
 
-  console.log("Seed complete: 2 properties, 8 units, 2 users, 4 invoices, 4 tickets.");
+  // Shared facilities (bookable) for the demo
+  await prisma.facility.create({
+    data: {
+      property_id: prop1.property_id,
+      facility_name: "Swimming Pool",
+      facility_type: "Swimming Pool",
+      facility_status: "Available",
+      max_capacity: 20,
+      is_bookable: true,
+      created_by: admin.user_id,
+    },
+  });
+  await prisma.facility.create({
+    data: {
+      property_id: prop1.property_id,
+      facility_name: "Gymnasium",
+      facility_type: "Gym",
+      facility_status: "Available",
+      max_capacity: 15,
+      is_bookable: true,
+      created_by: admin.user_id,
+    },
+  });
+  await prisma.facility.create({
+    data: {
+      property_id: prop2.property_id,
+      facility_name: "Function Hall",
+      facility_type: "Function Hall",
+      facility_status: "Available",
+      max_capacity: 100,
+      is_bookable: true,
+      created_by: admin.user_id,
+    },
+  });
+
+  console.log("Seed complete: 2 properties, 8 units, 2 users, 4 invoices, 4 tickets, 3 facilities.");
 }
 
 main()

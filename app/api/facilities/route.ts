@@ -1,83 +1,66 @@
-import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma'; // Use the singleton we created to protect your database connections!
+import { NextResponse } from "next/server";
+
+import { getSessionUser } from "@/lib/auth";
+import {
+  createFacility,
+  deleteFacility,
+  listFacilities,
+} from "@/lib/facility-management";
 
 export async function GET() {
   try {
-    const facilities = await prisma.facility.findMany({
-      include: { property: true }, // This pulls in the related property data too!
-      orderBy: { created_at: 'desc' }
-    });
+    const facilities = await listFacilities();
     return NextResponse.json(facilities);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Failed to fetch facilities";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
-
-    // FYP HACK: Ensure at least one property exists to satisfy the Foreign Key constraint
-    let prop = await prisma.propertyMaster.findFirst();
-    
-    if (!prop) {
-      prop = await prisma.propertyMaster.create({
-        data: {
-          property_name: "Default FYP Property",
-          property_type: "Residential",
-          address: "Test Address",
-          city: "Kuala Lumpur",
-          state: "KL",
-          country: "Malaysia",
-          postal_code: "50000",
-          total_units: 100
-        }
-      });
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const newFacility = await prisma.facility.create({
-      data: {
-        facility_name: body.facility_name,
-        facility_type: body.facility_type,
-        max_capacity: parseInt(body.capacity), // ✅ Fixed: Mapped to max_capacity
-        is_bookable: body.is_bookable,
-        property_id: prop.property_id // Attach it to our property!
-      }
-    });
-
-    return NextResponse.json(newFacility);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const body = await request.json();
+    const facility = await createFacility(
+      {
+        property_id: String(body.property_id),
+        facility_name: String(body.facility_name),
+        facility_type: String(body.facility_type),
+        facility_status: body.facility_status
+          ? String(body.facility_status)
+          : undefined,
+        max_capacity: Number(body.max_capacity),
+        is_bookable:
+          body.is_bookable === undefined ? true : Boolean(body.is_bookable),
+      },
+      user.userId
+    );
+    return NextResponse.json(facility, { status: 201 });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Failed to create facility";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function DELETE(req: Request) {
+export async function DELETE(request: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
-    if (!id) throw new Error('Facility ID required');
-
-    await prisma.facility.delete({ where: { facility_id: id } });
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    if (!id) throw new Error("Facility ID is required");
+    await deleteFacility(id);
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
-  }
-}
-
-export async function PUT(req: Request) {
-  try {
-    const body = await req.json();
-    const updated = await prisma.facility.update({
-      where: { facility_id: body.facility_id },
-      data: {
-        facility_name: body.facility_name,
-        facility_type: body.facility_type,
-        max_capacity: parseInt(body.capacity), // ✅ Fixed: Mapped to max_capacity
-        is_bookable: body.is_bookable,
-      }
-    });
-    return NextResponse.json(updated);
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Failed to delete facility";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

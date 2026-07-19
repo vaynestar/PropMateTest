@@ -391,6 +391,7 @@ model Booking {
   start_time          DateTime 
   end_time            DateTime 
   pax_count           Int      
+  purpose             String?  @db.VarChar
   cancellation_reason String?  @db.VarChar
 
   // Audit Trail
