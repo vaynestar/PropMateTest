@@ -4,10 +4,12 @@ import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { bookFacility } from "./actions";
 
-const DAY_START = 8 * 60; // 08:00
-const DAY_END = 22 * 60; // 22:00
-const TOTAL = DAY_END - DAY_START;
 const STEP = 5 * 60; // 5-minute interval for the time pickers (300s)
+
+// Monday-first weekday map: JS getDay() is Sun=0..Sat=6, convert to Mon=1..Sun=7
+function jsDayToMonFirst(jsDay: number): number {
+  return jsDay === 0 ? 7 : jsDay;
+}
 
 function toMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -24,6 +26,23 @@ function todayISO(): string {
   const d = new Date();
   const tz = d.getTimezoneOffset() * 60000;
   return new Date(d.getTime() - tz).toISOString().slice(0, 10);
+}
+
+// Returns array of the next N open dates (ISO) based on operation_days
+function nextOpenDates(
+  openDays: Set<number>,
+  count = 60
+): string[] {
+  const out: string[] = [];
+  const d = new Date();
+  for (let i = 0; i < count && out.length < 14; i++) {
+    const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 10);
+    if (openDays.has(jsDayToMonFirst(new Date(d).getDay()))) out.push(iso);
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
 }
 
 type Booking = {
@@ -57,10 +76,37 @@ export default function FacilityBookingCard({
     facility_type: string;
     property: { property_name: string };
     max_capacity: number;
+    is_bookable: boolean;
+    operation_days: string;
+    open_time: string;
+    close_time: string;
   };
   bookings: Booking[];
 }) {
-  const [date, setDate] = useState(todayISO());
+  const openDays = useMemo(
+    () =>
+      new Set(
+        facility.operation_days
+          .split(",")
+          .map((d) => Number(d.trim()))
+          .filter((n) => n >= 1 && n <= 7)
+      ),
+    [facility.operation_days]
+  );
+
+  const DAY_START = toMinutes(facility.open_time);
+  const DAY_END = toMinutes(facility.close_time);
+  const TOTAL = DAY_END - DAY_START;
+
+  const allowedDates = useMemo(() => nextOpenDates(openDays), [openDays]);
+
+  const [date, setDate] = useState(
+    allowedDates[0] ?? todayISO()
+  );
+
+  const isOpenOnSelected = openDays.has(
+    jsDayToMonFirst(new Date(date + "T00:00:00").getDay())
+  );
 
   const dayBookings = useMemo(() => {
     const target = date;
@@ -80,6 +126,8 @@ export default function FacilityBookingCard({
     return { left, width, label: `${b.start_time}–${b.end_time}` };
   });
 
+  const cols = Math.max(1, Math.round(TOTAL / 60));
+
   return (
     <div className="glass-card rounded-xl p-6">
       <div className="flex items-center gap-2 mb-4">
@@ -94,10 +142,21 @@ export default function FacilityBookingCard({
             {facility.facility_type} · {facility.property.property_name} ·
             Capacity {facility.max_capacity}
           </p>
+          <p className="font-label-sm text-label-sm text-on-surface-variant">
+            Open {facility.open_time}–{facility.close_time}
+          </p>
         </div>
       </div>
 
-      {/* Time-range chart for the selected day */}
+      {!facility.is_bookable && (
+        <div className="mb-4 rounded-lg bg-error-container/10 border border-error-container/30 px-3 py-2">
+          <span className="font-label-md text-label-md text-error-container">
+            This facility is not open for booking.
+          </span>
+        </div>
+      )}
+
+      {/* Time-range chart for the selected day, scoped to the facility's hours */}
       <div className="mb-4">
         <div className="flex justify-between font-label-sm text-label-sm text-on-surface-variant mb-1">
           <span>{fmt(DAY_START)}</span>
@@ -106,7 +165,7 @@ export default function FacilityBookingCard({
         </div>
         <div className="relative h-12 rounded-lg bg-surface-container-high overflow-hidden border border-outline-variant">
           <div className="absolute inset-0 flex">
-            {Array.from({ length: 7 }).map((_, i) => (
+            {Array.from({ length: cols }).map((_, i) => (
               <div
                 key={i}
                 className="flex-1 border-r border-outline-variant/30 last:border-r-0"
@@ -155,11 +214,22 @@ export default function FacilityBookingCard({
             type="date"
             name="booking_date"
             value={date}
-            min={todayISO()}
+            min={allowedDates[0]}
+            list="open-dates"
             required
             onChange={(e) => setDate(e.target.value)}
             className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
           />
+          <datalist id="open-dates">
+            {allowedDates.map((d) => (
+              <option key={d} value={d} />
+            ))}
+          </datalist>
+          {!isOpenOnSelected && (
+            <span className="font-label-sm text-label-sm text-error-container">
+              Facility is closed on this day.
+            </span>
+          )}
         </label>
         <div className="flex flex-col gap-1">
           <span className="font-label-sm text-label-sm text-on-surface-variant">
@@ -169,6 +239,8 @@ export default function FacilityBookingCard({
             type="time"
             name="start_time"
             step={STEP}
+            min={facility.open_time}
+            max={facility.close_time}
             required
             aria-label="Start time"
             className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary w-full"
@@ -182,6 +254,8 @@ export default function FacilityBookingCard({
             type="time"
             name="end_time"
             step={STEP}
+            min={facility.open_time}
+            max={facility.close_time}
             required
             aria-label="End time"
             className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary w-full"

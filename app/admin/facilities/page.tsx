@@ -26,9 +26,24 @@ const TYPE_ACCENT: Record<string, string> = {
   Other: "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]",
 };
 
+// Monday-first weekday options (Mon=1 ... Sun=7) to match the Facility schema
+const WEEKDAYS: { value: number; label: string }[] = [
+  { value: 1, label: "Mon" },
+  { value: 2, label: "Tue" },
+  { value: 3, label: "Wed" },
+  { value: 4, label: "Thu" },
+  { value: 5, label: "Fri" },
+  { value: 6, label: "Sat" },
+  { value: 7, label: "Sun" },
+];
+
+const timeInputClass =
+  "rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary";
+
 async function addFacility(formData: FormData) {
   "use server";
   await requireUser(["Admin"]);
+  const days = formData.getAll("operation_days").map(String);
   await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/facilities`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -38,6 +53,9 @@ async function addFacility(formData: FormData) {
       facility_type: String(formData.get("facility_type")),
       max_capacity: Number(formData.get("max_capacity")),
       is_bookable: formData.get("is_bookable") === "on",
+      operation_days: days.join(","),
+      open_time: String(formData.get("open_time")),
+      close_time: String(formData.get("close_time")),
     }),
   });
   revalidatePath("/admin/facilities");
@@ -51,6 +69,25 @@ async function removeFacility(formData: FormData) {
     `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/facilities?id=${id}`,
     { method: "DELETE" }
   );
+  revalidatePath("/admin/facilities");
+}
+
+async function editFacility(formData: FormData) {
+  "use server";
+  await requireUser(["Admin"]);
+  const id = String(formData.get("facility_id"));
+  const days = formData.getAll("operation_days").map(String);
+  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/facilities`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      facility_id: id,
+      operation_days: days.join(","),
+      open_time: String(formData.get("open_time")),
+      close_time: String(formData.get("close_time")),
+      is_bookable: formData.get("is_bookable") === "on",
+    }),
+  });
   revalidatePath("/admin/facilities");
 }
 
@@ -128,6 +165,54 @@ export default async function FacilitiesPage() {
             </span>
           </label>
 
+          <div className="md:col-span-2">
+            <span className="font-label-sm text-label-sm text-on-surface-variant">
+              Open on (Monday-first)
+            </span>
+            <div className="flex flex-wrap gap-3 mt-2">
+              {WEEKDAYS.map((d) => (
+                <label
+                  key={d.value}
+                  className="flex items-center gap-1.5 text-on-surface"
+                >
+                  <input
+                    type="checkbox"
+                    name="operation_days"
+                    value={d.value}
+                    defaultChecked
+                    className="w-4 h-4 accent-[var(--color-primary)]"
+                  />
+                  <span className="font-label-md text-label-md">{d.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <span className="font-label-sm text-label-sm text-on-surface-variant">
+              Opens at
+            </span>
+            <input
+              type="time"
+              name="open_time"
+              defaultValue="08:00"
+              step={300}
+              className={timeInputClass}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="font-label-sm text-label-sm text-on-surface-variant">
+              Closes at
+            </span>
+            <input
+              type="time"
+              name="close_time"
+              defaultValue="22:00"
+              step={300}
+              className={timeInputClass}
+            />
+          </div>
+
           <button
             type="submit"
             className="btn-primary px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2 transition-all md:col-span-2"
@@ -195,6 +280,26 @@ export default async function FacilitiesPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-label-sm text-label-sm text-on-surface-variant">
+                  Hours
+                </span>
+                <span className="font-label-md text-label-md text-on-surface">
+                  {f.open_time}–{f.close_time}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-label-sm text-label-sm text-on-surface-variant">
+                  Open days
+                </span>
+                <span className="font-label-md text-label-md text-on-surface">
+                  {f.operation_days
+                    .split(",")
+                    .map((d) => WEEKDAYS.find((w) => String(w.value) === d)?.label)
+                    .filter(Boolean)
+                    .join(" ")}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-label-sm text-label-sm text-on-surface-variant">
                   Bookings
                 </span>
                 <span className="font-label-md text-label-md text-on-surface">
@@ -202,6 +307,70 @@ export default async function FacilitiesPage() {
                 </span>
               </div>
             </div>
+
+            <details className="mt-3 rounded-lg border border-outline-variant/40 px-3 py-2">
+              <summary className="cursor-pointer font-label-md text-label-md text-primary">
+                Edit operating hours
+              </summary>
+              <form action={editFacility} className="grid gap-3 mt-3">
+                <input type="hidden" name="facility_id" value={f.facility_id} />
+                <div className="flex flex-wrap gap-3">
+                  {WEEKDAYS.map((d) => (
+                    <label
+                      key={d.value}
+                      className="flex items-center gap-1.5 text-on-surface"
+                    >
+                      <input
+                        type="checkbox"
+                        name="operation_days"
+                        value={d.value}
+                        defaultChecked={f.operation_days
+                          .split(",")
+                          .includes(String(d.value))}
+                        className="w-4 h-4 accent-[var(--color-primary)]"
+                      />
+                      <span className="font-label-sm text-label-sm">
+                        {d.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="time"
+                    name="open_time"
+                    defaultValue={f.open_time}
+                    step={300}
+                    className={timeInputClass}
+                  />
+                  <input
+                    type="time"
+                    name="close_time"
+                    defaultValue={f.close_time}
+                    step={300}
+                    className={timeInputClass}
+                  />
+                </div>
+                <label className="flex items-center gap-2 text-on-surface">
+                  <input
+                    type="checkbox"
+                    name="is_bookable"
+                    defaultChecked={f.is_bookable}
+                    className="w-4 h-4 accent-[var(--color-primary)]"
+                  />
+                  <span className="font-label-md text-label-md">
+                    Bookable by residents
+                  </span>
+                </label>
+                <button
+                  type="submit"
+                  className="btn-primary px-4 py-2 font-label-md text-label-md transition-all active:scale-95"
+                >
+                  Save hours
+                </button>
+              </form>
+            </details>
+
 
             <form action={removeFacility} className="mt-auto">
               <input

@@ -9,6 +9,9 @@ export type FacilityInput = {
   facility_status?: string;
   max_capacity: number;
   is_bookable?: boolean;
+  operation_days?: string;
+  open_time?: string;
+  close_time?: string;
 };
 
 export async function listFacilities() {
@@ -16,6 +19,11 @@ export async function listFacilities() {
     orderBy: { facility_name: "asc" },
     include: { property: true, _count: { select: { bookings: true } } },
   });
+}
+
+function toMinutes(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
 }
 
 export async function createFacility(input: FacilityInput, createdBy?: string) {
@@ -26,6 +34,12 @@ export async function createFacility(input: FacilityInput, createdBy?: string) {
     throw new Error("Max capacity must be at least 1");
   }
 
+  const open_time = input.open_time ?? "08:00";
+  const close_time = input.close_time ?? "22:00";
+  if (toMinutes(close_time) <= toMinutes(open_time)) {
+    throw new Error("Closing time must be after opening time");
+  }
+
   return prisma.facility.create({
     data: {
       property_id: input.property_id,
@@ -34,6 +48,9 @@ export async function createFacility(input: FacilityInput, createdBy?: string) {
       facility_status: input.facility_status ?? "Available",
       max_capacity: input.max_capacity,
       is_bookable: input.is_bookable ?? true,
+      operation_days: input.operation_days ?? "1,2,3,4,5,6,7",
+      open_time,
+      close_time,
       created_by: createdBy,
     },
   });
@@ -43,6 +60,40 @@ export async function deleteFacility(facilityId: string) {
   const trimmed = facilityId.trim();
   if (!trimmed) throw new Error("Facility ID is required");
   return prisma.facility.delete({ where: { facility_id: trimmed } });
+}
+
+export type FacilityUpdateInput = Partial<{
+  facility_name: string;
+  facility_status: string;
+  facility_type: string;
+  max_capacity: number;
+  is_bookable: boolean;
+  operation_days: string;
+  open_time: string;
+  close_time: string;
+}>;
+
+export async function updateFacility(
+  facilityId: string,
+  input: FacilityUpdateInput,
+  modifiedBy?: string
+) {
+  const trimmed = facilityId.trim();
+  if (!trimmed) throw new Error("Facility ID is required");
+
+  if (input.open_time && input.close_time) {
+    if (toMinutes(input.close_time) <= toMinutes(input.open_time)) {
+      throw new Error("Closing time must be after opening time");
+    }
+  }
+
+  return prisma.facility.update({
+    where: { facility_id: trimmed },
+    data: {
+      ...input,
+      modified_by: modifiedBy,
+    },
+  });
 }
 
 export type FacilityWithBookings = Prisma.FacilityGetPayload<{

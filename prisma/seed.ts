@@ -297,6 +297,9 @@ async function main() {
       facility_status: "Available",
       max_capacity: 20,
       is_bookable: true,
+      operation_days: "1,2,3,4,5,6,7",
+      open_time: "07:00",
+      close_time: "21:00",
       created_by: admin.user_id,
     },
   });
@@ -308,6 +311,9 @@ async function main() {
       facility_status: "Available",
       max_capacity: 15,
       is_bookable: true,
+      operation_days: "1,2,3,4,5,6,7",
+      open_time: "06:00",
+      close_time: "23:00",
       created_by: admin.user_id,
     },
   });
@@ -319,11 +325,14 @@ async function main() {
       facility_status: "Available",
       max_capacity: 100,
       is_bookable: true,
+      operation_days: "1,2,3,4,5,6",
+      open_time: "09:00",
+      close_time: "22:00",
       created_by: admin.user_id,
     },
   });
 
-  // Badminton courts (Court A-D) for the booking demo
+  // Badminton courts (Court A-D) for the booking demo — Mon–Sat 08:00–22:00
   const badmintonCourts = [
     { name: "Badminton Court A", capacity: 4 },
     { name: "Badminton Court B", capacity: 4 },
@@ -339,6 +348,9 @@ async function main() {
         facility_status: "Available",
         max_capacity: c.capacity,
         is_bookable: true,
+        operation_days: "1,2,3,4,5,6",
+        open_time: "08:00",
+        close_time: "22:00",
         created_by: admin.user_id,
       },
     });

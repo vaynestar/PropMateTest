@@ -1,14 +1,10 @@
-import type { Metadata } from "next";
-import { requireUser } from "@/lib/auth";
 import { listFacilities } from "@/lib/facility-management";
 import { listBookings } from "@/lib/booking-management";
-import FacilityBookingCard from "./FacilityBookingCard";
+import FacilitiesBrowser from "./FacilitiesBrowser";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Facilities" };
 
 export default async function ResidentFacilitiesPage() {
-  await requireUser();
   const facilities = await listFacilities();
   const raw = await listBookings();
   const bookings = raw.map((b) => ({
@@ -28,6 +24,18 @@ export default async function ResidentFacilitiesPage() {
     booking_status: b.booking_status,
   }));
 
+  const serializableFacilities = facilities.map((f) => ({
+    facility_id: f.facility_id,
+    facility_name: f.facility_name,
+    facility_type: f.facility_type,
+    property: { property_name: f.property.property_name },
+    max_capacity: f.max_capacity,
+    is_bookable: f.is_bookable,
+    operation_days: f.operation_days,
+    open_time: f.open_time,
+    close_time: f.close_time,
+  }));
+
   return (
     <div className="space-y-6">
       <section className="glass-card rounded-xl p-6">
@@ -35,21 +43,13 @@ export default async function ResidentFacilitiesPage() {
           Facilities Booking
         </h1>
         <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-          Pick your own time. The bar below shows each facility&apos;s booked
-          windows for the selected day so everyone can see availability at a
-          glance.
+          Browse facilities by type, then pick your own time. The bar shows each
+          facility&apos;s booked windows for the selected day so everyone can see
+          availability at a glance.
         </p>
       </section>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        {facilities.map((f) => (
-          <FacilityBookingCard
-            key={f.facility_id}
-            facility={f}
-            bookings={bookings}
-          />
-        ))}
-      </div>
+      <FacilitiesBrowser facilities={serializableFacilities} bookings={bookings} />
     </div>
   );
 }

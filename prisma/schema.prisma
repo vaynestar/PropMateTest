@@ -419,6 +419,11 @@ model Facility {
   max_capacity    Int
   is_bookable     Boolean  @default(true)
 
+  // Operating hours (Monday-first weekday numbering: Mon=1 ... Sun=7)
+  operation_days  String   @default("1,2,3,4,5,6,7") @db.VarChar // comma-separated open weekdays
+  open_time       String   @default("08:00") @db.VarChar // HH:MM daily opening
+  close_time      String   @default("22:00") @db.VarChar // HH:MM daily closing
+
   // Audit Trail
   created_at   DateTime @default(now())
   created_by   String?  @db.Uuid
