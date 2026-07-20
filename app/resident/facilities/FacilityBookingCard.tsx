@@ -7,6 +7,7 @@ import { bookFacility } from "./actions";
 const DAY_START = 8 * 60; // 08:00
 const DAY_END = 22 * 60; // 22:00
 const TOTAL = DAY_END - DAY_START;
+const STEP = 5 * 60; // 5-minute interval for the time pickers (300s)
 
 function toMinutes(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -167,6 +168,7 @@ export default function FacilityBookingCard({
           <input
             type="time"
             name="start_time"
+            step={STEP}
             required
             aria-label="Start time"
             className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary w-full"
@@ -179,6 +181,7 @@ export default function FacilityBookingCard({
           <input
             type="time"
             name="end_time"
+            step={STEP}
             required
             aria-label="End time"
             className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary w-full"
