@@ -8,6 +8,20 @@ export async function listBookings(facilityId?: string) {
   });
 }
 
+export async function getBookingsByFacilityAndDate(
+  facilityId: string,
+  bookingDate: string
+) {
+  return prisma.booking.findMany({
+    where: {
+      facility_id: facilityId,
+      booking_date: new Date(bookingDate),
+      booking_status: { not: "Cancelled" },
+    },
+    orderBy: { start_time: "asc" },
+  });
+}
+
 export type BookingInput = {
   facility_id: string;
   user_id: string;

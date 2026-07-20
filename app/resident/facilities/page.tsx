@@ -1,6 +1,6 @@
 import { listFacilities } from "@/lib/facility-management";
 import { listBookings } from "@/lib/booking-management";
-import FacilityBookingWizard from "./FacilityBookingWizard";
+import FacilityBooking from "./FacilityBooking";
 
 export const dynamic = "force-dynamic";
 
@@ -54,8 +54,7 @@ export default async function ResidentFacilitiesPage() {
           Facilities Booking
         </h1>
         <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-          Pick a facility, choose a date and time, and we&apos;ll show you the
-          day&apos;s availability at a glance. Only open facilities are listed.
+          Pick a facility, choose a start and end time, then book it.
         </p>
       </section>
 
@@ -64,7 +63,7 @@ export default async function ResidentFacilitiesPage() {
           No bookable facilities available right now.
         </p>
       ) : (
-        <FacilityBookingWizard facilities={facilities} bookings={bookings} />
+        <FacilityBooking facilities={facilities} bookings={bookings} />
       )}
     </div>
   );
