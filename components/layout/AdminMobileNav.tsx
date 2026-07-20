@@ -5,16 +5,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminNav } from "@/lib/admin-nav";
 import { logoutAction } from "@/app/logout/actions";
-import BottomNav, { NavItem } from "./BottomNav";
+import BottomNav from "./BottomNav";
 
-const PRIMARY: NavItem[] = [
+const PRIMARY = [
   { label: "Dashboard", href: "/admin", icon: "dashboard" },
   { label: "Billing", href: "/admin/billing", icon: "receipt_long" },
   { label: "Facilities", href: "/admin/facilities", icon: "apartment" },
   { label: "Helpdesk", href: "/admin/maintenance", icon: "support_agent" },
 ];
 
-const MORE: NavItem[] = [
+const MORE = [
   { label: "Properties", href: "/admin/properties", icon: "domain" },
   { label: "Units", href: "/admin/units", icon: "meeting_room" },
   { label: "Visitors", href: "/admin/visitors", icon: "person_search" },
@@ -23,7 +23,7 @@ const MORE: NavItem[] = [
   { label: "Profile", href: "/admin/profile", icon: "person" },
 ];
 
-export default function AdminMobileNav() {
+export function AdminMenuButton() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
@@ -134,8 +134,10 @@ export default function AdminMobileNav() {
           </nav>
         </div>
       )}
-
-      <BottomNav primary={PRIMARY} more={MORE} />
     </>
   );
+}
+
+export default function AdminMobileNav() {
+  return <BottomNav primary={PRIMARY} more={MORE} />;
 }

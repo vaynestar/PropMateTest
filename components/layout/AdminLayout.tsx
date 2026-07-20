@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import AdminMobileNav from "./AdminMobileNav";
+import AdminMobileNav, { AdminMenuButton } from "./AdminMobileNav";
 import { getSessionUser } from "@/lib/auth";
 import { logoutAction } from "@/app/logout/actions";
 
@@ -53,7 +53,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
                 <span className="material-symbols-outlined">logout</span>
               </button>
             </form>
-            <AdminMobileNav />
+            <AdminMenuButton />
           </div>
         </div>
       </header>
@@ -61,6 +61,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       <main className="flex-1 p-margin-mobile md:p-margin-desktop pb-24 md:pb-28">
         <div className="max-w-container-max mx-auto">{children}</div>
       </main>
+
+      <AdminMobileNav />
     </div>
   );
 }
