@@ -39,7 +39,7 @@ export default function BottomNav({
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-t border-outline-variant/30 flex justify-around items-stretch h-20 pb-safe px-2">
+      <nav className="fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-t border-outline-variant/30 flex justify-around items-stretch h-16 md:h-20 pb-safe px-2 md:px-4">
         {visibleTabs.map((item) =>
           item.icon === "blank" ? (
             <span key="spacer" className="flex-1" />
@@ -79,7 +79,7 @@ export default function BottomNav({
 
       {sheetOpen && (
         <div
-          className="fixed inset-0 z-[70] md:hidden"
+          className="fixed inset-0 z-[70]"
           role="dialog"
           aria-modal="true"
         >

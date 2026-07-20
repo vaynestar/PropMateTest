@@ -17,12 +17,9 @@ const PRIMARY: NavItem[] = [
 const MORE: NavItem[] = [
   { label: "Properties", href: "/admin/properties", icon: "domain" },
   { label: "Units", href: "/admin/units", icon: "meeting_room" },
-  {
-    label: "Facilities",
-    href: "/admin/facilities",
-    icon: "apartment",
-    children: [{ label: "Bookings", href: "/admin/bookings" }],
-  },
+  { label: "Visitors", href: "/admin/visitors", icon: "person_search" },
+  { label: "Announcements", href: "/admin/announcements", icon: "campaign" },
+  { label: "Reports", href: "/admin/reports", icon: "analytics" },
   { label: "Profile", href: "/admin/profile", icon: "person" },
 ];
 
@@ -38,7 +35,7 @@ export default function AdminMobileNav() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="md:hidden text-on-surface hover:bg-surface-variant rounded-full p-2 transition-all"
+        className="text-on-surface hover:bg-surface-variant rounded-full p-2 transition-all"
         aria-label="Open menu"
       >
         <span className="material-symbols-outlined">menu</span>
@@ -46,7 +43,7 @@ export default function AdminMobileNav() {
 
       {open && (
         <div
-          className="fixed inset-0 z-[60] md:hidden"
+          className="fixed inset-0 z-[60]"
           role="dialog"
           aria-modal="true"
         >
