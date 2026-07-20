@@ -1,14 +1,37 @@
 import { listFacilities } from "@/lib/facility-management";
 import { listBookings } from "@/lib/booking-management";
-import FacilitiesBrowser from "./FacilitiesBrowser";
+import FacilityBookingWizard from "./FacilityBookingWizard";
 
 export const dynamic = "force-dynamic";
 
+type BookingDTO = {
+  booking_id: string;
+  facility_id: string;
+  booking_date: string;
+  start_time: string;
+  end_time: string;
+  booking_status: string;
+};
+
 export default async function ResidentFacilitiesPage() {
-  const facilities = await listFacilities();
+  const all = await listFacilities();
+  const facilities = all
+    .filter((f) => f.is_bookable)
+    .map((f) => ({
+      facility_id: f.facility_id,
+      facility_name: f.facility_name,
+      facility_type: f.facility_type,
+      property: { property_name: f.property.property_name },
+      max_capacity: f.max_capacity,
+      operation_days: f.operation_days,
+      open_time: f.open_time,
+      close_time: f.close_time,
+    }));
+
   const raw = await listBookings();
-  const bookings = raw.map((b) => ({
+  const bookings: BookingDTO[] = raw.map((b) => ({
     booking_id: b.booking_id,
+    facility_id: b.facility_id,
     booking_date:
       b.booking_date instanceof Date
         ? b.booking_date.toISOString().slice(0, 10)
@@ -24,18 +47,6 @@ export default async function ResidentFacilitiesPage() {
     booking_status: b.booking_status,
   }));
 
-  const serializableFacilities = facilities.map((f) => ({
-    facility_id: f.facility_id,
-    facility_name: f.facility_name,
-    facility_type: f.facility_type,
-    property: { property_name: f.property.property_name },
-    max_capacity: f.max_capacity,
-    is_bookable: f.is_bookable,
-    operation_days: f.operation_days,
-    open_time: f.open_time,
-    close_time: f.close_time,
-  }));
-
   return (
     <div className="space-y-6">
       <section className="glass-card rounded-xl p-6">
@@ -43,13 +54,18 @@ export default async function ResidentFacilitiesPage() {
           Facilities Booking
         </h1>
         <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-          Browse facilities by type, then pick your own time. The bar shows each
-          facility&apos;s booked windows for the selected day so everyone can see
-          availability at a glance.
+          Pick a facility, choose a date and time, and we&apos;ll show you the
+          day&apos;s availability at a glance. Only open facilities are listed.
         </p>
       </section>
 
-      <FacilitiesBrowser facilities={serializableFacilities} bookings={bookings} />
+      {facilities.length === 0 ? (
+        <p className="font-body-md text-body-md text-on-surface-variant">
+          No bookable facilities available right now.
+        </p>
+      ) : (
+        <FacilityBookingWizard facilities={facilities} bookings={bookings} />
+      )}
     </div>
   );
 }
