@@ -4,13 +4,18 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { residentNav } from "@/lib/resident-nav";
+import BottomNav, { NavItem } from "./BottomNav";
 
-const BOTTOM_NAV = [
-  { label: "Home", icon: "home", href: "/resident", fill: true },
-  { label: "Invoices", icon: "receipt_long", href: "/resident/invoices" },
-  { label: "Fixes", icon: "build_circle", href: "/resident/maintenance" },
-  { label: "Bookings", icon: "event_seat", href: "/resident/facilities" },
-  { label: "More", icon: "menu", href: "/resident/unit" },
+const PRIMARY: NavItem[] = [
+  { label: "Home", href: "/resident", icon: "home" },
+  { label: "Invoices", href: "/resident/invoices", icon: "receipt_long" },
+  { label: "Helpdesk", href: "/resident/maintenance", icon: "build_circle" },
+  { label: "Facilities", href: "/resident/facilities", icon: "pool" },
+];
+
+const MORE: NavItem[] = [
+  { label: "My Unit", href: "/resident/unit", icon: "apartment" },
+  { label: "Profile", href: "/resident/profile", icon: "person" },
 ];
 
 export default function ResidentLayout({ children }: { children: ReactNode }) {
@@ -99,34 +104,7 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
         </main>
       </div>
 
-      <nav className="md:hidden fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-t border-outline-variant/30 flex justify-around items-center h-20 pb-safe px-4">
-        {BOTTOM_NAV.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`pressable flex flex-col items-center justify-center w-full h-full py-2 ${
-                active
-                  ? "text-primary font-bold border-t-2 border-primary bg-primary/5"
-                  : "text-on-surface-variant hover:text-on-surface transition-colors"
-              }`}
-            >
-              <span
-                className="material-symbols-outlined mb-1"
-                style={
-                  active && item.fill
-                    ? { fontVariationSettings: "'FILL' 1" }
-                    : undefined
-                }
-              >
-                {item.icon}
-              </span>
-              <span className="font-label-sm text-label-sm">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <BottomNav primary={PRIMARY} more={MORE} />
     </div>
   );
 }

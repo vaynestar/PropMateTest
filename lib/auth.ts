@@ -29,10 +29,12 @@ export function verifyPassword(password: string, stored: string): boolean {
 export async function createSession(userId: string, role: string) {
   const token = await signToken({ userId, role });
   const jar = await cookies();
+  const isProd = process.env.NODE_ENV === "production";
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    partitioned: isProd,
     path: "/",
     maxAge: SESSION_TTL,
   });

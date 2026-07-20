@@ -150,6 +150,10 @@
     animation: slide-in 0.25s ease-out;
   }
 
+  .animate-slide-up {
+    animation: slide-up 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
   .pressable {
     transition: transform 0.1s ease, background-color 0.2s ease,
       color 0.2s ease;
@@ -175,6 +179,15 @@
   }
   to {
     transform: translateX(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
   }
 }
 

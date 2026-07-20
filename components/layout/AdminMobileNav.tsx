@@ -5,8 +5,26 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminNav } from "@/lib/admin-nav";
 import { logoutAction } from "@/app/logout/actions";
+import BottomNav, { NavItem } from "./BottomNav";
 
-const BOTTOM_ITEMS = adminNav.slice(0, 5);
+const PRIMARY: NavItem[] = [
+  { label: "Dashboard", href: "/admin", icon: "dashboard" },
+  { label: "Billing", href: "/admin/billing", icon: "receipt_long" },
+  { label: "Facilities", href: "/admin/facilities", icon: "apartment" },
+  { label: "Helpdesk", href: "/admin/maintenance", icon: "support_agent" },
+];
+
+const MORE: NavItem[] = [
+  { label: "Properties", href: "/admin/properties", icon: "domain" },
+  { label: "Units", href: "/admin/units", icon: "meeting_room" },
+  {
+    label: "Facilities",
+    href: "/admin/facilities",
+    icon: "apartment",
+    children: [{ label: "Bookings", href: "/admin/bookings" }],
+  },
+  { label: "Profile", href: "/admin/profile", icon: "person" },
+];
 
 export default function AdminMobileNav() {
   const pathname = usePathname();
@@ -120,32 +138,7 @@ export default function AdminMobileNav() {
         </div>
       )}
 
-      <nav className="md:hidden fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-t border-outline-variant/30 flex justify-around items-center h-20 pb-safe px-2">
-        {BOTTOM_ITEMS.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`pressable flex flex-col items-center justify-center w-full h-full ${
-                active
-                  ? "text-primary font-bold"
-                  : "text-on-surface-variant hover:text-on-surface transition-colors"
-              }`}
-            >
-              <span
-                className="material-symbols-outlined mb-1"
-                style={
-                  active ? { fontVariationSettings: "'FILL' 1" } : undefined
-                }
-              >
-                {item.icon}
-              </span>
-              <span className="font-label-sm text-label-sm">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <BottomNav primary={PRIMARY} more={MORE} />
     </>
   );
 }
