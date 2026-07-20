@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import {
   getResidentPortalData,
-  getResidentBookings,
   getLatestAnnouncement,
 } from "@/lib/resident";
 
@@ -16,28 +15,12 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-function formatTime(date: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(date));
-}
-
 function formatDate(date: Date) {
   return new Intl.DateTimeFormat("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   }).format(new Date(date));
-}
-
-function daysUntil(date: Date) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const target = new Date(date);
-  target.setHours(0, 0, 0, 0);
-  return Math.round((target.getTime() - today.getTime()) / 86400000);
 }
 
 const QUICK_ACTIONS = [
@@ -70,10 +53,9 @@ export default async function ResidentDashboardPage() {
     );
   }
 
-  const [bookings, announcement] = await Promise.all([
-    getResidentBookings(user!.userId),
-    getLatestAnnouncement(lease.unit.property.property_id),
-  ]);
+  const announcement = await getLatestAnnouncement(
+    lease.unit.property.property_id
+  );
 
   const outstanding = lease.invoices
     .filter((i) => i.status !== "Paid")
@@ -84,7 +66,13 @@ export default async function ResidentDashboardPage() {
       (a, b) =>
         new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
     )[0];
-  const dueInDays = nextDue ? daysUntil(nextDue.due_date) : null;
+  const dueInDays = nextDue
+    ? Math.round(
+        (new Date(nextDue.due_date).setHours(0, 0, 0, 0) -
+          new Date().setHours(0, 0, 0, 0)) /
+          86400000
+      )
+    : null;
 
   return (
     <div className="flex flex-col gap-stack-lg">
@@ -148,67 +136,6 @@ export default async function ResidentDashboardPage() {
             </span>
           </Link>
         ))}
-      </section>
-
-      <section className="flex flex-col gap-stack-sm">
-        <div className="flex justify-between items-center">
-          <h2 className="font-title-lg text-title-lg text-on-surface">
-            Upcoming Bookings
-          </h2>
-          <Link
-            href="/resident/facilities"
-            className="font-label-sm text-label-sm text-primary hover:text-primary-container transition-colors"
-          >
-            View All
-          </Link>
-        </div>
-        {bookings.length === 0 ? (
-          <p className="font-body-md text-body-md text-on-surface-variant">
-            No upcoming bookings.
-          </p>
-        ) : (
-          <div className="flex overflow-x-auto hide-scrollbar gap-stack-md pb-4">
-            {bookings.map((b) => {
-              const days = daysUntil(b.booking_date);
-              const when =
-                days === 0
-                  ? "Today"
-                  : days === 1
-                  ? "Tomorrow"
-                  : formatDate(b.booking_date);
-              return (
-                <div
-                  key={b.booking_id}
-                  className="glass-card rounded-lg min-w-[240px] flex-shrink-0 flex flex-col"
-                >
-                  <div className="h-24 rounded-t-lg bg-surface-container-high overflow-hidden relative">
-                    <div className="absolute top-2 right-2 bg-surface-container-highest/90 backdrop-blur px-2 py-1 rounded font-label-sm text-label-sm border border-outline-variant">
-                      {when}
-                    </div>
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="material-symbols-outlined text-on-surface-variant text-4xl">
-                        meeting_room
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-stack-md flex flex-col gap-2">
-                    <span className="font-label-md text-label-md text-on-surface">
-                      {b.facility.facility_name}
-                    </span>
-                    <div className="flex items-center gap-2 text-on-surface-variant">
-                      <span className="material-symbols-outlined text-[16px]">
-                        schedule
-                      </span>
-                      <span className="font-label-sm text-label-sm">
-                        {formatTime(b.start_time)} - {formatTime(b.end_time)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </section>
 
       {announcement && (
