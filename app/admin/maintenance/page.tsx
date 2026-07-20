@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { listTickets } from "@/lib/maintenance";
 import { listUnits } from "@/lib/unit-management";
 import StatusBadge from "@/components/dashboard/StatusBadge";
+import ExpandableForm from "@/components/layout/ExpandableForm";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,7 @@ export default async function MaintenancePage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface">
-            Maintenance
+            Helpdesk
           </h1>
           <p className="font-body-md text-body-md text-on-surface-variant mt-1">
             Raise and track maintenance tickets across your properties.
@@ -82,10 +83,7 @@ export default async function MaintenancePage() {
         </span>
       </div>
 
-      <div className="glass-card rounded-xl p-6">
-        <h2 className="font-title-lg text-title-lg text-on-surface mb-4">
-          Raise New Ticket
-        </h2>
+      <ExpandableForm title="Raise New Ticket" buttonLabel="New Ticket">
         <form action={raiseTicket} className="grid gap-4 md:grid-cols-2">
           <select
             name="unit_id"
@@ -153,7 +151,7 @@ export default async function MaintenancePage() {
             Raise Ticket
           </button>
         </form>
-      </div>
+      </ExpandableForm>
 
       <div className="glass-card rounded-xl p-0 overflow-hidden">
         <div className="px-6 py-4 border-b border-outline-variant/30">
@@ -164,7 +162,7 @@ export default async function MaintenancePage() {
         <div className="divide-y divide-outline-variant/30">
           {tickets.length === 0 && (
             <p className="font-body-md text-body-md text-on-surface-variant px-6 py-8">
-              No maintenance tickets yet.
+              No helpdesk tickets yet.
             </p>
           )}
           {tickets.map((t) => {

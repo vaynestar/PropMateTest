@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth";
 import { getResidentPortalData, getResidentTickets } from "@/lib/resident";
 import StatusBadge from "@/components/dashboard/StatusBadge";
+import ExpandableForm from "@/components/layout/ExpandableForm";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,7 @@ export default async function ResidentMaintenancePage() {
     <div className="flex flex-col gap-stack-lg">
       <div>
         <h1 className="font-headline-lg text-headline-lg text-on-surface">
-          Maintenance
+          Helpdesk
         </h1>
         <p className="font-body-md text-body-md text-on-surface-variant mt-1">
           Report issues and track your requests.
@@ -52,10 +53,7 @@ export default async function ResidentMaintenancePage() {
       </div>
 
       {lease && (
-        <div className="glass-card rounded-xl p-6">
-          <h2 className="font-title-lg text-title-lg text-on-surface mb-4">
-            Raise a Request
-          </h2>
+        <ExpandableForm title="Raise a Request" buttonLabel="New Request">
           <form action={raiseTicket} className="grid gap-4 md:grid-cols-2">
             <input type="hidden" name="unit_id" value={lease.unit.unit_id} />
             <input
@@ -95,7 +93,7 @@ export default async function ResidentMaintenancePage() {
               Submit Request
             </button>
           </form>
-        </div>
+        </ExpandableForm>
       )}
 
       <div className="glass-card rounded-xl p-0 overflow-hidden">
@@ -107,7 +105,7 @@ export default async function ResidentMaintenancePage() {
         <div className="divide-y divide-outline-variant/30">
           {tickets.length === 0 && (
             <p className="font-body-md text-body-md text-on-surface-variant px-6 py-8">
-              No maintenance requests yet.
+              No helpdesk requests yet.
             </p>
           )}
           {tickets.map((t) => (

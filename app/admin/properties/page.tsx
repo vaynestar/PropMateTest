@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { listProperties } from "@/lib/property-management";
+import ExpandableForm from "@/components/layout/ExpandableForm";
 
 export const dynamic = "force-dynamic";
 
@@ -59,10 +60,7 @@ export default async function PropertiesPage() {
         </p>
       </div>
 
-      <div className="glass-card rounded-xl p-6">
-        <h2 className="font-title-lg text-title-lg text-on-surface mb-4">
-          Add New Property
-        </h2>
+      <ExpandableForm title="Add New Property" buttonLabel="New Property">
         <form action={addProperty} className="grid gap-4 md:grid-cols-2">
           <input
             name="property_name"
@@ -125,7 +123,7 @@ export default async function PropertiesPage() {
             Add Property
           </button>
         </form>
-      </div>
+      </ExpandableForm>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {properties.map((p) => (

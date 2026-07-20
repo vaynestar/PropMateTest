@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { listFacilities } from "@/lib/facility-management";
 import { listProperties } from "@/lib/property-management";
+import ExpandableForm from "@/components/layout/ExpandableForm";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,16 @@ const FACILITY_TYPES = [
   "Multi-purpose Hall",
   "Other",
 ];
+
+const TYPE_ACCENT: Record<string, string> = {
+  "Swimming Pool": "bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]",
+  Gym: "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]",
+  "Function Hall": "bg-primary shadow-[0_0_10px_rgba(208,188,255,0.5)]",
+  "Badminton Court": "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]",
+  "BBQ Area": "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]",
+  "Multi-purpose Hall": "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]",
+  Other: "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]",
+};
 
 async function addFacility(formData: FormData) {
   "use server";
@@ -61,10 +72,7 @@ export default async function FacilitiesPage() {
         </p>
       </div>
 
-      <div className="glass-card rounded-xl p-6">
-        <h2 className="font-title-lg text-title-lg text-on-surface mb-4">
-          Add Facility
-        </h2>
+      <ExpandableForm title="Add Facility" buttonLabel="New Facility">
         <form action={addFacility} className="grid gap-4 md:grid-cols-2">
           <select
             name="property_id"
@@ -133,52 +141,86 @@ export default async function FacilitiesPage() {
             Add Facility
           </button>
         </form>
-      </div>
+      </ExpandableForm>
 
-      <div className="glass-card rounded-xl p-0 overflow-hidden">
-        <div className="px-6 py-4 border-b border-outline-variant/30">
-          <h2 className="font-title-lg text-title-lg text-on-surface">
-            All Facilities
-          </h2>
-        </div>
-        <div className="divide-y divide-outline-variant/30">
-          {facilities.length === 0 && (
-            <p className="font-body-md text-body-md text-on-surface-variant px-6 py-8">
-              No facilities yet.
-            </p>
-          )}
-          {facilities.map((f) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-gutter">
+        {facilities.length === 0 && (
+          <p className="font-body-md text-body-md text-on-surface-variant col-span-full">
+            No facilities yet. Click &quot;New Facility&quot; to add one.
+          </p>
+        )}
+        {facilities.map((f) => (
+          <div
+            key={f.facility_id}
+            className="glass-card rounded-xl p-6 flex flex-col relative overflow-hidden group"
+          >
             <div
-              key={f.facility_id}
-              className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-6 py-4"
-            >
-              <div>
-                <p className="font-title-md text-title-md text-on-surface">
-                  {f.facility_name}
-                </p>
-                <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">
-                  {f.facility_type} · {f.property.property_name} · Capacity{" "}
-                  {f.max_capacity} · {f._count.bookings} booking
-                  {f._count.bookings === 1 ? "" : "s"}
-                </p>
-              </div>
-
-              <form action={removeFacility} className="shrink-0">
-                <input
-                  type="hidden"
-                  name="facility_id"
-                  value={f.facility_id}
-                />
-                <button
-                  type="submit"
-                  className="font-label-sm text-label-sm text-error-container hover:underline"
-                >
-                  Delete
-                </button>
-              </form>
+              className={`absolute top-0 left-0 w-1 h-full ${
+                TYPE_ACCENT[f.facility_type] ?? TYPE_ACCENT.Other
+              }`}
+            />
+            <div className="flex justify-between items-start mb-4">
+              <h4 className="font-title-lg text-title-lg text-on-surface font-bold pr-6">
+                {f.facility_name}
+              </h4>
+              <span className="material-symbols-outlined text-on-surface-variant">
+                {f.is_bookable ? "event_available" : "lock"}
+              </span>
             </div>
-          ))}
-        </div>
+
+            <div className="space-y-3 mb-6 flex-1">
+              <div className="flex justify-between items-center">
+                <span className="font-label-sm text-label-sm text-on-surface-variant">
+                  Property
+                </span>
+                <span className="font-label-md text-label-md text-on-surface">
+                  {f.property.property_name}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-label-sm text-label-sm text-on-surface-variant">
+                  Type
+                </span>
+                <span className="font-label-md text-label-md text-on-surface">
+                  {f.facility_type}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-label-sm text-label-sm text-on-surface-variant">
+                  Capacity
+                </span>
+                <span className="font-label-md text-label-md text-on-surface">
+                  {f.max_capacity}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-label-sm text-label-sm text-on-surface-variant">
+                  Bookings
+                </span>
+                <span className="font-label-md text-label-md text-on-surface">
+                  {f._count.bookings}
+                </span>
+              </div>
+            </div>
+
+            <form action={removeFacility} className="mt-auto">
+              <input
+                type="hidden"
+                name="facility_id"
+                value={f.facility_id}
+              />
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-lg text-error-container border border-error-container/30 hover:bg-error-container/10 transition-all font-label-md text-label-md active:scale-95 flex items-center justify-center gap-2"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  delete
+                </span>
+                Delete
+              </button>
+            </form>
+          </div>
+        ))}
       </div>
     </div>
   );

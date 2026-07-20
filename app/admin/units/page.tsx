@@ -2,6 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
+import ExpandableForm from "@/components/layout/ExpandableForm";
 
 export const dynamic = "force-dynamic";
 
@@ -97,10 +98,7 @@ export default async function UnitsPage({
         )}
       </div>
 
-      <div className="glass-card rounded-xl p-6">
-        <h2 className="font-title-lg text-title-lg text-on-surface mb-4">
-          Add New Unit
-        </h2>
+      <ExpandableForm title="Add New Unit" buttonLabel="New Unit">
         <form action={addUnit} className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <select
             name="property_id"
@@ -184,7 +182,7 @@ export default async function UnitsPage({
             Add Unit
           </button>
         </form>
-      </div>
+      </ExpandableForm>
 
       <div className="glass-card rounded-xl p-0 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30">
