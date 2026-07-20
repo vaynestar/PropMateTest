@@ -53,11 +53,11 @@ export default async function ResidentDashboardPage() {
 
   if (!lease) {
     return (
-      <div className="flex flex-col gap-stack-md">
+      <div className="flex flex-col gap-stack-lg">
         <h1 className="font-headline-lg text-headline-lg text-on-surface">
           Welcome Home
         </h1>
-        <div className="glass-card rounded-xl p-6 text-center">
+        <div className="glass-card rounded-xl p-8 text-center">
           <span className="material-symbols-outlined text-on-surface-variant text-5xl">
             info
           </span>
@@ -87,12 +87,12 @@ export default async function ResidentDashboardPage() {
   const dueInDays = nextDue ? daysUntil(nextDue.due_date) : null;
 
   return (
-    <div className="flex flex-col gap-stack-md">
+    <div className="flex flex-col gap-stack-lg">
       <h1 className="font-headline-md text-headline-md font-bold text-on-surface">
         Welcome Home
       </h1>
 
-      <section className="glass-card rounded-xl px-4 py-4 flex flex-col gap-stack-sm relative overflow-hidden">
+      <section className="glass-card rounded-xl p-stack-lg flex flex-col gap-stack-md relative overflow-hidden">
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
         <div className="flex justify-between items-start z-10">
           <div className="flex flex-col">
@@ -112,10 +112,10 @@ export default async function ResidentDashboardPage() {
             </div>
           )}
         </div>
-        <div className="flex gap-stack-sm z-10">
+        <div className="flex gap-stack-sm mt-2 z-10">
           <Link
             href="/resident/invoices"
-            className="gradient-btn flex-1 py-2.5 font-label-md text-label-md flex justify-center items-center gap-2"
+            className="gradient-btn flex-1 py-3 font-label-md text-label-md flex justify-center items-center gap-2"
           >
             Pay Now
             <span className="material-symbols-outlined text-[18px]">
@@ -136,7 +136,7 @@ export default async function ResidentDashboardPage() {
           <Link
             key={action.label}
             href={action.href}
-            className="pressable glass-card rounded-lg px-3 py-3 flex flex-col items-center justify-center gap-1.5 hover:bg-surface-container-high transition-colors group"
+            className="pressable glass-card rounded-lg p-stack-md flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-colors group"
           >
             <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant group-hover:border-primary/50 transition-colors">
               <span className="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">
@@ -150,9 +150,9 @@ export default async function ResidentDashboardPage() {
         ))}
       </section>
 
-      <section className="flex flex-col gap-2">
+      <section className="flex flex-col gap-stack-sm">
         <div className="flex justify-between items-center">
-          <h2 className="font-title-md text-title-md text-on-surface">
+          <h2 className="font-title-lg text-title-lg text-on-surface">
             Upcoming Bookings
           </h2>
           <Link
@@ -167,8 +167,8 @@ export default async function ResidentDashboardPage() {
             No upcoming bookings.
           </p>
         ) : (
-          <div className="flex overflow-x-auto hide-scrollbar gap-stack-md">
-            {bookings.slice(0, 3).map((b) => {
+          <div className="flex overflow-x-auto hide-scrollbar gap-stack-md pb-4">
+            {bookings.map((b) => {
               const days = daysUntil(b.booking_date);
               const when =
                 days === 0
@@ -181,7 +181,7 @@ export default async function ResidentDashboardPage() {
                   key={b.booking_id}
                   className="glass-card rounded-lg min-w-[240px] flex-shrink-0 flex flex-col"
                 >
-                  <div className="h-20 rounded-t-lg bg-surface-container-high overflow-hidden relative">
+                  <div className="h-24 rounded-t-lg bg-surface-container-high overflow-hidden relative">
                     <div className="absolute top-2 right-2 bg-surface-container-highest/90 backdrop-blur px-2 py-1 rounded font-label-sm text-label-sm border border-outline-variant">
                       {when}
                     </div>
@@ -212,11 +212,11 @@ export default async function ResidentDashboardPage() {
       </section>
 
       {announcement && (
-        <section className="flex flex-col gap-2 mb-2">
-          <h2 className="font-title-md text-title-md text-on-surface">
+        <section className="flex flex-col gap-stack-sm mb-4">
+          <h2 className="font-title-lg text-title-lg text-on-surface">
             Latest Announcement
           </h2>
-          <div className="glass-card rounded-lg p-3 flex items-start gap-stack-md">
+          <div className="glass-card rounded-lg p-stack-md flex items-start gap-stack-md">
             <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 mt-1">
               <span
                 className="material-symbols-outlined text-primary"
