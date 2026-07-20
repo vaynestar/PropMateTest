@@ -45,3 +45,28 @@ export async function getResidentTickets(userId: string) {
     include: { lease: { include: { unit: true } } },
   });
 }
+
+export async function getResidentBookings(userId: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return prisma.booking.findMany({
+    where: {
+      user_id: userId,
+      booking_date: { gte: today },
+      booking_status: { not: "Cancelled" },
+    },
+    orderBy: [{ booking_date: "asc" }, { start_time: "asc" }],
+    include: { facility: { include: { property: true } } },
+    take: 10,
+  });
+}
+
+export async function getLatestAnnouncement(propertyId: string) {
+  return prisma.announcement.findFirst({
+    where: {
+      property_id: propertyId,
+      expiry_date: { gte: new Date() },
+    },
+    orderBy: { publish_date: "desc" },
+  });
+}

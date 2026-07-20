@@ -116,6 +116,31 @@
     filter: brightness(1.1);
     box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
   }
+
+  .gradient-btn {
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+    border-radius: 4px;
+    color: #dce1fb;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .gradient-btn:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 0 15px rgba(124, 58, 237, 0.3);
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
 }
 
 /* ============================================================
