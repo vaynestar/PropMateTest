@@ -136,7 +136,7 @@ export default async function ResidentDashboardPage() {
           <Link
             key={action.label}
             href={action.href}
-            className="glass-card rounded-lg p-stack-md flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-colors group"
+            className="pressable glass-card rounded-lg p-stack-md flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-colors group"
           >
             <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant group-hover:border-primary/50 transition-colors">
               <span className="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">

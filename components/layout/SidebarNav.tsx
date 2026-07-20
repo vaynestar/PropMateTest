@@ -33,7 +33,7 @@ export default function SidebarNav() {
             <div key={item.href} className="flex flex-col gap-1">
               <Link
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors duration-200 ${
+                className={`pressable flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors duration-200 ${
                   active
                     ? "text-primary font-bold border-l-4 border-primary bg-primary/10"
                     : "text-on-surface-variant hover:bg-surface-container-high"
@@ -46,9 +46,9 @@ export default function SidebarNav() {
                 <div className="pl-10 flex flex-col gap-1 mb-1">
                   {item.children.map((child) => (
                     <Link
-                      key={child.href}
-                      href={child.href}
-                      className={`py-1.5 font-label-md text-label-md transition-colors ${
+                        key={child.href}
+                        href={child.href}
+                        className={`pressable py-1.5 font-label-md text-label-md transition-colors ${
                         pathname === child.href
                           ? "text-primary"
                           : "text-on-surface-variant hover:text-on-surface"

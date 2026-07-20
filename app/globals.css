@@ -141,6 +141,28 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
+
+  .animate-spin-slow {
+    animation: spin 1.2s linear infinite;
+  }
+
+  .pressable {
+    transition: transform 0.1s ease, background-color 0.2s ease,
+      color 0.2s ease;
+  }
+
+  .pressable:active {
+    transform: scale(0.95);
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ============================================================

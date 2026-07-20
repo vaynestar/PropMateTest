@@ -43,7 +43,7 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors duration-200 ${
+                className={`pressable flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition-colors duration-200 ${
                   active
                     ? "text-primary font-bold border-l-4 border-primary bg-primary/10"
                     : "text-on-surface-variant hover:bg-surface-container-high"
@@ -106,7 +106,7 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
             <Link
               key={item.label}
               href={item.href}
-              className={`flex flex-col items-center justify-center w-full h-full py-2 ${
+              className={`pressable flex flex-col items-center justify-center w-full h-full py-2 ${
                 active
                   ? "text-primary font-bold border-t-2 border-primary bg-primary/5"
                   : "text-on-surface-variant hover:text-on-surface transition-colors"
