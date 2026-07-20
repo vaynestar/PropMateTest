@@ -339,8 +339,9 @@ async function main() {
     { name: "Badminton Court C", capacity: 4 },
     { name: "Badminton Court D", capacity: 4 },
   ];
+  const courtIds: string[] = [];
   for (const c of badmintonCourts) {
-    await prisma.facility.create({
+    const created = await prisma.facility.create({
       data: {
         property_id: prop1.property_id,
         facility_name: c.name,
@@ -354,9 +355,60 @@ async function main() {
         created_by: admin.user_id,
       },
     });
+    courtIds.push(created.facility_id);
   }
 
-  console.log("Seed complete: 2 properties, 8 units, 2 users, 4 invoices, 4 tickets, 7 facilities.");
+  // Sample bookings so the availability bar + clash check are visible on first run.
+  // Dates are computed relative to today so they always fall on upcoming open days.
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const addDays = (n: number) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + n);
+    return d;
+  };
+  const atTime = (base: Date, hhmm: string) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    const d = new Date(base);
+    d.setHours(h, m, 0, 0);
+    return d;
+  };
+
+  const sampleBookings = [
+    // Court A: tomorrow 10:00–11:30
+    { court: 0, dayOffset: 1, start: "10:00", end: "11:30", purpose: "Morning doubles" },
+    // Court A: +3 days 15:00–16:30
+    { court: 0, dayOffset: 3, start: "15:00", end: "16:30", purpose: "Coaching session" },
+    // Court B: tomorrow 14:00–16:00
+    { court: 1, dayOffset: 1, start: "14:00", end: "16:00", purpose: "Friendly match" },
+    // Court B: +2 days 09:00–10:00
+    { court: 1, dayOffset: 2, start: "09:00", end: "10:00", purpose: "Solo practice" },
+    // Court C: +2 days 18:00–19:30
+    { court: 2, dayOffset: 2, start: "18:00", end: "19:30", purpose: "Evening game" },
+    // Court D: +4 days 11:00–12:00
+    { court: 3, dayOffset: 4, start: "11:00", end: "12:00", purpose: "Club session" },
+    // Court D: +4 days 17:00–18:30
+    { court: 3, dayOffset: 4, start: "17:00", end: "18:30", purpose: "Tournament prep" },
+  ];
+  for (const b of sampleBookings) {
+    const date = addDays(b.dayOffset);
+    await prisma.booking.create({
+      data: {
+        facility_id: courtIds[b.court],
+        user_id: resident.user_id,
+        lease_id: leaseDHA.lease_id,
+        booking_date: date,
+        booking_status: "Confirmed",
+        start_time: atTime(date, b.start),
+        end_time: atTime(date, b.end),
+        pax_count: 2,
+        purpose: b.purpose,
+        created_by: resident.user_id,
+      },
+    });
+  }
+
+  console.log("Seed complete: 2 properties, 8 units, 2 users, 4 invoices, 4 tickets, 7 facilities, 7 sample bookings.");
 }
 
 main()
