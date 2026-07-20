@@ -35,14 +35,11 @@ export const adminNav: NavItem[] = [
     label: "Facilities",
     href: "/admin/facilities",
     icon: "apartment",
-    children: [
-      { label: "Helpdesk", href: "/admin/maintenance" },
-      { label: "Bookings", href: "/admin/bookings" },
-    ],
+    children: [{ label: "Bookings", href: "/admin/bookings" }],
   },
   {
     label: "Helpdesk",
-    href: "/admin/helpdesk",
+    href: "/admin/maintenance",
     icon: "support_agent",
   },
   {
