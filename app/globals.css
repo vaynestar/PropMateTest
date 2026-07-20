@@ -146,6 +146,10 @@
     animation: spin 1.2s linear infinite;
   }
 
+  .animate-slide-in {
+    animation: slide-in 0.25s ease-out;
+  }
+
   .pressable {
     transition: transform 0.1s ease, background-color 0.2s ease,
       color 0.2s ease;
@@ -162,6 +166,15 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
   }
 }
 

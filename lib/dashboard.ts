@@ -9,7 +9,9 @@ export type DashboardStats = {
   occupancyRate: number;
   totalInvoices: number;
   unpaidInvoices: number;
+  overdueInvoices: number;
   outstandingAmount: number;
+  monthlyRevenue: number;
   openTickets: number;
   totalTenants: number;
   recentTickets: {
@@ -37,7 +39,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     maintenanceUnits,
     totalInvoices,
     unpaidInvoices,
+    overdueInvoices,
     outstandingAgg,
+    monthlyRevenueAgg,
     openTickets,
     totalTenants,
     recentTickets,
@@ -50,9 +54,14 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     prisma.unit.count({ where: { status: "Maintenance" } }),
     prisma.invoice.count(),
     prisma.invoice.count({ where: { status: "Unpaid" } }),
+    prisma.invoice.count({ where: { status: "Overdue" } }),
     prisma.invoice.aggregate({
       _sum: { total_amount: true },
       where: { status: { not: "Paid" } },
+    }),
+    prisma.unit.aggregate({
+      _sum: { monthly_rent: true },
+      where: { status: "Occupied" },
     }),
     prisma.ticket.count({ where: { status: { not: "Closed" } } }),
     prisma.user.count({ where: { role: "Resident" } }),
@@ -84,6 +93,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
   const outstandingAmount = Number(outstandingAgg._sum.total_amount ?? 0);
+  const monthlyRevenue = Number(monthlyRevenueAgg._sum.monthly_rent ?? 0);
 
   const recentInvoicesTyped = recentInvoices.map((inv) => ({
     ...inv,
@@ -99,7 +109,9 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     occupancyRate,
     totalInvoices,
     unpaidInvoices,
+    overdueInvoices,
     outstandingAmount,
+    monthlyRevenue,
     openTickets,
     totalTenants,
     recentTickets,

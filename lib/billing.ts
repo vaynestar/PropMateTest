@@ -43,6 +43,22 @@ export async function listInvoices(): Promise<InvoiceWithRelations[]> {
   });
 }
 
+export async function getRecentInvoices(limit = 5): Promise<InvoiceWithRelations[]> {
+  return prisma.invoice.findMany({
+    orderBy: { invoice_date: "desc" },
+    take: limit,
+    include: {
+      lease: {
+        include: {
+          unit: { include: { property: true } },
+          tenant: true,
+        },
+      },
+      details: { include: { charge: true } },
+    },
+  });
+}
+
 export async function generateMonthlyInvoices(createdBy?: string) {
   const rentalCharge = await prisma.chargeMaster.findFirst({
     where: { charge_name: "Monthly Rental" },

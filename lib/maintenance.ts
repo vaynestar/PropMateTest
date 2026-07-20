@@ -31,6 +31,21 @@ export async function listTickets(): Promise<TicketWithRelations[]> {
   });
 }
 
+export async function getRecentTickets(limit = 5): Promise<TicketWithRelations[]> {
+  return prisma.ticket.findMany({
+    orderBy: { created_at: "desc" },
+    take: limit,
+    include: {
+      lease: {
+        include: {
+          unit: { include: { property: true } },
+          tenant: true,
+        },
+      },
+    },
+  });
+}
+
 export async function raiseTicket(input: {
   unit_id: string;
   requester_id: string;
