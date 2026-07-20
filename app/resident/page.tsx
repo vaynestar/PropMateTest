@@ -168,7 +168,7 @@ export default async function ResidentDashboardPage() {
           </p>
         ) : (
           <div className="flex overflow-x-auto hide-scrollbar gap-stack-md pb-4">
-            {bookings.map((b) => {
+            {bookings.slice(0, 3).map((b) => {
               const days = daysUntil(b.booking_date);
               const when =
                 days === 0
