@@ -323,7 +323,28 @@ async function main() {
     },
   });
 
-  console.log("Seed complete: 2 properties, 8 units, 2 users, 4 invoices, 4 tickets, 3 facilities.");
+  // Badminton courts (Court A-D) for the booking demo
+  const badmintonCourts = [
+    { name: "Badminton Court A", capacity: 4 },
+    { name: "Badminton Court B", capacity: 4 },
+    { name: "Badminton Court C", capacity: 4 },
+    { name: "Badminton Court D", capacity: 4 },
+  ];
+  for (const c of badmintonCourts) {
+    await prisma.facility.create({
+      data: {
+        property_id: prop1.property_id,
+        facility_name: c.name,
+        facility_type: "Badminton Court",
+        facility_status: "Available",
+        max_capacity: c.capacity,
+        is_bookable: true,
+        created_by: admin.user_id,
+      },
+    });
+  }
+
+  console.log("Seed complete: 2 properties, 8 units, 2 users, 4 invoices, 4 tickets, 7 facilities.");
 }
 
 main()
