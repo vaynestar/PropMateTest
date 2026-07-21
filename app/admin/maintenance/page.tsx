@@ -2,26 +2,13 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { listTickets } from "@/lib/maintenance";
 import { listUnits } from "@/lib/unit-management";
-import StatusBadge from "@/components/dashboard/StatusBadge";
 import ExpandableForm from "@/components/layout/ExpandableForm";
+import AdminTicketTable from "@/components/maintenance/AdminTicketTable";
 
 export const dynamic = "force-dynamic";
 
 const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 const CATEGORIES = ["Maintenance", "Plumbing", "Electrical", "Security", "Others"];
-const NEXT_STATUSES: Record<string, string> = {
-  Open: "In Progress",
-  "In Progress": "Resolved",
-  Resolved: "Closed",
-};
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
-}
 
 async function raiseTicket(formData: FormData) {
   "use server";
@@ -40,18 +27,7 @@ async function raiseTicket(formData: FormData) {
   revalidatePath("/admin/maintenance");
 }
 
-async function updateStatus(formData: FormData) {
-  "use server";
-  await requireUser(["Admin"]);
-  const ticketId = String(formData.get("ticket_id"));
-  const status = String(formData.get("status"));
-  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/tickets`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ticket_id: ticketId, status }),
-  });
-  revalidatePath("/admin/maintenance");
-}
+
 
 export default async function MaintenancePage() {
   const user = await requireUser(["Admin"]);
@@ -153,67 +129,7 @@ export default async function MaintenancePage() {
         </form>
       </ExpandableForm>
 
-      <div className="glass-card rounded-xl p-0 overflow-hidden">
-        <div className="px-6 py-4 border-b border-outline-variant/30">
-          <h2 className="font-title-lg text-title-lg text-on-surface">
-            All Tickets
-          </h2>
-        </div>
-        <div className="divide-y divide-outline-variant/30">
-          {tickets.length === 0 && (
-            <p className="font-body-md text-body-md text-on-surface-variant px-6 py-8">
-              No helpdesk tickets yet.
-            </p>
-          )}
-          {tickets.map((t) => {
-            const next = NEXT_STATUSES[t.status];
-            return (
-              <div
-                key={t.ticket_id}
-                className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-6 py-4"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className="font-title-md text-title-md text-on-surface">
-                      {t.title}
-                    </span>
-                    <StatusBadge status={t.status} variant="ticket" />
-                  </div>
-                  <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">
-                    {t.lease.unit.unit_number} ·{" "}
-                    {t.lease.unit.property.property_name} · {t.priority}{" "}
-                    priority
-                  </p>
-                  <p className="font-label-sm text-label-sm text-on-surface-variant">
-                    Reported {formatDate(t.created_at)}
-                  </p>
-                </div>
-
-                {next ? (
-                  <form action={updateStatus} className="shrink-0">
-                    <input
-                      type="hidden"
-                      name="ticket_id"
-                      value={t.ticket_id}
-                    />
-                    <input type="hidden" name="status" value={next} />
-                    <button
-                      type="submit"
-                      className="font-label-sm text-label-sm text-primary hover:text-primary-container transition-colors"
-                    >
-                      Mark {next}
-                    </button>
-                  </form>
-                ) : (
-                  <span className="font-label-sm text-label-sm text-on-surface-variant shrink-0">
-                    Closed
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <AdminTicketTable tickets={tickets} />
     </div>
   );
 }

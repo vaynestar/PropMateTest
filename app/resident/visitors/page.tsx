@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import VisitorForm from "./VisitorForm";
 import StatusBadge from "@/components/dashboard/StatusBadge";
+import VisitorQRCode from "@/components/visitors/VisitorQRCode";
 
 export const dynamic = "force-dynamic";
 
@@ -62,8 +63,16 @@ export default async function ResidentVisitorsPage() {
                   <p className="text-xs text-on-surface-variant font-mono mt-0.5">
                     IC/Passport: {v.visitor_ic_no}
                   </p>
+                  <div className="mt-2">
+                    <StatusBadge status={v.status || "Pending"} />
+                  </div>
                 </div>
-                <StatusBadge status={v.status || "Pending"} />
+                {v.status === "Approved" && (
+                  <div className="shrink-0 flex flex-col items-center">
+                    <VisitorQRCode value={v.visitor_id} />
+                    <span className="text-[10px] text-on-surface-variant mt-1">Show at guardhouse</span>
+                  </div>
+                )}
               </div>
               
               <div className="space-y-2 mt-4 text-sm text-on-surface-variant">

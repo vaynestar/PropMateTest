@@ -38,7 +38,7 @@ export async function registerVisitor(state: any, formData: FormData) {
         vehicle_plate,
         visit_purpose,
         visit_date: new Date(visit_date_str),
-        status: "Pending",
+        status: "Approved",
         created_by: user.userId,
       },
     });

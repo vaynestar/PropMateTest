@@ -4,6 +4,7 @@ import ExpandableForm from "@/components/layout/ExpandableForm";
 import AdminVisitorForm from "./AdminVisitorForm";
 import AdminVisitorList from "./AdminVisitorList";
 import { getAllVisitors } from "@/lib/visitor-management";
+import ScanButton from "@/components/visitors/ScanButton";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +32,7 @@ export default async function AdminVisitorsPage() {
             Manage resident visitors and approve entry
           </p>
         </div>
+        <ScanButton />
       </div>
 
       <ExpandableForm title="Register Walk-in Visitor" buttonLabel="New Visitor" defaultOpen={false}>
