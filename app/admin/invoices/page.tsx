@@ -35,6 +35,8 @@ async function markPaid(formData: FormData) {
   revalidatePath("/admin/invoices");
 }
 
+import { generateInvoicesAction } from "./actions";
+
 export default async function InvoicesDetailPage({
   searchParams,
 }: {
@@ -51,19 +53,35 @@ export default async function InvoicesDetailPage({
 
   return (
     <div className="flex flex-col gap-stack-lg">
-      <div>
-        <Link
-          href="/admin/billing"
-          className="font-label-sm text-label-sm text-primary hover:text-primary-container transition-colors"
-        >
-          ← Back to Billing
-        </Link>
-        <h1 className="font-headline-lg text-headline-lg text-on-surface mt-2">
-          Invoice Details
-        </h1>
-        <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-          Itemised view of every generated invoice.
-        </p>
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+        <div>
+          <Link
+            href="/admin/billing"
+            className="font-label-sm text-label-sm text-primary hover:text-primary-container transition-colors"
+          >
+            ← Back to Billing
+          </Link>
+          <h1 className="font-headline-lg text-headline-lg text-on-surface mt-2">
+            Invoice Details
+          </h1>
+          <p className="font-body-md text-body-md text-on-surface-variant mt-1">
+            Itemised view of every generated invoice.
+          </p>
+        </div>
+        <form action={generateInvoicesAction}>
+          <button
+            type="submit"
+            className="btn-primary px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2 transition-all"
+          >
+            <span
+              className="material-symbols-outlined"
+              style={{ fontSize: 18 }}
+            >
+              receipt_long
+            </span>
+            Generate Monthly Invoices
+          </button>
+        </form>
       </div>
 
       <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-outline-variant/30">

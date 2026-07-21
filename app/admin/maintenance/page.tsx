@@ -30,12 +30,18 @@ async function raiseTicket(formData: FormData) {
 
 
 
+import prisma from "@/lib/prisma";
+
 export default async function MaintenancePage() {
   await requireUser(["Admin"]);
   const cookieStore = await cookies();
   const propertyId = cookieStore.get("propmate_property_id")?.value;
 
-  const [tickets, units] = await Promise.all([listTickets(propertyId), listUnits()]);
+  const [tickets, units, admins] = await Promise.all([
+    listTickets(propertyId),
+    listUnits(),
+    prisma.user.findMany({ where: { role: "Admin" }, select: { user_id: true, user_name: true } }),
+  ]);
 
   const occupiedUnits = units.filter((u) => u.status === "Occupied");
   const openCount = tickets.filter(
@@ -133,7 +139,7 @@ export default async function MaintenancePage() {
         </form>
       </ExpandableForm>
 
-      <AdminTicketTable tickets={tickets} />
+      <AdminTicketTable tickets={tickets} admins={admins} />
     </div>
   );
 }
