@@ -22,46 +22,46 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               <span className="font-body-md text-body-md">Dashboard</span>
             </Link>
           </li>
-          <li className="group">
-            <div className="flex items-center justify-between px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors duration-200 cursor-pointer">
+          <details className="group [&_summary::-webkit-details-marker]:hidden">
+            <summary className="list-none flex items-center justify-between px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors duration-200 cursor-pointer">
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined">domain</span>
                 <span className="font-body-md text-body-md">Properties</span>
               </div>
-              <span className="material-symbols-outlined text-sm">expand_more</span>
-            </div>
-            <ul className="ml-11 mt-1 flex flex-col gap-1">
+              <span className="material-symbols-outlined text-sm transition-transform group-open:rotate-180">expand_more</span>
+            </summary>
+            <ul className="ml-11 mt-1 flex flex-col gap-1 pb-2">
               <li><Link href="/admin/properties" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">All Properties</Link></li>
               <li><Link href="/admin/units" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Units</Link></li>
               <li><Link href="/admin/leases" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Leases</Link></li>
             </ul>
-          </li>
-          <li className="group">
-            <div className="flex items-center justify-between px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors duration-200 cursor-pointer">
+          </details>
+          <details className="group [&_summary::-webkit-details-marker]:hidden">
+            <summary className="list-none flex items-center justify-between px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors duration-200 cursor-pointer">
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined">payments</span>
                 <span className="font-body-md text-body-md">Billing</span>
               </div>
-              <span className="material-symbols-outlined text-sm">expand_more</span>
-            </div>
-            <ul className="ml-11 mt-1 flex flex-col gap-1">
+              <span className="material-symbols-outlined text-sm transition-transform group-open:rotate-180">expand_more</span>
+            </summary>
+            <ul className="ml-11 mt-1 flex flex-col gap-1 pb-2">
               <li><Link href="/admin/billing" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Billing Overview</Link></li>
               <li><Link href="/admin/invoices" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Invoices</Link></li>
             </ul>
-          </li>
-          <li className="group">
-            <div className="flex items-center justify-between px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors duration-200 cursor-pointer">
+          </details>
+          <details className="group [&_summary::-webkit-details-marker]:hidden">
+            <summary className="list-none flex items-center justify-between px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors duration-200 cursor-pointer">
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined">home_repair_service</span>
                 <span className="font-body-md text-body-md">Facilities</span>
               </div>
-              <span className="material-symbols-outlined text-sm">expand_more</span>
-            </div>
-            <ul className="ml-11 mt-1 flex flex-col gap-1">
+              <span className="material-symbols-outlined text-sm transition-transform group-open:rotate-180">expand_more</span>
+            </summary>
+            <ul className="ml-11 mt-1 flex flex-col gap-1 pb-2">
               <li><Link href="/admin/facilities" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Manage Facilities</Link></li>
               <li><Link href="/admin/bookings" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Bookings</Link></li>
             </ul>
-          </li>
+          </details>
           <li>
             <Link className="flex items-center gap-3 px-4 py-3 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container-high transition-colors duration-200" href="/admin/maintenance">
               <span className="material-symbols-outlined">support_agent</span>
