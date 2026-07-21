@@ -98,10 +98,10 @@ export default async function ResidentDashboardPage() {
             </div>
           )}
         </div>
-        <div className="flex gap-stack-sm mt-2 z-10">
+        <div className="flex gap-stack-sm mt-4 z-10 w-full">
           <Link
             href="/resident/invoices"
-            className="gradient-btn flex-1 py-3 font-label-md text-label-md flex justify-center items-center gap-2"
+            className="gradient-btn flex-1 py-3 rounded-lg font-label-md text-label-md flex justify-center items-center gap-2"
           >
             Pay Now
             <span className="material-symbols-outlined text-[18px]">
@@ -110,7 +110,7 @@ export default async function ResidentDashboardPage() {
           </Link>
           <Link
             href="/resident/invoices"
-            className="bg-transparent border border-outline px-4 rounded font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-colors"
+            className="bg-transparent border border-outline px-6 py-3 rounded-lg font-label-md text-label-md text-on-surface hover:bg-surface-container-high transition-colors flex items-center justify-center"
           >
             History
           </Link>
@@ -122,10 +122,10 @@ export default async function ResidentDashboardPage() {
           <Link
             key={action.label}
             href={action.href}
-            className="pressable glass-card rounded-lg p-stack-md flex flex-col items-center justify-center gap-2 hover:bg-slate-800/50 transition-colors group"
+            className="pressable glass-card rounded-xl p-stack-md flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-colors group"
           >
-            <div className="w-12 h-12 rounded-full bg-slate-900/50 flex items-center justify-center border border-outline-variant group-hover:border-primary/50 transition-colors">
-              <span className="material-symbols-outlined text-on-secondary group-hover:text-on-surface transition-colors" style={{ fontVariationSettings: "'wght' 200" }}>
+            <div className="w-12 h-12 rounded-full bg-surface-container-high/50 flex items-center justify-center border border-outline-variant group-hover:border-primary/50 transition-colors">
+              <span className="material-symbols-outlined text-primary group-hover:text-on-surface transition-colors">
                 {action.icon}
               </span>
             </div>
@@ -160,9 +160,9 @@ export default async function ResidentDashboardPage() {
 
               return (
                 <div key={booking.booking_id} className="glass-card rounded-lg min-w-[240px] flex-shrink-0 flex flex-col">
-                  <div className="h-24 rounded-t-lg bg-slate-900/50 overflow-hidden relative flex items-center justify-center border-b border-outline-variant/30">
-                    <span className="material-symbols-outlined text-4xl text-slate-700">meeting_room</span>
-                    <div className="absolute top-2 right-2 bg-slate-900/90 backdrop-blur px-2 py-1 rounded font-label-sm text-label-sm border border-outline-variant">
+                  <div className="h-24 rounded-t-lg bg-surface-container-highest/50 overflow-hidden relative flex items-center justify-center border-b border-outline-variant/30">
+                    <span className="material-symbols-outlined text-4xl text-primary/40">meeting_room</span>
+                    <div className="absolute top-2 right-2 bg-surface-container-highest/90 backdrop-blur px-2 py-1 rounded font-label-sm text-label-sm border border-outline-variant">
                       {dateLabel}
                     </div>
                   </div>
