@@ -96,39 +96,44 @@ export default async function ResidentMaintenancePage() {
         </ExpandableForm>
       )}
 
-      <div className="glass-card rounded-xl p-0 overflow-hidden">
-        <div className="px-6 py-4 border-b border-outline-variant/30">
-          <h2 className="font-title-lg text-title-lg text-on-surface">
-            My Requests
-          </h2>
-        </div>
-        <div className="divide-y divide-outline-variant/30">
+      <div className="flex flex-col gap-stack-sm w-full">
+        <h2 className="font-title-lg text-title-lg text-on-surface px-1">
+          My Requests
+        </h2>
+        <div className="flex flex-col gap-stack-md w-full">
           {tickets.length === 0 && (
-            <p className="font-body-md text-body-md text-on-surface-variant px-6 py-8">
+            <p className="font-body-md text-body-md text-on-surface-variant px-6 py-8 text-center glass-card rounded-xl">
               No helpdesk requests yet.
             </p>
           )}
           {tickets.map((t) => (
             <div
               key={t.ticket_id}
-              className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between px-6 py-4"
+              className="glass-card rounded-xl p-4 flex flex-col gap-3 w-full"
             >
-              <div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="font-title-md text-title-md text-on-surface">
+              <div className="flex justify-between items-start w-full">
+                <div className="flex flex-col">
+                  <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
+                    {t.ticket_category}
+                  </span>
+                  <span className="font-title-lg text-title-lg text-on-surface">
                     {t.title}
                   </span>
-                  <StatusBadge status={t.status} variant="ticket" />
                 </div>
-                <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">
-                  {t.ticket_category} · {t.lease.unit.unit_number} · Reported{" "}
-                  {formatDate(t.created_at)}
+                <StatusBadge status={t.status} variant="ticket" />
+              </div>
+              {t.description && (
+                <p className="font-body-md text-body-md text-on-surface-variant">
+                  {t.description}
                 </p>
-                {t.description && (
-                  <p className="font-body-sm text-body-sm text-on-surface-variant mt-1">
-                    {t.description}
-                  </p>
-                )}
+              )}
+              <div className="flex justify-between items-center w-full mt-2 pt-3 border-t border-outline-variant/30">
+                <span className="font-body-md text-body-md text-on-surface-variant">
+                  Reported: {formatDate(t.created_at)}
+                </span>
+                <span className="font-label-md text-label-md text-primary">
+                  Unit {t.lease.unit.unit_number}
+                </span>
               </div>
             </div>
           ))}

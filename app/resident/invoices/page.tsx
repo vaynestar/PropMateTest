@@ -35,50 +35,46 @@ export default async function ResidentInvoicesPage() {
         </p>
       </div>
 
-      <div className="glass-card rounded-xl p-0 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            <thead className="bg-surface-container-high/50">
-              <tr className="font-label-sm text-label-sm text-on-surface-variant">
-                <th className="px-6 py-3">Invoice No.</th>
-                <th className="px-6 py-3">Unit</th>
-                <th className="px-6 py-3">Issued</th>
-                <th className="px-6 py-3">Due</th>
-                <th className="px-6 py-3 text-right">Amount</th>
-                <th className="px-6 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-outline-variant/30">
-              {invoices.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-6 py-10 font-body-md text-body-md text-on-surface-variant text-center"
-                  >
-                    No invoices yet.
-                  </td>
-                </tr>
-              )}
-              {invoices.map((inv) => (
-                <tr
-                  key={inv.invoice_id}
-                  className="font-body-md text-body-md text-on-surface"
+      <div className="flex flex-col gap-stack-md w-full">
+        {invoices.length === 0 && (
+          <p className="font-body-md text-body-md text-on-surface-variant px-6 py-8 text-center">
+            No invoices yet.
+          </p>
+        )}
+        {invoices.map((inv) => (
+          <div
+            key={inv.invoice_id}
+            className={`glass-card rounded-xl p-4 flex flex-col gap-3 text-left w-full ${
+              inv.status === "Paid" ? "opacity-70" : ""
+            }`}
+          >
+            <div className="flex justify-between items-start w-full">
+              <div className="flex flex-col">
+                <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
+                  Unit {inv.lease.unit.unit_number}
+                </span>
+                <span
+                  className={`font-headline-md text-headline-md text-on-surface ${
+                    inv.status === "Paid"
+                      ? "line-through decoration-outline-variant"
+                      : ""
+                  }`}
                 >
-                  <td className="px-6 py-4 font-label-md">{inv.invoice_no}</td>
-                  <td className="px-6 py-4">{inv.lease.unit.unit_number}</td>
-                  <td className="px-6 py-4">{formatDate(inv.invoice_date)}</td>
-                  <td className="px-6 py-4">{formatDate(inv.due_date)}</td>
-                  <td className="px-6 py-4 text-right">
-                    {formatCurrency(Number(inv.total_amount))}
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={inv.status} variant="invoice" />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  {formatCurrency(Number(inv.total_amount))}
+                </span>
+              </div>
+              <StatusBadge status={inv.status} variant="invoice" />
+            </div>
+            <div className="flex justify-between items-center w-full mt-2 pt-3 border-t border-outline-variant/30">
+              <span className="font-body-md text-body-md text-on-surface-variant">
+                Due: {formatDate(inv.due_date)}
+              </span>
+              <span className="font-label-md text-label-md text-primary">
+                {inv.invoice_no}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

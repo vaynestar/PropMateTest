@@ -83,37 +83,60 @@ export default function FacilityBooking({
         {facilities.map((f) => {
           const active = f.facility_id === selectedId;
           return (
-            <button
-              key={f.facility_id}
-              type="button"
-              onClick={() => setSelectedId(f.facility_id)}
-              className={`glass-card rounded-xl p-5 text-left transition-all active:scale-[0.98] ${
-                active
-                  ? "border-2 border-primary"
-                  : "border border-outline-variant hover:border-primary/60"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-primary">
-                  sports_tennis
-                </span>
+            <React.Fragment key={f.facility_id}>
+              <button
+                type="button"
+                onClick={() => setSelectedId(active ? null : f.facility_id)}
+                className={`rounded-xl p-6 glass-card flex flex-col justify-between group cursor-pointer hover:border-primary/50 transition-colors text-left ${
+                  active
+                    ? "border-2 border-primary bg-primary/5"
+                    : "border border-outline-variant"
+                }`}
+              >
                 <div>
-                  <p className="font-title-sm text-title-sm text-on-surface">
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="w-12 h-12 rounded-lg bg-surface-container-high/30 border border-outline-variant flex items-center justify-center text-primary shadow-inner">
+                      <span className="material-symbols-outlined text-2xl">
+                        sports_tennis
+                      </span>
+                    </div>
+                    {active && (
+                      <span className="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded font-label-sm">
+                        Selected
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-title-lg text-on-surface mb-1 truncate">
                     {f.facility_name}
-                  </p>
-                  <p className="font-label-sm text-label-sm text-on-surface-variant">
+                  </h3>
+                  <p className="font-body-md text-on-surface-variant truncate">
                     {f.facility_type}
                   </p>
                 </div>
-              </div>
-            </button>
+                <div className="mt-6 pt-4 border-t border-outline-variant/30 flex justify-between items-center w-full">
+                  <div className="text-on-surface-variant font-label-md flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[16px]">
+                      group
+                    </span>{" "}
+                    Max {f.max_capacity}
+                  </div>
+                  <div className="text-primary font-label-md group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                    {active ? "Close" : "Select"}{" "}
+                    <span className="material-symbols-outlined text-[16px]">
+                      {active ? "expand_less" : "chevron_right"}
+                    </span>
+                  </div>
+                </div>
+              </button>
+              {active && (
+                <div className="col-span-1 sm:col-span-2 lg:col-span-3 w-full animate-in fade-in slide-in-from-top-4 duration-300">
+                  <BookingCard facility={f} bookings={bookings} />
+                </div>
+              )}
+            </React.Fragment>
           );
         })}
       </div>
-
-      {facility && (
-        <BookingCard key={facility.facility_id} facility={facility} bookings={bookings} />
-      )}
     </div>
   );
 }

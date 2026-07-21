@@ -50,11 +50,11 @@ export default async function ResidentFacilitiesPage() {
 
   return (
     <div className="space-y-6">
-      <section className="glass-card rounded-xl p-6">
-        <h1 className="font-title-lg text-title-lg text-on-surface">
-          Facilities Booking
+      <section className="flex flex-col gap-1 w-full min-w-0">
+        <h1 className="font-headline-lg-mobile md:font-headline-lg text-on-surface mb-2">
+          Reserve Facilities
         </h1>
-        <p className="font-body-md text-body-md text-on-surface-variant mt-1">
+        <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
           Pick a facility, choose a start and end time, then book it.
         </p>
       </section>
