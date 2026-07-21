@@ -66,7 +66,7 @@ export default function AdminFacilityBooking({
   const facility = facilities.find((f) => f.facility_id === selectedId) ?? null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0 w-full max-w-full">
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {facilities.map((f) => {
           const active = f.facility_id === selectedId;

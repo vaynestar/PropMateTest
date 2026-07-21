@@ -25,7 +25,7 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
     href === "/resident" ? pathname === href : pathname.startsWith(href);
 
   return (
-    <div className="min-h-screen flex bg-surface text-on-surface">
+    <div className="min-h-screen flex bg-surface text-on-surface w-full max-w-full overflow-x-hidden">
       <nav className="hidden md:flex w-[240px] h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface-container-lowest flex-col py-stack-lg z-50">
         <div className="px-6 mb-8 flex items-center gap-3">
           <div className="w-8 h-8 rounded bg-primary flex items-center justify-center font-bold text-on-primary">
@@ -64,7 +64,7 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
         </div>
       </nav>
 
-      <div className="flex-1 md:ml-[240px] flex flex-col min-h-screen">
+      <div className="flex-1 md:ml-[240px] flex flex-col min-h-screen min-w-0">
         <header className="flex justify-between items-center px-margin-mobile md:px-margin-desktop sticky top-0 z-40 w-full h-16 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/50">
           <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-primary-container flex items-center justify-center md:hidden">
             <span className="material-symbols-outlined text-on-primary text-[18px]">
@@ -99,8 +99,8 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 p-margin-mobile md:p-margin-desktop pb-24 md:pb-6">
-          <div className="max-w-container-max mx-auto">{children}</div>
+        <main className="flex-1 p-margin-mobile md:p-margin-desktop pb-24 md:pb-6 min-w-0">
+          <div className="max-w-container-max mx-auto min-w-0 w-full">{children}</div>
         </main>
       </div>
 

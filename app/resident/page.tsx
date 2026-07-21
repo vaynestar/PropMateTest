@@ -73,7 +73,7 @@ export default async function ResidentDashboardPage() {
     : null;
 
   return (
-    <div className="flex flex-col gap-stack-lg">
+    <div className="flex flex-col gap-stack-lg min-w-0 w-full max-w-full">
       <h1 className="font-headline-md text-headline-md font-bold text-on-surface">
         Welcome Home
       </h1>
@@ -137,7 +137,7 @@ export default async function ResidentDashboardPage() {
       </section>
 
       {bookings.length > 0 && (
-        <section className="flex flex-col gap-stack-sm">
+        <section className="flex flex-col gap-stack-sm min-w-0 w-full max-w-full">
           <div className="flex justify-between items-center">
             <h2 className="font-title-lg text-title-lg text-on-surface">Upcoming Bookings</h2>
             <Link href="/resident/facilities" className="font-label-sm text-label-sm text-primary hover:text-primary-container">View All</Link>
