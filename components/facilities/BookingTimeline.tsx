@@ -49,7 +49,7 @@ export default function BookingTimeline({
 
   return (
     <div className="w-full overflow-x-auto pb-4">
-      <div className="min-w-[600px] mt-2">
+      <div className="min-w-[600px] mt-2 px-6">
         {/* Timeline Header (Hours) */}
         <div className="relative h-6 border-b border-outline-variant/40 mb-2">
           {hours.map((h) => {

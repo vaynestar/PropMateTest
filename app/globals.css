@@ -105,4 +105,5 @@ body {
   font-family: var(--font-inter);
   background-color: var(--color-background);
   color: var(--color-on-surface);
+  overflow-x: hidden;
 }

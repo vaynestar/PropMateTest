@@ -212,16 +212,16 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
         </select>
       </label>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="flex flex-col gap-2 border border-outline-variant/30 rounded-lg p-4 bg-surface-container/50">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">
+        <div className="flex flex-col gap-2 border border-outline-variant/30 rounded-lg p-3 md:p-4 bg-surface-container/50 min-w-0">
           <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
             Start time
           </span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap sm:flex-nowrap gap-2">
             <select
               value={startDisplayHour}
               onChange={(e) => setStartDisplayHour(Number(e.target.value))}
-              className="flex-1 rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
             >
               {Array.from({ length: 12 }).map((_, i) => (
                 <option key={i + 1} value={i + 1}>{pad(i + 1)}</option>
@@ -231,7 +231,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
             <select
               value={startMin}
               onChange={(e) => setStartMin(Number(e.target.value))}
-              className="flex-1 rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
             >
               {Array.from({ length: 12 }).map((_, i) => (
                 <option key={i * 5} value={i * 5}>{pad(i * 5)}</option>
@@ -240,7 +240,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
             <select
               value={startPeriod}
               onChange={(e) => setStartPeriod(e.target.value as "AM"|"PM")}
-              className="flex-1 rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
             >
               <option value="AM">AM</option>
               <option value="PM">PM</option>
@@ -248,15 +248,15 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
           </div>
         </div>
         
-        <div className="flex flex-col gap-2 border border-outline-variant/30 rounded-lg p-4 bg-surface-container/50">
+        <div className="flex flex-col gap-2 border border-outline-variant/30 rounded-lg p-3 md:p-4 bg-surface-container/50 min-w-0">
           <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
             End time
           </span>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap sm:flex-nowrap gap-2">
             <select
               value={endDisplayHour}
               onChange={(e) => setEndDisplayHour(Number(e.target.value))}
-              className="flex-1 rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
             >
               {Array.from({ length: 12 }).map((_, i) => (
                 <option key={i + 1} value={i + 1}>{pad(i + 1)}</option>
@@ -266,7 +266,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
             <select
               value={endMin}
               onChange={(e) => setEndMin(Number(e.target.value))}
-              className="flex-1 rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
             >
               {Array.from({ length: 12 }).map((_, i) => (
                 <option key={i * 5} value={i * 5}>{pad(i * 5)}</option>
@@ -275,7 +275,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
             <select
               value={endPeriod}
               onChange={(e) => setEndPeriod(e.target.value as "AM"|"PM")}
-              className="flex-1 rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
             >
               <option value="AM">AM</option>
               <option value="PM">PM</option>
