@@ -267,12 +267,22 @@ async function main() {
 
   // A few maintenance tickets (one per occupied unit, varied status)
   const ticketSeeds = [
-    { unit: dhA, lease: leaseDHA, title: "Air-conditioner not cooling", priority: "High", status: "Open" },
-    { unit: dhD, lease: leaseDHD, title: "Leaking kitchen faucet", priority: "Medium", status: "In Progress" },
-    { unit: tsA, lease: leaseTSA, title: "Lift lobby light flickering", priority: "Low", status: "Resolved" },
-    { unit: tsD, lease: leaseTSD, title: "Main door lock jammed", priority: "High", status: "Open" },
+    { unit: dhA, lease: leaseDHA, title: "Air-conditioner not cooling", priority: "High", status: "Open", cost: 0, monthsAgo: 0 },
+    { unit: dhD, lease: leaseDHD, title: "Leaking kitchen faucet", priority: "Medium", status: "In Progress", cost: 0, monthsAgo: 0 },
+    { unit: tsA, lease: leaseTSA, title: "Lift lobby light flickering", priority: "Low", status: "Resolved", cost: 150, monthsAgo: 0 },
+    { unit: tsD, lease: leaseTSD, title: "Main door lock jammed", priority: "High", status: "Open", cost: 0, monthsAgo: 0 },
+    
+    // Past closed tickets for the cost graph
+    { unit: dhA, lease: leaseDHA, title: "Plumbing fix", priority: "Medium", status: "Closed", cost: 450, monthsAgo: 1 },
+    { unit: dhB, lease: leaseDHA, title: "Electrical wiring", priority: "High", status: "Closed", cost: 800, monthsAgo: 2 },
+    { unit: tsA, lease: leaseTSA, title: "Window seal replacement", priority: "Low", status: "Closed", cost: 120, monthsAgo: 2 },
+    { unit: tsC, lease: leaseTSA, title: "HVAC repair", priority: "High", status: "Closed", cost: 1200, monthsAgo: 3 },
+    { unit: dhD, lease: leaseDHD, title: "Painting touchup", priority: "Medium", status: "Closed", cost: 300, monthsAgo: 4 },
   ];
   for (const t of ticketSeeds) {
+    const createdDate = new Date();
+    createdDate.setMonth(createdDate.getMonth() - t.monthsAgo);
+    
     await prisma.ticket.create({
       data: {
         lease_id: t.lease.lease_id,
@@ -283,12 +293,18 @@ async function main() {
         ticket_category: "Maintenance",
         priority: t.priority,
         status: t.status,
+        cost: t.cost,
+        created_at: createdDate,
+        resolved_at: t.status === "Closed" || t.status === "Resolved" ? createdDate : null,
         created_by: resident.user_id,
       },
     });
   }
 
   // Shared facilities (bookable) for the demo
+  const nextMonth = new Date();
+  nextMonth.setDate(nextMonth.getDate() + 15);
+  
   await prisma.facility.create({
     data: {
       property_id: prop1.property_id,
@@ -300,9 +316,14 @@ async function main() {
       operation_days: "1,2,3,4,5,6,7",
       open_time: "07:00",
       close_time: "21:00",
+      next_maintenance_date: nextMonth,
       created_by: admin.user_id,
     },
   });
+  
+  const soonDate = new Date();
+  soonDate.setDate(soonDate.getDate() + 5);
+
   await prisma.facility.create({
     data: {
       property_id: prop1.property_id,
@@ -314,6 +335,7 @@ async function main() {
       operation_days: "1,2,3,4,5,6,7",
       open_time: "06:00",
       close_time: "23:00",
+      next_maintenance_date: soonDate,
       created_by: admin.user_id,
     },
   });
@@ -328,6 +350,7 @@ async function main() {
       operation_days: "1,2,3,4,5,6",
       open_time: "09:00",
       close_time: "22:00",
+      next_maintenance_date: new Date(new Date().setMonth(new Date().getMonth() + 2)), // 2 months away
       created_by: admin.user_id,
     },
   });
