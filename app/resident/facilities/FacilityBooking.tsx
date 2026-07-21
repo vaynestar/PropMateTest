@@ -150,6 +150,15 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
   const startHour = (startDisplayHour === 12 ? 0 : startDisplayHour) + (startPeriod === "PM" ? 12 : 0);
   const endHour = (endDisplayHour === 12 ? 0 : endDisplayHour) + (endPeriod === "PM" ? 12 : 0);
 
+  const handleDuration = (hours: number) => {
+    const newEndMinTotal = startHour * 60 + startMin + hours * 60;
+    const endH = Math.floor(newEndMinTotal / 60) % 24;
+    const endM = newEndMinTotal % 60;
+    setEndDisplayHour(endH % 12 || 12);
+    setEndMin(endM);
+    setEndPeriod(endH >= 12 ? "PM" : "AM");
+  };
+
   const start = startHour * 60 + startMin;
   const end = endHour * 60 + endMin;
 
@@ -245,6 +254,18 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
               <option value="AM">AM</option>
               <option value="PM">PM</option>
             </select>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            {[1, 1.5, 2, 2.5, 3].map((dur) => (
+              <button
+                key={dur}
+                type="button"
+                onClick={() => handleDuration(dur)}
+                className="flex-1 py-1 px-2 text-xs font-medium rounded border border-outline-variant hover:bg-surface-container-high transition-colors text-on-surface"
+              >
+                +{dur}h
+              </button>
+            ))}
           </div>
         </div>
         

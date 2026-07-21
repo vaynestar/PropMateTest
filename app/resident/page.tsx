@@ -3,16 +3,13 @@ import { getSessionUser } from "@/lib/auth";
 import {
   getResidentPortalData,
   getLatestAnnouncement,
+  getResidentBookings,
 } from "@/lib/resident";
 
 export const dynamic = "force-dynamic";
 
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-MY", {
-    style: "currency",
-    currency: "MYR",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return "RM " + value.toFixed(2);
 }
 
 function formatDate(date: Date) {
@@ -33,6 +30,7 @@ const QUICK_ACTIONS = [
 export default async function ResidentDashboardPage() {
   const user = await getSessionUser();
   const { lease } = await getResidentPortalData(user!.userId);
+  const bookings = await getResidentBookings(user!.userId);
 
   if (!lease) {
     return (
@@ -124,10 +122,10 @@ export default async function ResidentDashboardPage() {
           <Link
             key={action.label}
             href={action.href}
-            className="pressable glass-card rounded-lg p-stack-md flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-colors group"
+            className="pressable glass-card rounded-lg p-stack-md flex flex-col items-center justify-center gap-2 hover:bg-slate-800/50 transition-colors group"
           >
-            <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant group-hover:border-primary/50 transition-colors">
-              <span className="material-symbols-outlined text-on-surface-variant group-hover:text-on-surface transition-colors">
+            <div className="w-12 h-12 rounded-full bg-slate-900/50 flex items-center justify-center border border-outline-variant group-hover:border-primary/50 transition-colors">
+              <span className="material-symbols-outlined text-on-secondary group-hover:text-on-surface transition-colors" style={{ fontVariationSettings: "'wght' 200" }}>
                 {action.icon}
               </span>
             </div>
@@ -137,6 +135,52 @@ export default async function ResidentDashboardPage() {
           </Link>
         ))}
       </section>
+
+      {bookings.length > 0 && (
+        <section className="flex flex-col gap-stack-sm">
+          <div className="flex justify-between items-center">
+            <h2 className="font-title-lg text-title-lg text-on-surface">Upcoming Bookings</h2>
+            <Link href="/resident/facilities" className="font-label-sm text-label-sm text-primary hover:text-primary-container">View All</Link>
+          </div>
+          <div className="flex overflow-x-auto hide-scrollbar gap-stack-md pb-4 -mx-margin-mobile px-margin-mobile">
+            {bookings.map((booking) => {
+              const d = new Date(booking.booking_date);
+              const today = new Date();
+              today.setHours(0,0,0,0);
+              const tomorrow = new Date(today);
+              tomorrow.setDate(tomorrow.getDate() + 1);
+              
+              const dTime = d.setHours(0,0,0,0);
+              let dateLabel = formatDate(booking.booking_date);
+              if (dTime === today.getTime()) dateLabel = "Today";
+              else if (dTime === tomorrow.getTime()) dateLabel = "Tomorrow";
+
+              const startStr = new Date(booking.start_time).toTimeString().slice(0,5);
+              const endStr = new Date(booking.end_time).toTimeString().slice(0,5);
+
+              return (
+                <div key={booking.booking_id} className="glass-card rounded-lg min-w-[240px] flex-shrink-0 flex flex-col">
+                  <div className="h-24 rounded-t-lg bg-slate-900/50 overflow-hidden relative flex items-center justify-center border-b border-outline-variant/30">
+                    <span className="material-symbols-outlined text-4xl text-slate-700">meeting_room</span>
+                    <div className="absolute top-2 right-2 bg-slate-900/90 backdrop-blur px-2 py-1 rounded font-label-sm text-label-sm border border-outline-variant">
+                      {dateLabel}
+                    </div>
+                  </div>
+                  <div className="p-stack-md flex flex-col gap-2">
+                    <span className="font-label-md text-label-md text-on-surface">{booking.facility.facility_name}</span>
+                    <div className="flex items-center gap-2 text-on-secondary">
+                      <span className="material-symbols-outlined text-[16px]">schedule</span>
+                      <span className="font-label-sm text-label-sm">
+                        {startStr} - {endStr}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {announcement && (
         <section className="flex flex-col gap-stack-sm mb-4">
