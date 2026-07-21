@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 
 import { getSessionUser } from "@/lib/auth";
 import {
-  generateMonthlyInvoices,
+  getEligibleLeasesForInvoicing,
+  generateInvoicesForLeases,
   listInvoices,
   markInvoicePaid,
 } from "@/lib/billing";
@@ -21,7 +22,9 @@ export async function GET() {
 export async function POST() {
   try {
     const user = await getSessionUser();
-    const result = await generateMonthlyInvoices(user?.userId);
+    const eligible = await getEligibleLeasesForInvoicing();
+    const leaseIds = eligible.map(l => l.lease_id);
+    const result = await generateInvoicesForLeases(leaseIds, user?.userId);
     return NextResponse.json(result, { status: 201 });
   } catch (error: unknown) {
     const message =

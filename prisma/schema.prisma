@@ -125,6 +125,8 @@ model User {
   modified_bookings      Booking[] @relation("BookingModifiedBy")
   created_facilities     Facility[] @relation("FacilityCreatedBy")
   modified_facilities    Facility[] @relation("FacilityModifiedBy")
+  created_lease_charges  LeaseCharge[] @relation("LeaseChargeCreatedBy")
+  modified_lease_charges LeaseCharge[] @relation("LeaseChargeModifiedBy")
   created_announcements  Announcement[] @relation("AnnouncementCreatedBy")
   modified_announcements Announcement[] @relation("AnnouncementModifiedBy")
 
@@ -160,6 +162,7 @@ model TenantLease {
   visitors      Visitor[]
   bookings      Booking[]
   notifications Notification[]
+  lease_charges LeaseCharge[]
 
   @@map("tenant_leases")
 }
@@ -261,12 +264,38 @@ model ChargeMaster {
 
   // Relations
   invoice_details InvoiceDetail[]
+  lease_charges   LeaseCharge[]
 
   @@map("charge_master")
 }
 
 // ==========================================
 // DOMAIN 5: MAINTENANCE
+// ==========================================
+
+model LeaseCharge {
+  lease_charge_id String   @id @default(uuid()) @db.Uuid
+  lease_id        String   @db.Uuid
+  charge_id       String   @db.Uuid
+  amount          Decimal  @db.Decimal(10, 2)
+  quantity        Decimal  @default(1) @db.Decimal(10, 2)
+  is_active       Boolean  @default(true)
+  
+  // Audit Trail
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("LeaseChargeCreatedBy", fields: [created_by], references: [user_id])
+  modified_at  DateTime @updatedAt @map("_modified_at")
+  modified_by  String?  @db.Uuid @map("_modified_by")
+  modifier     User?    @relation("LeaseChargeModifiedBy", fields: [modified_by], references: [user_id])
+
+  // Relations
+  lease        TenantLease  @relation(fields: [lease_id], references: [lease_id], onDelete: Cascade)
+  charge       ChargeMaster @relation(fields: [charge_id], references: [charge_id])
+
+  @@map("lease_charges")
+}
+
 // ==========================================
 
 model Ticket {

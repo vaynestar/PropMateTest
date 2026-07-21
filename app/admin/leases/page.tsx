@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ExpandableForm from "@/components/layout/ExpandableForm";
@@ -80,6 +81,15 @@ export default async function AdminLeasesPage() {
                   <span>Phone</span>
                   <span className="text-white font-mono">{l.tenant.phone_number || "-"}</span>
                 </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-[#4a4455]/50">
+                <Link
+                  href={`/admin/leases/${l.lease_id}/charges`}
+                  className="w-full btn-outline py-2 flex items-center justify-center gap-2 text-xs"
+                >
+                  <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+                  Setup Invoice Details
+                </Link>
               </div>
             </div>
           ))

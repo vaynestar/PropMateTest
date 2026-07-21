@@ -76,82 +76,114 @@ export async function getRecentInvoices(propertyId?: string, limit = 5): Promise
   });
 }
 
-export async function generateMonthlyInvoices(createdBy?: string) {
-  const rentalCharge = await prisma.chargeMaster.findFirst({
-    where: { charge_name: "Monthly Rental" },
-  });
-  if (!rentalCharge) {
-    throw new Error(
-      "Monthly Rental charge not found. Please seed charge master first."
-    );
-  }
-
-  const { y, m } = currentMonthKey();
+export async function getEligibleLeasesForInvoicing(targetDate = new Date()) {
+  const { y, m } = currentMonthKey(targetDate);
   const monthStart = startOfMonth(new Date(y, m, 1));
-  const dueDate = addMonths(monthStart, 1);
-  const invoiceNoPrefix = `INV-${y}${String(m + 1).padStart(2, "0")}`;
 
-  // Active leases on occupied units that don't yet have an invoice this month
   const leases = await prisma.tenantLease.findMany({
     where: { status: "Active" },
     include: {
-      unit: true,
+      unit: { include: { property: true } },
       tenant: true,
       invoices: {
         where: { invoice_date: { gte: monthStart } },
         select: { invoice_id: true },
       },
+      lease_charges: {
+        include: { charge: true },
+        where: { is_active: true }
+      }
     },
   });
 
-  const candidates = leases.filter(
-    (l) =>
-      l.unit.status === "Occupied" &&
-      l.unit.monthly_rent.toNumber() > 0 &&
-      l.invoices.length === 0
-  );
+  return leases.filter((l) => l.invoices.length === 0);
+}
 
-  if (candidates.length === 0) {
-    return { generated: 0, message: "No new invoices to generate for this month." };
+export async function generateInvoicesForLeases(leaseIds: string[], createdBy?: string, targetDate = new Date()) {
+  if (leaseIds.length === 0) {
+    return { generated: 0, message: "No leases selected." };
   }
+
+  const rentalCharge = await prisma.chargeMaster.findFirst({
+    where: { charge_name: "Monthly Rental" },
+  });
+
+  const { y, m } = currentMonthKey(targetDate);
+  const monthStart = startOfMonth(new Date(y, m, 1));
+  const dueDate = addMonths(monthStart, 1);
+  const invoiceNoPrefix = `INV-${y}${String(m + 1).padStart(2, "0")}`;
+
+  const leases = await prisma.tenantLease.findMany({
+    where: { lease_id: { in: leaseIds } },
+    include: {
+      unit: true,
+      lease_charges: { include: { charge: true }, where: { is_active: true } }
+    }
+  });
 
   const existingCount = await prisma.invoice.count({
     where: { invoice_no: { startsWith: invoiceNoPrefix } },
   });
 
   let counter = existingCount;
-  for (const lease of candidates) {
+  for (const lease of leases) {
     counter += 1;
-    const rent = lease.unit.monthly_rent;
     const invoiceNo = `${invoiceNoPrefix}-${String(counter).padStart(3, "0")}`;
-    await prisma.invoice.create({
-      data: {
-        lease_id: lease.lease_id,
-        invoice_no: invoiceNo,
-        invoice_date: monthStart,
-        due_date: dueDate,
-        total_amount: rent,
-        status: "Unpaid",
-        created_by: createdBy,
-        details: {
-          create: [
-            {
-              charge_id: rentalCharge.charge_id,
-              description: `Monthly rental - ${lease.unit.unit_number}`,
-              uom: "month",
-              unit_price: rent,
-              quantity: 1,
-              total_price: rent,
-            },
-          ],
+    
+    let detailsInput = [];
+    let totalAmount = 0;
+
+    if (lease.lease_charges.length > 0) {
+      // Use configured lease charges
+      for (const lc of lease.lease_charges) {
+        const lineTotal = Number(lc.amount) * Number(lc.quantity);
+        totalAmount += lineTotal;
+        detailsInput.push({
+          charge_id: lc.charge_id,
+          description: lc.charge.charge_name,
+          uom: lc.charge.uom,
+          unit_price: lc.amount,
+          quantity: lc.quantity,
+          total_price: lineTotal,
+        });
+      }
+    } else {
+      // Fallback to unit's monthly_rent if no charges configured (MVP compatibility)
+      const rent = Number(lease.unit.monthly_rent);
+      if (rent > 0 && rentalCharge) {
+        totalAmount += rent;
+        detailsInput.push({
+          charge_id: rentalCharge.charge_id,
+          description: `Monthly rental - ${lease.unit.unit_number}`,
+          uom: "month",
+          unit_price: rent,
+          quantity: 1,
+          total_price: rent,
+        });
+      }
+    }
+
+    if (totalAmount > 0) {
+      await prisma.invoice.create({
+        data: {
+          lease_id: lease.lease_id,
+          invoice_no: invoiceNo,
+          invoice_date: monthStart,
+          due_date: dueDate,
+          total_amount: totalAmount,
+          status: "Unpaid",
+          created_by: createdBy,
+          details: {
+            create: detailsInput
+          },
         },
-      },
-    });
+      });
+    }
   }
 
   return {
-    generated: candidates.length,
-    message: `Generated ${candidates.length} invoice(s) for ${invoiceNoPrefix}.`,
+    generated: leaseIds.length,
+    message: `Generated ${leaseIds.length} invoice(s) for ${invoiceNoPrefix}.`,
   };
 }
 

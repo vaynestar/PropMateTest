@@ -18,6 +18,7 @@ async function main() {
   await prisma.paymentTransaction.deleteMany();
   await prisma.booking.deleteMany();
   await prisma.visitor.deleteMany();
+  await prisma.leaseCharge.deleteMany();
   await prisma.invoiceDetail.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.ticket.deleteMany();
@@ -233,6 +234,27 @@ async function main() {
     },
   });
 
+  const parkingCharge = await prisma.chargeMaster.create({
+    data: { charge_name: "Parking Fee", charge_type: "Recurring", uom: "month", default_amount: 100, description: "Monthly parking bay fee", created_by: admin.user_id },
+  });
+  
+  const maintenanceCharge = await prisma.chargeMaster.create({
+    data: { charge_name: "Maintenance Fee", charge_type: "Recurring", uom: "month", default_amount: 250, description: "Property maintenance fee", created_by: admin.user_id },
+  });
+
+  const leaseCharges = [
+    { lease_id: leaseDHA.lease_id, charge_id: rentalCharge.charge_id, amount: dhA.monthly_rent, quantity: 1, created_by: admin.user_id },
+    { lease_id: leaseDHA.lease_id, charge_id: parkingCharge.charge_id, amount: 100, quantity: 1, created_by: admin.user_id },
+    { lease_id: leaseDHA.lease_id, charge_id: maintenanceCharge.charge_id, amount: 250, quantity: 1, created_by: admin.user_id },
+    { lease_id: leaseDHD.lease_id, charge_id: rentalCharge.charge_id, amount: dhD.monthly_rent, quantity: 1, created_by: admin.user_id },
+    { lease_id: leaseDHD.lease_id, charge_id: maintenanceCharge.charge_id, amount: 250, quantity: 1, created_by: admin.user_id },
+    { lease_id: leaseTSA.lease_id, charge_id: rentalCharge.charge_id, amount: tsA.monthly_rent, quantity: 1, created_by: admin.user_id },
+    { lease_id: leaseTSD.lease_id, charge_id: rentalCharge.charge_id, amount: tsD.monthly_rent, quantity: 1, created_by: admin.user_id },
+    { lease_id: leaseTSD.lease_id, charge_id: parkingCharge.charge_id, amount: 100, quantity: 2, created_by: admin.user_id },
+    { lease_id: leaseDHC.lease_id, charge_id: rentalCharge.charge_id, amount: dhC.monthly_rent, quantity: 1, created_by: admin.user_id },
+  ];
+  await prisma.leaseCharge.createMany({ data: leaseCharges });
+
   // Invoices generated from unit monthly_rent (per occupied unit)
   const occupied: { unit: any; lease: any }[] = [
     { unit: dhA, lease: leaseDHA },
@@ -250,26 +272,33 @@ async function main() {
     due.setMonth(due.getMonth() + 1);
     const invNo = `INV-${month.getFullYear()}${String(month.getMonth() + 1).padStart(2, "0")}-${String(invoiceCounter).padStart(3, "0")}`;
     const status = invoiceCounter % 2 === 0 ? "Unpaid" : "Paid";
+    const myCharges = leaseCharges.filter(lc => lc.lease_id === lease.lease_id);
+    let total = 0;
+    const details = myCharges.map(lc => {
+      const lineTotal = Number(lc.amount) * Number(lc.quantity);
+      total += lineTotal;
+      const chargeMaster = [rentalCharge, parkingCharge, maintenanceCharge].find(c => c.charge_id === lc.charge_id)!;
+      return {
+        charge_id: lc.charge_id,
+        description: `${chargeMaster.charge_name} - ${unit.unit_number}`,
+        uom: chargeMaster.uom,
+        unit_price: lc.amount,
+        quantity: lc.quantity,
+        total_price: lineTotal,
+      };
+    });
+
     await prisma.invoice.create({
       data: {
         lease_id: lease.lease_id,
         invoice_no: invNo,
         invoice_date: month,
         due_date: due,
-        total_amount: unit.monthly_rent,
+        total_amount: total,
         status,
         created_by: admin.user_id,
         details: {
-          create: [
-            {
-              charge_id: rentalCharge.charge_id,
-              description: `Monthly rental - ${unit.unit_number}`,
-              uom: "month",
-              unit_price: unit.monthly_rent,
-              quantity: 1,
-              total_price: unit.monthly_rent,
-            },
-          ],
+          create: details,
         },
       },
     });

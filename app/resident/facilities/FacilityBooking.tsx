@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import { useMemo, useState, Fragment } from "react";
 import { useFormStatus } from "react-dom";
 import { bookFacility } from "./actions";
 import BookingTimeline from "@/components/facilities/BookingTimeline";
@@ -83,7 +83,7 @@ export default function FacilityBooking({
         {facilities.map((f) => {
           const active = f.facility_id === selectedId;
           return (
-            <React.Fragment key={f.facility_id}>
+            <Fragment key={f.facility_id}>
               <button
                 type="button"
                 onClick={() => setSelectedId(active ? null : f.facility_id)}
@@ -133,7 +133,7 @@ export default function FacilityBooking({
                   <BookingCard facility={f} bookings={bookings} />
                 </div>
               )}
-            </React.Fragment>
+            </Fragment>
           );
         })}
       </div>

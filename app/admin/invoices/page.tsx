@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listInvoices } from "@/lib/billing";
 import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton";
+import ManualInvoiceButton from "@/components/billing/ManualInvoiceButton";
 import InvoiceBatchList from "@/components/billing/InvoiceBatchList";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +42,10 @@ export default async function InvoicesDetailPage({
             Itemised view of every generated invoice.
           </p>
         </div>
-        <GenerateInvoicesButton />
+        <div className="flex items-center gap-3">
+          <ManualInvoiceButton />
+          <GenerateInvoicesButton />
+        </div>
       </div>
 
       <InvoiceBatchList invoices={invoices} />
