@@ -14,8 +14,9 @@ export type FacilityInput = {
   close_time?: string;
 };
 
-export async function listFacilities() {
+export async function listFacilities(propertyId?: string) {
   return prisma.facility.findMany({
+    where: propertyId ? { property_id: propertyId } : undefined,
     orderBy: { facility_name: "asc" },
     include: { property: true, _count: { select: { bookings: true } } },
   });

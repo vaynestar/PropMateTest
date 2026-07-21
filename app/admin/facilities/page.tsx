@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listFacilities } from "@/lib/facility-management";
 import { listProperties } from "@/lib/property-management";
@@ -93,10 +94,17 @@ async function editFacility(formData: FormData) {
 
 export default async function FacilitiesPage() {
   await requireUser(["Admin"]);
-  const [facilities, properties] = await Promise.all([
-    listFacilities(),
+  const cookieStore = await cookies();
+  const propertyId = cookieStore.get("propmate_property_id")?.value;
+
+  const [facilities, allProperties] = await Promise.all([
+    listFacilities(propertyId),
     listProperties(),
   ]);
+
+  const properties = propertyId 
+    ? allProperties.filter(p => p.property_id === propertyId) 
+    : allProperties;
 
   return (
     <div className="flex flex-col gap-stack-lg">

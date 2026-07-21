@@ -1,22 +1,23 @@
+import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import AdminLeaseForm from "./AdminLeaseForm";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { getAllLeases } from "@/lib/lease-management";
+import { listUnits } from "@/lib/unit-management";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminLeasesPage() {
   await requireUser(["Admin"]);
+  const cookieStore = await cookies();
+  const propertyId = cookieStore.get("propmate_property_id")?.value;
 
-  const leases = await getAllLeases();
-  
-  // For the form: we need all units and users
-  const units = await prisma.unit.findMany({
-    include: { property: true },
-    orderBy: [{ property: { property_name: "asc" } }, { unit_number: "asc" }]
-  });
+  const [leases, units] = await Promise.all([
+    getAllLeases(propertyId),
+    listUnits(propertyId),
+  ]);
   
   const users = await prisma.user.findMany({
     where: { role: "Resident" },

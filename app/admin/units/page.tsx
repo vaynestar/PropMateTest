@@ -1,25 +1,14 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
 import ExpandableForm from "@/components/layout/ExpandableForm";
+import UnitGrid from "@/components/units/UnitGrid";
 
 export const dynamic = "force-dynamic";
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-MY", {
-    style: "currency",
-    currency: "MYR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
-const STATUS_STYLES: Record<string, string> = {
-  Occupied: "bg-emerald-500/15 text-emerald-300",
-  Vacant: "bg-surface-container-highest text-on-surface-variant",
-  Reserved: "bg-indigo-500/15 text-indigo-300",
-  Maintenance: "bg-amber-500/15 text-amber-300",
-};
 
 async function addUnit(formData: FormData) {
   "use server";
@@ -56,23 +45,23 @@ async function removeUnit(formData: FormData) {
   revalidatePath("/admin/units");
 }
 
-export default async function UnitsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ property?: string }>;
-}) {
+export default async function UnitsPage() {
   await requireUser(["Admin"]);
-  const { property } = await searchParams;
+  const cookieStore = await cookies();
+  const propertyId = cookieStore.get("propmate_property_id")?.value;
+
   const [units, properties] = await Promise.all([
     listUnits(),
     listPropertiesForUnits(),
   ]);
 
-  const filteredUnits = property
-    ? units.filter((u) => u.property_id === property)
+  const activePropertyId = propertyId || (properties[0]?.property_id ?? null);
+
+  const filteredUnits = activePropertyId
+    ? units.filter((u) => u.property_id === activePropertyId)
     : units;
-  const activeProperty = property
-    ? properties.find((p) => p.property_id === property)
+  const activeProperty = activePropertyId
+    ? properties.find((p) => p.property_id === activePropertyId)
     : undefined;
 
   return (
@@ -88,14 +77,6 @@ export default async function UnitsPage({
               : "Manage individual units across all properties."}
           </p>
         </div>
-        {activeProperty && (
-          <Link
-            href="/admin/units"
-            className="font-label-md text-label-md text-primary hover:text-primary-container transition-colors"
-          >
-            Clear filter
-          </Link>
-        )}
       </div>
 
       <ExpandableForm title="Add New Unit" buttonLabel="New Unit">
@@ -194,56 +175,7 @@ export default async function UnitsPage({
           </span>
         </div>
 
-        <div className="divide-y divide-outline-variant/30">
-          {filteredUnits.length === 0 && (
-            <p className="font-body-md text-body-md text-on-surface-variant px-6 py-8">
-              No units found. Create one above to start managing units.
-            </p>
-          )}
-          {filteredUnits.map((unit) => (
-            <div
-              key={unit.unit_id}
-              className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between px-6 py-4"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <span className="font-title-md text-title-md text-on-surface">
-                    {unit.unit_number}
-                  </span>
-                  <span
-                    className={`font-label-sm text-label-sm px-2 py-0.5 rounded-full ${
-                      STATUS_STYLES[unit.status] ??
-                      "bg-surface-container-highest text-on-surface-variant"
-                    }`}
-                  >
-                    {unit.status}
-                  </span>
-                </div>
-                <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">
-                  {unit.property.property_name} · {unit.unit_type} · Floor{" "}
-                  {String(unit.floor_number)} · {unit.area_sqft.toString()} sqft
-                </p>
-                <p className="font-label-sm text-label-sm text-primary mt-0.5">
-                  {formatCurrency(Number(unit.monthly_rent))} / month
-                </p>
-              </div>
-
-              <form action={removeUnit} className="shrink-0">
-                <input
-                  type="hidden"
-                  name="unit_id"
-                  value={unit.unit_id}
-                />
-                <button
-                  type="submit"
-                  className="font-label-sm text-label-sm text-error-container hover:underline"
-                >
-                  Delete
-                </button>
-              </form>
-            </div>
-          ))}
-        </div>
+        <UnitGrid units={filteredUnits} removeAction={removeUnit} />
       </div>
     </div>
   );

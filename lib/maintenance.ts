@@ -17,8 +17,9 @@ function requireText(value: unknown, fieldName: string): string {
   return trimmed;
 }
 
-export async function listTickets(): Promise<TicketWithRelations[]> {
+export async function listTickets(propertyId?: string): Promise<TicketWithRelations[]> {
   return prisma.ticket.findMany({
+    where: propertyId ? { lease: { unit: { property_id: propertyId } } } : undefined,
     orderBy: { created_at: "desc" },
     include: {
       lease: {

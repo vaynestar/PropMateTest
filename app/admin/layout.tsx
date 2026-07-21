@@ -1,11 +1,24 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { getSessionUser } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 import { logoutAction } from "@/app/logout/actions";
 import AdminMobileNav, { AdminMenuButton } from "@/components/layout/AdminMobileNav";
+import PropertySwitcher from "@/components/layout/PropertySwitcher";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const user = await getSessionUser();
+  const cookieStore = await cookies();
+  const activePropertyId = cookieStore.get("propmate_property_id")?.value || "";
+
+  const properties = await prisma.propertyMaster.findMany({
+    select: { property_id: true, property_name: true },
+    orderBy: { created_at: "asc" },
+  });
+
+  // If no cookie is set but properties exist, we could optionally default to the first one
+  const safeActivePropertyId = activePropertyId || (properties[0]?.property_id ?? "");
 
   return (
     <div className="bg-surface text-on-surface font-body-md antialiased overflow-x-hidden min-h-screen flex w-full">
@@ -111,9 +124,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <div className="flex items-center md:hidden">
             <AdminMenuButton />
           </div>
-          <div className="hidden md:flex flex-1 items-center font-headline-sm text-headline-sm font-bold">
+          <div className="hidden md:flex items-center font-headline-sm text-headline-sm font-bold mr-4">
              PropMate Admin
           </div>
+          
+          <div className="flex-1 flex items-center justify-start">
+            <PropertySwitcher properties={properties} activePropertyId={safeActivePropertyId} />
+          </div>
+
           {/* Actions */}
           <div className="flex items-center gap-2">
             <button className="p-2 text-on-surface-variant hover:bg-surface-variant rounded-full transition-all relative">

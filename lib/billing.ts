@@ -28,8 +28,9 @@ function addMonths(date: Date, months: number) {
   return d;
 }
 
-export async function listInvoices(): Promise<InvoiceWithRelations[]> {
+export async function listInvoices(propertyId?: string): Promise<InvoiceWithRelations[]> {
   return prisma.invoice.findMany({
+    where: propertyId ? { lease: { unit: { property_id: propertyId } } } : undefined,
     orderBy: { invoice_date: "desc" },
     include: {
       lease: {
@@ -43,8 +44,9 @@ export async function listInvoices(): Promise<InvoiceWithRelations[]> {
   });
 }
 
-export async function getRecentInvoices(limit = 5): Promise<InvoiceWithRelations[]> {
+export async function getRecentInvoices(propertyId?: string, limit = 5): Promise<InvoiceWithRelations[]> {
   return prisma.invoice.findMany({
+    where: propertyId ? { lease: { unit: { property_id: propertyId } } } : undefined,
     orderBy: { invoice_date: "desc" },
     take: limit,
     include: {

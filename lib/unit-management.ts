@@ -64,8 +64,9 @@ function parseMonthlyRent(value?: number | string) {
   return new Prisma.Decimal(parsed.toFixed(2));
 }
 
-export async function listUnits() {
+export async function listUnits(propertyId?: string) {
   return prisma.unit.findMany({
+    where: propertyId ? { property_id: propertyId } : undefined,
     include: { property: true },
     orderBy: { created_at: 'desc' },
   });

@@ -1,10 +1,13 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { getDashboardStats } from "@/lib/dashboard";
 import MaintenanceCostChart from "@/components/dashboard/MaintenanceCostChart";
 import FilterableTicketQueue from "@/components/dashboard/FilterableTicketQueue";
 
 export default async function AdminDashboardPage() {
-  const stats = await getDashboardStats();
+  const cookieStore = await cookies();
+  const propertyId = cookieStore.get("propmate_property_id")?.value;
+  const stats = await getDashboardStats(propertyId);
 
   // Outstanding amount formatted logic
   const isK = stats.outstandingAmount >= 10000;

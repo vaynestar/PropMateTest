@@ -37,9 +37,14 @@ export type DashboardStats = {
   }[];
 };
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+export async function getDashboardStats(propertyId?: string): Promise<DashboardStats> {
   const nextMonth = new Date();
   nextMonth.setDate(nextMonth.getDate() + 30);
+
+  const facilityWhere = propertyId ? { property_id: propertyId } : {};
+  const unitWhere = propertyId ? { property_id: propertyId } : {};
+  const leaseWhere = propertyId ? { unit: { property_id: propertyId } } : {};
+  const ticketWhere = propertyId ? { lease: { unit: { property_id: propertyId } } } : {};
 
   const [
     totalProperties,
@@ -61,33 +66,40 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     closedTickets,
   ] = await Promise.all([
     prisma.propertyMaster.count(),
-    prisma.facility.count(),
+    prisma.facility.count({ where: facilityWhere }),
     prisma.facility.count({
       where: {
+        ...facilityWhere,
         next_maintenance_date: {
           lte: nextMonth,
           gte: new Date(),
         },
       },
     }),
-    prisma.unit.count(),
-    prisma.unit.count({ where: { status: "Occupied" } }),
-    prisma.unit.count({ where: { status: "Vacant" } }),
-    prisma.unit.count({ where: { status: "Maintenance" } }),
-    prisma.invoice.count(),
-    prisma.invoice.count({ where: { status: "Unpaid" } }),
-    prisma.invoice.count({ where: { status: "Overdue" } }),
+    prisma.unit.count({ where: unitWhere }),
+    prisma.unit.count({ where: { ...unitWhere, status: "Occupied" } }),
+    prisma.unit.count({ where: { ...unitWhere, status: "Vacant" } }),
+    prisma.unit.count({ where: { ...unitWhere, status: "Maintenance" } }),
+    prisma.invoice.count({ where: { lease: leaseWhere } }),
+    prisma.invoice.count({ where: { status: "Unpaid", lease: leaseWhere } }),
+    prisma.invoice.count({ where: { status: "Overdue", lease: leaseWhere } }),
     prisma.invoice.aggregate({
       _sum: { total_amount: true },
-      where: { status: { not: "Paid" } },
+      where: { status: { not: "Paid" }, lease: leaseWhere },
     }),
     prisma.unit.aggregate({
       _sum: { monthly_rent: true },
-      where: { status: "Occupied" },
+      where: { ...unitWhere, status: "Occupied" },
     }),
-    prisma.ticket.count({ where: { status: { in: ["Open", "In Progress"] } } }),
-    prisma.user.count({ where: { role: "Resident" } }),
+    prisma.ticket.count({ where: { ...ticketWhere, status: { in: ["Open", "In Progress"] } } }),
+    prisma.user.count({ 
+      where: { 
+        role: "Resident", 
+        tenant_leases: propertyId ? { some: { unit: { property_id: propertyId } } } : undefined 
+      } 
+    }),
     prisma.ticket.findMany({
+      where: ticketWhere,
       orderBy: { created_at: "desc" },
       take: 5,
       select: {
@@ -99,7 +111,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
       },
     }),
     prisma.ticket.findMany({
-      where: { status: { in: ["Open", "In Progress"] } },
+      where: { ...ticketWhere, status: { in: ["Open", "In Progress"] } },
       orderBy: { created_at: "desc" },
       select: {
         ticket_id: true,
@@ -112,6 +124,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
     prisma.ticket.findMany({
       where: { 
+        ...ticketWhere,
         status: { in: ["Resolved", "Closed"] },
         cost: { gt: 0 } 
       },

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listInvoices } from "@/lib/billing";
 import StatusBadge from "@/components/dashboard/StatusBadge";
@@ -45,7 +46,10 @@ async function markPaid(formData: FormData) {
 
 export default async function BillingPage() {
   await requireUser(["Admin"]);
-  const invoices = await listInvoices();
+  const cookieStore = await cookies();
+  const propertyId = cookieStore.get("propmate_property_id")?.value;
+
+  const invoices = await listInvoices(propertyId);
 
   const totalBilled = invoices.reduce(
     (sum, inv) => sum + Number(inv.total_amount),

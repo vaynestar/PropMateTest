@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listTickets } from "@/lib/maintenance";
 import { listUnits } from "@/lib/unit-management";
@@ -30,8 +31,11 @@ async function raiseTicket(formData: FormData) {
 
 
 export default async function MaintenancePage() {
-  const user = await requireUser(["Admin"]);
-  const [tickets, units] = await Promise.all([listTickets(), listUnits()]);
+  await requireUser(["Admin"]);
+  const cookieStore = await cookies();
+  const propertyId = cookieStore.get("propmate_property_id")?.value;
+
+  const [tickets, units] = await Promise.all([listTickets(propertyId), listUnits()]);
 
   const occupiedUnits = units.filter((u) => u.status === "Occupied");
   const openCount = tickets.filter(

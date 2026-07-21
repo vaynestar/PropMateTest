@@ -13,9 +13,10 @@ export async function getVisitorsByLease(leaseId: string) {
   }
 }
 
-export async function getAllVisitors() {
+export async function getAllVisitors(propertyId?: string) {
   try {
     const visitors = await prisma.visitor.findMany({
+      where: propertyId ? { lease: { unit: { property_id: propertyId } } } : undefined,
       orderBy: { visit_date: "desc" },
       include: {
         lease: {

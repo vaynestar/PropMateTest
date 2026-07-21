@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ExpandableForm from "@/components/layout/ExpandableForm";
@@ -8,14 +9,20 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminBookingsPage() {
   await requireUser(["Admin"]);
+  const cookieStore = await cookies();
+  const propertyId = cookieStore.get("propmate_property_id")?.value;
 
   const facilities = await prisma.facility.findMany({
-    where: { is_bookable: true },
+    where: { 
+      is_bookable: true,
+      ...(propertyId ? { property_id: propertyId } : {})
+    },
     include: { property: true },
     orderBy: { facility_name: "asc" },
   });
 
   const bookings = await prisma.booking.findMany({
+    where: propertyId ? { facility: { property_id: propertyId } } : undefined,
     include: {
       facility: true,
       lease: {
@@ -29,7 +36,10 @@ export default async function AdminBookingsPage() {
   });
 
   const leases = await prisma.tenantLease.findMany({
-    where: { status: "Active" },
+    where: { 
+      status: "Active",
+      ...(propertyId ? { unit: { property_id: propertyId } } : {})
+    },
     include: {
       unit: true,
       tenant: { select: { user_name: true } },

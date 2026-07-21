@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ExpandableForm from "@/components/layout/ExpandableForm";
@@ -10,12 +11,17 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminVisitorsPage() {
   await requireUser(["Admin"]);
+  const cookieStore = await cookies();
+  const propertyId = cookieStore.get("propmate_property_id")?.value;
 
-  const visitors = await getAllVisitors();
+  const visitors = await getAllVisitors(propertyId);
 
   // Get active leases for the admin to select from when registering a visitor manually
   const leases = await prisma.tenantLease.findMany({
-    where: { status: "Active" },
+    where: { 
+      status: "Active",
+      ...(propertyId ? { unit: { property_id: propertyId } } : {})
+    },
     include: {
       unit: true,
       tenant: { select: { user_name: true } },

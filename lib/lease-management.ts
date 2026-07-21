@@ -1,8 +1,9 @@
 import prisma from "./prisma";
 
-export async function getAllLeases() {
+export async function getAllLeases(propertyId?: string) {
   try {
     const leases = await prisma.tenantLease.findMany({
+      where: propertyId ? { unit: { property_id: propertyId } } : undefined,
       include: {
         unit: {
           include: { property: true }
