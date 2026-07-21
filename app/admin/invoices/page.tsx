@@ -35,12 +35,19 @@ async function markPaid(formData: FormData) {
   revalidatePath("/admin/invoices");
 }
 
-export default async function InvoicesDetailPage() {
+export default async function InvoicesDetailPage({
+  searchParams,
+}: {
+  searchParams: { status?: string };
+}) {
   await requireUser(["Admin"]);
   const cookieStore = await cookies();
   const propertyId = cookieStore.get("propmate_property_id")?.value;
 
-  const invoices = await listInvoices(propertyId);
+  let invoices = await listInvoices(propertyId);
+  if (searchParams.status && searchParams.status !== "All") {
+    invoices = invoices.filter(inv => inv.status === searchParams.status);
+  }
 
   return (
     <div className="flex flex-col gap-stack-lg">
@@ -59,7 +66,27 @@ export default async function InvoicesDetailPage() {
         </p>
       </div>
 
-      <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-outline-variant/30">
+        <span className="font-label-sm text-label-sm text-on-surface-variant mr-2">Filter:</span>
+        {["All", "Unpaid", "Paid", "Overdue"].map((status) => {
+          const isActive = (searchParams.status || "All") === status;
+          return (
+            <Link
+              key={status}
+              href={`/admin/invoices?status=${status}`}
+              className={`px-4 py-1.5 rounded-full font-label-md text-label-md transition-all ${
+                isActive
+                  ? "bg-primary text-on-primary font-bold shadow-md"
+                  : "bg-surface-container hover:bg-surface-container-highest text-on-surface"
+              }`}
+            >
+              {status}
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {invoices.length === 0 && (
           <p className="font-body-md text-body-md text-on-surface-variant glass-card rounded-xl p-8 text-center">
             No invoices yet.
@@ -121,30 +148,38 @@ export default async function InvoicesDetailPage() {
               </table>
             </div>
 
-            <div className="flex items-center justify-between border-t border-outline-variant/30 pt-3">
+            <div className="border-t border-outline-variant/30 pt-4 flex flex-col gap-3">
               <span className="font-label-sm text-label-sm text-on-surface-variant">
-                Issued {formatDate(inv.invoice_date)} · Due{" "}
-                {formatDate(inv.due_date)}
+                Issued {formatDate(inv.invoice_date)} · Due {formatDate(inv.due_date)}
               </span>
-              {inv.status !== "Paid" ? (
-                <form action={markPaid}>
-                  <input
-                    type="hidden"
-                    name="invoice_id"
-                    value={inv.invoice_id}
-                  />
-                  <button
-                    type="submit"
-                    className="font-label-sm text-label-sm text-emerald-300 hover:underline"
-                  >
-                    Mark Paid
-                  </button>
-                </form>
-              ) : (
-                <span className="font-label-sm text-label-sm text-on-surface-variant">
-                  Settled
+              
+              <div className="bg-surface-container-high border border-outline-variant/40 rounded-lg p-3 flex flex-wrap gap-2 items-center justify-between">
+                <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
+                  Actions
                 </span>
-              )}
+                <div className="flex gap-2">
+                  <Link
+                    href={`/print/invoice/${inv.invoice_id}`}
+                    target="_blank"
+                    className="btn-outline px-4 py-1.5 text-sm flex items-center gap-2 border-outline-variant text-on-surface hover:bg-surface-container-highest rounded-md transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">print</span>
+                    Print
+                  </Link>
+                  {inv.status !== "Paid" && (
+                    <form action={markPaid}>
+                      <input type="hidden" name="invoice_id" value={inv.invoice_id} />
+                      <button
+                        type="submit"
+                        className="btn-primary px-4 py-1.5 text-sm flex items-center gap-2 rounded-md transition-colors bg-emerald-600 hover:bg-emerald-500 text-white"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                        Mark Paid
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         ))}

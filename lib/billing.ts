@@ -44,6 +44,21 @@ export async function listInvoices(propertyId?: string): Promise<InvoiceWithRela
   });
 }
 
+export async function getInvoiceById(invoiceId: string) {
+  return prisma.invoice.findUnique({
+    where: { invoice_id: invoiceId },
+    include: {
+      lease: {
+        include: {
+          unit: { include: { property: true } },
+          tenant: true,
+        },
+      },
+      details: { include: { charge: true } },
+    },
+  });
+}
+
 export async function getRecentInvoices(propertyId?: string, limit = 5): Promise<InvoiceWithRelations[]> {
   return prisma.invoice.findMany({
     where: propertyId ? { lease: { unit: { property_id: propertyId } } } : undefined,
