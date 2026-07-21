@@ -9,10 +9,39 @@ function hashPassword(password: string): string {
   return `scrypt$${salt}$${derived.toString("hex")}`;
 }
 
-async function main() {
-  console.log("Seeding PropMate MVP demo data...");
+// Helpers for dates
+const today = new Date();
+today.setHours(0, 0, 0, 0);
 
-  // Clear in dependency order (child tables first)
+function addDays(d: Date, days: number) {
+  const date = new Date(d);
+  date.setDate(date.getDate() + days);
+  return date;
+}
+
+function addMonths(d: Date, months: number) {
+  const date = new Date(d);
+  date.setMonth(date.getMonth() + months);
+  return date;
+}
+
+function startOfMonth(d: Date) {
+  const date = new Date(d);
+  date.setDate(1);
+  return date;
+}
+
+function atTime(d: Date, hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  const date = new Date(d);
+  date.setHours(h, m, 0, 0);
+  return date;
+}
+
+async function main() {
+  console.log("Seeding PropMate MVP standardized demo data...");
+
+  // Clear in dependency order
   await prisma.ticketComment.deleteMany();
   await prisma.ticketAttachment.deleteMany();
   await prisma.paymentTransaction.deleteMany();
@@ -27,7 +56,9 @@ async function main() {
   await prisma.unit.deleteMany();
   await prisma.propertyMaster.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.chargeMaster.deleteMany();
 
+  // --- USERS ---
   const admin = await prisma.user.create({
     data: {
       user_name: "Admin PropMate",
@@ -38,475 +69,283 @@ async function main() {
     },
   });
 
-  const resident = await prisma.user.create({
+  const res1 = await prisma.user.create({
     data: {
       user_name: "Ahmad Resident",
-      user_email: "resident@propmate.com",
+      user_email: "ahmad@propmate.com",
       password_hash: hashPassword("resident123"),
       phone_number: "0112233445",
       role: "Resident",
     },
   });
 
-  const rentalCharge = await prisma.chargeMaster.create({
+  const res2 = await prisma.user.create({
     data: {
-      charge_name: "Monthly Rental",
-      charge_type: "Recurring",
-      uom: "month",
-      default_amount: 0,
-      description: "Standard monthly rental charge",
-      created_by: admin.user_id,
+      user_name: "John Doe",
+      user_email: "john@propmate.com",
+      password_hash: hashPassword("resident123"),
+      phone_number: "0198877665",
+      role: "Resident",
     },
   });
 
-  const prop1 = await prisma.propertyMaster.create({
+  const res3 = await prisma.user.create({
     data: {
-      property_name: "Desa Harmoni Condominium",
-      property_type: "Condominium",
-      address: "12 Jalan Harmoni",
-      city: "Kuala Lumpur",
-      state: "Wilayah Persekutuan",
-      country: "Malaysia",
-      postal_code: "56000",
-      total_units: 4,
-      created_by: admin.user_id,
+      user_name: "Siti Aminah",
+      user_email: "siti@propmate.com",
+      password_hash: hashPassword("resident123"),
+      phone_number: "0134455667",
+      role: "Resident",
     },
   });
 
-  const prop2 = await prisma.propertyMaster.create({
-    data: {
-      property_name: "Taman Sentosa Apartments",
-      property_type: "Apartment",
-      address: "45 Jalan Sentosa",
-      city: "Petaling Jaya",
-      state: "Selangor",
-      country: "Malaysia",
-      postal_code: "46100",
-      total_units: 4,
-      created_by: admin.user_id,
-    },
+  // --- CHARGE MASTERS ---
+  const chargeRent = await prisma.chargeMaster.create({
+    data: { charge_name: "Monthly Rental", charge_type: "Recurring", uom: "month", default_amount: 0, description: "Standard monthly rental", created_by: admin.user_id },
   });
-
-  // Desa Harmoni units
-  const dhA = await prisma.unit.create({
-    data: {
-      property_id: prop1.property_id,
-      unit_number: "A-01",
-      unit_type: "2 Bedroom",
-      floor_number: 1,
-      area_sqft: 850,
-      status: "Occupied",
-      monthly_rent: 1500,
-      created_by: admin.user_id,
-    },
-  });
-  const dhB = await prisma.unit.create({
-    data: {
-      property_id: prop1.property_id,
-      unit_number: "A-02",
-      unit_type: "3 Bedroom",
-      floor_number: 2,
-      area_sqft: 1100,
-      status: "Vacant",
-      monthly_rent: 1800,
-      created_by: admin.user_id,
-    },
-  });
-  const dhC = await prisma.unit.create({
-    data: {
-      property_id: prop1.property_id,
-      unit_number: "A-03",
-      unit_type: "Studio",
-      floor_number: 3,
-      area_sqft: 500,
-      status: "Occupied",
-      monthly_rent: 1100,
-      created_by: admin.user_id,
-    },
-  });
-  const dhD = await prisma.unit.create({
-    data: {
-      property_id: prop1.property_id,
-      unit_number: "A-04",
-      unit_type: "2 Bedroom",
-      floor_number: 4,
-      area_sqft: 900,
-      status: "Occupied",
-      monthly_rent: 1600,
-      created_by: admin.user_id,
-    },
-  });
-
-  // Taman Sentosa units
-  const tsA = await prisma.unit.create({
-    data: {
-      property_id: prop2.property_id,
-      unit_number: "B-01",
-      unit_type: "3 Bedroom",
-      floor_number: 1,
-      area_sqft: 1200,
-      status: "Occupied",
-      monthly_rent: 1700,
-      created_by: admin.user_id,
-    },
-  });
-  const tsB = await prisma.unit.create({
-    data: {
-      property_id: prop2.property_id,
-      unit_number: "B-02",
-      unit_type: "2 Bedroom",
-      floor_number: 2,
-      area_sqft: 950,
-      status: "Vacant",
-      monthly_rent: 1400,
-      created_by: admin.user_id,
-    },
-  });
-  const tsC = await prisma.unit.create({
-    data: {
-      property_id: prop2.property_id,
-      unit_number: "B-03",
-      unit_type: "Studio",
-      floor_number: 3,
-      area_sqft: 520,
-      status: "Vacant",
-      monthly_rent: 1000,
-      created_by: admin.user_id,
-    },
-  });
-  const tsD = await prisma.unit.create({
-    data: {
-      property_id: prop2.property_id,
-      unit_number: "B-04",
-      unit_type: "3 Bedroom",
-      floor_number: 4,
-      area_sqft: 1250,
-      status: "Occupied",
-      monthly_rent: 1750,
-      created_by: admin.user_id,
-    },
-  });
-
-  // Minimal leases for occupied units (no Lease UI in MVP; needed for Invoice/Ticket FK)
-  const leaseDHA = await prisma.tenantLease.create({
-    data: {
-      unit_id: dhA.unit_id,
-      user_id: resident.user_id,
-      move_in_date: new Date("2025-01-01"),
-      status: "Active",
-      created_by: admin.user_id,
-    },
-  });
-  const leaseDHD = await prisma.tenantLease.create({
-    data: {
-      unit_id: dhD.unit_id,
-      user_id: admin.user_id,
-      move_in_date: new Date("2025-03-15"),
-      status: "Active",
-      created_by: admin.user_id,
-    },
-  });
-  const leaseTSA = await prisma.tenantLease.create({
-    data: {
-      unit_id: tsA.unit_id,
-      user_id: resident.user_id,
-      move_in_date: new Date("2025-02-01"),
-      status: "Active",
-      created_by: admin.user_id,
-    },
-  });
-  const leaseTSD = await prisma.tenantLease.create({
-    data: {
-      unit_id: tsD.unit_id,
-      user_id: admin.user_id,
-      move_in_date: new Date("2025-04-10"),
-      status: "Active",
-      created_by: admin.user_id,
-    },
-  });
-  const leaseDHC = await prisma.tenantLease.create({
-    data: {
-      unit_id: dhC.unit_id,
-      user_id: resident.user_id,
-      move_in_date: new Date("2025-05-01"),
-      status: "Active",
-      created_by: admin.user_id,
-    },
-  });
-
-  const parkingCharge = await prisma.chargeMaster.create({
+  const chargePark = await prisma.chargeMaster.create({
     data: { charge_name: "Parking Fee", charge_type: "Recurring", uom: "month", default_amount: 100, description: "Monthly parking bay fee", created_by: admin.user_id },
   });
-  
-  const maintenanceCharge = await prisma.chargeMaster.create({
+  const chargeMaint = await prisma.chargeMaster.create({
     data: { charge_name: "Maintenance Fee", charge_type: "Recurring", uom: "month", default_amount: 250, description: "Property maintenance fee", created_by: admin.user_id },
   });
+  const chargeSec = await prisma.chargeMaster.create({
+    data: { charge_name: "Security Fee", charge_type: "Recurring", uom: "month", default_amount: 50, description: "24-hour security fee", created_by: admin.user_id },
+  });
+  const chargeCard = await prisma.chargeMaster.create({
+    data: { charge_name: "Access Card", charge_type: "One-Time", uom: "piece", default_amount: 30, description: "Replacement access card", created_by: admin.user_id },
+  });
 
-  const leaseCharges = [
-    { lease_id: leaseDHA.lease_id, charge_id: rentalCharge.charge_id, amount: dhA.monthly_rent, quantity: 1, created_by: admin.user_id },
-    { lease_id: leaseDHA.lease_id, charge_id: parkingCharge.charge_id, amount: 100, quantity: 1, created_by: admin.user_id },
-    { lease_id: leaseDHA.lease_id, charge_id: maintenanceCharge.charge_id, amount: 250, quantity: 1, created_by: admin.user_id },
-    { lease_id: leaseDHD.lease_id, charge_id: rentalCharge.charge_id, amount: dhD.monthly_rent, quantity: 1, created_by: admin.user_id },
-    { lease_id: leaseDHD.lease_id, charge_id: maintenanceCharge.charge_id, amount: 250, quantity: 1, created_by: admin.user_id },
-    { lease_id: leaseTSA.lease_id, charge_id: rentalCharge.charge_id, amount: tsA.monthly_rent, quantity: 1, created_by: admin.user_id },
-    { lease_id: leaseTSD.lease_id, charge_id: rentalCharge.charge_id, amount: tsD.monthly_rent, quantity: 1, created_by: admin.user_id },
-    { lease_id: leaseTSD.lease_id, charge_id: parkingCharge.charge_id, amount: 100, quantity: 2, created_by: admin.user_id },
-    { lease_id: leaseDHC.lease_id, charge_id: rentalCharge.charge_id, amount: dhC.monthly_rent, quantity: 1, created_by: admin.user_id },
+  // --- PROPERTIES ---
+  const prop1 = await prisma.propertyMaster.create({
+    data: { property_name: "Desa Harmoni Condominium", property_type: "Condominium", address: "12 Jalan Harmoni", city: "Kuala Lumpur", state: "WP", country: "Malaysia", postal_code: "56000", total_units: 4, created_by: admin.user_id },
+  });
+  const prop2 = await prisma.propertyMaster.create({
+    data: { property_name: "Taman Sentosa Apartments", property_type: "Apartment", address: "45 Jalan Sentosa", city: "Petaling Jaya", state: "Selangor", country: "Malaysia", postal_code: "46100", total_units: 4, created_by: admin.user_id },
+  });
+  const prop3 = await prisma.propertyMaster.create({
+    data: { property_name: "Apex Commercial Tower", property_type: "Commercial", address: "88 Apex Hub", city: "Shah Alam", state: "Selangor", country: "Malaysia", postal_code: "40000", total_units: 4, created_by: admin.user_id },
+  });
+
+  // --- UNITS ---
+  const unitsData = [
+    { propId: prop1.property_id, no: "A-01", type: "2 Bedroom", sqft: 850, rent: 1500, tenant: res1 },
+    { propId: prop1.property_id, no: "A-02", type: "3 Bedroom", sqft: 1100, rent: 1800, tenant: res2 },
+    { propId: prop1.property_id, no: "A-03", type: "Studio", sqft: 500, rent: 1100, tenant: null }, // Vacant
+    { propId: prop1.property_id, no: "A-04", type: "2 Bedroom", sqft: 900, rent: 1600, tenant: res3 },
+    { propId: prop2.property_id, no: "B-01", type: "3 Bedroom", sqft: 1200, rent: 1700, tenant: res1 },
+    { propId: prop2.property_id, no: "B-02", type: "2 Bedroom", sqft: 950, rent: 1400, tenant: res2 },
+    { propId: prop2.property_id, no: "B-03", type: "Studio", sqft: 520, rent: 1000, tenant: null }, // Vacant
+    { propId: prop2.property_id, no: "B-04", type: "3 Bedroom", sqft: 1250, rent: 1750, tenant: res3 },
+    { propId: prop3.property_id, no: "C-01", type: "Retail Lot", sqft: 2000, rent: 4500, tenant: res2 },
+    { propId: prop3.property_id, no: "C-02", type: "Office", sqft: 1500, rent: 3000, tenant: res1 },
   ];
-  await prisma.leaseCharge.createMany({ data: leaseCharges });
 
-  // Invoices generated from unit monthly_rent (per occupied unit)
-  const occupied: { unit: any; lease: any }[] = [
-    { unit: dhA, lease: leaseDHA },
-    { unit: dhD, lease: leaseDHD },
-    { unit: dhC, lease: leaseDHC },
-    { unit: tsA, lease: leaseTSA },
-    { unit: tsD, lease: leaseTSD },
-  ];
-
-  let invoiceCounter = 1;
-  for (const { unit, lease } of occupied) {
-    const month = new Date();
-    month.setDate(1);
-    const due = new Date(month);
-    due.setMonth(due.getMonth() + 1);
-    const invNo = `INV-${month.getFullYear()}${String(month.getMonth() + 1).padStart(2, "0")}-${String(invoiceCounter).padStart(3, "0")}`;
-    const status = invoiceCounter % 2 === 0 ? "Unpaid" : "Paid";
-    const myCharges = leaseCharges.filter(lc => lc.lease_id === lease.lease_id);
-    let total = 0;
-    const details = myCharges.map(lc => {
-      const lineTotal = Number(lc.amount) * Number(lc.quantity);
-      total += lineTotal;
-      const chargeMaster = [rentalCharge, parkingCharge, maintenanceCharge].find(c => c.charge_id === lc.charge_id)!;
-      return {
-        charge_id: lc.charge_id,
-        description: `${chargeMaster.charge_name} - ${unit.unit_number}`,
-        uom: chargeMaster.uom,
-        unit_price: lc.amount,
-        quantity: lc.quantity,
-        total_price: lineTotal,
-      };
-    });
-
-    await prisma.invoice.create({
+  const occupiedUnits: any[] = [];
+  
+  for (const u of unitsData) {
+    const unit = await prisma.unit.create({
       data: {
-        lease_id: lease.lease_id,
-        invoice_no: invNo,
-        invoice_date: month,
-        due_date: due,
-        total_amount: total,
-        status,
+        property_id: u.propId,
+        unit_number: u.no,
+        unit_type: u.type,
+        floor_number: 1,
+        area_sqft: u.sqft,
+        status: u.tenant ? "Occupied" : "Vacant",
+        monthly_rent: u.rent,
         created_by: admin.user_id,
-        details: {
-          create: details,
-        },
-      },
+      }
     });
-    invoiceCounter++;
+
+    if (u.tenant) {
+      const moveIn = addMonths(today, -6);
+      const lease = await prisma.tenantLease.create({
+        data: {
+          unit_id: unit.unit_id,
+          user_id: u.tenant.user_id,
+          move_in_date: moveIn,
+          status: "Active",
+          created_by: admin.user_id,
+        }
+      });
+      occupiedUnits.push({ unit, lease, tenant: u.tenant });
+
+      // Create Lease Charges
+      const charges = [
+        { lease_id: lease.lease_id, charge_id: chargeRent.charge_id, amount: unit.monthly_rent, quantity: 1, created_by: admin.user_id },
+        { lease_id: lease.lease_id, charge_id: chargeMaint.charge_id, amount: 250, quantity: 1, created_by: admin.user_id },
+      ];
+      // Randomly add parking or security
+      if (Math.random() > 0.5) charges.push({ lease_id: lease.lease_id, charge_id: chargePark.charge_id, amount: 100, quantity: 1, created_by: admin.user_id });
+      if (Math.random() > 0.5) charges.push({ lease_id: lease.lease_id, charge_id: chargeSec.charge_id, amount: 50, quantity: 1, created_by: admin.user_id });
+      
+      await prisma.leaseCharge.createMany({ data: charges });
+    }
   }
 
-  // A few maintenance tickets (one per occupied unit, varied status)
-  const ticketSeeds = [
-    { unit: dhA, lease: leaseDHA, title: "Air-conditioner not cooling", priority: "High", status: "Open", cost: 0, monthsAgo: 0 },
-    { unit: dhD, lease: leaseDHD, title: "Leaking kitchen faucet", priority: "Medium", status: "In Progress", cost: 0, monthsAgo: 0 },
-    { unit: tsA, lease: leaseTSA, title: "Lift lobby light flickering", priority: "Low", status: "Resolved", cost: 150, monthsAgo: 0 },
-    { unit: tsD, lease: leaseTSD, title: "Main door lock jammed", priority: "High", status: "Open", cost: 0, monthsAgo: 0 },
+  // --- INVOICES (Historical & Current) ---
+  const currentMonthStart = startOfMonth(today);
+  const monthsToGenerate = [-2, -1, 0]; // 2 months ago, last month, this month
+
+  let invoiceCounter = 1;
+  const leaseChargesList = await prisma.leaseCharge.findMany({ include: { charge: true } });
+
+  for (const mOffset of monthsToGenerate) {
+    const invDate = addMonths(currentMonthStart, mOffset);
+    const dueDate = addMonths(invDate, 1);
     
-    // Past closed tickets for the cost graph
-    { unit: dhA, lease: leaseDHA, title: "Plumbing fix", priority: "Medium", status: "Closed", cost: 450, monthsAgo: 1 },
-    { unit: dhB, lease: leaseDHA, title: "Electrical wiring", priority: "High", status: "Closed", cost: 800, monthsAgo: 2 },
-    { unit: tsA, lease: leaseTSA, title: "Window seal replacement", priority: "Low", status: "Closed", cost: 120, monthsAgo: 2 },
-    { unit: tsC, lease: leaseTSA, title: "HVAC repair", priority: "High", status: "Closed", cost: 1200, monthsAgo: 3 },
-    { unit: dhD, lease: leaseDHD, title: "Painting touchup", priority: "Medium", status: "Closed", cost: 300, monthsAgo: 4 },
+    for (const { unit, lease } of occupiedUnits) {
+      const invNo = `INV-${invDate.getFullYear()}${String(invDate.getMonth() + 1).padStart(2, "0")}-${String(invoiceCounter).padStart(3, "0")}`;
+      const status = mOffset === 0 ? "Unpaid" : "Paid"; // Past are paid, current unpaid
+      
+      const myCharges = leaseChargesList.filter(lc => lc.lease_id === lease.lease_id);
+      let total = 0;
+      
+      const detailsInput = myCharges.map(lc => {
+        const lineTotal = Number(lc.amount) * Number(lc.quantity);
+        total += lineTotal;
+        return {
+          charge_id: lc.charge_id,
+          description: `${lc.charge.charge_name} - ${unit.unit_number}`,
+          uom: lc.charge.uom,
+          unit_price: lc.amount,
+          quantity: lc.quantity,
+          total_price: lineTotal,
+        };
+      });
+
+      if (mOffset < 0 && Math.random() > 0.8) {
+        total += 30;
+        detailsInput.push({
+          charge_id: chargeCard.charge_id,
+          description: "Access Card Replacement",
+          uom: "piece",
+          unit_price: 30 as any,
+          quantity: 1 as any,
+          total_price: 30 as any,
+        });
+      }
+
+      await prisma.invoice.create({
+        data: {
+          lease_id: lease.lease_id,
+          invoice_no: invNo,
+          invoice_date: invDate,
+          due_date: dueDate,
+          total_amount: total,
+          status,
+          created_by: admin.user_id,
+          details: { create: detailsInput },
+        }
+      });
+      invoiceCounter++;
+    }
+  }
+
+  // --- TICKETS ---
+  const ticketSeeds = [
+    { title: "Air-conditioner not cooling", category: "Maintenance", priority: "High", status: "Closed", cost: 250, monthsAgo: 2 },
+    { title: "Leaking kitchen faucet", category: "Maintenance", priority: "Medium", status: "Closed", cost: 120, monthsAgo: 1 },
+    { title: "Keycard stopped working", category: "General", priority: "Low", status: "Resolved", cost: 0, monthsAgo: 1 },
+    { title: "Main door lock jammed", category: "Maintenance", priority: "High", status: "In Progress", cost: 0, monthsAgo: 0 },
+    { title: "Noisy neighbors", category: "Complaint", priority: "Medium", status: "Open", cost: 0, monthsAgo: 0 },
+    { title: "Lift lobby light flickering", category: "Maintenance", priority: "Low", status: "Open", cost: 0, monthsAgo: 0 },
+    { title: "Pest control request", category: "Maintenance", priority: "Medium", status: "Closed", cost: 300, monthsAgo: 3 },
+    { title: "Balcony drain clogged", category: "Maintenance", priority: "High", status: "Closed", cost: 150, monthsAgo: 2 },
   ];
-  for (const t of ticketSeeds) {
-    const createdDate = new Date();
-    createdDate.setMonth(createdDate.getMonth() - t.monthsAgo);
+
+  for (let i = 0; i < ticketSeeds.length; i++) {
+    const t = ticketSeeds[i];
+    const target = occupiedUnits[i % occupiedUnits.length];
+    const createdDate = addMonths(today, -t.monthsAgo);
     
     await prisma.ticket.create({
       data: {
-        lease_id: t.lease.lease_id,
-        requester_id: resident.user_id,
-        unit_id: t.unit.unit_id,
+        lease_id: target.lease.lease_id,
+        requester_id: target.tenant.user_id,
+        unit_id: target.unit.unit_id,
         title: t.title,
-        description: `${t.title} reported by resident.`,
-        ticket_category: "Maintenance",
+        description: `${t.title} reported by ${target.tenant.user_name}.`,
+        ticket_category: t.category,
         priority: t.priority,
         status: t.status,
         cost: t.cost,
         created_at: createdDate,
-        resolved_at: t.status === "Closed" || t.status === "Resolved" ? createdDate : null,
-        created_by: resident.user_id,
-      },
+        resolved_at: (t.status === "Closed" || t.status === "Resolved") ? addDays(createdDate, 2) : null,
+        created_by: target.tenant.user_id,
+      }
     });
   }
 
-  // Shared facilities (bookable) for the demo
-  const nextMonth = new Date();
-  nextMonth.setDate(nextMonth.getDate() + 15);
-  
-  await prisma.facility.create({
-    data: {
-      property_id: prop1.property_id,
-      facility_name: "Swimming Pool",
-      facility_type: "Swimming Pool",
-      facility_status: "Available",
-      max_capacity: 20,
-      is_bookable: true,
-      operation_days: "1,2,3,4,5,6,7",
-      open_time: "07:00",
-      close_time: "21:00",
-      next_maintenance_date: nextMonth,
-      created_by: admin.user_id,
-    },
+  // --- FACILITIES ---
+  const facPool = await prisma.facility.create({
+    data: { property_id: prop1.property_id, facility_name: "Infinity Pool", facility_type: "Swimming Pool", facility_status: "Available", max_capacity: 20, is_bookable: true, operation_days: "1,2,3,4,5,6,7", open_time: "07:00", close_time: "21:00", created_by: admin.user_id },
   });
-  
-  const soonDate = new Date();
-  soonDate.setDate(soonDate.getDate() + 5);
-
-  await prisma.facility.create({
-    data: {
-      property_id: prop1.property_id,
-      facility_name: "Gymnasium",
-      facility_type: "Gym",
-      facility_status: "Available",
-      max_capacity: 15,
-      is_bookable: true,
-      operation_days: "1,2,3,4,5,6,7",
-      open_time: "06:00",
-      close_time: "23:00",
-      next_maintenance_date: soonDate,
-      created_by: admin.user_id,
-    },
+  const facGym = await prisma.facility.create({
+    data: { property_id: prop1.property_id, facility_name: "Resident Gym", facility_type: "Gym", facility_status: "Available", max_capacity: 15, is_bookable: true, operation_days: "1,2,3,4,5,6,7", open_time: "06:00", close_time: "23:00", created_by: admin.user_id },
   });
-  await prisma.facility.create({
-    data: {
-      property_id: prop2.property_id,
-      facility_name: "Function Hall",
-      facility_type: "Function Hall",
-      facility_status: "Available",
-      max_capacity: 100,
-      is_bookable: true,
-      operation_days: "1,2,3,4,5,6",
-      open_time: "09:00",
-      close_time: "22:00",
-      next_maintenance_date: new Date(new Date().setMonth(new Date().getMonth() + 2)), // 2 months away
-      created_by: admin.user_id,
-    },
+  const facHall = await prisma.facility.create({
+    data: { property_id: prop2.property_id, facility_name: "Grand Function Hall", facility_type: "Function Hall", facility_status: "Available", max_capacity: 100, is_bookable: true, operation_days: "1,2,3,4,5,6", open_time: "09:00", close_time: "22:00", created_by: admin.user_id },
   });
 
-  // Badminton courts (Court A-D) for the booking demo — Mon–Sat 08:00–22:00
-  const badmintonCourts = [
-    { name: "Badminton Court A", capacity: 4 },
-    { name: "Badminton Court B", capacity: 4 },
-    { name: "Badminton Court C", capacity: 4 },
-    { name: "Badminton Court D", capacity: 4 },
+  // --- BOOKINGS ---
+  const bookingSeeds = [
+    { fac: facPool, dayOffset: -5, start: "10:00", end: "12:00", status: "Completed" },
+    { fac: facGym, dayOffset: -2, start: "18:00", end: "19:00", status: "Completed" },
+    { fac: facPool, dayOffset: 1, start: "08:00", end: "10:00", status: "Confirmed" },
+    { fac: facHall, dayOffset: 3, start: "14:00", end: "18:00", status: "Confirmed" },
+    { fac: facGym, dayOffset: 1, start: "19:00", end: "20:30", status: "Pending" },
   ];
-  const courtIds: string[] = [];
-  for (const c of badmintonCourts) {
-    const created = await prisma.facility.create({
-      data: {
-        property_id: prop1.property_id,
-        facility_name: c.name,
-        facility_type: "Badminton Court",
-        facility_status: "Available",
-        max_capacity: c.capacity,
-        is_bookable: true,
-        operation_days: "1,2,3,4,5,6",
-        open_time: "08:00",
-        close_time: "22:00",
-        created_by: admin.user_id,
-      },
-    });
-    courtIds.push(created.facility_id);
-  }
 
-  // Sample bookings so the availability bar + clash check are visible on first run.
-  // Dates are computed relative to today so they always fall on upcoming open days.
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const addDays = (n: number) => {
-    const d = new Date(today);
-    d.setDate(d.getDate() + n);
-    return d;
-  };
-  const atTime = (base: Date, hhmm: string) => {
-    const [h, m] = hhmm.split(":").map(Number);
-    const d = new Date(base);
-    d.setHours(h, m, 0, 0);
-    return d;
-  };
-
-  const sampleBookings = [
-    // Court A: tomorrow 10:00–11:30
-    { court: 0, dayOffset: 1, start: "10:00", end: "11:30", purpose: "Morning doubles" },
-    // Court A: +3 days 15:00–16:30
-    { court: 0, dayOffset: 3, start: "15:00", end: "16:30", purpose: "Coaching session" },
-    // Court B: tomorrow 14:00–16:00
-    { court: 1, dayOffset: 1, start: "14:00", end: "16:00", purpose: "Friendly match" },
-    // Court B: +2 days 09:00–10:00
-    { court: 1, dayOffset: 2, start: "09:00", end: "10:00", purpose: "Solo practice" },
-    // Court C: +2 days 18:00–19:30
-    { court: 2, dayOffset: 2, start: "18:00", end: "19:30", purpose: "Evening game" },
-    // Court D: +4 days 11:00–12:00
-    { court: 3, dayOffset: 4, start: "11:00", end: "12:00", purpose: "Club session" },
-    // Court D: +4 days 17:00–18:30
-    { court: 3, dayOffset: 4, start: "17:00", end: "18:30", purpose: "Tournament prep" },
-  ];
-  for (const b of sampleBookings) {
-    const date = addDays(b.dayOffset);
+  for (let i = 0; i < bookingSeeds.length; i++) {
+    const b = bookingSeeds[i];
+    const target = occupiedUnits[i % occupiedUnits.length];
+    const bDate = addDays(today, b.dayOffset);
+    
     await prisma.booking.create({
       data: {
-        facility_id: courtIds[b.court],
-        user_id: resident.user_id,
-        lease_id: leaseDHA.lease_id,
-        booking_date: date,
-        booking_status: "Confirmed",
-        start_time: atTime(date, b.start),
-        end_time: atTime(date, b.end),
-        pax_count: 2,
-        purpose: b.purpose,
-        created_by: resident.user_id,
-      },
+        facility_id: b.fac.facility_id,
+        user_id: target.tenant.user_id,
+        lease_id: target.lease.lease_id,
+        booking_date: bDate,
+        booking_status: b.status,
+        start_time: atTime(bDate, b.start),
+        end_time: atTime(bDate, b.end),
+        pax_count: b.fac.facility_type === "Function Hall" ? 50 : 2,
+        purpose: "Standard usage",
+        created_by: target.tenant.user_id,
+      }
     });
   }
 
-  // Sample Visitors
-  await prisma.visitor.createMany({
-    data: [
-      {
-        lease_id: leaseDHA.lease_id,
-        visitor_name: "Ali Bin Abu",
-        visitor_ic_no: "900101-14-5555",
-        vehicle_plate: "WAB 1234",
-        visit_purpose: "Delivery",
-        visit_date: addDays(1),
-        status: "Approved",
-        created_by: resident.user_id,
-      },
-      {
-        lease_id: leaseDHA.lease_id,
-        visitor_name: "Siti Aminah",
-        visitor_ic_no: "880505-10-6666",
-        vehicle_plate: "VBB 9876",
-        visit_purpose: "Visiting family",
-        visit_date: addDays(3),
-        status: "Pending",
-        created_by: resident.user_id,
-      },
-      {
-        lease_id: leaseTSA.lease_id,
-        visitor_name: "John Doe",
-        visitor_ic_no: "G99887766",
-        visit_purpose: "Internet Installation",
-        visit_date: addDays(0),
-        status: "Pending",
-        created_by: resident.user_id,
-      }
-    ]
-  });
+  // --- VISITORS ---
+  const visitorSeeds = [
+    { name: "Ali Bin Abu", ic: "900101-14-5555", plate: "WAB 1234", purpose: "Delivery", dayOffset: -3, status: "Completed" },
+    { name: "Sarah Lee", ic: "850505-10-6666", plate: "VBB 9876", purpose: "Visiting", dayOffset: -1, status: "Completed" },
+    { name: "Michael Chang", ic: "921122-10-1234", plate: "BKS 1122", purpose: "Plumber", dayOffset: 0, status: "Approved" },
+    { name: "Siti Nurhaliza", ic: "880808-10-8888", plate: "WWA 8888", purpose: "Visiting", dayOffset: 1, status: "Pending" },
+    { name: "David Lim", ic: "991212-14-9999", plate: "JQX 999", purpose: "Internet Install", dayOffset: 2, status: "Approved" },
+  ];
 
-  console.log("Seed complete: 2 properties, 8 units, 2 users, 4 invoices, 4 tickets, 7 facilities, 7 sample bookings, 3 visitors.");
+  for (let i = 0; i < visitorSeeds.length; i++) {
+    const v = visitorSeeds[i];
+    const target = occupiedUnits[i % occupiedUnits.length];
+    
+    await prisma.visitor.create({
+      data: {
+        lease_id: target.lease.lease_id,
+        visitor_name: v.name,
+        visitor_ic_no: v.ic,
+        vehicle_plate: v.plate,
+        visit_purpose: v.purpose,
+        visit_date: addDays(today, v.dayOffset),
+        status: v.status,
+        created_by: target.tenant.user_id,
+      }
+    });
+  }
+
+  console.log("Seed complete: 3 properties, 10 units, 4 users, 24 invoices, 8 tickets, 3 facilities, 5 bookings, 5 visitors.");
 }
 
 main()

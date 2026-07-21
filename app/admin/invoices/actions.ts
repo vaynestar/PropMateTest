@@ -4,9 +4,10 @@ import { requireUser } from "@/lib/auth";
 import { generateInvoicesForLeases, markInvoicePaid, getEligibleLeasesForInvoicing } from "@/lib/billing";
 import prisma from "@/lib/prisma";
 
-export async function getEligibleLeasesAction() {
+export async function getEligibleLeasesAction(targetDateStr?: string) {
   await requireUser(["Admin"]);
-  return getEligibleLeasesForInvoicing();
+  const targetDate = targetDateStr ? new Date(targetDateStr) : new Date();
+  return getEligibleLeasesForInvoicing(targetDate);
 }
 
 export async function getAllActiveLeasesAction() {
@@ -17,9 +18,10 @@ export async function getAllActiveLeasesAction() {
   });
 }
 
-export async function generateInvoicesAction(leaseIds: string[]) {
+export async function generateInvoicesAction(leaseIds: string[], targetDateStr?: string) {
   const user = await requireUser(["Admin"]);
-  const result = await generateInvoicesForLeases(leaseIds, user.userId);
+  const targetDate = targetDateStr ? new Date(targetDateStr) : new Date();
+  const result = await generateInvoicesForLeases(leaseIds, user.userId, targetDate);
   revalidatePath("/admin/billing");
   revalidatePath("/admin/invoices");
   return result;

@@ -74,6 +74,15 @@ export default async function BillingPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
+            href="/admin/billing/recurring-charges"
+            className="btn-outline px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+              autorenew
+            </span>
+            Recurring Charges
+          </Link>
+          <Link
             href="/admin/billing/charges"
             className="btn-outline px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2"
           >

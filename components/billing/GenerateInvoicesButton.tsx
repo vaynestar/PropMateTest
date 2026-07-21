@@ -8,19 +8,38 @@ export default function GenerateInvoicesButton() {
   const [modalOpen, setModalOpen] = useState(false);
   const [leases, setLeases] = useState<any[]>([]);
   const [selectedLeaseIds, setSelectedLeaseIds] = useState<Set<string>>(new Set());
+  
+  // Default to current month
+  const [targetMonth, setTargetMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
 
-  const handleOpen = async () => {
+  const fetchLeases = async (monthStr: string) => {
     setLoading(true);
     try {
-      const data = await getEligibleLeasesAction();
+      // Create a date corresponding to the 1st of the selected month
+      const [year, month] = monthStr.split('-').map(Number);
+      const d = new Date(year, month - 1, 1);
+      const data = await getEligibleLeasesAction(d.toISOString());
       setLeases(data);
       setSelectedLeaseIds(new Set(data.map((l: any) => l.lease_id)));
-      setModalOpen(true);
     } catch (e) {
       alert("Failed to fetch eligible leases.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleOpen = async () => {
+    setModalOpen(true);
+    await fetchLeases(targetMonth);
+  };
+
+  const handleMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newMonth = e.target.value;
+    setTargetMonth(newMonth);
+    fetchLeases(newMonth);
   };
 
   const toggleLease = (id: string) => {
@@ -40,7 +59,9 @@ export default function GenerateInvoicesButton() {
     }
     setLoading(true);
     try {
-      const result = await generateInvoicesAction(Array.from(selectedLeaseIds));
+      const [year, month] = targetMonth.split('-').map(Number);
+      const d = new Date(year, month - 1, 1);
+      const result = await generateInvoicesAction(Array.from(selectedLeaseIds), d.toISOString());
       alert(result.message);
       setModalOpen(false);
     } catch (e: any) {
@@ -72,8 +93,17 @@ export default function GenerateInvoicesButton() {
             <div className="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
               <div>
                 <h2 className="text-xl font-bold text-on-surface">Generate Monthly Bills</h2>
-                <p className="text-sm text-on-surface-variant mt-1">
-                  {leases.length} tenants are due for an invoice this month.
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="text-sm text-on-surface-variant font-medium">Billing Month:</span>
+                  <input
+                    type="month"
+                    value={targetMonth}
+                    onChange={handleMonthChange}
+                    className="px-3 py-1.5 rounded-md bg-surface-container border border-outline-variant text-sm text-on-surface focus:border-primary outline-none"
+                  />
+                </div>
+                <p className="text-sm text-on-surface-variant mt-2">
+                  {leases.length} tenants are due for an invoice in this month.
                 </p>
               </div>
               <button onClick={() => setModalOpen(false)} className="text-on-surface-variant hover:text-on-surface p-1">

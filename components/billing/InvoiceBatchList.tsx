@@ -62,7 +62,16 @@ export default function InvoiceBatchList({ invoices }: { invoices: any[] }) {
   // Derive the active batch to show
   let currentBatch = selectedBatch;
   if (!currentBatch || !batchKeys.includes(currentBatch)) {
-    currentBatch = batchKeys[0] || "";
+    // Determine last month's key
+    const lastMonthDate = new Date();
+    lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+    const lastMonthKey = getMonthYear(lastMonthDate);
+
+    if (batchKeys.includes(lastMonthKey)) {
+      currentBatch = lastMonthKey;
+    } else {
+      currentBatch = batchKeys[0] || "";
+    }
   }
 
   return (

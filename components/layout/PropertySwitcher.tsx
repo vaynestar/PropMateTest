@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useTransition, useEffect } from "react";
 import { setActiveProperty } from "@/app/actions/property-actions";
 
 type PropertyOption = {
@@ -11,11 +11,19 @@ type PropertyOption = {
 export default function PropertySwitcher({
   properties,
   activePropertyId,
+  isValid = true,
 }: {
   properties: PropertyOption[];
   activePropertyId: string;
+  isValid?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!isValid && activePropertyId) {
+      setActiveProperty(activePropertyId);
+    }
+  }, [isValid, activePropertyId]);
 
   if (properties.length === 0) return null;
 

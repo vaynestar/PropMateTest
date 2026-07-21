@@ -17,8 +17,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     orderBy: { created_at: "asc" },
   });
 
-  // If no cookie is set but properties exist, we could optionally default to the first one
-  const safeActivePropertyId = activePropertyId || (properties[0]?.property_id ?? "");
+  const isValidProperty = properties.some((p) => p.property_id === activePropertyId);
+  const safeActivePropertyId = isValidProperty ? activePropertyId : (properties[0]?.property_id ?? "");
 
   return (
     <div className="bg-surface text-on-surface font-body-md antialiased overflow-x-hidden min-h-screen flex w-full">
@@ -59,7 +59,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </summary>
             <ul className="ml-11 mt-1 flex flex-col gap-1 pb-2">
               <li><Link href="/admin/billing" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Billing Overview</Link></li>
-              <li><Link href="/admin/invoices" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Invoices</Link></li>
+              <li><Link href="/admin/invoices" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Invoice Details</Link></li>
+              <li><Link href="/admin/billing/recurring-charges" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Recurring Charges</Link></li>
             </ul>
           </details>
           <details className="group [&_summary::-webkit-details-marker]:hidden">
@@ -129,7 +130,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </div>
           
           <div className="flex-1 flex items-center justify-start">
-            <PropertySwitcher properties={properties} activePropertyId={safeActivePropertyId} />
+            <PropertySwitcher properties={properties} activePropertyId={safeActivePropertyId} isValid={isValidProperty} />
           </div>
 
           {/* Actions */}

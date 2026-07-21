@@ -29,7 +29,10 @@ export const adminNav: NavItem[] = [
     label: "Billing",
     href: "/admin/billing",
     icon: "payments",
-    children: [{ label: "Invoices", href: "/admin/invoices" }],
+    children: [
+      { label: "Invoice Details", href: "/admin/invoices" },
+      { label: "Recurring Charges", href: "/admin/billing/recurring-charges" }
+    ],
   },
   {
     label: "Facilities",
