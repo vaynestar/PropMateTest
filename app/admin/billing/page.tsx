@@ -60,6 +60,26 @@ export default async function BillingPage() {
     .reduce((sum, inv) => sum + Number(inv.total_amount), 0);
   const paidCount = invoices.filter((inv) => inv.status === "Paid").length;
 
+  function getMonthYear(date: Date | string) {
+    return new Intl.DateTimeFormat("en-GB", {
+      month: "long",
+      year: "numeric",
+    }).format(new Date(date));
+  }
+
+  const batches = invoices.reduce((acc, inv) => {
+    const key = getMonthYear(inv.invoice_date);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(inv);
+    return acc;
+  }, {} as Record<string, typeof invoices>);
+
+  const batchKeys = Object.keys(batches).sort((a, b) => {
+    const dateA = new Date(batches[a][0].invoice_date).getTime();
+    const dateB = new Date(batches[b][0].invoice_date).getTime();
+    return dateB - dateA;
+  });
+
   return (
     <div className="flex flex-col gap-stack-lg">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -117,13 +137,13 @@ export default async function BillingPage() {
       <div className="glass-card rounded-xl p-0 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30">
           <h2 className="font-title-lg text-title-lg text-on-surface">
-            Invoices
+            Invoice Batches Overview
           </h2>
           <Link
             href="/admin/invoices"
             className="font-label-md text-label-md text-primary hover:text-primary-container transition-colors"
           >
-            View detail
+            View all details
           </Link>
         </div>
 
@@ -131,74 +151,64 @@ export default async function BillingPage() {
           <table className="w-full text-left">
             <thead className="bg-surface-container-high/50">
               <tr className="font-label-sm text-label-sm text-on-surface-variant">
-                <th className="px-6 py-3">Invoice No.</th>
-                <th className="px-6 py-3">Unit</th>
-                <th className="px-6 py-3">Tenant</th>
-                <th className="px-6 py-3">Due</th>
-                <th className="px-6 py-3 text-right">Amount</th>
-                <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3">Batch Name</th>
+                <th className="px-6 py-3 text-center">Invoices Generated</th>
+                <th className="px-6 py-3 text-right">Collected (Paid)</th>
+                <th className="px-6 py-3 text-right">Outstanding</th>
                 <th className="px-6 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/30">
-              {invoices.length === 0 && (
+              {batchKeys.length === 0 && (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={5}
                     className="px-6 py-10 font-body-md text-body-md text-on-surface-variant text-center"
                   >
-                    No invoices yet. Click "Generate Monthly Invoices" to create
+                    No invoice batches yet. Click "Generate Monthly Invoices" to create
                     them from occupied units.
                   </td>
                 </tr>
               )}
-              {invoices.map((inv) => (
-                <tr
-                  key={inv.invoice_id}
-                  className="font-body-md text-body-md text-on-surface"
-                >
-                  <td className="px-6 py-4 font-label-md">
-                    {inv.invoice_no}
-                  </td>
-                  <td className="px-6 py-4">
-                    {inv.lease.unit.unit_number}
-                    <span className="block font-label-sm text-label-sm text-on-surface-variant">
-                      {inv.lease.unit.property.property_name}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">{inv.lease.tenant.user_name}</td>
-                  <td className="px-6 py-4">
-                    {formatDate(inv.due_date)}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    {formatCurrency(Number(inv.total_amount))}
-                  </td>
-                  <td className="px-6 py-4">
-                    <StatusBadge status={inv.status} variant="invoice" />
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    {inv.status !== "Paid" ? (
-                      <form action={markPaid}>
-                        <input
-                          type="hidden"
-                          name="invoice_id"
-                          value={inv.invoice_id}
-                        />
-                        <button
-                          type="submit"
-                          className="font-label-sm text-label-sm text-emerald-300 hover:underline"
-                        >
-                          Mark Paid
-                        </button>
-                      </form>
-                    ) : (
-                      <span className="font-label-sm text-label-sm text-on-surface-variant">
-                        —
+              {batchKeys.map((bk) => {
+                const batchInvoices = batches[bk];
+                const generated = batchInvoices.length;
+                const collected = batchInvoices
+                  .filter((i) => i.status === "Paid")
+                  .reduce((sum, i) => sum + Number(i.total_amount), 0);
+                const outst = batchInvoices
+                  .filter((i) => i.status !== "Paid")
+                  .reduce((sum, i) => sum + Number(i.total_amount), 0);
+                return (
+                  <tr
+                    key={bk}
+                    className="font-body-md text-body-md text-on-surface hover:bg-surface-container-low/50 transition-colors"
+                  >
+                    <td className="px-6 py-4 font-label-md">
+                      {bk}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="px-3 py-1 bg-surface-container-high rounded-full font-label-sm text-on-surface">
+                        {generated}
                       </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4 text-right text-emerald-400 font-medium">
+                      {formatCurrency(collected)}
+                    </td>
+                    <td className="px-6 py-4 text-right text-rose-300 font-medium">
+                      {formatCurrency(outst)}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <Link
+                        href="/admin/invoices"
+                        className="font-label-sm text-label-sm text-primary hover:underline"
+                      >
+                        View Details →
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

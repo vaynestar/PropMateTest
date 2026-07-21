@@ -118,7 +118,7 @@ async function main() {
       unit_type: "Studio",
       floor_number: 3,
       area_sqft: 500,
-      status: "Maintenance",
+      status: "Occupied",
       monthly_rent: 1100,
       created_by: admin.user_id,
     },
@@ -223,11 +223,21 @@ async function main() {
       created_by: admin.user_id,
     },
   });
+  const leaseDHC = await prisma.tenantLease.create({
+    data: {
+      unit_id: dhC.unit_id,
+      user_id: resident.user_id,
+      move_in_date: new Date("2025-05-01"),
+      status: "Active",
+      created_by: admin.user_id,
+    },
+  });
 
   // Invoices generated from unit monthly_rent (per occupied unit)
   const occupied: { unit: any; lease: any }[] = [
     { unit: dhA, lease: leaseDHA },
     { unit: dhD, lease: leaseDHD },
+    { unit: dhC, lease: leaseDHC },
     { unit: tsA, lease: leaseTSA },
     { unit: tsD, lease: leaseTSD },
   ];
