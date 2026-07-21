@@ -17,6 +17,7 @@ async function main() {
   await prisma.ticketAttachment.deleteMany();
   await prisma.paymentTransaction.deleteMany();
   await prisma.booking.deleteMany();
+  await prisma.visitor.deleteMany();
   await prisma.invoiceDetail.deleteMany();
   await prisma.invoice.deleteMany();
   await prisma.ticket.deleteMany();
@@ -431,7 +432,42 @@ async function main() {
     });
   }
 
-  console.log("Seed complete: 2 properties, 8 units, 2 users, 4 invoices, 4 tickets, 7 facilities, 7 sample bookings.");
+  // Sample Visitors
+  await prisma.visitor.createMany({
+    data: [
+      {
+        lease_id: leaseDHA.lease_id,
+        visitor_name: "Ali Bin Abu",
+        visitor_ic_no: "900101-14-5555",
+        vehicle_plate: "WAB 1234",
+        visit_purpose: "Delivery",
+        visit_date: addDays(1),
+        status: "Approved",
+        created_by: resident.user_id,
+      },
+      {
+        lease_id: leaseDHA.lease_id,
+        visitor_name: "Siti Aminah",
+        visitor_ic_no: "880505-10-6666",
+        vehicle_plate: "VBB 9876",
+        visit_purpose: "Visiting family",
+        visit_date: addDays(3),
+        status: "Pending",
+        created_by: resident.user_id,
+      },
+      {
+        lease_id: leaseTSA.lease_id,
+        visitor_name: "John Doe",
+        visitor_ic_no: "G99887766",
+        visit_purpose: "Internet Installation",
+        visit_date: addDays(0),
+        status: "Pending",
+        created_by: resident.user_id,
+      }
+    ]
+  });
+
+  console.log("Seed complete: 2 properties, 8 units, 2 users, 4 invoices, 4 tickets, 7 facilities, 7 sample bookings, 3 visitors.");
 }
 
 main()
