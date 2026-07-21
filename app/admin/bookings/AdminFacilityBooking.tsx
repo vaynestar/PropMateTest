@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { adminBookFacility } from "./actions";
+import BookingTimeline from "@/components/facilities/BookingTimeline";
 
 type Facility = {
   facility_id: string;
@@ -124,16 +125,19 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
   const DAY_START = toMinutes(facility.open_time);
   const DAY_END = toMinutes(facility.close_time);
 
-  const slots = useMemo(() => {
-    const out: number[] = [];
-    for (let m = DAY_START; m <= DAY_END; m += 30) out.push(m);
-    return out;
-  }, [DAY_START, DAY_END]);
-
   const openDates = useMemo(() => nextOpenDates(openDays, 14), [openDays]);
   const [date, setDate] = useState<string>(dateToISO(openDates[0]));
-  const [start, setStart] = useState<number>(DAY_START);
-  const [end, setEnd] = useState<number>(Math.min(DAY_START + 60, DAY_END));
+
+  const initialStartHour = Math.floor(DAY_START / 60);
+  const initialEndHour = Math.floor(Math.min(DAY_START + 60, DAY_END) / 60);
+  
+  const [startHour, setStartHour] = useState<number>(initialStartHour);
+  const [startMin, setStartMin] = useState<number>(0);
+  const [endHour, setEndHour] = useState<number>(initialEndHour);
+  const [endMin, setEndMin] = useState<number>(0);
+
+  const start = startHour * 60 + startMin;
+  const end = endHour * 60 + endMin;
 
   const dayBookings = useMemo(() => {
     return bookings.filter((b) => {
@@ -173,6 +177,11 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
     }
     if (clash) {
       setError("This time slot has been booked. Please try another time.");
+      return;
+    }
+
+    if (start < DAY_START || end > DAY_END) {
+      setError(`Booking must be within operating hours (${facility.open_time} - ${facility.close_time}).`);
       return;
     }
 
@@ -260,47 +269,75 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
           </select>
         </label>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="flex flex-col gap-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="flex flex-col gap-2 border border-[#4a4455] rounded-lg p-4 bg-[#0c1324]">
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               Start time
             </span>
-            <select
-              value={start}
-              onChange={(e) => {
-                const v = Number(e.target.value);
-                setStart(v);
-                if (end <= v) setEnd(Math.min(v + 60, DAY_END));
-              }}
-              className="rounded-lg bg-[#0c1324] border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
-            >
-              {slots
-                .filter((m) => m < DAY_END)
-                .map((m) => (
-                  <option key={m} value={m}>
-                    {fmt(m)}
-                  </option>
+            <div className="flex gap-2">
+              <select
+                value={startHour}
+                onChange={(e) => setStartHour(Number(e.target.value))}
+                className="flex-1 rounded-lg bg-surface-container border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
+              >
+                {Array.from({ length: 24 }).map((_, i) => (
+                  <option key={i} value={i}>{pad(i)}</option>
                 ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1">
+              </select>
+              <span className="text-white self-center font-bold">:</span>
+              <select
+                value={startMin}
+                onChange={(e) => setStartMin(Number(e.target.value))}
+                className="flex-1 rounded-lg bg-surface-container border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
+              >
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <option key={i * 5} value={i * 5}>{pad(i * 5)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <div className="flex flex-col gap-2 border border-[#4a4455] rounded-lg p-4 bg-[#0c1324]">
             <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
               End time
             </span>
-            <select
-              value={end}
-              onChange={(e) => setEnd(Number(e.target.value))}
-              className="rounded-lg bg-[#0c1324] border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
-            >
-              {slots
-                .filter((m) => m > start)
-                .map((m) => (
-                  <option key={m} value={m}>
-                    {fmt(m)}
-                  </option>
+            <div className="flex gap-2">
+              <select
+                value={endHour}
+                onChange={(e) => setEndHour(Number(e.target.value))}
+                className="flex-1 rounded-lg bg-surface-container border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
+              >
+                {Array.from({ length: 24 }).map((_, i) => (
+                  <option key={i} value={i}>{pad(i)}</option>
                 ))}
-            </select>
-          </label>
+              </select>
+              <span className="text-white self-center font-bold">:</span>
+              <select
+                value={endMin}
+                onChange={(e) => setEndMin(Number(e.target.value))}
+                className="flex-1 rounded-lg bg-surface-container border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
+              >
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <option key={i * 5} value={i * 5}>{pad(i * 5)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Timeline Visualization */}
+        <div className="pt-2">
+          <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Availability Timeline</p>
+          <BookingTimeline 
+            dayStart={DAY_START} 
+            dayEnd={DAY_END} 
+            bookings={dayBookings.map(b => ({
+              start_time: toMinutes(new Date(b.start_time).toTimeString().slice(0,5)),
+              end_time: toMinutes(new Date(b.end_time).toTimeString().slice(0,5)),
+            }))} 
+            selectedStart={start}
+            selectedEnd={end}
+          />
         </div>
 
         {clash && (
