@@ -1,0 +1,16 @@
+# Deployment Rules
+
+*   **GitHub Repository**: `https://github.com/vaynestar/PropMateTest`
+*   **Vercel Project**: `prop-mate-test`
+*   **Live URL**: `https://prop-mate-test.vercel.app`
+
+## Vercel Deployment Instructions
+When deploying changes to Vercel, **DO NOT** use the `npx vercel --prod` command via the CLI, as this will create a disconnected project and fail to update the live environment.
+
+Instead, push all commits directly to the GitHub repository:
+```bash
+git add .
+git commit -m "your commit message"
+git push
+```
+Vercel is linked to this repository and will automatically trigger a production build and deploy to the `prop-mate-test` environment.
