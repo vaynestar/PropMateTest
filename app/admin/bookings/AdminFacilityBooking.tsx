@@ -375,7 +375,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
         </div>
 
         {/* Timeline Visualization */}
-        <div className="pt-2">
+        <div className="pt-2 min-w-0 w-full max-w-full">
           <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Availability Timeline</p>
           <BookingTimeline 
             dayStart={DAY_START} 

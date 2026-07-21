@@ -101,9 +101,10 @@
     .text-body-md { font-size: 14px; line-height: 20px; font-weight: 400; }
 }
 
-body {
+html, body {
   font-family: var(--font-inter);
   background-color: var(--color-background);
   color: var(--color-on-surface);
   overflow-x: hidden;
+  max-width: 100vw;
 }
