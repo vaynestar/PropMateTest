@@ -23,26 +23,7 @@ function formatDate(date: Date) {
   }).format(new Date(date));
 }
 
-async function generateInvoices() {
-  "use server";
-  await requireUser(["Admin"]);
-  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/invoices`, {
-    method: "POST",
-  });
-  revalidatePath("/admin/billing");
-}
-
-async function markPaid(formData: FormData) {
-  "use server";
-  await requireUser(["Admin"]);
-  const id = String(formData.get("invoice_id"));
-  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/invoices`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ invoice_id: id }),
-  });
-  revalidatePath("/admin/billing");
-}
+import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton";
 
 export default async function BillingPage() {
   await requireUser(["Admin"]);
@@ -91,20 +72,7 @@ export default async function BillingPage() {
             Generate monthly rental invoices from occupied units.
           </p>
         </div>
-        <form action={generateInvoices}>
-          <button
-            type="submit"
-            className="btn-primary px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2 transition-all"
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: 18 }}
-            >
-              autorenew
-            </span>
-            Generate Monthly Invoices
-          </button>
-        </form>
+        <GenerateInvoicesButton />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-stack-lg">
