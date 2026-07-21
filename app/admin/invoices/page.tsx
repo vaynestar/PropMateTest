@@ -1,41 +1,11 @@
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listInvoices } from "@/lib/billing";
-import StatusBadge from "@/components/dashboard/StatusBadge";
+import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton";
+import InvoiceBatchList from "@/components/billing/InvoiceBatchList";
 
 export const dynamic = "force-dynamic";
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-MY", {
-    style: "currency",
-    currency: "MYR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
-}
-
-async function markPaid(formData: FormData) {
-  "use server";
-  await requireUser(["Admin"]);
-  const id = String(formData.get("invoice_id"));
-  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/invoices`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ invoice_id: id }),
-  });
-  revalidatePath("/admin/invoices");
-}
-
-import { generateInvoicesAction } from "./actions";
 
 export default async function InvoicesDetailPage({
   searchParams,
@@ -47,6 +17,9 @@ export default async function InvoicesDetailPage({
   const propertyId = cookieStore.get("propmate_property_id")?.value;
 
   let invoices = await listInvoices(propertyId);
+  // Optional: We can still do server-side filtering if passed via URL, 
+  // but InvoiceBatchList handles client-side filtering. 
+  // We'll leave the server-side as-is in case they navigate directly via /admin/invoices?status=Overdue
   if (searchParams.status && searchParams.status !== "All") {
     invoices = invoices.filter(inv => inv.status === searchParams.status);
   }
@@ -68,140 +41,10 @@ export default async function InvoicesDetailPage({
             Itemised view of every generated invoice.
           </p>
         </div>
-        <form action={generateInvoicesAction}>
-          <button
-            type="submit"
-            className="btn-primary px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2 transition-all"
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: 18 }}
-            >
-              receipt_long
-            </span>
-            Generate Monthly Invoices
-          </button>
-        </form>
+        <GenerateInvoicesButton />
       </div>
 
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-outline-variant/30">
-        <span className="font-label-sm text-label-sm text-on-surface-variant mr-2">Filter:</span>
-        {["All", "Unpaid", "Paid", "Overdue"].map((status) => {
-          const isActive = (searchParams.status || "All") === status;
-          return (
-            <Link
-              key={status}
-              href={`/admin/invoices?status=${status}`}
-              className={`px-4 py-1.5 rounded-full font-label-md text-label-md transition-all ${
-                isActive
-                  ? "bg-primary text-on-primary font-bold shadow-md"
-                  : "bg-surface-container hover:bg-surface-container-highest text-on-surface"
-              }`}
-            >
-              {status}
-            </Link>
-          );
-        })}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {invoices.length === 0 && (
-          <p className="font-body-md text-body-md text-on-surface-variant glass-card rounded-xl p-8 text-center">
-            No invoices yet.
-          </p>
-        )}
-        {invoices.map((inv) => (
-          <div
-            key={inv.invoice_id}
-            className="glass-card rounded-xl p-6 flex flex-col gap-4"
-          >
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-              <div>
-                <p className="font-title-lg text-title-lg text-on-surface">
-                  {inv.invoice_no}
-                </p>
-                <p className="font-label-sm text-label-sm text-on-surface-variant">
-                  {inv.lease.unit.unit_number} ·{" "}
-                  {inv.lease.unit.property.property_name} ·{" "}
-                  {inv.lease.tenant.user_name}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="font-title-md text-title-md text-on-surface">
-                  {formatCurrency(Number(inv.total_amount))}
-                </span>
-                <StatusBadge status={inv.status} variant="invoice" />
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="font-label-sm text-label-sm text-on-surface-variant border-b border-outline-variant/30">
-                    <th className="py-2 pr-4">Description</th>
-                    <th className="py-2 px-4 text-right">Unit Price</th>
-                    <th className="py-2 px-4 text-right">Qty</th>
-                    <th className="py-2 pl-4 text-right">Total</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-outline-variant/20">
-                  {inv.details.map((d) => (
-                    <tr
-                      key={d.detail_id}
-                      className="font-body-md text-body-md text-on-surface"
-                    >
-                      <td className="py-2 pr-4">{d.description}</td>
-                      <td className="py-2 px-4 text-right">
-                        {formatCurrency(Number(d.unit_price))}
-                      </td>
-                      <td className="py-2 px-4 text-right">
-                        {Number(d.quantity)}
-                      </td>
-                      <td className="py-2 pl-4 text-right">
-                        {formatCurrency(Number(d.total_price))}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="border-t border-outline-variant/30 pt-4 flex flex-col gap-3">
-              <span className="font-label-sm text-label-sm text-on-surface-variant">
-                Issued {formatDate(inv.invoice_date)} · Due {formatDate(inv.due_date)}
-              </span>
-              
-              <div className="bg-surface-container-high border border-outline-variant/40 rounded-lg p-3 flex flex-wrap gap-2 items-center justify-between">
-                <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                  Actions
-                </span>
-                <div className="flex gap-2">
-                  <Link
-                    href={`/print/invoice/${inv.invoice_id}`}
-                    target="_blank"
-                    className="btn-outline px-4 py-1.5 text-sm flex items-center gap-2 border-outline-variant text-on-surface hover:bg-surface-container-highest rounded-md transition-colors"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">print</span>
-                    Print
-                  </Link>
-                  {inv.status !== "Paid" && (
-                    <form action={markPaid}>
-                      <input type="hidden" name="invoice_id" value={inv.invoice_id} />
-                      <button
-                        type="submit"
-                        className="btn-primary px-4 py-1.5 text-sm flex items-center gap-2 rounded-md transition-colors bg-emerald-600 hover:bg-emerald-500 text-white"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                        Mark Paid
-                      </button>
-                    </form>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+      <InvoiceBatchList invoices={invoices} />
     </div>
   );
 }
