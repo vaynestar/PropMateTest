@@ -42,6 +42,7 @@ export async function POST(request: Request) {
           : undefined,
         open_time: body.open_time ? String(body.open_time) : undefined,
         close_time: body.close_time ? String(body.close_time) : undefined,
+        max_booking_hours: body.max_booking_hours ? Number(body.max_booking_hours) : null,
       },
       user.userId
     );
@@ -82,6 +83,7 @@ export async function PATCH(request: Request) {
           : undefined,
         open_time: body.open_time ? String(body.open_time) : undefined,
         close_time: body.close_time ? String(body.close_time) : undefined,
+        max_booking_hours: body.max_booking_hours === "" ? null : (body.max_booking_hours ? Number(body.max_booking_hours) : undefined),
       },
       user.userId
     );

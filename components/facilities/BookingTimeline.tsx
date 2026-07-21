@@ -14,6 +14,7 @@ type BookingTimelineProps = {
   bookings: BookingSlot[];
   selectedStart?: number;
   selectedEnd?: number;
+  hasClash?: boolean;
 };
 
 function formatHour(h: number) {
@@ -28,6 +29,7 @@ export default function BookingTimeline({
   bookings,
   selectedStart,
   selectedEnd,
+  hasClash,
 }: BookingTimelineProps) {
   const totalMins = dayEnd - dayStart;
 
@@ -103,15 +105,19 @@ export default function BookingTimeline({
           {/* Selected Slot (Pending) */}
           {selectedStart !== undefined && selectedEnd !== undefined && selectedEnd > selectedStart && (
             <div
-              className="absolute top-1 bottom-1 bg-emerald-500/80 border border-emerald-400 rounded-sm flex items-center justify-center shadow-[0_0_8px_rgba(16,185,129,0.5)] z-10"
+              className={`absolute top-1 bottom-1 rounded-sm flex items-center justify-center z-10 ${
+                hasClash
+                  ? "bg-rose-500/80 border border-rose-400 shadow-[0_0_8px_rgba(244,63,94,0.5)]"
+                  : "bg-emerald-500/80 border border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+              }`}
               style={{
                 left: `${getPercent(selectedStart)}%`,
                 width: `${getPercent(selectedEnd) - getPercent(selectedStart)}%`,
               }}
-              title="Your Selection"
+              title={hasClash ? "Clash detected!" : "Your Selection"}
             >
               <span className="text-[10px] font-bold text-white px-1 truncate">
-                Selected
+                {hasClash ? "Clash!" : "Selected"}
               </span>
             </div>
           )}
@@ -126,6 +132,10 @@ export default function BookingTimeline({
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 bg-emerald-500/80 border border-emerald-400 rounded-sm"></div>
             <span className="text-[10px] text-on-surface-variant">Your Selection</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 bg-rose-500/80 border border-rose-400 rounded-sm"></div>
+            <span className="text-[10px] text-on-surface-variant">Overlap / Clash</span>
           </div>
         </div>
       </div>

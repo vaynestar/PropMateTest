@@ -13,6 +13,7 @@ type Facility = {
   operation_days: string;
   open_time: string;
   close_time: string;
+  max_booking_hours: number | null;
 };
 
 type Booking = {
@@ -131,10 +132,16 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
   const initialStartHour = Math.floor(DAY_START / 60);
   const initialEndHour = Math.floor(Math.min(DAY_START + 60, DAY_END) / 60);
   
-  const [startHour, setStartHour] = useState<number>(initialStartHour);
+  const [startDisplayHour, setStartDisplayHour] = useState<number>(initialStartHour % 12 || 12);
   const [startMin, setStartMin] = useState<number>(0);
-  const [endHour, setEndHour] = useState<number>(initialEndHour);
+  const [startPeriod, setStartPeriod] = useState<"AM"|"PM">(initialStartHour >= 12 ? "PM" : "AM");
+
+  const [endDisplayHour, setEndDisplayHour] = useState<number>(initialEndHour % 12 || 12);
   const [endMin, setEndMin] = useState<number>(0);
+  const [endPeriod, setEndPeriod] = useState<"AM"|"PM">(initialEndHour >= 12 ? "PM" : "AM");
+
+  const startHour = (startDisplayHour === 12 ? 0 : startDisplayHour) + (startPeriod === "PM" ? 12 : 0);
+  const endHour = (endDisplayHour === 12 ? 0 : endDisplayHour) + (endPeriod === "PM" ? 12 : 0);
 
   const start = startHour * 60 + startMin;
   const end = endHour * 60 + endMin;
@@ -155,6 +162,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
 
   const clash = useMemo(() => {
     if (end <= start) return null;
+    if (facility.max_booking_hours && (end - start) > facility.max_booking_hours * 60) return "max_exceeded";
     return (
       dayBookings.find((b) => {
         const dStart = new Date(b.start_time);
@@ -164,7 +172,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
         return start < be && end > bs;
       }) ?? null
     );
-  }, [dayBookings, start, end]);
+  }, [dayBookings, start, end, facility.max_booking_hours]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,6 +181,10 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
 
     if (!leaseId) {
       setError("Please select a tenant/unit to book for.");
+      return;
+    }
+    if (clash === "max_exceeded") {
+      setError(`Maximum booking duration allowed is ${facility.max_booking_hours} hours.`);
       return;
     }
     if (clash) {
@@ -276,12 +288,12 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
             </span>
             <div className="flex gap-2">
               <select
-                value={startHour}
-                onChange={(e) => setStartHour(Number(e.target.value))}
+                value={startDisplayHour}
+                onChange={(e) => setStartDisplayHour(Number(e.target.value))}
                 className="flex-1 rounded-lg bg-surface-container border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
               >
-                {Array.from({ length: 24 }).map((_, i) => (
-                  <option key={i} value={i}>{pad(i)}</option>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <option key={i + 1} value={i + 1}>{pad(i + 1)}</option>
                 ))}
               </select>
               <span className="text-white self-center font-bold">:</span>
@@ -294,6 +306,14 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
                   <option key={i * 5} value={i * 5}>{pad(i * 5)}</option>
                 ))}
               </select>
+              <select
+                value={startPeriod}
+                onChange={(e) => setStartPeriod(e.target.value as "AM"|"PM")}
+                className="flex-1 rounded-lg bg-surface-container border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
+              >
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
+              </select>
             </div>
           </div>
           
@@ -303,12 +323,12 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
             </span>
             <div className="flex gap-2">
               <select
-                value={endHour}
-                onChange={(e) => setEndHour(Number(e.target.value))}
+                value={endDisplayHour}
+                onChange={(e) => setEndDisplayHour(Number(e.target.value))}
                 className="flex-1 rounded-lg bg-surface-container border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
               >
-                {Array.from({ length: 24 }).map((_, i) => (
-                  <option key={i} value={i}>{pad(i)}</option>
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <option key={i + 1} value={i + 1}>{pad(i + 1)}</option>
                 ))}
               </select>
               <span className="text-white self-center font-bold">:</span>
@@ -320,6 +340,14 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
                 {Array.from({ length: 12 }).map((_, i) => (
                   <option key={i * 5} value={i * 5}>{pad(i * 5)}</option>
                 ))}
+              </select>
+              <select
+                value={endPeriod}
+                onChange={(e) => setEndPeriod(e.target.value as "AM"|"PM")}
+                className="flex-1 rounded-lg bg-surface-container border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
+              >
+                <option value="AM">AM</option>
+                <option value="PM">PM</option>
               </select>
             </div>
           </div>
@@ -337,10 +365,19 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
             }))} 
             selectedStart={start}
             selectedEnd={end}
+            hasClash={!!clash}
           />
         </div>
 
-        {clash && (
+        {clash === "max_exceeded" && (
+          <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-4 py-3">
+            <span className="text-sm text-rose-400">
+              Maximum booking duration allowed is {facility.max_booking_hours} hours.
+            </span>
+          </div>
+        )}
+
+        {clash && clash !== "max_exceeded" && (
           <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-4 py-3">
             <span className="text-sm text-rose-400">
               This time slot is already booked. Please try another time.

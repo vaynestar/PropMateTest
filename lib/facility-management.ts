@@ -12,6 +12,7 @@ export type FacilityInput = {
   operation_days?: string;
   open_time?: string;
   close_time?: string;
+  max_booking_hours?: number | null;
 };
 
 export async function listFacilities(propertyId?: string) {
@@ -52,6 +53,7 @@ export async function createFacility(input: FacilityInput, createdBy?: string) {
       operation_days: input.operation_days ?? "1,2,3,4,5,6,7",
       open_time,
       close_time,
+      max_booking_hours: input.max_booking_hours ?? null,
       created_by: createdBy,
     },
   });
@@ -72,6 +74,7 @@ export type FacilityUpdateInput = Partial<{
   operation_days: string;
   open_time: string;
   close_time: string;
+  max_booking_hours: number | null;
 }>;
 
 export async function updateFacility(

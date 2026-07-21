@@ -26,6 +26,7 @@ export default async function ResidentFacilitiesPage() {
       operation_days: f.operation_days,
       open_time: f.open_time,
       close_time: f.close_time,
+      max_booking_hours: f.max_booking_hours,
     }));
 
   const raw = await listBookings();

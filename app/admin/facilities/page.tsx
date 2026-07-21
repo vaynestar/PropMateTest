@@ -57,6 +57,7 @@ async function addFacility(formData: FormData) {
       operation_days: days.join(","),
       open_time: String(formData.get("open_time")),
       close_time: String(formData.get("close_time")),
+      max_booking_hours: formData.get("max_booking_hours") ? String(formData.get("max_booking_hours")) : "",
     }),
   });
   revalidatePath("/admin/facilities");
@@ -87,6 +88,7 @@ async function editFacility(formData: FormData) {
       open_time: String(formData.get("open_time")),
       close_time: String(formData.get("close_time")),
       is_bookable: formData.get("is_bookable") === "on",
+      max_booking_hours: formData.get("max_booking_hours") ? String(formData.get("max_booking_hours")) : "",
     }),
   });
   revalidatePath("/admin/facilities");
@@ -158,6 +160,14 @@ export default async function FacilitiesPage() {
             min="1"
             placeholder="Max capacity"
             required
+            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
+          />
+
+          <input
+            name="max_booking_hours"
+            type="number"
+            min="1"
+            placeholder="Max booking hours (Optional)"
             className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
           />
 
@@ -288,6 +298,14 @@ export default async function FacilitiesPage() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-label-sm text-label-sm text-on-surface-variant">
+                  Max Booking
+                </span>
+                <span className="font-label-md text-label-md text-on-surface">
+                  {f.max_booking_hours ? `${f.max_booking_hours} hrs` : "Unlimited"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-label-sm text-label-sm text-on-surface-variant">
                   Hours
                 </span>
                 <span className="font-label-md text-label-md text-on-surface">
@@ -357,6 +375,19 @@ export default async function FacilitiesPage() {
                     defaultValue={f.close_time}
                     step={300}
                     className={timeInputClass}
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="font-label-sm text-label-sm text-on-surface-variant">
+                    Max booking hours (empty = unlimited)
+                  </span>
+                  <input
+                    type="number"
+                    name="max_booking_hours"
+                    min="1"
+                    defaultValue={f.max_booking_hours ?? ""}
+                    placeholder="Unlimited"
+                    className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
                   />
                 </div>
                 <label className="flex items-center gap-2 text-on-surface">
