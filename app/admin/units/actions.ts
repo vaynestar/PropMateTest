@@ -9,44 +9,61 @@ export async function addUnit(state: any, formData: FormData) {
     await requireUser(["Admin"]);
     
     const property_id = formData.get("property_id") as string || null;
-    const unit_type = String(formData.get("unit_type"));
+    const unit_type = String(formData.get("unit_type") || "Standard");
     const floor_number = String(formData.get("floor_number"));
     const area_sqft = String(formData.get("area_sqft"));
     const status = String(formData.get("status"));
-    
-    const prefix = String(formData.get("unit_prefix") || "");
-    const startStr = String(formData.get("start_number") || "1");
-    const endStr = String(formData.get("end_number") || "1");
-    
-    const startNum = parseInt(startStr, 10);
-    const endNum = parseInt(endStr, 10);
-    
-    if (isNaN(startNum) || isNaN(endNum) || startNum > endNum) {
-      throw new Error("Invalid start or end number range.");
-    }
-    
-    // Process batch creation
-    const padLength = Math.max(startStr.length, endStr.length);
+    const mode = String(formData.get("creation_mode"));
+
     let count = 0;
-    
-    for (let i = startNum; i <= endNum; i++) {
-      const paddedNum = i.toString().padStart(padLength, "0");
-      const unitNumber = `${prefix}${paddedNum}`;
+
+    if (mode === "single") {
+      const unit_number = String(formData.get("unit_number"));
+      if (!unit_number) throw new Error("Unit Number is required.");
       
       await createUnit({
         property_id,
-        unit_number: unitNumber,
+        unit_number,
         unit_type,
         floor_number,
         area_sqft,
         monthly_rent: "0",
         status,
       });
-      count++;
+      count = 1;
+    } else {
+      const prefix = String(formData.get("unit_prefix") || "");
+      const startStr = String(formData.get("start_number") || "1");
+      const endStr = String(formData.get("end_number") || "1");
+      
+      const startNum = parseInt(startStr, 10);
+      const endNum = parseInt(endStr, 10);
+      
+      if (isNaN(startNum) || isNaN(endNum) || startNum > endNum) {
+        throw new Error("Invalid start or end number range.");
+      }
+      
+      const padLength = Math.max(startStr.length, endStr.length);
+      
+      for (let i = startNum; i <= endNum; i++) {
+        const paddedNum = i.toString().padStart(padLength, "0");
+        const unitNumber = `${prefix}${paddedNum}`;
+        
+        await createUnit({
+          property_id,
+          unit_number: unitNumber,
+          unit_type,
+          floor_number,
+          area_sqft,
+          monthly_rent: "0",
+          status,
+        });
+        count++;
+      }
     }
 
     revalidatePath("/admin/units");
-    return { success: true, message: `Successfully generated ${count} unit${count === 1 ? '' : 's'}!` };
+    return { success: true, message: `Successfully ${mode === "single" ? "added" : "generated"} ${count} unit${count === 1 ? '' : 's'}!` };
   } catch (error: any) {
     return { error: error.message || "Failed to add unit" };
   }
