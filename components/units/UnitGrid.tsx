@@ -7,6 +7,7 @@ import { removeUnit, updateUnitStatusAction } from "@/app/admin/units/actions";
 
 function ChangeStatusDropdown({ unit }: { unit: any }) {
   const [state, formAction, isPending] = useActionState(updateUnitStatusAction, null);
+  const isOccupiedByLease = (unit.leases && unit.leases.length > 0) || (unit.tenant_leases && unit.tenant_leases.length > 0);
 
   return (
     <form action={formAction} className="mt-2 w-full">
@@ -14,19 +15,21 @@ function ChangeStatusDropdown({ unit }: { unit: any }) {
       <div className="relative flex items-center justify-center">
         <select
           name="status"
-          defaultValue={unit.status}
+          value={unit.status}
           onChange={(e) => e.target.form?.requestSubmit()}
           disabled={isPending}
-          className="w-full text-[11px] font-medium bg-surface border border-outline-variant/40 rounded-lg px-1.5 py-1 text-on-surface text-center outline-none focus:border-primary cursor-pointer disabled:opacity-50 transition-colors"
+          className="w-full text-[11px] font-medium bg-surface border border-outline-variant/40 rounded-lg px-1 py-1 text-on-surface text-center outline-none focus:border-primary cursor-pointer disabled:opacity-50 transition-colors"
           title="Quick Change Unit Status"
         >
           <option value="Vacant">Status: Vacant</option>
-          <option value="Occupied">Status: Occupied</option>
+          <option value="Occupied" disabled={!isOccupiedByLease}>
+            Status: Occupied {isOccupiedByLease ? "(Leased)" : "(Requires Lease)"}
+          </option>
           <option value="Repair">Status: Repair</option>
           <option value="Not Available">Status: Not Available</option>
         </select>
         {isPending && (
-          <span className="material-symbols-outlined animate-spin text-[12px] text-primary absolute right-1.5 pointer-events-none">
+          <span className="material-symbols-outlined animate-spin text-[12px] text-primary absolute right-1 pointer-events-none">
             progress_activity
           </span>
         )}

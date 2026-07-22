@@ -20,7 +20,7 @@ export default function AdminLeaseForm({
     }
   }, [state]);
 
-  const vacantUnits = units.filter(u => u.status !== "Occupied");
+  const vacantUnits = units.filter(u => u.status === "Vacant");
   const residentUsers = users.filter(u => u.role === "Resident");
 
   return (

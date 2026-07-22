@@ -94,6 +94,15 @@ export async function updateUnitStatusAction(state: any, formData: FormData) {
       throw new Error("Unit ID and status are required.");
     }
 
+    if (status === "Occupied") {
+      const activeLease = await prisma.tenantLease.findFirst({
+        where: { unit_id: unitId, status: "Active" }
+      });
+      if (!activeLease) {
+        throw new Error("Unit cannot be marked as Occupied without an active lease. Please create a lease for this unit.");
+      }
+    }
+
     await prisma.unit.update({
       where: { unit_id: unitId },
       data: { status },

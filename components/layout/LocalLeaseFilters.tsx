@@ -37,6 +37,7 @@ export default function LocalLeaseFilters({
 
   // Combobox state
   const [query, setQuery] = useState("");
+  const [isUserTyping, setIsUserTyping] = useState(false);
   const [unitInput, setUnitInput] = useState(unitNumber);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,13 +46,12 @@ export default function LocalLeaseFilters({
 
   // Sync display query when activeTenantId changes
   useEffect(() => {
-    if (selectedTenant) {
-      const phoneStr = selectedTenant.phone_number ? ` | ${selectedTenant.phone_number}` : "";
-      setQuery(`${selectedTenant.user_name}${phoneStr} | ${selectedTenant.user_email}`);
-    } else {
+    if (selectedTenant && !isUserTyping) {
+      setQuery(selectedTenant.user_name);
+    } else if (!activeTenantId && !isUserTyping) {
       setQuery("");
     }
-  }, [activeTenantId, selectedTenant]);
+  }, [activeTenantId, selectedTenant, isUserTyping]);
 
   // Sync unitInput prop
   useEffect(() => {
@@ -63,6 +63,7 @@ export default function LocalLeaseFilters({
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        setIsUserTyping(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -123,6 +124,7 @@ export default function LocalLeaseFilters({
       } else {
         params.delete("tenant");
       }
+      setIsUserTyping(false);
       setIsOpen(false);
       startTransition(() => {
         router.push(`?${params.toString()}`);
@@ -132,9 +134,9 @@ export default function LocalLeaseFilters({
   );
 
   // Filter tenants based on typing query (matches name, phone, or email)
-  const filteredTenants = query.trim()
+  const filteredTenants = query.trim() && isUserTyping
     ? tenants.filter((t) => {
-        const q = query.toLowerCase();
+        const q = query.toLowerCase().trim();
         return (
           t.user_name.toLowerCase().includes(q) ||
           t.user_email.toLowerCase().includes(q) ||
@@ -265,6 +267,7 @@ export default function LocalLeaseFilters({
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
+                setIsUserTyping(true);
                 setIsOpen(true);
               }}
               onFocus={() => setIsOpen(true)}
