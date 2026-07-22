@@ -10,4 +10,5 @@ export const residentNav: ResidentNavItem[] = [
   { label: "Invoices", href: "/resident/invoices", icon: "receipt_long" },
   { label: "Facilities", href: "/resident/facilities", icon: "meeting_room" },
   { label: "Helpdesk", href: "/resident/maintenance", icon: "build" },
+  { label: "Profile", href: "/resident/profile", icon: "person" },
 ];
