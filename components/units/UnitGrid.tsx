@@ -74,8 +74,7 @@ export default function UnitGrid({ units }: { units: any[] }) {
     <div className="flex flex-col gap-8 p-6">
       {unitsByFloor.map(({ floor, units }) => (
         <div key={floor} className="glass-card rounded-xl p-6 relative overflow-hidden">
-          <div className="absolute top-0 left-0 bottom-0 w-2 bg-primary/20" />
-          <h3 className="text-lg font-bold text-on-surface mb-4 pl-2 border-b border-outline-variant/30 pb-2">
+          <h3 className="text-lg font-bold text-on-surface mb-4 border-b border-outline-variant/30 pb-2">
             Floor {floor}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
