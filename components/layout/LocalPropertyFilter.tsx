@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback } from "react";
+import { useCallback, useTransition } from "react";
 
 type Property = {
   property_id: string;
@@ -18,6 +18,7 @@ export default function LocalPropertyFilter({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -28,7 +29,9 @@ export default function LocalPropertyFilter({
       } else {
         params.delete("property");
       }
-      router.push(`?${params.toString()}`);
+      startTransition(() => {
+        router.push(`?${params.toString()}`);
+      });
     },
     [router, searchParams]
   );
@@ -36,22 +39,30 @@ export default function LocalPropertyFilter({
   if (properties.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 w-full sm:w-auto">
       <label className="text-sm text-on-surface-variant font-medium whitespace-nowrap">
         Filter by Property:
       </label>
-      <select
-        value={activePropertyId || ""}
-        onChange={handleChange}
-        className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface text-sm outline-none focus:border-primary"
-      >
-        <option value="">All Properties</option>
-        {properties.map((p) => (
-          <option key={p.property_id} value={p.property_id}>
-            {p.property_name} ({p.property_type})
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          value={activePropertyId || ""}
+          onChange={handleChange}
+          disabled={isPending}
+          className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface text-sm outline-none focus:border-primary disabled:opacity-50"
+        >
+          <option value="">All Properties</option>
+          {properties.map((p) => (
+            <option key={p.property_id} value={p.property_id}>
+              {p.property_name} ({p.property_type})
+            </option>
+          ))}
+        </select>
+        {isPending && (
+          <div className="absolute right-[-24px] top-1/2 -translate-y-1/2 text-primary">
+            <span className="material-symbols-outlined animate-spin-slow text-[18px]">progress_activity</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

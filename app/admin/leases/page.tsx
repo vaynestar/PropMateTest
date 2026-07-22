@@ -40,19 +40,21 @@ export default async function AdminLeasesPage(props: { searchParams: Promise<{ [
             Manage unit tenancies and resident assignments
           </p>
         </div>
-        <LocalPropertyFilter
-          properties={properties}
-          activePropertyId={activePropertyId}
-        />
       </div>
 
       <ExpandableForm title="Create New Lease" buttonLabel="Add Lease" defaultOpen={false}>
         <AdminLeaseForm units={units} users={users} />
       </ExpandableForm>
 
-      <h2 className="text-xl font-semibold text-white pt-4 border-t border-[#4a4455]">
-        Active & Past Leases
-      </h2>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#4a4455]">
+        <h2 className="text-xl font-semibold text-white">
+          Active & Past Leases
+        </h2>
+        <LocalPropertyFilter
+          properties={properties}
+          activePropertyId={activePropertyId}
+        />
+      </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {leases.length === 0 ? (

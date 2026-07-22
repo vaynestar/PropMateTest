@@ -42,10 +42,6 @@ export default async function UnitsPage(props: { searchParams: Promise<{ [key: s
               : "Manage individual units across all properties."}
           </p>
         </div>
-        <LocalPropertyFilter
-          properties={properties}
-          activePropertyId={activePropertyId}
-        />
       </div>
 
       <ExpandableForm title="Add New Unit" buttonLabel="New Unit">
@@ -53,13 +49,19 @@ export default async function UnitsPage(props: { searchParams: Promise<{ [key: s
       </ExpandableForm>
 
       <div className="glass-card rounded-xl p-0 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30">
-          <h2 className="font-title-lg text-title-lg text-on-surface">
-            Current Units
-          </h2>
-          <span className="font-label-sm text-label-sm text-on-surface-variant">
-            {filteredUnits.length} unit{filteredUnits.length === 1 ? "" : "s"}
-          </span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 border-b border-outline-variant/30 gap-4">
+          <div className="flex items-center gap-4">
+            <h2 className="font-title-lg text-title-lg text-on-surface">
+              Current Units
+            </h2>
+            <span className="font-label-sm text-label-sm text-on-surface-variant bg-surface px-2 py-1 rounded-md">
+              {filteredUnits.length} unit{filteredUnits.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <LocalPropertyFilter
+            properties={properties}
+            activePropertyId={activePropertyId}
+          />
         </div>
 
         <UnitGrid units={filteredUnits} />
