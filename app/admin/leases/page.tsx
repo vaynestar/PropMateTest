@@ -7,7 +7,7 @@ import AdminLeaseForm from "./AdminLeaseForm";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { getAllLeases } from "@/lib/lease-management";
 import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
-import LocalPropertyFilter from "@/components/layout/LocalPropertyFilter";
+import LocalLeaseFilters from "@/components/layout/LocalLeaseFilters";
 
 export const dynamic = "force-dynamic";
 
@@ -68,9 +68,11 @@ export default async function AdminLeasesPage(props: { searchParams: Promise<{ [
         <h2 className="text-xl font-semibold text-white">
           Active & Past Leases
         </h2>
-        <LocalPropertyFilter
+        <LocalLeaseFilters
           properties={properties}
           activePropertyId={activePropertyId}
+          tenants={users}
+          activeTenantId={urlTenantId || null}
         />
       </div>
       
