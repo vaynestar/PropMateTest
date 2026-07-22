@@ -82,28 +82,24 @@ export async function listUnits(propertyId?: string) {
   });
 
   // Automatically sync unit status: if no active leases exist and unit status is "Occupied", update status to "Vacant"
-  const syncedUnits = await Promise.all(
-    units.map(async (u) => {
-      const hasActiveLease = u.tenant_leases.length > 0;
-      if (u.status === "Occupied" && !hasActiveLease) {
-        await prisma.unit.update({
-          where: { unit_id: u.unit_id },
-          data: { status: "Vacant" }
-        });
-        return { ...u, status: "Vacant" };
-      }
-      if (u.status === "Vacant" && hasActiveLease) {
-        await prisma.unit.update({
-          where: { unit_id: u.unit_id },
-          data: { status: "Occupied" }
-        });
-        return { ...u, status: "Occupied" };
-      }
-      return u;
-    })
-  );
+  for (const u of units) {
+    const hasActiveLease = u.tenant_leases.length > 0;
+    if (u.status === "Occupied" && !hasActiveLease) {
+      await prisma.unit.update({
+        where: { unit_id: u.unit_id },
+        data: { status: "Vacant" }
+      });
+      u.status = "Vacant";
+    } else if (u.status === "Vacant" && hasActiveLease) {
+      await prisma.unit.update({
+        where: { unit_id: u.unit_id },
+        data: { status: "Occupied" }
+      });
+      u.status = "Occupied";
+    }
+  }
 
-  return syncedUnits;
+  return units;
 }
 
 export async function listPropertiesForUnits() {
