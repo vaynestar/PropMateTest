@@ -64,7 +64,20 @@ function parseMonthlyRent(value?: number | string) {
   return new Prisma.Decimal(parsed.toFixed(2));
 }
 
-export async function listUnits(propertyId?: string) {
+export type UnitWithDetails = Prisma.UnitGetPayload<{
+  include: {
+    property: true;
+    tenant_leases: {
+      include: {
+        tenant: {
+          select: { user_id: true; user_name: true; user_email: true; phone_number: true };
+        };
+      };
+    };
+  };
+}>;
+
+export async function listUnits(propertyId?: string): Promise<UnitWithDetails[]> {
   const units = await prisma.unit.findMany({
     where: propertyId ? { property_id: propertyId } : undefined,
     include: {
