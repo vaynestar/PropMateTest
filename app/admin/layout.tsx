@@ -3,6 +3,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { getSessionUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import Image from "next/image";
 import { logoutAction } from "@/app/logout/actions";
 import AdminMobileNav, { AdminMenuButton } from "@/components/layout/AdminMobileNav";
 import PropertySwitcher from "@/components/layout/PropertySwitcher";
@@ -24,9 +25,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     <div className="bg-surface text-on-surface font-body-md antialiased overflow-x-hidden min-h-screen flex w-full">
       {/* SideNavBar (Desktop Only) */}
       <nav className="hidden md:flex flex-col h-screen fixed left-0 top-0 w-[260px] bg-surface-container-lowest border-r border-outline-variant py-stack-lg transition-all duration-300 ease-in-out z-50">
-        <div className="px-gutter mb-8">
-          <h1 className="font-headline-md text-headline-md font-bold text-on-surface">PROPMATE</h1>
-          <p className="font-label-sm text-label-sm text-on-surface-variant">Property Management</p>
+        <div className="px-gutter mb-8 flex flex-col items-start gap-2">
+          <Image src="/logo.png" alt="PropMate" width={140} height={140} className="rounded-lg object-contain -ml-2" />
         </div>
         <ul className="flex-1 flex flex-col gap-2 px-4 overflow-y-auto hide-scrollbar">
           <li>
