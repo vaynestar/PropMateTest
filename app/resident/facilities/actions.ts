@@ -25,8 +25,10 @@ export async function bookFacility(state: any, formData: FormData) {
 
     const existing = await getBookingsByFacilityAndDate(facilityId, bookingDate);
     const clash = existing.find((b) => {
-      const bs = toMin(String(b.start_time));
-      const be = toMin(String(b.end_time));
+      const bStartDate = new Date(b.start_time);
+      const bs = bStartDate.getHours() * 60 + bStartDate.getMinutes();
+      const bEndDate = new Date(b.end_time);
+      const be = bEndDate.getHours() * 60 + bEndDate.getMinutes();
       return toMin(start) < be && toMin(end) > bs;
     });
 

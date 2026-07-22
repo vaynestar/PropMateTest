@@ -59,13 +59,21 @@ export async function createBooking(input: BookingInput, createdBy?: string) {
 
   const requestedDate = new Date(input.booking_date);
 
+  const startDt = new Date(requestedDate);
+  const [sh, sm] = input.start_time.split(":").map(Number);
+  startDt.setHours(sh, sm, 0, 0);
+
+  const endDt = new Date(requestedDate);
+  const [eh, em] = input.end_time.split(":").map(Number);
+  endDt.setHours(eh, em, 0, 0);
+
   const overlapping = await prisma.booking.findFirst({
     where: {
       facility_id: input.facility_id,
       booking_date: requestedDate,
       booking_status: { not: "Cancelled" },
-      start_time: { lt: input.end_time },
-      end_time: { gt: input.start_time },
+      start_time: { lt: endDt },
+      end_time: { gt: startDt },
     },
   });
 
@@ -80,8 +88,8 @@ export async function createBooking(input: BookingInput, createdBy?: string) {
       facility_id: input.facility_id,
       user_id: input.user_id,
       booking_date: requestedDate,
-      start_time: input.start_time,
-      end_time: input.end_time,
+      start_time: startDt,
+      end_time: endDt,
       purpose: input.purpose,
       booking_status: "Reserved",
       pax_count: 1,

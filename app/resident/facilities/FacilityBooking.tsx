@@ -204,8 +204,8 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
     if (start < DAY_START || end > DAY_END) return "out_of_bounds";
     return (
       dayBookings.find((b) => {
-        const bs = toMinutes(b.start_time);
-        const be = toMinutes(b.end_time);
+        const bs = new Date(b.start_time).getHours() * 60 + new Date(b.start_time).getMinutes();
+        const be = new Date(b.end_time).getHours() * 60 + new Date(b.end_time).getMinutes();
         return start < be && end > bs;
       }) ?? null
     );
@@ -337,8 +337,8 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
           dayStart={DAY_START} 
           dayEnd={DAY_END} 
           bookings={dayBookings.map(b => ({
-            start_time: toMinutes(b.start_time),
-            end_time: toMinutes(b.end_time),
+            start_time: new Date(b.start_time).getHours() * 60 + new Date(b.start_time).getMinutes(),
+            end_time: new Date(b.end_time).getHours() * 60 + new Date(b.end_time).getMinutes(),
           }))} 
           selectedStart={start}
           selectedEnd={end}

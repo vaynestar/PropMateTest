@@ -184,7 +184,11 @@ function BookingSheet({
             b.booking_date === date &&
             b.booking_status !== "Cancelled"
         )
-        .sort((a, b) => toMinutes(a.start_time) - toMinutes(b.start_time)),
+        .sort((a, b) => {
+          const aStart = new Date(a.start_time).getHours() * 60 + new Date(a.start_time).getMinutes();
+          const bStart = new Date(b.start_time).getHours() * 60 + new Date(b.start_time).getMinutes();
+          return aStart - bStart;
+        }),
     [bookings, facility.facility_id, date]
   );
 
@@ -197,16 +201,16 @@ function BookingSheet({
 
   const isBooked = (from: number, to: number) =>
     dayBookings.some((b) => {
-      const bs = toMinutes(b.start_time);
-      const be = toMinutes(b.end_time);
+      const bs = new Date(b.start_time).getHours() * 60 + new Date(b.start_time).getMinutes();
+      const be = new Date(b.end_time).getHours() * 60 + new Date(b.end_time).getMinutes();
       return from < be && to > bs;
     });
 
   const clash = useMemo(() => {
     if (duration === null) return null;
     return dayBookings.find((b) => {
-      const bs = toMinutes(b.start_time);
-      const be = toMinutes(b.end_time);
+      const bs = new Date(b.start_time).getHours() * 60 + new Date(b.start_time).getMinutes();
+      const be = new Date(b.end_time).getHours() * 60 + new Date(b.end_time).getMinutes();
       return startMin < be && endMin > bs;
     }) ?? null;
   }, [dayBookings, startMin, endMin, duration]);
@@ -371,8 +375,7 @@ function BookingSheet({
         {clash && (
           <div className="rounded-lg bg-error-container/10 border border-error-container/40 px-4 py-3">
             <span className="font-label-md text-label-md text-error-container">
-              This slot clashes with an existing booking ({clash.start_time}–
-              {clash.end_time}). Please choose another time.
+              This slot clashes with an existing booking. Please choose another time.
             </span>
           </div>
         )}
