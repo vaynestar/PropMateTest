@@ -46,6 +46,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             <ul className="ml-11 mt-1 flex flex-col gap-1 pb-2">
               <li><Link href="/admin/properties" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">All Properties</Link></li>
               <li><Link href="/admin/units" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Units</Link></li>
+              <li><Link href="/admin/tenants" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Tenants</Link></li>
               <li><Link href="/admin/leases" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Leases</Link></li>
             </ul>
           </details>

@@ -17,6 +17,8 @@ const PRIMARY = [
 const MORE = [
   { label: "Properties", href: "/admin/properties", icon: "domain" },
   { label: "Units", href: "/admin/units", icon: "meeting_room" },
+  { label: "Tenants", href: "/admin/tenants", icon: "groups" },
+  { label: "Leases", href: "/admin/leases", icon: "description" },
   { label: "Visitors", href: "/admin/visitors", icon: "person_search" },
   { label: "Announcements", href: "/admin/announcements", icon: "campaign" },
   { label: "Reports", href: "/admin/reports", icon: "analytics" },
