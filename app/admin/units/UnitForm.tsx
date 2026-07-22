@@ -44,74 +44,87 @@ export default function UnitForm({
       )}
 
       <form action={formAction} className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        <select
-          name="property_id"
-          defaultValue={activePropertyId || ""}
-          required
-          className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary"
-        >
-          <option value="">Select property</option>
-          {properties.map((property) => (
-            <option
-              key={property.property_id}
-              value={property.property_id}
-            >
-              {property.property_name} ({property.property_type})
-            </option>
-          ))}
-        </select>
+        <div className="lg:col-span-3 grid gap-4 grid-cols-1 md:grid-cols-3">
+          <select
+            name="property_id"
+            defaultValue={activePropertyId || ""}
+            required
+            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary"
+          >
+            <option value="">Select property</option>
+            {properties.map((property) => (
+              <option
+                key={property.property_id}
+                value={property.property_id}
+              >
+                {property.property_name} ({property.property_type})
+              </option>
+            ))}
+          </select>
+          <input
+            name="unit_type"
+            placeholder="Type (e.g., Condominium)"
+            required
+            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
+          />
+          <input
+            name="floor_number"
+            type="number"
+            placeholder="Floor No."
+            required
+            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
+          />
+        </div>
 
-        <input
-          name="unit_number"
-          placeholder="Unit No. (e.g., A-12-03)"
-          required
-          className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-        />
+        <div className="lg:col-span-3 grid gap-4 grid-cols-1 sm:grid-cols-3 p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low/50">
+          <div className="sm:col-span-3">
+            <h3 className="text-sm font-semibold text-on-surface">Unit Number Formatting (Batch Creation)</h3>
+            <p className="text-xs text-on-surface-variant">To create one unit, set Start and End to the same number.</p>
+          </div>
+          <input
+            name="unit_prefix"
+            placeholder="Prefix (e.g., A-12-)"
+            required
+            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
+          />
+          <input
+            name="start_number"
+            type="text"
+            placeholder="Start No. (e.g., 01)"
+            required
+            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary font-mono"
+          />
+          <input
+            name="end_number"
+            type="text"
+            placeholder="End No. (e.g., 10)"
+            required
+            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary font-mono"
+          />
+        </div>
 
-        <input
-          name="unit_type"
-          placeholder="Type (e.g., Condominium)"
-          required
-          className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-        />
+        <div className="lg:col-span-3 grid gap-4 grid-cols-1 md:grid-cols-2">
+          <input
+            name="area_sqft"
+            type="number"
+            step="0.01"
+            min="0.01"
+            placeholder="Area (sqft)"
+            required
+            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
+          />
 
-        <input
-          name="floor_number"
-          type="number"
-          placeholder="Floor No."
-          required
-          className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-        />
-
-        <input
-          name="area_sqft"
-          type="number"
-          step="0.01"
-          min="0.01"
-          placeholder="Area (sqft)"
-          required
-          className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-        />
-
-        <input
-          name="monthly_rent"
-          type="number"
-          step="0.01"
-          min="0"
-          placeholder="Monthly rent (MYR)"
-          className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-        />
-
-        <select
-          name="status"
-          defaultValue="Vacant"
-          className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary"
-        >
-          <option value="Vacant">Vacant</option>
-          <option value="Occupied">Occupied</option>
-          <option value="Reserved">Reserved</option>
-          <option value="Maintenance">Maintenance</option>
-        </select>
+          <select
+            name="status"
+            defaultValue="Vacant"
+            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary"
+          >
+            <option value="Vacant">Vacant</option>
+            <option value="Occupied">Occupied</option>
+            <option value="Reserved">Reserved</option>
+            <option value="Maintenance">Maintenance</option>
+          </select>
+        </div>
 
         <button
           type="submit"
@@ -121,9 +134,9 @@ export default function UnitForm({
           {isPending ? (
             <span className="material-symbols-outlined animate-spin-slow" style={{ fontSize: 18 }}>progress_activity</span>
           ) : (
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
+            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add_box</span>
           )}
-          {isPending ? "Adding Unit..." : "Add Unit"}
+          {isPending ? "Generating Units..." : "Generate Units"}
         </button>
       </form>
     </div>

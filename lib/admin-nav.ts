@@ -22,6 +22,7 @@ export const adminNav: NavItem[] = [
     icon: "domain",
     children: [
       { label: "Units", href: "/admin/units" },
+      { label: "Tenants", href: "/admin/tenants" },
       { label: "Leases", href: "/admin/leases" },
     ],
   },
