@@ -1,27 +1,34 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 export default function AdminLoading() {
+  const [showSpinner, setShowSpinner] = useState(false);
+
+  useEffect(() => {
+    // Only show full indicator if loading takes longer than 400ms to prevent flashing on fast transitions
+    const timer = setTimeout(() => {
+      setShowSpinner(true);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-surface/80 backdrop-blur-md animate-fade-in">
-      <div className="glass-card p-8 rounded-2xl border border-outline-variant/60 shadow-2xl flex flex-col items-center gap-4 text-center max-w-xs w-full">
-        {/* Pulsing Logo Container */}
-        <div className="relative flex items-center justify-center w-16 h-16 rounded-2xl bg-primary/10 border border-primary/30 shadow-[0_0_25px_rgba(123,87,231,0.3)] animate-pulse">
-          <span className="material-symbols-outlined text-primary text-[36px] animate-spin">
+    <div className="fixed inset-0 z-[100] pointer-events-none flex flex-col items-center justify-start pt-20 bg-black/20 backdrop-blur-[2px] animate-fade-in">
+      {/* Top Progress Line */}
+      <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-purple-400 to-primary animate-pulse z-[101]" />
+
+      {showSpinner && (
+        <div className="bg-surface-container-high/90 border border-outline-variant/50 rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-3 animate-fade-in backdrop-blur-md">
+          <span className="material-symbols-outlined text-primary text-[22px] animate-spin">
             progress_activity
           </span>
+          <span className="text-xs font-semibold text-on-surface tracking-wide">
+            Loading PropMate...
+          </span>
         </div>
-
-        <div>
-          <h3 className="font-headline-md text-headline-md text-on-surface font-bold">
-            Loading PropMate
-          </h3>
-          <p className="font-label-sm text-label-sm text-on-surface-variant mt-1 animate-pulse">
-            Fetching module data...
-          </p>
-        </div>
-
-        <div className="w-full bg-surface-container-high h-1.5 rounded-full overflow-hidden mt-1">
-          <div className="h-full bg-gradient-to-r from-primary via-purple-400 to-primary w-1/2 rounded-full animate-slide-in" />
-        </div>
-      </div>
+      )}
     </div>
   );
 }
