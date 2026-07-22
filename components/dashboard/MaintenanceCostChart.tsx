@@ -26,49 +26,49 @@ export default function MaintenanceCostChart({ data }: Props) {
 
   return (
     <div className="glass-card p-6 h-full flex flex-col">
-      <h3 className="text-title-md font-semibold text-primary-900 dark:text-primary-100 mb-6">
+      <h3 className="text-title-md font-semibold text-on-surface mb-6">
         Overall Facility Maintenance Cost
       </h3>
       <div className="flex-1 w-full min-h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
-            margin={{ top: 5, right: 20, left: 20, bottom: 5 }}
+            margin={{ top: 10, right: 20, left: 20, bottom: 10 }}
           >
-            <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
+            <CartesianGrid stroke="#4a4455" strokeDasharray="3 3" opacity={0.4} vertical={false} />
             <XAxis
               dataKey="month"
-              axisLine={false}
+              axisLine={{ stroke: "#4a4455" }}
               tickLine={false}
-              tick={{ fontSize: 12 }}
+              tick={{ fill: "#cac4d0", fontSize: 12 }}
               dy={10}
-              stroke="var(--color-primary-500)"
             />
             <YAxis
-              axisLine={false}
+              axisLine={{ stroke: "#4a4455" }}
               tickLine={false}
-              tick={{ fontSize: 12 }}
+              tick={{ fill: "#cac4d0", fontSize: 12 }}
               tickFormatter={(value) => formatCurrency(value)}
-              stroke="var(--color-primary-500)"
-              width={80}
+              width={85}
             />
             <Tooltip
               formatter={(value: any) => [formatCurrency(Number(value)), "Cost"]}
               contentStyle={{
-                backgroundColor: "var(--color-surface)",
-                borderColor: "var(--color-primary-200)",
-                borderRadius: "8px",
-                color: "var(--color-primary-900)",
+                backgroundColor: "#1d1b26",
+                borderColor: "#4a4455",
+                borderRadius: "12px",
+                color: "#e6e1e5",
+                boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
               }}
-              itemStyle={{ color: "var(--color-primary-600)" }}
+              labelStyle={{ color: "#e6e1e5", fontWeight: 600, marginBottom: "4px" }}
+              itemStyle={{ color: "#d0bcff" }}
             />
             <Line
               type="monotone"
               dataKey="cost"
-              stroke="var(--color-primary-500)"
+              stroke="#a855f7"
               strokeWidth={3}
-              dot={{ r: 4, strokeWidth: 2 }}
-              activeDot={{ r: 6, stroke: "var(--color-primary-600)", strokeWidth: 2 }}
+              dot={{ r: 5, fill: "#a855f7", stroke: "#ffffff", strokeWidth: 2 }}
+              activeDot={{ r: 7, fill: "#c084fc", stroke: "#ffffff", strokeWidth: 2 }}
             />
           </LineChart>
         </ResponsiveContainer>
