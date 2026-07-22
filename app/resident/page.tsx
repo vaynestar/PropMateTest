@@ -101,7 +101,7 @@ export default async function ResidentDashboardPage() {
         <div className="flex gap-stack-sm mt-4 z-10 w-full">
           <Link
             href="/resident/invoices"
-            className="gradient-btn flex-1 py-3 rounded-lg font-label-md text-label-md flex justify-center items-center gap-2"
+            className="btn-primary flex-1 py-3 rounded-lg font-label-md text-label-md flex justify-center items-center gap-2"
           >
             Pay Now
             <span className="material-symbols-outlined text-[18px]">
