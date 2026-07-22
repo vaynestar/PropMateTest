@@ -67,7 +67,7 @@ function parseMonthlyRent(value?: number | string) {
 export type UnitWithDetails = Prisma.UnitGetPayload<{
   include: {
     property: true;
-    tenant_leases: {
+    leases: {
       include: {
         tenant: {
           select: { user_id: true; user_name: true; user_email: true; phone_number: true };
@@ -82,7 +82,7 @@ export async function listUnits(propertyId?: string): Promise<UnitWithDetails[]>
     where: propertyId ? { property_id: propertyId } : undefined,
     include: {
       property: true,
-      tenant_leases: {
+      leases: {
         where: { status: "Active" },
         include: {
           tenant: {
@@ -96,7 +96,7 @@ export async function listUnits(propertyId?: string): Promise<UnitWithDetails[]>
 
   // Automatically sync unit status: if no active leases exist and unit status is "Occupied", update status to "Vacant"
   for (const u of units) {
-    const hasActiveLease = u.tenant_leases.length > 0;
+    const hasActiveLease = u.leases.length > 0;
     if (u.status === "Occupied" && !hasActiveLease) {
       await prisma.unit.update({
         where: { unit_id: u.unit_id },

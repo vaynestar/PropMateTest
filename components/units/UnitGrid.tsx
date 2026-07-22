@@ -80,7 +80,7 @@ export default function UnitGrid({ units }: { units: any[] }) {
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {units.map((unit: any) => {
-              const activeLease = unit.tenant_leases?.[0];
+              const activeLease = unit.leases?.[0] || unit.tenant_leases?.[0];
               const isOccupied = unit.status === "Occupied" || !!activeLease;
               const tenantName = activeLease?.tenant?.user_name;
 
