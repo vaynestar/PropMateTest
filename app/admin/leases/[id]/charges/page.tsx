@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import Link from "next/link";
 import AddLeaseChargeForm from "./AddLeaseChargeForm";
+import { removeLeaseChargeAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
