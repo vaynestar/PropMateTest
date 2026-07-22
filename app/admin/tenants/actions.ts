@@ -7,9 +7,13 @@ import prisma from "@/lib/prisma";
 export async function addTenant(state: any, formData: FormData) {
   try {
     const adminUser = await requireUser(["Admin"]);
-    const user_name = String(formData.get("user_name"));
-    const user_email = String(formData.get("user_email"));
-    const phone_number = formData.get("phone_number") as string || null;
+    const user_name = String(formData.get("user_name")).trim();
+    const user_email = String(formData.get("user_email")).trim();
+    const phone_number = String(formData.get("phone_number") || "").trim();
+    
+    if (!phone_number) {
+      throw new Error("Phone number is compulsory.");
+    }
     
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
@@ -74,11 +78,12 @@ export async function updateTenant(state: any, formData: FormData) {
   try {
     const adminUser = await requireUser(["Admin"]);
     const user_id = String(formData.get("user_id"));
-    const user_name = String(formData.get("user_name"));
-    const user_email = String(formData.get("user_email"));
-    const phone_number = formData.get("phone_number") as string || null;
+    const user_name = String(formData.get("user_name")).trim();
+    const user_email = String(formData.get("user_email")).trim();
+    const phone_number = String(formData.get("phone_number") || "").trim();
 
     if (!user_id) throw new Error("User ID is required.");
+    if (!phone_number) throw new Error("Phone number is compulsory.");
 
     // Check if new email is already taken by another user
     const existingUser = await prisma.user.findUnique({

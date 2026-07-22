@@ -16,14 +16,16 @@ export default async function AdminLeasesPage(props: { searchParams: Promise<{ [
   const cookieStore = await cookies();
   const searchParams = await props.searchParams;
   const urlPropertyId = searchParams.property as string | undefined;
+  const urlTenantId = searchParams.tenant as string | undefined;
   const cookiePropertyId = cookieStore.get("propmate_property_id")?.value;
 
   const properties = await listPropertiesForUnits();
   const activePropertyId = urlPropertyId || cookiePropertyId || (properties[0]?.property_id ?? null);
 
-  const [leases, units] = await Promise.all([
-    getAllLeases(activePropertyId || undefined),
+  const [leases, units, filteredTenant] = await Promise.all([
+    getAllLeases(activePropertyId || undefined, urlTenantId),
     listUnits(activePropertyId || undefined),
+    urlTenantId ? prisma.user.findUnique({ where: { user_id: urlTenantId }, select: { user_name: true } }) : null
   ]);
   
   const users = await prisma.user.findMany({
@@ -45,6 +47,22 @@ export default async function AdminLeasesPage(props: { searchParams: Promise<{ [
       <ExpandableForm title="Create New Lease" buttonLabel="Add Lease" defaultOpen={false}>
         <AdminLeaseForm units={units} users={users} />
       </ExpandableForm>
+
+      {filteredTenant && (
+        <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between animate-slide-in">
+          <div className="flex items-center gap-2 text-primary font-medium">
+            <span className="material-symbols-outlined text-[20px]">filter_alt</span>
+            <span>Showing leases for tenant: <strong>{filteredTenant.user_name}</strong></span>
+          </div>
+          <Link
+            href="/admin/leases"
+            className="px-3 py-1 bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg text-xs font-medium flex items-center gap-1 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[14px]">close</span>
+            Clear Filter
+          </Link>
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#4a4455]">
         <h2 className="text-xl font-semibold text-white">

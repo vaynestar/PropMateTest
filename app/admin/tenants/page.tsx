@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ExpandableForm from "@/components/layout/ExpandableForm";
@@ -89,7 +90,15 @@ export default async function TenantsPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-outline-variant/30">
+                  <div className="flex items-center flex-wrap gap-2 mt-4 pt-4 border-t border-outline-variant/30">
+                    <Link
+                      href={`/admin/leases?tenant=${tenant.user_id}`}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 rounded-lg transition-colors text-sm font-medium pressable"
+                      title="View Leases for this Tenant"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">real_estate_agent</span>
+                      View Leases
+                    </Link>
                     <TenantEditForm tenant={tenant} />
                     <TenantDeleteForm userId={tenant.user_id} />
                   </div>

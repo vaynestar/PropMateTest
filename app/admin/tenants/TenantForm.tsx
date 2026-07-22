@@ -50,7 +50,8 @@ export default function TenantForm() {
         <input
           name="phone_number"
           type="tel"
-          placeholder="Phone Number (Optional)"
+          placeholder="Phone Number (e.g., 012-3456789)"
+          required
           className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary lg:col-span-1"
         />
 

@@ -107,12 +107,13 @@ export default function TenantEditForm({ tenant }: { tenant: Tenant }) {
 
                 <div className="flex flex-col gap-1.5">
                   <label htmlFor={`phone_number-${tenant.user_id}`} className="font-label-md text-label-md text-on-surface-variant">
-                    Phone Number
+                    Phone Number <span className="text-error">*</span>
                   </label>
                   <input
                     id={`phone_number-${tenant.user_id}`}
                     name="phone_number"
                     type="tel"
+                    required
                     defaultValue={tenant.phone_number || ""}
                     className="bg-surface-container border border-outline-variant/50 rounded-lg px-4 py-2 text-on-surface focus:border-primary focus:outline-none transition-colors"
                   />

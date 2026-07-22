@@ -1,15 +1,29 @@
 import prisma from "./prisma";
 
-export async function getAllLeases(propertyId?: string) {
+export async function getAllLeases(propertyId?: string, tenantId?: string, search?: string) {
   try {
+    const whereClause: any = {};
+    if (propertyId) {
+      whereClause.unit = { property_id: propertyId };
+    }
+    if (tenantId) {
+      whereClause.user_id = tenantId;
+    }
+    if (search) {
+      whereClause.OR = [
+        { tenant: { user_name: { contains: search, mode: "insensitive" } } },
+        { tenant: { user_email: { contains: search, mode: "insensitive" } } },
+        { unit: { unit_number: { contains: search, mode: "insensitive" } } },
+      ];
+    }
     const leases = await prisma.tenantLease.findMany({
-      where: propertyId ? { unit: { property_id: propertyId } } : undefined,
+      where: whereClause,
       include: {
         unit: {
           include: { property: true }
         },
         tenant: {
-          select: { user_name: true, user_email: true, phone_number: true }
+          select: { user_id: true, user_name: true, user_email: true, phone_number: true }
         }
       },
       orderBy: { created_at: "desc" },

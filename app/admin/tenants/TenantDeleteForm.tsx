@@ -16,17 +16,17 @@ export default function TenantDeleteForm({ userId }: { userId: string }) {
   }, [state]);
 
   return (
-    <form action={formAction} className="relative mt-2 pt-2 border-t border-outline-variant/30 flex justify-end">
+    <form action={formAction} className="inline-flex items-center m-0 p-0 relative">
       <input type="hidden" name="user_id" value={userId} />
       <button
         type="submit"
         disabled={isPending}
-        className="text-xs px-3 py-1.5 rounded bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 transition-colors flex items-center gap-1 disabled:opacity-50 pressable"
+        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors text-sm font-medium disabled:opacity-50 pressable"
       >
         {isPending ? (
-          <span className="material-symbols-outlined animate-spin-slow text-[14px]">progress_activity</span>
+          <span className="material-symbols-outlined animate-spin-slow text-[18px]">progress_activity</span>
         ) : (
-          <span className="material-symbols-outlined text-[14px]">delete</span>
+          <span className="material-symbols-outlined text-[18px]">delete</span>
         )}
         {isPending ? "Deleting..." : "Delete"}
       </button>
