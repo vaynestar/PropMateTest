@@ -48,7 +48,7 @@ export default async function UnitsPage(props: { searchParams: Promise<{ [key: s
         <UnitForm properties={properties} activePropertyId={activePropertyId} />
       </ExpandableForm>
 
-      <div className="glass-card rounded-xl p-0 overflow-hidden">
+      <div className="rounded-xl p-0 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between px-6 py-4 border-b border-outline-variant/30 gap-4">
           <div className="flex items-center gap-4">
             <h2 className="font-title-lg text-title-lg text-on-surface">
