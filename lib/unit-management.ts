@@ -65,11 +65,45 @@ function parseMonthlyRent(value?: number | string) {
 }
 
 export async function listUnits(propertyId?: string) {
-  return prisma.unit.findMany({
+  const units = await prisma.unit.findMany({
     where: propertyId ? { property_id: propertyId } : undefined,
-    include: { property: true },
+    include: {
+      property: true,
+      tenant_leases: {
+        where: { status: "Active" },
+        include: {
+          tenant: {
+            select: { user_id: true, user_name: true, user_email: true, phone_number: true }
+          }
+        }
+      }
+    },
     orderBy: { created_at: 'desc' },
   });
+
+  // Automatically sync unit status: if no active leases exist and unit status is "Occupied", update status to "Vacant"
+  const syncedUnits = await Promise.all(
+    units.map(async (u) => {
+      const hasActiveLease = u.tenant_leases.length > 0;
+      if (u.status === "Occupied" && !hasActiveLease) {
+        await prisma.unit.update({
+          where: { unit_id: u.unit_id },
+          data: { status: "Vacant" }
+        });
+        return { ...u, status: "Vacant" };
+      }
+      if (u.status === "Vacant" && hasActiveLease) {
+        await prisma.unit.update({
+          where: { unit_id: u.unit_id },
+          data: { status: "Occupied" }
+        });
+        return { ...u, status: "Occupied" };
+      }
+      return u;
+    })
+  );
+
+  return syncedUnits;
 }
 
 export async function listPropertiesForUnits() {

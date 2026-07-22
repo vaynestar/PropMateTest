@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useActionState, useEffect, useState } from "react";
+import Link from "next/link";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { removeUnit } from "@/app/admin/units/actions";
 
@@ -78,18 +79,47 @@ export default function UnitGrid({ units }: { units: any[] }) {
             Floor {floor}
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {units.map((unit: any) => (
-              <div
-                key={unit.unit_id}
-                className="bg-surface-container border border-outline-variant/50 rounded-lg p-3 hover:border-primary/50 transition-all flex flex-col items-center justify-center text-center group relative"
-              >
-                <span className="font-title-md text-title-md text-on-surface mb-1">
-                  {unit.unit_number}
-                </span>
-                <StatusBadge status={unit.status} />
-                <DeleteUnitButton unitId={unit.unit_id} />
-              </div>
-            ))}
+            {units.map((unit: any) => {
+              const activeLease = unit.tenant_leases?.[0];
+              const isOccupied = unit.status === "Occupied" || !!activeLease;
+              const tenantName = activeLease?.tenant?.user_name;
+
+              return (
+                <div
+                  key={unit.unit_id}
+                  className={`bg-surface-container border rounded-xl p-3 hover:border-primary/50 transition-all flex flex-col items-center justify-between text-center group relative ${
+                    isOccupied
+                      ? "border-emerald-500/40 bg-emerald-500/5 shadow-[0_0_15px_rgba(16,185,129,0.08)]"
+                      : "border-outline-variant/50"
+                  }`}
+                >
+                  <div className="flex flex-col items-center w-full">
+                    <span className="font-title-md text-title-md text-on-surface mb-1 font-bold">
+                      {unit.unit_number}
+                    </span>
+                    <StatusBadge status={unit.status} variant="unit" />
+                    
+                    {tenantName && (
+                      <p className="text-[11px] text-on-surface-variant/90 mt-1.5 font-medium truncate max-w-full" title={tenantName}>
+                        {tenantName}
+                      </p>
+                    )}
+                  </div>
+
+                  {isOccupied && (
+                    <Link
+                      href={`/admin/leases?unit=${unit.unit_number}${unit.property_id ? `&property=${unit.property_id}` : ""}`}
+                      className="w-full mt-2.5 pt-2 border-t border-outline-variant/30 flex items-center justify-center gap-1 text-[11px] text-primary hover:text-primary-fixed font-medium group-hover:underline"
+                    >
+                      <span className="material-symbols-outlined text-[13px]">real_estate_agent</span>
+                      View Lease
+                    </Link>
+                  )}
+
+                  <DeleteUnitButton unitId={unit.unit_id} />
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}
