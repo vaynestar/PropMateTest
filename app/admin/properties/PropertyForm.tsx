@@ -20,14 +20,14 @@ export default function PropertyForm() {
       {isSuccess && (
         <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2 animate-slide-in">
           <span className="material-symbols-outlined text-[18px]">check_circle</span>
-          {state.message}
+          {state?.message}
         </div>
       )}
 
       {state?.error && (
         <div className="mb-4 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm flex items-center gap-2">
           <span className="material-symbols-outlined text-[18px]">error</span>
-          {state.error}
+          {state?.error}
         </div>
       )}
 

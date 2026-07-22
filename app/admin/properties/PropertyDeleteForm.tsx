@@ -29,10 +29,9 @@ export default function PropertyDeleteForm({ propertyId }: { propertyId: string 
         {isPending ? "Deleting..." : "Delete"}
       </button>
 
-      {/* Floating Error Toast for Delete */}
       {showError && (
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max p-2 rounded bg-rose-500 text-white text-xs shadow-lg animate-fade-in z-10 whitespace-nowrap">
-          {state.error}
+          {state?.error}
         </div>
       )}
     </form>
