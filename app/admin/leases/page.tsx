@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import AdminLeaseForm from "./AdminLeaseForm";
+import AdminLeaseEditForm from "./AdminLeaseEditForm";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { getAllLeases } from "@/lib/lease-management";
 import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
@@ -129,7 +130,8 @@ export default async function AdminLeasesPage(props: { searchParams: Promise<{ [
                   <span className="text-white font-mono">{l.tenant.phone_number || "-"}</span>
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-[#4a4455]/50">
+              <div className="mt-4 pt-4 border-t border-[#4a4455]/50 flex flex-col gap-2">
+                <AdminLeaseEditForm lease={l} />
                 <Link
                   href={`/admin/leases/${l.lease_id}/charges`}
                   className="w-full btn-outline py-2 flex items-center justify-center gap-2 text-xs"

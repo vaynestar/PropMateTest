@@ -92,3 +92,78 @@ export async function createLease(data: {
     throw new Error(error.message || "Failed to create lease");
   }
 }
+
+export async function updateLease(
+  lease_id: string,
+  data: {
+    move_in_date: string;
+    move_out_date?: string | null;
+    status?: string;
+  },
+  modifiedBy: string
+) {
+  try {
+    const existingLease = await prisma.tenantLease.findUnique({
+      where: { lease_id },
+      include: { unit: true }
+    });
+
+    if (!existingLease) {
+      throw new Error("Lease not found");
+    }
+
+    const moveOutDate = data.move_out_date ? new Date(data.move_out_date) : null;
+    
+    // Auto status determination:
+    // Adding a move_out_date automatically updates status to "Inactive"
+    // Removing move_out_date restores status to "Active"
+    let newStatus = data.status;
+    if (data.move_out_date !== undefined) {
+      if (moveOutDate) {
+        newStatus = "Inactive";
+      } else {
+        newStatus = "Active";
+      }
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const updatedLease = await tx.tenantLease.update({
+        where: { lease_id },
+        data: {
+          move_in_date: new Date(data.move_in_date),
+          move_out_date: moveOutDate,
+          status: newStatus || existingLease.status,
+          modified_by: modifiedBy,
+        },
+      });
+
+      // Update unit status based on lease status
+      if (newStatus === "Active") {
+        await tx.unit.update({
+          where: { unit_id: existingLease.unit_id },
+          data: { status: "Occupied" },
+        });
+      } else if (newStatus === "Inactive" || newStatus === "Expired" || newStatus === "Terminated") {
+        // Check if there are other active leases for this unit
+        const otherActive = await tx.tenantLease.findFirst({
+          where: {
+            unit_id: existingLease.unit_id,
+            status: "Active",
+            NOT: { lease_id }
+          }
+        });
+        if (!otherActive) {
+          await tx.unit.update({
+            where: { unit_id: existingLease.unit_id },
+            data: { status: "Vacant" },
+          });
+        }
+      }
+
+      return updatedLease;
+    });
+  } catch (error: any) {
+    console.error("Failed to update lease:", error);
+    throw new Error(error.message || "Failed to update lease");
+  }
+}
