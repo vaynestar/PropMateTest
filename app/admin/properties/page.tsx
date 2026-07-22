@@ -17,7 +17,7 @@ async function addProperty(formData: FormData) {
     state: String(formData.get("state")),
     country: String(formData.get("country")),
     postal_code: String(formData.get("postal_code")),
-    total_units: String(formData.get("total_units")),
+    total_units: "0",
   };
   await createProperty(input, user.userId);
   revalidatePath("/admin/properties");
@@ -91,14 +91,6 @@ export default async function PropertiesPage() {
             required
             className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
           />
-          <input
-            name="total_units"
-            type="number"
-            min="0"
-            placeholder="Total units"
-            required
-            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-          />
           <button
             type="submit"
             className="btn-primary px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2 md:col-span-2 transition-all"
@@ -130,34 +122,39 @@ export default async function PropertiesPage() {
                 domain
               </span>
             </div>
-            <p className="font-body-md text-body-md text-on-surface-variant">
+            <p className="font-body-md text-body-md text-on-surface-variant border-b border-outline-variant/30 pb-3">
               {p.address}, {p.postal_code}
             </p>
-            <div className="flex items-center justify-between mt-2">
-              <span className="font-label-md text-label-md text-on-surface">
-                {p._count.units} / {p.total_units} units
-              </span>
-              <div className="flex gap-2">
-                <Link
-                  href={`/admin/units?property=${p.property_id}`}
-                  className="font-label-sm text-label-sm text-primary hover:text-primary-container transition-colors"
-                >
-                  View units
-                </Link>
-                <form action={removeProperty}>
-                  <input
-                    type="hidden"
-                    name="property_id"
-                    value={p.property_id}
-                  />
-                  <button
-                    type="submit"
-                    className="font-label-sm text-label-sm text-error-container hover:underline"
-                  >
-                    Delete
-                  </button>
-                </form>
+            
+            <div className="flex items-center justify-between mt-1 mb-2">
+              <div className="flex items-center gap-2 text-on-surface">
+                <span className="material-symbols-outlined text-sm">meeting_room</span>
+                <span className="font-label-md text-label-md">
+                  {p._count.units} Unit{p._count.units !== 1 ? "s" : ""}
+                </span>
               </div>
+            </div>
+
+            <div className="flex gap-3 w-full mt-auto">
+              <Link
+                href={`/admin/units?property=${p.property_id}`}
+                className="flex-1 text-center py-2 rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors text-sm"
+              >
+                View Units
+              </Link>
+              <form action={removeProperty} className="flex-1">
+                <input
+                  type="hidden"
+                  name="property_id"
+                  value={p.property_id}
+                />
+                <button
+                  type="submit"
+                  className="w-full text-center py-2 rounded-lg bg-error-container/10 text-error-container font-medium hover:bg-error-container/20 transition-colors text-sm"
+                >
+                  Delete
+                </button>
+              </form>
             </div>
           </div>
         ))}
