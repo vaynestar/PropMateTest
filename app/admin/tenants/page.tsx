@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import TenantForm from "./TenantForm";
 import TenantDeleteForm from "./TenantDeleteForm";
+import TenantEditForm from "./TenantEditForm";
 
 export const dynamic = "force-dynamic";
 
@@ -88,7 +89,10 @@ export default async function TenantsPage() {
                     </div>
                   </div>
 
-                  <TenantDeleteForm userId={tenant.user_id} />
+                  <div className="flex items-center gap-2 mt-4 pt-4 border-t border-outline-variant/30">
+                    <TenantEditForm tenant={tenant} />
+                    <TenantDeleteForm userId={tenant.user_id} />
+                  </div>
                 </div>
               ))}
             </div>
