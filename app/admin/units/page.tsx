@@ -2,7 +2,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
-import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
+import { createUnit, deleteUnit, listPropertiesForUnits, listUnits } from "@/lib/unit-management";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import UnitGrid from "@/components/units/UnitGrid";
 
@@ -13,35 +13,25 @@ export const dynamic = "force-dynamic";
 async function addUnit(formData: FormData) {
   "use server";
   await requireUser(["Admin"]);
-
-  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/units`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      property_id: formData.get("property_id") || null,
-      unit_number: String(formData.get("unit_number")),
-      unit_type: String(formData.get("unit_type")),
-      floor_number: String(formData.get("floor_number")),
-      area_sqft: String(formData.get("area_sqft")),
-      monthly_rent: String(formData.get("monthly_rent") || "0"),
-      status: String(formData.get("status")),
-    }),
+  await createUnit({
+    property_id: formData.get("property_id") as string || null,
+    unit_number: String(formData.get("unit_number")),
+    unit_type: String(formData.get("unit_type")),
+    floor_number: String(formData.get("floor_number")),
+    area_sqft: String(formData.get("area_sqft")),
+    monthly_rent: String(formData.get("monthly_rent") || "0"),
+    status: String(formData.get("status")),
   });
-
   revalidatePath("/admin/units");
 }
 
 async function removeUnit(formData: FormData) {
   "use server";
   await requireUser(["Admin"]);
-
-  await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/units?id=${String(
-      formData.get("unit_id")
-    )}`,
-    { method: "DELETE" }
-  );
-
+  const unitId = String(formData.get("unit_id"));
+  if (unitId) {
+    await deleteUnit(unitId);
+  }
   revalidatePath("/admin/units");
 }
 

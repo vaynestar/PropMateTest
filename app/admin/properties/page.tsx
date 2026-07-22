@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { listProperties } from "@/lib/property-management";
+import { createProperty, deleteProperty, listProperties } from "@/lib/property-management";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 
 export const dynamic = "force-dynamic";
 
 async function addProperty(formData: FormData) {
   "use server";
-  await requireUser(["Admin"]);
+  const user = await requireUser(["Admin"]);
   const input = {
     property_name: String(formData.get("property_name")),
     property_type: String(formData.get("property_type")),
@@ -19,18 +19,7 @@ async function addProperty(formData: FormData) {
     postal_code: String(formData.get("postal_code")),
     total_units: String(formData.get("total_units")),
   };
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/properties`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }
-  );
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(data.error ?? "Failed to create property");
-  }
+  await createProperty(input, user.userId);
   revalidatePath("/admin/properties");
 }
 
@@ -38,10 +27,7 @@ async function removeProperty(formData: FormData) {
   "use server";
   await requireUser(["Admin"]);
   const id = String(formData.get("property_id"));
-  await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/properties/${id}`,
-    { method: "DELETE" }
-  );
+  await deleteProperty(id);
   revalidatePath("/admin/properties");
 }
 
