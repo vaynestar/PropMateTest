@@ -19,27 +19,57 @@ export default function AdminLeaseForm({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Searchable Vacant Unit Combobox State
+  const [unitQuery, setUnitQuery] = useState("");
+  const [selectedUnitId, setSelectedUnitId] = useState("");
+  const [isUnitDropdownOpen, setIsUnitDropdownOpen] = useState(false);
+  const unitDropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (state?.success) {
       setIsSuccess(true);
       setSelectedUserId("");
       setTenantQuery("");
+      setSelectedUnitId("");
+      setUnitQuery("");
       setTimeout(() => setIsSuccess(false), 3000);
     }
   }, [state]);
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setIsDropdownOpen(false);
+      }
+      if (unitDropdownRef.current && !unitDropdownRef.current.contains(e.target as Node)) {
+        setIsUnitDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const vacantUnits = units.filter(u => u.status === "Vacant");
+  // Filter & naturally sort vacant units ascending (01, 02, ... 10, 11)
+  const vacantUnits = useMemo(() => {
+    const vacant = units.filter((u) => u.status === "Vacant");
+    return vacant.sort((a, b) => {
+      const propCompare = a.property.property_name.localeCompare(b.property.property_name);
+      if (propCompare !== 0) return propCompare;
+      return a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true, sensitivity: "base" });
+    });
+  }, [units]);
+
+  const filteredVacantUnits = useMemo(() => {
+    if (!unitQuery.trim()) return vacantUnits;
+    const q = unitQuery.toLowerCase().trim();
+    return vacantUnits.filter(
+      (u) =>
+        u.unit_number.toLowerCase().includes(q) ||
+        u.property.property_name.toLowerCase().includes(q) ||
+        u.unit_type.toLowerCase().includes(q)
+    );
+  }, [vacantUnits, unitQuery]);
 
   const filteredUsers = useMemo(() => {
     if (!tenantQuery.trim()) return users;
@@ -189,23 +219,91 @@ export default function AdminLeaseForm({
             )}
           </div>
 
-          <div className="space-y-1">
-            <label htmlFor="unit_id" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Vacant Unit
+          {/* Typeable Searchable Vacant Unit Combobox */}
+          <div className="space-y-1 relative" ref={unitDropdownRef}>
+            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+              Vacant Unit <span className="text-rose-400">*</span>
             </label>
-            <select
-              id="unit_id"
-              name="unit_id"
-              required
-              className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary"
-            >
-              <option value="">Select Unit...</option>
-              {vacantUnits.map((u) => (
-                <option key={u.unit_id} value={u.unit_id}>
-                  {u.property.property_name} - Unit {u.unit_number}
-                </option>
-              ))}
-            </select>
+            <input type="hidden" name="unit_id" value={selectedUnitId} required />
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Type to search unit by Unit No or Property..."
+                value={unitQuery}
+                onChange={(e) => {
+                  setUnitQuery(e.target.value);
+                  setSelectedUnitId("");
+                  setIsUnitDropdownOpen(true);
+                }}
+                onFocus={() => setIsUnitDropdownOpen(true)}
+                className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg pl-9 pr-9 py-2.5 text-white placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary text-sm transition-colors"
+              />
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
+                domain
+              </span>
+              {selectedUnitId ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedUnitId("");
+                    setUnitQuery("");
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-white p-0.5 rounded-full"
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              ) : (
+                <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px] pointer-events-none">
+                  expand_more
+                </span>
+              )}
+            </div>
+
+            {/* Dropdown Options List */}
+            {isUnitDropdownOpen && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto bg-surface-container-high border border-outline-variant/80 rounded-xl shadow-[0_12px_35px_rgba(0,0,0,0.7)] z-50 divide-y divide-outline-variant/20 animate-fade-in">
+                {filteredVacantUnits.length === 0 ? (
+                  <div className="p-4 text-xs text-on-surface-variant text-center">
+                    {vacantUnits.length === 0 ? "No Vacant Units Available" : `No vacant units matching "${unitQuery}"`}
+                  </div>
+                ) : (
+                  filteredVacantUnits.map((u) => {
+                    const isSelected = u.unit_id === selectedUnitId;
+                    return (
+                      <div
+                        key={u.unit_id}
+                        onClick={() => {
+                          setSelectedUnitId(u.unit_id);
+                          setUnitQuery(`${u.property.property_name} - Unit ${u.unit_number}`);
+                          setIsUnitDropdownOpen(false);
+                        }}
+                        className={`p-3 hover:bg-primary/20 cursor-pointer flex items-center justify-between gap-2 text-xs transition-colors ${
+                          isSelected ? "bg-primary/20 text-primary font-semibold border-l-4 border-primary" : "text-on-surface"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <span className="material-symbols-outlined text-[16px] text-primary shrink-0">door_front</span>
+                          <span className="font-bold text-on-surface">Unit {u.unit_number}</span>
+                          <span className="text-on-surface-variant/80 text-[11px]">({u.property.property_name})</span>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[11px] shrink-0">
+                          <span className="px-2 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30 font-medium">
+                            {u.unit_type || "Standard"}
+                          </span>
+                          {isSelected && (
+                            <span className="material-symbols-outlined text-primary text-[16px] shrink-0">
+                              check_circle
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-1">
