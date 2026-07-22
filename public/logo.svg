@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048" width="2048" height="2048">
+  <defs>
+    <linearGradient id="violetGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="100%" stop-color="#6D28D9" />
+    </linearGradient>
+  </defs>
+  <!-- 4K Vector Rounded Squircle Background -->
+  <rect x="80" y="80" width="1888" height="1888" rx="410" fill="url(#violetGrad)" />
+  
+  <!-- Precision Vector PM Monogram House Emblem -->
+  <g stroke="#FFFFFF" stroke-width="140" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Outer Gable Roof -->
+    <path d="M 488,988 L 1024,550 L 1560,988" />
+    <!-- Chimney -->
+    <path d="M 1262,700 L 1262,560 L 1345,560 L 1345,760" />
+    <!-- Left & Right Outer Walls -->
+    <path d="M 488,988 L 488,1462" />
+    <path d="M 1560,988 L 1560,1462" />
+    <!-- Base Left & Right Feet -->
+    <path d="M 488,1462 L 675,1462" />
+    <path d="M 1373,1462 L 1560,1462" />
+    
+    <!-- M Monogram Stems -->
+    <path d="M 695,1012 L 695,1462" />
+    <path d="M 1353,1012 L 1353,1462" />
+    <!-- M Center Valley V-Shape -->
+    <path d="M 695,1012 L 1024,1288 L 1353,1012" />
+    
+    <!-- Center P Hexagon Loop -->
+    <path d="M 1024,738 L 1212,900 L 1024,1062 L 836,900 Z" />
+    <!-- Center P Vertical Stem -->
+    <path d="M 1024,1062 L 1024,1462" />
+  </g>
+</svg>
