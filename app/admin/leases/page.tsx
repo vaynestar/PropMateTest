@@ -17,19 +17,30 @@ export default async function AdminLeasesPage(props: { searchParams: Promise<{ [
   const searchParams = await props.searchParams;
   const urlPropertyId = searchParams.property as string | undefined;
   const urlTenantId = searchParams.tenant as string | undefined;
+  const urlUnitNumber = searchParams.unit as string | undefined;
+  const includePrevious = searchParams.include_previous !== "false"; // Default is true
   const cookiePropertyId = cookieStore.get("propmate_property_id")?.value;
 
   const properties = await listPropertiesForUnits();
-  const activePropertyId = urlPropertyId || cookiePropertyId || (properties[0]?.property_id ?? null);
+  
+  // If property parameter is explicitly in URL, use it; otherwise, if tenant is set, search globally across all properties; else use active cookie property.
+  const activePropertyId = urlPropertyId || (urlTenantId ? null : (cookiePropertyId || (properties[0]?.property_id ?? null)));
 
   const [leases, units, filteredTenant] = await Promise.all([
-    getAllLeases(activePropertyId || undefined, urlTenantId),
+    getAllLeases(
+      activePropertyId || undefined,
+      urlTenantId,
+      undefined,
+      includePrevious,
+      urlUnitNumber
+    ),
     listUnits(activePropertyId || undefined),
     urlTenantId ? prisma.user.findUnique({ where: { user_id: urlTenantId }, select: { user_name: true } }) : null
   ]);
   
   const users = await prisma.user.findMany({
     where: { role: "Resident" },
+    select: { user_id: true, user_name: true, user_email: true, phone_number: true },
     orderBy: { user_name: "asc" }
   });
 
@@ -52,7 +63,7 @@ export default async function AdminLeasesPage(props: { searchParams: Promise<{ [
         <div className="p-4 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between animate-slide-in">
           <div className="flex items-center gap-2 text-primary font-medium">
             <span className="material-symbols-outlined text-[20px]">filter_alt</span>
-            <span>Showing leases for tenant: <strong>{filteredTenant.user_name}</strong></span>
+            <span>Showing all leases ({leases.length}) for tenant: <strong>{filteredTenant.user_name}</strong></span>
           </div>
           <Link
             href="/admin/leases"
@@ -64,15 +75,19 @@ export default async function AdminLeasesPage(props: { searchParams: Promise<{ [
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-[#4a4455]">
-        <h2 className="text-xl font-semibold text-white">
-          Active & Past Leases
-        </h2>
+      <div className="flex flex-col gap-4 pt-4 border-t border-[#4a4455]">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-white">
+            Leases ({leases.length})
+          </h2>
+        </div>
         <LocalLeaseFilters
           properties={properties}
           activePropertyId={activePropertyId}
           tenants={users}
           activeTenantId={urlTenantId || null}
+          includePrevious={includePrevious}
+          unitNumber={urlUnitNumber || ""}
         />
       </div>
       

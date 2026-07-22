@@ -21,11 +21,15 @@ export default function LocalLeaseFilters({
   activePropertyId,
   tenants,
   activeTenantId,
+  includePrevious = true,
+  unitNumber = "",
 }: {
   properties: Property[];
   activePropertyId: string | null;
   tenants: Tenant[];
   activeTenantId: string | null;
+  includePrevious?: boolean;
+  unitNumber?: string;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -33,6 +37,7 @@ export default function LocalLeaseFilters({
 
   // Combobox state
   const [query, setQuery] = useState("");
+  const [unitInput, setUnitInput] = useState(unitNumber);
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +52,11 @@ export default function LocalLeaseFilters({
       setQuery("");
     }
   }, [activeTenantId, selectedTenant]);
+
+  // Sync unitInput prop
+  useEffect(() => {
+    setUnitInput(unitNumber);
+  }, [unitNumber]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -67,6 +77,37 @@ export default function LocalLeaseFilters({
         params.set("property", val);
       } else {
         params.delete("property");
+      }
+      startTransition(() => {
+        router.push(`?${params.toString()}`);
+      });
+    },
+    [router, searchParams]
+  );
+
+  const handleIncludePreviousChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const checked = e.target.checked;
+      const params = new URLSearchParams(searchParams.toString());
+      if (!checked) {
+        params.set("include_previous", "false");
+      } else {
+        params.delete("include_previous"); // Default is true
+      }
+      startTransition(() => {
+        router.push(`?${params.toString()}`);
+      });
+    },
+    [router, searchParams]
+  );
+
+  const handleUnitSubmit = useCallback(
+    (val: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (val.trim()) {
+        params.set("unit", val.trim());
+      } else {
+        params.delete("unit");
       }
       startTransition(() => {
         router.push(`?${params.toString()}`);
@@ -104,31 +145,82 @@ export default function LocalLeaseFilters({
     : tenants;
 
   return (
-    <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full">
-      {/* Property Filter */}
-      {properties.length > 0 && (
-        <div className="flex items-center gap-2 shrink-0">
-          <label className="text-xs text-on-surface-variant font-medium whitespace-nowrap">
-            Property:
-          </label>
-          <select
-            value={activePropertyId || ""}
-            onChange={handlePropertyChange}
-            disabled={isPending}
-            className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface text-sm outline-none focus:border-primary disabled:opacity-50"
-          >
-            <option value="">All Properties</option>
-            {properties.map((p) => (
-              <option key={p.property_id} value={p.property_id}>
-                {p.property_name} ({p.property_type})
-              </option>
-            ))}
-          </select>
+    <div className="flex flex-col gap-3 w-full">
+      {/* Top Filter Bar Row */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        {/* Left Side Filters: Property & Unit Number */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Property Filter */}
+          {properties.length > 0 && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-on-surface-variant font-medium whitespace-nowrap">
+                Property:
+              </label>
+              <select
+                value={activePropertyId || ""}
+                onChange={handlePropertyChange}
+                disabled={isPending}
+                className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface text-sm outline-none focus:border-primary disabled:opacity-50"
+              >
+                <option value="">All Properties</option>
+                {properties.map((p) => (
+                  <option key={p.property_id} value={p.property_id}>
+                    {p.property_name} ({p.property_type})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Unit Number Search Input */}
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-on-surface-variant font-medium whitespace-nowrap">
+              Unit No:
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="e.g. A-12-03"
+                value={unitInput}
+                onChange={(e) => setUnitInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleUnitSubmit(unitInput);
+                  }
+                }}
+                className="w-32 px-3 py-1.5 bg-surface-container-high border border-outline-variant rounded-lg text-on-surface text-sm placeholder:text-on-surface-variant/50 outline-none focus:border-primary transition-colors"
+              />
+              {unitInput && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUnitInput("");
+                    handleUnitSubmit("");
+                  }}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface p-0.5 rounded-full"
+                >
+                  <span className="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* Right Side Checkbox: Include Previous / Past Leases */}
+        <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-on-surface hover:text-primary transition-colors bg-surface-container-high border border-outline-variant px-3 py-1.5 rounded-lg">
+          <input
+            type="checkbox"
+            checked={includePrevious}
+            onChange={handleIncludePreviousChange}
+            disabled={isPending}
+            className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary accent-primary cursor-pointer"
+          />
+          <span>Include Previous / Past Leases</span>
+        </label>
+      </div>
 
       {/* Full-Row Typeable Tenant Filter Combobox */}
-      <div className="relative flex-1" ref={containerRef}>
+      <div className="relative w-full" ref={containerRef}>
         <div className="flex items-center gap-2">
           <label className="text-xs text-on-surface-variant font-medium whitespace-nowrap hidden sm:inline">
             Tenant:

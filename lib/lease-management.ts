@@ -1,18 +1,34 @@
 import prisma from "./prisma";
 
-export async function getAllLeases(propertyId?: string, tenantId?: string, search?: string) {
+export async function getAllLeases(
+  propertyId?: string,
+  tenantId?: string,
+  search?: string,
+  includePrevious: boolean = true,
+  unitNumber?: string
+) {
   try {
     const whereClause: any = {};
     if (propertyId) {
       whereClause.unit = { property_id: propertyId };
     }
+    if (unitNumber) {
+      whereClause.unit = {
+        ...(whereClause.unit || {}),
+        unit_number: { contains: unitNumber, mode: "insensitive" }
+      };
+    }
     if (tenantId) {
       whereClause.user_id = tenantId;
+    }
+    if (!includePrevious) {
+      whereClause.status = "Active";
     }
     if (search) {
       whereClause.OR = [
         { tenant: { user_name: { contains: search, mode: "insensitive" } } },
         { tenant: { user_email: { contains: search, mode: "insensitive" } } },
+        { tenant: { phone_number: { contains: search, mode: "insensitive" } } },
         { unit: { unit_number: { contains: search, mode: "insensitive" } } },
       ];
     }
