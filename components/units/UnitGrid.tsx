@@ -1,9 +1,47 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useActionState, useEffect, useState } from "react";
 import StatusBadge from "@/components/dashboard/StatusBadge";
+import { removeUnit } from "@/app/admin/units/actions";
 
-export default function UnitGrid({ units, removeAction }: { units: any[]; removeAction: (formData: FormData) => void }) {
+function DeleteUnitButton({ unitId }: { unitId: string }) {
+  const [state, formAction, isPending] = useActionState(removeUnit, null);
+  const [showError, setShowError] = useState(false);
+
+  useEffect(() => {
+    if (state?.error) {
+      setShowError(true);
+      const t = setTimeout(() => setShowError(false), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [state]);
+
+  return (
+    <form action={formAction} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+      <input type="hidden" name="unit_id" value={unitId} />
+      <button
+        type="submit"
+        disabled={isPending}
+        className="bg-red-500/90 hover:bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center shadow-sm disabled:opacity-50 pressable"
+        title="Remove Unit"
+      >
+        {isPending ? (
+          <span className="material-symbols-outlined animate-spin-slow text-[14px]">progress_activity</span>
+        ) : (
+          <span className="material-symbols-outlined text-[14px]">close</span>
+        )}
+      </button>
+
+      {showError && (
+        <div className="absolute bottom-full right-0 mb-1 w-max p-1.5 rounded bg-rose-500 text-white text-xs shadow-lg animate-fade-in whitespace-nowrap">
+          {state?.error}
+        </div>
+      )}
+    </form>
+  );
+}
+
+export default function UnitGrid({ units }: { units: any[] }) {
   // Group units by floor_number
   const unitsByFloor = useMemo(() => {
     const grouped = units.reduce((acc, unit) => {
@@ -33,7 +71,7 @@ export default function UnitGrid({ units, removeAction }: { units: any[]; remove
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 p-6">
       {unitsByFloor.map(({ floor, units }) => (
         <div key={floor} className="glass-card rounded-xl p-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 bottom-0 w-2 bg-primary/20" />
@@ -50,18 +88,7 @@ export default function UnitGrid({ units, removeAction }: { units: any[]; remove
                   {unit.unit_number}
                 </span>
                 <StatusBadge status={unit.status} />
-                
-                {/* Delete button appears on hover */}
-                <form action={removeAction} className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <input type="hidden" name="unit_id" value={unit.unit_id} />
-                  <button
-                    type="submit"
-                    className="bg-error text-white rounded-full w-6 h-6 flex items-center justify-center shadow-sm"
-                    title="Remove Unit"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">close</span>
-                  </button>
-                </form>
+                <DeleteUnitButton unitId={unit.unit_id} />
               </div>
             ))}
           </div>

@@ -6,18 +6,24 @@ import ExpandableForm from "@/components/layout/ExpandableForm";
 import AdminLeaseForm from "./AdminLeaseForm";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { getAllLeases } from "@/lib/lease-management";
-import { listUnits } from "@/lib/unit-management";
+import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
+import LocalPropertyFilter from "@/components/layout/LocalPropertyFilter";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminLeasesPage() {
+export default async function AdminLeasesPage(props: { searchParams: Promise<{ [key: string]: string | string[] | undefined }> }) {
   await requireUser(["Admin"]);
   const cookieStore = await cookies();
-  const propertyId = cookieStore.get("propmate_property_id")?.value;
+  const searchParams = await props.searchParams;
+  const urlPropertyId = searchParams.property as string | undefined;
+  const cookiePropertyId = cookieStore.get("propmate_property_id")?.value;
+
+  const properties = await listPropertiesForUnits();
+  const activePropertyId = urlPropertyId || cookiePropertyId || (properties[0]?.property_id ?? null);
 
   const [leases, units] = await Promise.all([
-    getAllLeases(propertyId),
-    listUnits(propertyId),
+    getAllLeases(activePropertyId || undefined),
+    listUnits(activePropertyId || undefined),
   ]);
   
   const users = await prisma.user.findMany({
@@ -34,6 +40,10 @@ export default async function AdminLeasesPage() {
             Manage unit tenancies and resident assignments
           </p>
         </div>
+        <LocalPropertyFilter
+          properties={properties}
+          activePropertyId={activePropertyId}
+        />
       </div>
 
       <ExpandableForm title="Create New Lease" buttonLabel="Add Lease" defaultOpen={false}>

@@ -37,7 +37,7 @@ export default function AdminLeaseForm({
       {state?.error && (
         <div className="mb-6 p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm flex items-center gap-2">
           <span className="material-symbols-outlined">error</span>
-          {state.error}
+          {state?.error}
         </div>
       )}
 
