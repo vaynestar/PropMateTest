@@ -23,11 +23,10 @@ export default function LoginPage() {
             priority
           />
           <h1 className="font-display-lg text-display-lg text-on-surface mb-6 drop-shadow-lg">
-            Elevate Your Portfolio.
+           Prop Mate
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
-            Experience quiet authority in property management. PropMate delivers deep
-            spatial insights and high-contrast analytics for the modern administrator.
+            Your Best Mate of Solution for Property Management.
           </p>
         </div>
       </div>
@@ -119,7 +118,7 @@ export default function LoginPage() {
 
           <div className="pt-4 border-t border-outline-variant text-center">
             <p className="font-body-md text-body-md text-on-surface-variant">
-              Demo accounts are seeded. Use admin@propmate.com / resident@propmate.com.
+              Demo accounts: admin@propmate.com / resident@propmate.com
             </p>
           </div>
         </div>
