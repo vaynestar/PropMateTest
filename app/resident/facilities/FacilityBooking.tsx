@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, Fragment } from "react";
+import { useMemo, useState, Fragment, useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { bookFacility } from "./actions";
 import BookingTimeline from "@/components/facilities/BookingTimeline";
@@ -161,6 +161,8 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
 
   const initialStartHour = Math.floor(DAY_START / 60);
   const initialEndHour = Math.floor(Math.min(DAY_START + 60, DAY_END) / 60);
+
+  const [state, formAction, pending] = useActionState(bookFacility, null);
   
   const [startDisplayHour, setStartDisplayHour] = useState<number>(initialStartHour % 12 || 12);
   const [startMin, setStartMin] = useState<number>(0);
@@ -368,7 +370,23 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
         </div>
       )}
 
-      <form action={bookFacility}>
+      {state?.error && (
+        <div className="rounded-lg bg-error-container/10 border border-error-container/40 px-4 py-3">
+          <span className="font-label-md text-label-md text-error-container">
+            {state.error}
+          </span>
+        </div>
+      )}
+
+      {state?.success && (
+        <div className="rounded-lg bg-primary/20 border border-primary px-4 py-3">
+          <span className="font-label-md text-label-md text-primary-fixed">
+            {state.message}
+          </span>
+        </div>
+      )}
+
+      <form action={formAction}>
         <input type="hidden" name="facility_id" value={facility.facility_id} />
         <input type="hidden" name="booking_date" value={date} />
         <input type="hidden" name="start_time" value={fmt(start)} />
