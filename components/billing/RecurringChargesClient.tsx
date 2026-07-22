@@ -191,9 +191,10 @@ export default function RecurringChargesClient({ leases, chargeMasters }: { leas
                     <td className="px-6 py-4 text-center">
                       <button 
                         onClick={() => openDrawer(l)}
-                        className="bg-primary hover:bg-primary-container text-on-primary px-3 py-1.5 rounded text-sm font-medium opacity-0 group-hover:opacity-100 transition-all focus:opacity-100"
+                        className="bg-primary/20 hover:bg-primary text-primary hover:text-on-primary border border-primary/40 px-3.5 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all shadow-sm"
                       >
-                        Edit Charges
+                        <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                        Edit Charges / Prices
                       </button>
                     </td>
                   </tr>
@@ -237,6 +238,10 @@ export default function RecurringChargesClient({ leases, chargeMasters }: { leas
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
+              <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px]">edit</span>
+                <span>You can edit the <strong>Price (RM)</strong> and <strong>Quantity</strong> directly for each line item below.</span>
+              </div>
               <h4 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-3">Current Recurring Charges</h4>
               <div className="space-y-3">
                 {editingCharges.map(c => (
@@ -248,37 +253,40 @@ export default function RecurringChargesClient({ leases, chargeMasters }: { leas
                       </div>
                       <button 
                         onClick={() => removeCharge(c.id)}
-                        className="text-error/70 hover:text-error transition-colors opacity-0 group-hover:opacity-100"
+                        className="text-error/70 hover:text-error transition-colors p-1"
+                        title="Remove Charge"
                       >
                         <span className="material-symbols-outlined text-sm">delete</span>
                       </button>
                     </div>
                     <div className="flex gap-4">
-                      <div className="flex-1">
-                        <label className="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">Qty</label>
+                      <div className="w-1/3">
+                        <label className="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider font-semibold">Qty</label>
                         <input 
                           type="number" 
                           min={1}
                           value={c.quantity} 
                           onChange={(e) => updateCharge(c.id, 'quantity', Number(e.target.value))}
-                          className="w-full bg-surface-container-highest border border-outline-variant/50 rounded py-1.5 px-3 text-sm text-on-surface focus:outline-none focus:border-primary"
+                          className="w-full bg-surface-container-highest border border-outline-variant/50 rounded py-1.5 px-3 text-sm text-on-surface focus:outline-none focus:border-primary font-medium"
                         />
                       </div>
-                      <div className="flex-1">
-                        <label className="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider">Amount</label>
+                      <div className="w-1/3">
+                        <label className="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider font-semibold">Price (RM)</label>
                         <div className="relative">
-                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">RM</span>
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs font-bold">RM</span>
                           <input 
                             type="number"
                             min={0}
+                            step="0.01"
                             value={c.amount} 
                             onChange={(e) => updateCharge(c.id, 'amount', Number(e.target.value))}
-                            className="w-full bg-surface-container-highest border border-outline-variant/50 rounded py-1.5 pl-8 pr-3 text-sm text-on-surface focus:outline-none focus:border-primary"
+                            className="w-full bg-surface-container-highest border border-outline-variant/50 rounded py-1.5 pl-8 pr-2 text-sm text-on-surface focus:outline-none focus:border-primary font-bold text-primary"
                           />
                         </div>
                       </div>
-                      <div className="flex-1 flex flex-col justify-end">
-                        <div className="text-right font-semibold text-on-surface py-1.5">
+                      <div className="w-1/3 flex flex-col justify-end">
+                        <label className="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider text-right font-semibold">Subtotal</label>
+                        <div className="text-right font-bold text-on-surface py-1.5 text-sm">
                           {formatCurrency(c.amount * c.quantity)}
                         </div>
                       </div>
