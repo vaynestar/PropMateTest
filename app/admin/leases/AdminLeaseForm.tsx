@@ -53,7 +53,7 @@ export default function AdminLeaseForm({
   }, [users, tenantQuery]);
 
   return (
-    <div className="bg-surface-container border border-[#4a4455] rounded-xl p-4 sm:p-6 shadow-xl relative overflow-hidden">
+    <div className="bg-surface-container border border-[#4a4455] rounded-xl p-4 sm:p-6 shadow-xl relative z-10">
       <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
 
       {isSuccess && (
@@ -114,11 +114,30 @@ export default function AdminLeaseForm({
               )}
             </div>
 
-            {/* Dropdown Options List */}
+            {/* Structured 3-Column Scrollable Dropdown Options List */}
             {isDropdownOpen && (
-              <div className="absolute left-0 right-0 top-full mt-1.5 max-h-60 overflow-y-auto bg-[#0c1324] border border-[#4a4455] rounded-xl shadow-2xl z-50 divide-y divide-[#4a4455]/40 animate-fade-in">
+              <div className="absolute left-0 right-0 top-full mt-1.5 max-h-64 overflow-y-auto bg-surface-container-high border border-outline-variant/80 rounded-xl shadow-[0_12px_35px_rgba(0,0,0,0.7)] z-50 divide-y divide-outline-variant/20 animate-fade-in">
+                {/* Sticky Table Header */}
+                {filteredUsers.length > 0 && (
+                  <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-surface-container-lowest/90 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider sticky top-0 backdrop-blur-md z-10 border-b border-outline-variant/40">
+                    <div className="col-span-5 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[13px]">person</span>
+                      Tenant Name
+                    </div>
+                    <div className="col-span-3 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[13px]">call</span>
+                      Phone Number
+                    </div>
+                    <div className="col-span-4 flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[13px]">mail</span>
+                      Email Address
+                    </div>
+                  </div>
+                )}
+
+                {/* Filtered Residents List */}
                 {filteredUsers.length === 0 ? (
-                  <div className="p-3 text-xs text-on-surface-variant text-center">
+                  <div className="p-4 text-xs text-on-surface-variant text-center">
                     No residents found matching "{tenantQuery}"
                   </div>
                 ) : (
@@ -132,26 +151,30 @@ export default function AdminLeaseForm({
                           setTenantQuery(u.user_name);
                           setIsDropdownOpen(false);
                         }}
-                        className={`p-3 hover:bg-primary/20 cursor-pointer flex items-center justify-between gap-2 text-xs transition-colors ${
-                          isSelected ? "bg-primary/20 text-primary font-semibold border-l-4 border-primary" : "text-white"
+                        className={`grid grid-cols-12 gap-2 px-4 py-2.5 items-center hover:bg-primary/15 cursor-pointer text-xs transition-all ${
+                          isSelected
+                            ? "bg-primary/20 text-primary font-semibold border-l-4 border-primary"
+                            : "text-on-surface border-l-4 border-transparent"
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 truncate">
+                        {/* Column 1: Name */}
+                        <div className="col-span-5 flex items-center gap-2.5 truncate">
                           <div className="w-6 h-6 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-[11px] shrink-0">
                             {u.user_name.charAt(0).toUpperCase()}
                           </div>
-                          <span className="font-semibold text-white truncate">{u.user_name}</span>
+                          <span className="font-semibold text-on-surface truncate">{u.user_name}</span>
                         </div>
 
-                        <div className="flex items-center gap-2 text-[11px] text-on-surface-variant shrink-0">
-                          {u.phone_number && (
-                            <span className="font-mono bg-surface px-1.5 py-0.5 rounded border border-[#4a4455]">
-                              {u.phone_number}
-                            </span>
-                          )}
-                          <span className="truncate max-w-[140px] text-on-surface-variant/80">
-                            {u.user_email}
+                        {/* Column 2: Phone */}
+                        <div className="col-span-3 flex items-center text-[11px] truncate">
+                          <span className="font-mono bg-surface-container px-2 py-0.5 rounded border border-outline-variant/40 text-on-surface truncate">
+                            {u.phone_number || "—"}
                           </span>
+                        </div>
+
+                        {/* Column 3: Email */}
+                        <div className="col-span-4 flex items-center justify-between gap-2 text-[11px] text-on-surface-variant truncate">
+                          <span className="truncate text-on-surface-variant/90">{u.user_email}</span>
                           {isSelected && (
                             <span className="material-symbols-outlined text-primary text-[16px] shrink-0">
                               check_circle
