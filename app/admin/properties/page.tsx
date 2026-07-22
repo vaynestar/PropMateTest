@@ -1,35 +1,11 @@
 import Link from "next/link";
-import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { createProperty, deleteProperty, listProperties } from "@/lib/property-management";
+import { listProperties } from "@/lib/property-management";
 import ExpandableForm from "@/components/layout/ExpandableForm";
+import PropertyForm from "./PropertyForm";
+import PropertyDeleteForm from "./PropertyDeleteForm";
 
 export const dynamic = "force-dynamic";
-
-async function addProperty(formData: FormData) {
-  "use server";
-  const user = await requireUser(["Admin"]);
-  const input = {
-    property_name: String(formData.get("property_name")),
-    property_type: String(formData.get("property_type")),
-    address: String(formData.get("address")),
-    city: String(formData.get("city")),
-    state: String(formData.get("state")),
-    country: String(formData.get("country")),
-    postal_code: String(formData.get("postal_code")),
-    total_units: "0",
-  };
-  await createProperty(input, user.userId);
-  revalidatePath("/admin/properties");
-}
-
-async function removeProperty(formData: FormData) {
-  "use server";
-  await requireUser(["Admin"]);
-  const id = String(formData.get("property_id"));
-  await deleteProperty(id);
-  revalidatePath("/admin/properties");
-}
 
 export default async function PropertiesPage() {
   await requireUser(["Admin"]);
@@ -47,60 +23,7 @@ export default async function PropertiesPage() {
       </div>
 
       <ExpandableForm title="Add New Property" buttonLabel="New Property">
-        <form action={addProperty} className="grid gap-4 md:grid-cols-2">
-          <input
-            name="property_name"
-            placeholder="Property name (e.g., Desa Harmoni)"
-            required
-            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-          />
-          <input
-            name="property_type"
-            placeholder="Type (Condominium / Apartment)"
-            required
-            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-          />
-          <input
-            name="address"
-            placeholder="Street address"
-            required
-            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary md:col-span-2"
-          />
-          <input
-            name="city"
-            placeholder="City"
-            required
-            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-          />
-          <input
-            name="state"
-            placeholder="State"
-            required
-            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-          />
-          <input
-            name="country"
-            placeholder="Country"
-            defaultValue="Malaysia"
-            required
-            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-          />
-          <input
-            name="postal_code"
-            placeholder="Postal code"
-            required
-            className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
-          />
-          <button
-            type="submit"
-            className="btn-primary px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2 md:col-span-2 transition-all"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-              add
-            </span>
-            Add Property
-          </button>
-        </form>
+        <PropertyForm />
       </ExpandableForm>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -142,19 +65,7 @@ export default async function PropertiesPage() {
               >
                 View Units
               </Link>
-              <form action={removeProperty} className="flex-1">
-                <input
-                  type="hidden"
-                  name="property_id"
-                  value={p.property_id}
-                />
-                <button
-                  type="submit"
-                  className="w-full text-center py-2 rounded-lg bg-error-container/10 text-error-container font-medium hover:bg-error-container/20 transition-colors text-sm"
-                >
-                  Delete
-                </button>
-              </form>
+              <PropertyDeleteForm propertyId={p.property_id} />
             </div>
           </div>
         ))}
