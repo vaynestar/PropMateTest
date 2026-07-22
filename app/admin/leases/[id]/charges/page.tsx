@@ -42,13 +42,31 @@ export default async function LeaseChargesPage({ params }: { params: Promise<{ i
             arrow_back
           </span>
         </Link>
-        <div>
-          <h1 className="font-headline-lg text-headline-lg text-on-surface">
-            Tenant Invoice Details
-          </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-            Setup recurring charges for {lease.tenant.user_name} ({lease.unit.property.property_name} - Unit {lease.unit.unit_number})
-          </p>
+        <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="font-headline-lg text-headline-lg text-on-surface">
+              Tenant Billing Details Setup
+            </h1>
+            <p className="font-body-md text-body-md text-on-surface-variant mt-1">
+              Setup default monthly charges for {lease.tenant.user_name} ({lease.unit.property.property_name} - Unit {lease.unit.unit_number})
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin/billing/recurring-charges"
+              className="px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant/60 hover:border-primary text-xs font-semibold text-on-surface transition-colors flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[16px] text-primary">autorenew</span>
+              Recurring Charges
+            </Link>
+            <Link
+              href="/admin/invoices"
+              className="px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 text-xs font-semibold text-primary transition-colors flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+              Billing Details
+            </Link>
+          </div>
         </div>
       </div>
 

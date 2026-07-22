@@ -28,10 +28,17 @@ function getMonthYear(date: Date | string) {
   }).format(new Date(date));
 }
 
-export default function InvoiceBatchList({ invoices }: { invoices: any[] }) {
+export default function InvoiceBatchList({
+  invoices,
+  chargeMasters = [],
+}: {
+  invoices: any[];
+  chargeMasters?: any[];
+}) {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [selectedBatch, setSelectedBatch] = useState("");
+  const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
 
   const filteredInvoices = invoices.filter((inv) => {
     const s = search.toLowerCase();
@@ -170,6 +177,15 @@ export default function InvoiceBatchList({ invoices }: { invoices: any[] }) {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setEditingInvoice(inv)}
+                          className="px-2.5 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold inline-flex items-center gap-1 transition-colors border border-primary/20"
+                          title="Edit Line Items / Add Item"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                          Edit Items
+                        </button>
                         <Link
                           href={`/print/invoice/${inv.invoice_id}`}
                           target="_blank"
@@ -198,6 +214,14 @@ export default function InvoiceBatchList({ invoices }: { invoices: any[] }) {
             </table>
           </div>
         </div>
+      )}
+
+      {editingInvoice && (
+        <EditInvoiceItemsModal
+          invoice={editingInvoice}
+          chargeMasters={chargeMasters}
+          onClose={() => setEditingInvoice(null)}
+        />
       )}
     </div>
   );

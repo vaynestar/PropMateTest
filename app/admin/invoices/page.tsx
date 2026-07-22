@@ -6,6 +6,8 @@ import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton"
 import ManualInvoiceButton from "@/components/billing/ManualInvoiceButton";
 import InvoiceBatchList from "@/components/billing/InvoiceBatchList";
 
+import prisma from "@/lib/prisma";
+
 export const dynamic = "force-dynamic";
 
 export default async function InvoicesDetailPage({
@@ -18,9 +20,11 @@ export default async function InvoicesDetailPage({
   const propertyId = cookieStore.get("propmate_property_id")?.value;
 
   let invoices = await listInvoices(propertyId);
-  // Optional: We can still do server-side filtering if passed via URL, 
-  // but InvoiceBatchList handles client-side filtering. 
-  // We'll leave the server-side as-is in case they navigate directly via /admin/invoices?status=Overdue
+  const chargeMasters = await prisma.chargeMaster.findMany({
+    where: { is_active: true },
+    orderBy: { charge_name: "asc" }
+  });
+
   if (searchParams.status && searchParams.status !== "All") {
     invoices = invoices.filter(inv => inv.status === searchParams.status);
   }
@@ -48,7 +52,7 @@ export default async function InvoicesDetailPage({
         </div>
       </div>
 
-      <InvoiceBatchList invoices={invoices} />
+      <InvoiceBatchList invoices={invoices} chargeMasters={chargeMasters} />
     </div>
   );
 }
