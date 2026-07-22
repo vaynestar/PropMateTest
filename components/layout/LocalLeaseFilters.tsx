@@ -262,20 +262,47 @@ export default function LocalLeaseFilters({
 
         {/* Dropdown Options Popup */}
         {isOpen && (
-          <div className="absolute left-0 right-0 top-full mt-2 max-h-64 overflow-y-auto bg-surface-container-high border border-outline-variant/80 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-50 divide-y divide-outline-variant/30 animate-fade-in">
+          <div className="absolute left-0 right-0 top-full mt-2 max-h-72 overflow-y-auto bg-surface-container-high border border-outline-variant/80 rounded-xl shadow-[0_12px_35px_rgba(0,0,0,0.6)] z-50 divide-y divide-outline-variant/20 animate-fade-in">
+            {/* Show All Leases Option */}
             <div
               onClick={() => {
                 setQuery("");
                 selectTenant(null);
               }}
-              className="px-4 py-2.5 hover:bg-primary/20 cursor-pointer flex items-center justify-between text-sm transition-colors text-primary font-medium"
+              className={`px-4 py-3 hover:bg-primary/20 cursor-pointer flex items-center justify-between text-sm transition-colors text-primary font-semibold border-b border-outline-variant/40 ${
+                !activeTenantId ? "bg-primary/10" : ""
+              }`}
             >
-              <span>All Tenants (Show All Leases)</span>
-              {!activeTenantId && <span className="material-symbols-outlined text-[18px]">check</span>}
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs shrink-0">
+                  <span className="material-symbols-outlined text-[16px]">groups</span>
+                </div>
+                <span>All Tenants (Show All Leases)</span>
+              </div>
+              {!activeTenantId && <span className="material-symbols-outlined text-[18px] text-primary">check_circle</span>}
             </div>
 
+            {/* Structured Column Header Row */}
+            {filteredTenants.length > 0 && (
+              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-surface-container-lowest/90 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider sticky top-0 backdrop-blur-md z-10 border-b border-outline-variant/40">
+                <div className="col-span-5 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[13px]">person</span>
+                  Tenant Name
+                </div>
+                <div className="col-span-3 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[13px]">call</span>
+                  Phone Number
+                </div>
+                <div className="col-span-4 flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-[13px]">mail</span>
+                  Email Address
+                </div>
+              </div>
+            )}
+
+            {/* Filtered Tenant Items List */}
             {filteredTenants.length === 0 ? (
-              <div className="px-4 py-3 text-xs text-on-surface-variant text-center">
+              <div className="px-4 py-4 text-xs text-on-surface-variant text-center">
                 No matching tenants found for "{query}"
               </div>
             ) : (
@@ -285,25 +312,35 @@ export default function LocalLeaseFilters({
                   <div
                     key={t.user_id}
                     onClick={() => selectTenant(t.user_id)}
-                    className={`px-4 py-2.5 hover:bg-surface-variant/70 cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm transition-colors ${
-                      isSelected ? "bg-primary/10 text-primary border-l-4 border-primary" : "text-on-surface"
+                    className={`grid grid-cols-12 gap-2 px-4 py-2.5 items-center hover:bg-primary/15 cursor-pointer text-sm transition-all ${
+                      isSelected
+                        ? "bg-primary/20 text-primary font-semibold border-l-4 border-primary"
+                        : "text-on-surface border-l-4 border-transparent"
                     }`}
                   >
-                    {/* Full Row format: Name | Phone Number | Email */}
-                    <div className="flex items-center gap-3 font-medium truncate">
+                    {/* Column 1: Name */}
+                    <div className="col-span-5 flex items-center gap-2.5 truncate">
                       <div className="w-7 h-7 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold shrink-0">
                         {t.user_name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-semibold text-on-surface">{t.user_name}</span>
+                      <span className="font-semibold text-on-surface truncate">{t.user_name}</span>
                     </div>
 
-                    <div className="flex items-center gap-3 text-xs text-on-surface-variant shrink-0">
-                      <span className="font-mono bg-surface-container px-2 py-0.5 rounded border border-outline-variant/40 text-on-surface">
-                        {t.phone_number || "No Phone"}
+                    {/* Column 2: Phone Number */}
+                    <div className="col-span-3 flex items-center text-xs truncate">
+                      <span className="font-mono bg-surface-container px-2 py-0.5 rounded border border-outline-variant/40 text-on-surface text-[12px] truncate">
+                        {t.phone_number || "—"}
                       </span>
-                      <span className="text-on-surface-variant/80 truncate max-w-[200px]">
-                        {t.user_email}
-                      </span>
+                    </div>
+
+                    {/* Column 3: Email Address */}
+                    <div className="col-span-4 flex items-center justify-between gap-2 text-xs text-on-surface-variant truncate">
+                      <span className="truncate text-on-surface-variant/90">{t.user_email}</span>
+                      {isSelected && (
+                        <span className="material-symbols-outlined text-primary text-[18px] shrink-0">
+                          check_circle
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
