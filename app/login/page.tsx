@@ -17,9 +17,9 @@ export default function LoginPage() {
           <Image
             src="/logo.png"
             alt="PropMate Logo"
-            width={72}
-            height={72}
-            className="w-18 h-18 rounded-2xl object-contain shadow-[0_0_30px_rgba(160,120,255,0.4)] mb-6"
+            width={96}
+            height={96}
+            className="w-24 h-24 rounded-2xl object-contain shadow-[0_0_40px_rgba(123,87,231,0.5)] mb-6"
             priority
           />
           <h1 className="font-display-lg text-display-lg text-on-surface mb-6 drop-shadow-lg">
@@ -37,13 +37,13 @@ export default function LoginPage() {
         <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
         <div className="w-full max-w-[440px] bg-surface-container/50 backdrop-blur-xl border border-outline-variant rounded-lg p-8 sm:p-10 shadow-[0_20px_40px_rgba(0,0,0,0.4)] relative z-10 flex flex-col gap-8">
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3 mb-2 lg:hidden">
+            <div className="flex items-center gap-3 mb-2">
               <Image
                 src="/logo.png"
                 alt="PropMate Logo"
-                width={36}
-                height={36}
-                className="w-9 h-9 rounded-lg object-contain"
+                width={40}
+                height={40}
+                className="w-10 h-10 rounded-xl object-contain shadow-sm"
                 priority
               />
               <span className="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">
