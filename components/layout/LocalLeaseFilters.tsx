@@ -86,10 +86,9 @@ export default function LocalLeaseFilters({
   );
 
   const handleIncludePreviousChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const checked = e.target.checked;
+    (nextChecked: boolean) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (!checked) {
+      if (!nextChecked) {
         params.set("include_previous", "false");
       } else {
         params.delete("include_previous"); // Default is true
@@ -211,17 +210,7 @@ export default function LocalLeaseFilters({
           type="button"
           onClick={() => {
             if (!isPending) {
-              const nextVal = !includePrevious;
-              setIncludePrevious(nextVal);
-              startTransition(() => {
-                const params = new URLSearchParams(searchParams.toString());
-                if (nextVal) {
-                  params.set("include_previous", "true");
-                } else {
-                  params.set("include_previous", "false");
-                }
-                router.push(`?${params.toString()}`);
-              });
+              handleIncludePreviousChange(!includePrevious);
             }
           }}
           disabled={isPending}
