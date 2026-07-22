@@ -71,7 +71,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </summary>
             <ul className="ml-11 mt-1 flex flex-col gap-1 pb-2">
               <li><Link href="/admin/billing" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Billing Overview</Link></li>
-              <li><Link href="/admin/invoices" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Invoice Details</Link></li>
+              <li><Link href="/admin/invoices" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Billing Details</Link></li>
+              <li><Link href="/admin/billing/charges" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Charge Masterfile</Link></li>
               <li><Link href="/admin/billing/recurring-charges" className="block py-2 text-sm text-on-surface-variant hover:text-primary transition-colors">Recurring Charges</Link></li>
             </ul>
           </details>
