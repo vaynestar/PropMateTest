@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Image from "next/image";
 import AdminMobileNav, { AdminMenuButton } from "./AdminMobileNav";
 import { getSessionUser } from "@/lib/auth";
 import { logoutAction } from "@/app/logout/actions";
@@ -9,12 +10,17 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <div className="min-h-screen flex flex-col bg-surface text-on-surface">
       <header className="flex justify-between items-center px-margin-mobile md:px-margin-desktop sticky top-0 z-40 w-full h-16 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/50">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-primary flex items-center justify-center font-bold text-on-primary">
-            P
-          </div>
+        <div className="flex items-center gap-3">
+          <Image
+            src="/logo.png"
+            alt="PropMate Logo"
+            width={32}
+            height={32}
+            className="w-8 h-8 rounded-lg object-contain shadow-sm"
+            priority
+          />
           <div className="font-headline-md text-headline-md font-bold text-on-surface">
-            PropMate
+            Prop Mate
           </div>
         </div>
         <div className="flex items-center gap-4">
