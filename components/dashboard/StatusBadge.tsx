@@ -21,6 +21,8 @@ const unitStyles: Record<string, string> = {
   Occupied: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold",
   Vacant: "bg-sky-500/15 text-sky-300 border-sky-500/30 font-medium",
   Maintenance: "bg-amber-500/20 text-amber-300 border-amber-500/40 font-semibold",
+  Repair: "bg-amber-500/20 text-amber-300 border-amber-500/40 font-semibold",
+  "Not Available": "bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold",
 };
 
 const leaseStyles: Record<string, { cls: string; icon: string }> = {

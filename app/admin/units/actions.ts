@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 import { createUnit, deleteUnit } from "@/lib/unit-management";
 
 export async function addUnit(state: any, formData: FormData) {
@@ -80,5 +81,28 @@ export async function removeUnit(state: any, formData: FormData) {
     return { success: true, message: "Unit deleted successfully!" };
   } catch (error: any) {
     return { error: error.message || "Failed to delete unit" };
+  }
+}
+
+export async function updateUnitStatusAction(state: any, formData: FormData) {
+  try {
+    await requireUser(["Admin"]);
+    const unitId = String(formData.get("unit_id"));
+    const status = String(formData.get("status"));
+
+    if (!unitId || !status) {
+      throw new Error("Unit ID and status are required.");
+    }
+
+    await prisma.unit.update({
+      where: { unit_id: unitId },
+      data: { status },
+    });
+
+    revalidatePath("/admin/units");
+    revalidatePath("/admin/leases");
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || "Failed to update unit status" };
   }
 }

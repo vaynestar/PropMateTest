@@ -121,8 +121,8 @@ export default async function AdminLeasesPage(props: { searchParams: Promise<{ [
                 </div>
                 <div className="flex justify-between">
                   <span>Move-out</span>
-                  <span className="text-white">
-                    {l.move_out_date ? new Date(l.move_out_date).toLocaleDateString("en-GB") : "Current"}
+                  <span className="text-white font-medium">
+                    {l.move_out_date ? new Date(l.move_out_date).toLocaleDateString("en-GB") : "N/A"}
                   </span>
                 </div>
                 <div className="flex justify-between">

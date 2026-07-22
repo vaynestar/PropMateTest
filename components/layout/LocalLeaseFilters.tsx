@@ -206,17 +206,58 @@ export default function LocalLeaseFilters({
           </div>
         </div>
 
-        {/* Right Side Checkbox: Include Previous / Past Leases */}
-        <label className="flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-on-surface hover:text-primary transition-colors bg-surface-container-high border border-outline-variant px-3 py-1.5 rounded-lg">
-          <input
-            type="checkbox"
-            checked={includePrevious}
-            onChange={handleIncludePreviousChange}
-            disabled={isPending}
-            className="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary accent-primary cursor-pointer"
-          />
+        {/* Right Side Toggle Button: Include Previous / Past Leases */}
+        <button
+          type="button"
+          onClick={() => {
+            if (!isPending) {
+              const nextVal = !includePrevious;
+              setIncludePrevious(nextVal);
+              startTransition(() => {
+                const params = new URLSearchParams(searchParams.toString());
+                if (nextVal) {
+                  params.set("include_previous", "true");
+                } else {
+                  params.set("include_previous", "false");
+                }
+                router.push(`?${params.toString()}`);
+              });
+            }
+          }}
+          disabled={isPending}
+          className={`flex items-center gap-2.5 px-3.5 py-1.5 rounded-xl border text-xs font-semibold select-none transition-all pressable shadow-sm ${
+            includePrevious
+              ? "bg-primary/15 border-primary text-primary shadow-[0_0_12px_rgba(168,85,247,0.15)]"
+              : "bg-surface-container-high border-outline-variant/60 text-on-surface-variant hover:text-on-surface hover:border-outline-variant"
+          } ${isPending ? "opacity-75 cursor-wait" : "cursor-pointer"}`}
+          title={includePrevious ? "Currently showing active and past leases" : "Currently showing active leases only"}
+        >
+          {isPending ? (
+            <span className="material-symbols-outlined animate-spin text-[18px] text-primary">
+              progress_activity
+            </span>
+          ) : includePrevious ? (
+            <span className="material-symbols-outlined text-[18px] text-primary font-bold">
+              check_box
+            </span>
+          ) : (
+            <span className="material-symbols-outlined text-[18px] text-on-surface-variant/70">
+              check_box_outline_blank
+            </span>
+          )}
+
           <span>Include Previous / Past Leases</span>
-        </label>
+
+          <span
+            className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${
+              includePrevious
+                ? "bg-primary text-on-primary"
+                : "bg-surface-container text-on-surface-variant/70 border border-outline-variant/40"
+            }`}
+          >
+            {includePrevious ? "ON" : "OFF"}
+          </span>
+        </button>
       </div>
 
       {/* Full-Row Typeable Tenant Filter Combobox */}
