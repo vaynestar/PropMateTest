@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { loginAction } from "./actions";
+import Image from "next/image";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(loginAction, {});
@@ -13,12 +14,17 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-br from-surface via-surface to-primary-container/20 z-10 mix-blend-overlay" />
         <div className="absolute inset-0 bg-cover bg-center z-0 opacity-60 mix-blend-screen bg-[radial-gradient(circle_at_30%_30%,#2e1a5e_0%,#0c1324_60%)]" />
         <div className="relative z-20 flex flex-col items-center text-center p-12 max-w-lg">
-          <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary-container to-inverse-primary flex items-center justify-center shadow-[0_0_40px_rgba(160,120,255,0.3)] mb-8">
-            <span className="material-symbols-outlined text-[32px] text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
-              domain
-            </span>
+          <div className="mb-8 flex items-center justify-center">
+            <Image 
+              src="/logo.png" 
+              alt="PropMate Logo" 
+              width={280} 
+              height={280} 
+              className="rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.5)] object-contain"
+              priority
+            />
           </div>
-          <h1 className="font-display-lg text-display-lg text-on-surface mb-6 drop-shadow-lg">
+          <h1 className="font-display-lg text-display-lg text-on-surface mb-6 drop-shadow-lg hidden">
             Elevate Your Portfolio.
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
@@ -34,14 +40,13 @@ export default function LoginPage() {
         <div className="w-full max-w-[440px] bg-surface-container/50 backdrop-blur-xl border border-outline-variant rounded-lg p-8 sm:p-10 shadow-[0_20px_40px_rgba(0,0,0,0.4)] relative z-10 flex flex-col gap-8">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3 mb-2 lg:hidden">
-              <div className="w-8 h-8 rounded bg-gradient-to-br from-primary-container to-inverse-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-[16px] text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
-                  domain
-                </span>
-              </div>
-              <span className="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">
-                PropMate
-              </span>
+              <Image 
+                src="/logo.png" 
+                alt="PropMate" 
+                width={160} 
+                height={160} 
+                className="rounded-lg object-contain"
+              />
             </div>
             <h2 className="font-headline-lg text-headline-lg text-on-surface">Sign in</h2>
             <p className="font-body-md text-body-md text-on-surface-variant">
