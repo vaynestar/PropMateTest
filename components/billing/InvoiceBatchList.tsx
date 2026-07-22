@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { markInvoicePaidAction } from "@/app/admin/invoices/actions";
+import EditInvoiceItemsModal from "./EditInvoiceItemsModal";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-MY", {
