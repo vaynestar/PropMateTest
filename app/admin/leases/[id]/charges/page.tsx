@@ -1,7 +1,7 @@
 import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import Link from "next/link";
-import { addLeaseChargeAction, removeLeaseChargeAction } from "./actions";
+import AddLeaseChargeForm from "./AddLeaseChargeForm";
 
 export const dynamic = "force-dynamic";
 
@@ -109,39 +109,7 @@ export default async function LeaseChargesPage({ params }: { params: Promise<{ i
           </div>
         </div>
 
-        <div className="glass-card rounded-xl p-6 self-start">
-          <h2 className="font-title-md text-title-md text-on-surface mb-4">Add Charge</h2>
-          <form action={addLeaseChargeAction} className="flex flex-col gap-4">
-            <input type="hidden" name="lease_id" value={id} />
-            <div className="flex flex-col gap-1">
-              <label className="font-label-md text-on-surface-variant">Select Master Charge</label>
-              <select name="charge_id" required className="px-4 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-on-surface focus:border-primary outline-none">
-                {activeCharges.map(c => (
-                  <option key={c.charge_id} value={c.charge_id}>
-                    {c.charge_name} (RM {Number(c.default_amount).toFixed(2)})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex gap-4">
-              <div className="flex flex-col gap-1 w-1/2">
-                <label className="font-label-md text-on-surface-variant">Amount (RM)</label>
-                <input type="number" step="0.01" name="amount" required placeholder="0.00" className="px-4 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-on-surface focus:border-primary outline-none" />
-              </div>
-              <div className="flex flex-col gap-1 w-1/2">
-                <label className="font-label-md text-on-surface-variant">Quantity</label>
-                <input type="number" step="0.01" name="quantity" required defaultValue="1" className="px-4 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-on-surface focus:border-primary outline-none" />
-              </div>
-            </div>
-            <p className="text-xs text-on-surface-variant italic mt-1">
-              Note: You can override the default amount here for this specific tenant.
-            </p>
-            <button type="submit" className="btn-primary py-2.5 mt-2 font-label-md rounded-lg flex justify-center items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">add</span>
-              Add to Bill
-            </button>
-          </form>
-        </div>
+        <AddLeaseChargeForm lease_id={id} activeCharges={activeCharges} />
       </div>
     </div>
   );
