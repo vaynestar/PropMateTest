@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { residentNav } from "@/lib/resident-nav";
 import BottomNav, { NavItem } from "./BottomNav";
@@ -28,14 +29,12 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex bg-surface text-on-surface w-full max-w-full overflow-x-hidden">
       <nav className="hidden md:flex w-[240px] h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface-container-lowest flex-col py-stack-lg z-50">
         <div className="px-6 mb-8 flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-primary flex items-center justify-center font-bold text-on-primary">
-            P
-          </div>
+          <Image src="/logo.png" alt="PropMate Logo" width={36} height={36} className="w-9 h-9 rounded-xl object-contain" priority />
           <div>
-            <div className="font-headline-md text-headline-md font-bold text-on-surface">
+            <div className="font-headline-md text-headline-md font-bold text-on-surface leading-none">
               PropMate
             </div>
-            <div className="font-label-sm text-label-sm text-on-surface-variant">
+            <div className="font-label-sm text-label-sm text-on-surface-variant mt-1">
               Resident Portal
             </div>
           </div>
