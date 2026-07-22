@@ -19,7 +19,7 @@ export default async function AdminLeasesPage(props: { searchParams: Promise<{ [
   const urlPropertyId = searchParams.property as string | undefined;
   const urlTenantId = searchParams.tenant as string | undefined;
   const urlUnitNumber = searchParams.unit as string | undefined;
-  const includePrevious = searchParams.include_previous !== "false"; // Default is true
+  const includePrevious = searchParams.include_previous === "true"; // Default is false (OFF)
   const cookiePropertyId = cookieStore.get("propmate_property_id")?.value;
 
   const properties = await listPropertiesForUnits();

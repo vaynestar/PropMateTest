@@ -21,7 +21,7 @@ export default function LocalLeaseFilters({
   activePropertyId,
   tenants,
   activeTenantId,
-  includePrevious = true,
+  includePrevious = false,
   unitNumber = "",
 }: {
   properties: Property[];
