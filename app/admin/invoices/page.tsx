@@ -36,7 +36,7 @@ export default async function InvoicesDetailPage({
             ← Back to Billing
           </Link>
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-2">
-            Invoice Details
+            Billing Details
           </h1>
           <p className="font-body-md text-body-md text-on-surface-variant mt-1">
             Itemised view of every generated invoice.
