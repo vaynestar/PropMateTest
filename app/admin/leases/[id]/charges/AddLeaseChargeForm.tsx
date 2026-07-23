@@ -89,7 +89,7 @@ export default function AddLeaseChargeForm({
           >
             {activeCharges.map((c) => (
               <option key={c.charge_id} value={c.charge_id}>
-                {c.charge_name} (RM {Number(c.default_amount).toFixed(2)})
+                [{c.charge_type}] {c.charge_name} (RM {Number(c.default_amount).toFixed(2)})
               </option>
             ))}
           </select>
@@ -130,7 +130,7 @@ export default function AddLeaseChargeForm({
         </div>
 
         <p className="text-[11px] text-on-surface-variant/80 italic mt-0.5 leading-relaxed">
-          💡 You can override the default rate for this specific resident.
+          💡 Charges added here will recur automatically every month when generating bills. For one-off items (e.g. Access Card), add them directly to a specific month's bill under <strong>Billing Details (/admin/invoices)</strong>.
         </p>
 
         <button
