@@ -8,8 +8,17 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR" }).format(value);
 }
 
-export default function RecurringChargesClient({ leases, chargeMasters }: { leases: any[], chargeMasters: any[] }) {
+export default function RecurringChargesClient({
+  leases,
+  chargeMasters,
+  properties = [],
+}: {
+  leases: any[];
+  chargeMasters: any[];
+  properties?: any[];
+}) {
   const [search, setSearch] = useState("");
+  const [selectedProperty, setSelectedProperty] = useState("ALL");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedLease, setSelectedLease] = useState<any | null>(null);
   
@@ -17,10 +26,14 @@ export default function RecurringChargesClient({ leases, chargeMasters }: { leas
   const [editingCharges, setEditingCharges] = useState<{ id: string, charge_id: string, quantity: number, amount: number, name: string }[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const filteredLeases = leases.filter(l => 
-    l.tenant.user_name.toLowerCase().includes(search.toLowerCase()) || 
-    l.unit.unit_number.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredLeases = leases.filter(l => {
+    const s = search.toLowerCase();
+    const matchesSearch =
+      l.tenant.user_name.toLowerCase().includes(s) ||
+      l.unit.unit_number.toLowerCase().includes(s);
+    const matchesProp = selectedProperty === "ALL" || l.unit.property_id === selectedProperty;
+    return matchesSearch && matchesProp;
+  });
 
   // KPIs
   let totalMonthly = 0;
@@ -102,15 +115,40 @@ export default function RecurringChargesClient({ leases, chargeMasters }: { leas
           <h1 className="font-headline-lg text-headline-lg text-on-surface mt-2 tracking-tight">Recurring Lease Charges</h1>
           <p className="font-body-md text-body-md text-on-surface-variant mt-1">Manage standard and custom billing lines for active leases.</p>
         </div>
-        <div className="flex-1 max-w-sm relative">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
-          <input
-            type="text"
-            placeholder="Search tenant or unit..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-container border border-outline-variant text-sm focus:border-primary outline-none transition-colors text-on-surface"
-          />
+
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          {/* Property Filter Dropdown */}
+          <div className="relative min-w-[180px]">
+            <select
+              value={selectedProperty}
+              onChange={(e) => setSelectedProperty(e.target.value)}
+              className="w-full appearance-none bg-surface-container border border-outline-variant/60 rounded-lg py-2 pl-3 pr-8 text-sm text-on-surface font-semibold focus:border-primary outline-none cursor-pointer"
+            >
+              <option value="ALL">🏢 All Properties ({leases.length})</option>
+              {properties.map((p) => {
+                const count = leases.filter(l => l.unit.property_id === p.property_id).length;
+                return (
+                  <option key={p.property_id} value={p.property_id}>
+                    {p.property_name} ({count})
+                  </option>
+                );
+              })}
+            </select>
+            <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">
+              expand_more
+            </span>
+          </div>
+
+          <div className="flex-1 md:w-64 relative">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+            <input
+              type="text"
+              placeholder="Search tenant or unit..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-container border border-outline-variant text-sm focus:border-primary outline-none transition-colors text-on-surface"
+            />
+          </div>
         </div>
       </div>
 

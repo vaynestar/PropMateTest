@@ -6,11 +6,11 @@ export const metadata = {
 };
 
 export default async function RecurringChargesPage() {
-  const { leases, chargeMasters } = await getRecurringChargesData();
+  const { leases, chargeMasters, properties } = await getRecurringChargesData();
 
   return (
     <div className="w-full">
-      <RecurringChargesClient leases={leases} chargeMasters={chargeMasters} />
+      <RecurringChargesClient leases={leases} chargeMasters={chargeMasters} properties={properties} />
     </div>
   );
 }

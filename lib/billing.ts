@@ -77,8 +77,9 @@ export async function getRecentInvoices(propertyId?: string, limit = 5): Promise
 }
 
 export async function getEligibleLeasesForInvoicing(targetDate = new Date()) {
-  const { y, m } = currentMonthKey(targetDate);
-  const monthStart = startOfMonth(new Date(y, m, 1));
+  const d = new Date(targetDate);
+  const monthStart = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
+  const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1, 0, 0, 0, 0);
 
   const leases = await prisma.tenantLease.findMany({
     where: { status: "Active" },
@@ -86,13 +87,18 @@ export async function getEligibleLeasesForInvoicing(targetDate = new Date()) {
       unit: { include: { property: true } },
       tenant: true,
       invoices: {
-        where: { invoice_date: { gte: monthStart } },
+        where: {
+          invoice_date: {
+            gte: monthStart,
+            lt: monthEnd,
+          },
+        },
         select: { invoice_id: true },
       },
       lease_charges: {
         include: { charge: true },
-        where: { is_active: true }
-      }
+        where: { is_active: true },
+      },
     },
   });
 

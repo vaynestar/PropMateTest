@@ -8,6 +8,8 @@ import InvoiceBatchList from "@/components/billing/InvoiceBatchList";
 
 import prisma from "@/lib/prisma";
 
+import RefreshDataButton from "@/components/billing/RefreshDataButton";
+
 export const dynamic = "force-dynamic";
 
 export default async function InvoicesDetailPage({
@@ -46,7 +48,8 @@ export default async function InvoicesDetailPage({
             Itemised view of every generated invoice.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshDataButton />
           <ManualInvoiceButton />
           <GenerateInvoicesButton />
         </div>

@@ -25,6 +25,7 @@ function formatDate(date: Date) {
 
 import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton";
 import BillingMonthlyBarChart from "@/components/billing/BillingMonthlyBarChart";
+import RefreshDataButton from "@/components/billing/RefreshDataButton";
 
 export default async function BillingPage() {
   await requireUser(["Admin"]);
@@ -73,10 +74,11 @@ export default async function BillingPage() {
             Generate monthly rental invoices from occupied units.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <RefreshDataButton />
           <Link
             href="/admin/billing/recurring-charges"
-            className="btn-outline px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2"
+            className="btn-outline px-5 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
               autorenew
@@ -85,7 +87,7 @@ export default async function BillingPage() {
           </Link>
           <Link
             href="/admin/billing/charges"
-            className="btn-outline px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2"
+            className="btn-outline px-5 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
               settings

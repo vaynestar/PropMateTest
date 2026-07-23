@@ -22,7 +22,11 @@ export async function getRecurringChargesData() {
     orderBy: { charge_name: "asc" }
   });
 
-  return { leases, chargeMasters };
+  const properties = await prisma.property.findMany({
+    orderBy: { property_name: "asc" }
+  });
+
+  return { leases, chargeMasters, properties };
 }
 
 export async function saveLeaseChargesAction(leaseId: string, charges: { charge_id: string; quantity: number; amount: number }[]) {

@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { generateInvoicesAction, getEligibleLeasesAction } from "@/app/admin/invoices/actions";
 
 export default function GenerateInvoicesButton() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [fetchingLeases, setFetchingLeases] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [leases, setLeases] = useState<any[]>([]);
   const [selectedLeaseIds, setSelectedLeaseIds] = useState<Set<string>>(new Set());
@@ -16,9 +19,8 @@ export default function GenerateInvoicesButton() {
   });
 
   const fetchLeases = async (monthStr: string) => {
-    setLoading(true);
+    setFetchingLeases(true);
     try {
-      // Create a date corresponding to the 1st of the selected month
       const [year, month] = monthStr.split('-').map(Number);
       const d = new Date(year, month - 1, 1);
       const data = await getEligibleLeasesAction(d.toISOString());
@@ -27,7 +29,7 @@ export default function GenerateInvoicesButton() {
     } catch (e) {
       alert("Failed to fetch eligible leases.");
     } finally {
-      setLoading(false);
+      setFetchingLeases(false);
     }
   };
 
@@ -64,6 +66,7 @@ export default function GenerateInvoicesButton() {
       const result = await generateInvoicesAction(Array.from(selectedLeaseIds), d.toISOString());
       alert(result.message);
       setModalOpen(false);
+      router.refresh();
     } catch (e: any) {
       alert(`Error generating invoices: ${e.message}`);
     } finally {
@@ -112,10 +115,16 @@ export default function GenerateInvoicesButton() {
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              {leases.length === 0 ? (
+              {fetchingLeases ? (
+                <div className="flex flex-col items-center justify-center py-10 gap-3 text-primary">
+                  <span className="material-symbols-outlined animate-spin text-[36px]">progress_activity</span>
+                  <span className="text-xs font-semibold text-on-surface-variant">Checking eligible leases for {targetMonth}...</span>
+                </div>
+              ) : leases.length === 0 ? (
                 <div className="text-center py-8 text-on-surface-variant">
-                  <span className="material-symbols-outlined text-[48px] opacity-50 mb-4">check_circle</span>
-                  <p>All active tenants have been billed for this month!</p>
+                  <span className="material-symbols-outlined text-[48px] opacity-50 mb-4 text-emerald-400">check_circle</span>
+                  <p className="font-semibold text-on-surface">All active tenants have been billed for this month!</p>
+                  <p className="text-xs text-on-surface-variant mt-1">Select a different month above or check lease statuses.</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2">

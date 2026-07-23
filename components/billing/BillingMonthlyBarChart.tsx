@@ -92,7 +92,7 @@ export default function BillingMonthlyBarChart({ invoices }: { invoices: any[] }
       </div>
 
       {/* Chart Bars Grid */}
-      <div className="pt-6 pb-2 px-2 flex items-end justify-between gap-3 h-64 relative overflow-visible">
+      <div className="pt-8 pb-2 px-2 flex items-end justify-center md:justify-start gap-4 sm:gap-6 h-64 relative overflow-visible">
         {sortedMonths.map((m) => {
           const isHovered = hoveredMonth === m.monthLabel;
 
@@ -106,11 +106,11 @@ export default function BillingMonthlyBarChart({ invoices }: { invoices: any[] }
               key={m.monthLabel}
               onMouseEnter={() => setHoveredMonth(m.monthLabel)}
               onMouseLeave={() => setHoveredMonth(null)}
-              className="flex-1 flex flex-col items-center group relative h-full justify-end cursor-pointer"
+              className="w-16 sm:w-20 flex flex-col items-center group relative h-full justify-end cursor-pointer"
             >
               {/* Tooltip Popup on Hover */}
               {isHovered && (
-                <div className="absolute bottom-[calc(100%+12px)] z-30 bg-surface-container-highest border border-outline-variant rounded-xl p-3 shadow-2xl min-w-[200px] text-xs animate-fade-in pointer-events-none">
+                <div className="absolute bottom-[calc(100%+14px)] z-30 bg-surface-container-highest border border-outline-variant rounded-xl p-3 shadow-2xl min-w-[200px] text-xs animate-fade-in pointer-events-none">
                   <div className="font-bold text-on-surface text-sm border-b border-outline-variant/40 pb-1.5 mb-2 flex justify-between items-center">
                     <span>{m.monthLabel}</span>
                     <span className="text-primary font-mono">{formatCurrency(m.total)}</span>
@@ -135,7 +135,7 @@ export default function BillingMonthlyBarChart({ invoices }: { invoices: any[] }
               )}
 
               {/* Total Amount Label on Top of Bar */}
-              <span className="text-[10px] font-bold font-mono text-on-surface-variant group-hover:text-primary mb-2 transition-colors">
+              <span className="text-xs sm:text-sm font-bold font-mono text-on-surface group-hover:text-primary mb-2 transition-colors bg-surface-container-high/80 px-2 py-0.5 rounded-md border border-outline-variant/40 shadow-sm whitespace-nowrap">
                 {formatCurrency(m.total)}
               </span>
 
