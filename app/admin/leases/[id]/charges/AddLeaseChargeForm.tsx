@@ -6,6 +6,7 @@ import { addLeaseChargeAction } from "./actions";
 type ChargeMaster = {
   charge_id: string;
   charge_name: string;
+  charge_type: string;
   default_amount: any;
 };
 
