@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useActionState, useTransition } from "react";
+import { useState, useActionState, useTransition, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { addInvoiceDetailAction, removeInvoiceDetailAction } from "@/app/admin/invoices/actions";
 
 function formatCurrency(value: number) {
@@ -16,6 +17,10 @@ export default function EditInvoiceItemsModal({
   chargeMasters: any[];
   onClose: () => void;
 }) {
+  const router = useRouter();
+  const [details, setDetails] = useState<any[]>(invoice.details || []);
+  const [totalAmount, setTotalAmount] = useState<number>(Number(invoice.total_amount) || 0);
+
   const [selectedChargeId, setSelectedChargeId] = useState("");
   const [description, setDescription] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
@@ -36,6 +41,22 @@ export default function EditInvoiceItemsModal({
     }
   };
 
+  useEffect(() => {
+    if (addState?.success) {
+      if (addState.newDetail) {
+        setDetails((prev) => [...prev, addState.newDetail]);
+      }
+      if (typeof addState.newTotal === "number") {
+        setTotalAmount(addState.newTotal);
+      }
+      setDescription("");
+      setUnitPrice("");
+      setSelectedChargeId("");
+      setQuantity("1");
+      router.refresh();
+    }
+  }, [addState, router]);
+
   const handleRemoveDetail = (detailId: string) => {
     setDeletingId(detailId);
     const formData = new FormData();
@@ -43,8 +64,20 @@ export default function EditInvoiceItemsModal({
     formData.append("invoice_id", invoice.invoice_id);
 
     startTransition(async () => {
-      await removeInvoiceDetailAction(formData);
+      const res = await removeInvoiceDetailAction(formData);
       setDeletingId(null);
+      if (res?.success) {
+        setDetails((prev) => {
+          const next = prev.filter((d) => d.detail_id !== detailId);
+          if (typeof res.newTotal === "number") {
+            setTotalAmount(res.newTotal);
+          } else {
+            setTotalAmount(next.reduce((sum, d) => sum + Number(d.total_price), 0));
+          }
+          return next;
+        });
+        router.refresh();
+      }
     });
   };
 
@@ -86,7 +119,7 @@ export default function EditInvoiceItemsModal({
           {/* Current Invoice Line Items Table */}
           <div>
             <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
-              Current Line Items ({invoice.details.length})
+              Current Line Items ({details.length})
             </h4>
             <div className="border border-outline-variant/40 rounded-xl overflow-hidden bg-surface-container-low">
               <table className="w-full text-left text-xs whitespace-nowrap">
@@ -100,14 +133,14 @@ export default function EditInvoiceItemsModal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-outline-variant/30">
-                  {invoice.details.length === 0 ? (
+                  {details.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-4 py-6 text-center text-on-surface-variant/70 italic">
                         No line items on this invoice. Use the form below to add line items.
                       </td>
                     </tr>
                   ) : (
-                    invoice.details.map((d: any) => {
+                    details.map((d: any) => {
                       const isDeleting = deletingId === d.detail_id;
                       return (
                         <tr key={d.detail_id} className="hover:bg-surface-container-high/40 transition-colors">
@@ -144,13 +177,13 @@ export default function EditInvoiceItemsModal({
                       );
                     })
                   )}
-                  {invoice.details.length > 0 && (
+                  {details.length > 0 && (
                     <tr className="bg-surface-container-high/50 font-bold">
                       <td colSpan={3} className="px-4 py-3 text-right text-on-surface">
                         Invoice Grand Total:
                       </td>
                       <td className="px-4 py-3 text-right text-emerald-400 text-sm font-mono">
-                        {formatCurrency(Number(invoice.total_amount))}
+                        {formatCurrency(totalAmount)}
                       </td>
                       <td></td>
                     </tr>
@@ -193,7 +226,7 @@ export default function EditInvoiceItemsModal({
                     <option value="">Custom Item / Select Template...</option>
                     {chargeMasters.map((c) => (
                       <option key={c.charge_id} value={c.charge_id}>
-                        {c.charge_name} (RM {Number(c.default_amount).toFixed(2)})
+                        [{c.charge_type}] {c.charge_name} (RM {Number(c.default_amount).toFixed(2)})
                       </option>
                     ))}
                   </select>

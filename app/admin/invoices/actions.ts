@@ -74,7 +74,7 @@ export async function addInvoiceDetailAction(prevState: any, formData: FormData)
 
     const lineTotal = unit_price * quantity;
 
-    await prisma.invoiceDetail.create({
+    const newDetail = await prisma.invoiceDetail.create({
       data: {
         invoice_id,
         charge_id,
@@ -98,7 +98,7 @@ export async function addInvoiceDetailAction(prevState: any, formData: FormData)
 
     revalidatePath("/admin/invoices");
     revalidatePath("/admin/billing");
-    return { success: true };
+    return { success: true, newDetail, newTotal };
   } catch (error: any) {
     return { error: error.message || "Failed to add item to invoice." };
   }
@@ -128,7 +128,7 @@ export async function removeInvoiceDetailAction(formData: FormData) {
 
     revalidatePath("/admin/invoices");
     revalidatePath("/admin/billing");
-    return { success: true };
+    return { success: true, newTotal };
   } catch (error: any) {
     return { error: error.message || "Failed to remove invoice item." };
   }
