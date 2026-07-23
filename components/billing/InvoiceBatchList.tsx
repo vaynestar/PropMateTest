@@ -39,6 +39,8 @@ export default function InvoiceBatchList({
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [selectedBatch, setSelectedBatch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
 
   const filteredInvoices = invoices.filter((inv) => {
@@ -49,8 +51,12 @@ export default function InvoiceBatchList({
       inv.lease.tenant.user_name.toLowerCase().includes(s);
       
     const matchesStatus = filterStatus === "All" || inv.status === filterStatus;
+
+    const invDateStr = new Date(inv.invoice_date).toISOString().split("T")[0];
+    const matchesFromDate = !fromDate || invDateStr >= fromDate;
+    const matchesToDate = !toDate || invDateStr <= toDate;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesFromDate && matchesToDate;
   });
 
   const batches = filteredInvoices.reduce((acc, inv) => {
@@ -84,8 +90,8 @@ export default function InvoiceBatchList({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="glass-card rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
-        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+      <div className="glass-card rounded-xl p-4 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
+        <div className="flex flex-wrap items-center gap-3">
           {batchKeys.length > 0 && (
             <select
               value={currentBatch}
@@ -109,9 +115,40 @@ export default function InvoiceBatchList({
             <option value="Paid">Paid</option>
             <option value="Overdue">Overdue</option>
           </select>
+
+          {/* Date Range Inputs */}
+          <div className="flex items-center gap-2 bg-surface-container-high/60 border border-outline-variant/60 rounded-lg px-3 py-1.5 text-xs text-on-surface">
+            <span className="material-symbols-outlined text-[16px] text-on-surface-variant">calendar_today</span>
+            <span className="font-semibold text-on-surface-variant">From:</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="bg-transparent border-none outline-none text-on-surface text-xs font-mono"
+            />
+            <span className="font-semibold text-on-surface-variant">To:</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="bg-transparent border-none outline-none text-on-surface text-xs font-mono"
+            />
+            {(fromDate || toDate) && (
+              <button
+                onClick={() => {
+                  setFromDate("");
+                  setToDate("");
+                }}
+                className="text-rose-400 hover:text-rose-300 p-0.5 ml-1"
+                title="Clear date filter"
+              >
+                <span className="material-symbols-outlined text-[14px]">cancel</span>
+              </button>
+            )}
+          </div>
         </div>
         
-        <div className="flex-1 w-full md:max-w-xs relative">
+        <div className="w-full lg:w-64 relative">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
             search
           </span>

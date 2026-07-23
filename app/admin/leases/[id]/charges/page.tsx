@@ -27,7 +27,7 @@ export default async function LeaseChargesPage({ params }: { params: Promise<{ i
   }
 
   const activeCharges = await prisma.chargeMaster.findMany({
-    where: { is_active: true },
+    where: { is_active: true, charge_type: "Recurring" },
     orderBy: { charge_name: "asc" }
   });
 

@@ -24,6 +24,7 @@ function formatDate(date: Date) {
 }
 
 import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton";
+import BillingMonthlyBarChart from "@/components/billing/BillingMonthlyBarChart";
 
 export default async function BillingPage() {
   await requireUser(["Admin"]);
@@ -121,6 +122,8 @@ export default async function BillingPage() {
           </p>
         </div>
       </div>
+
+      <BillingMonthlyBarChart invoices={invoices} />
 
       <div className="glass-card rounded-xl p-0 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30">
