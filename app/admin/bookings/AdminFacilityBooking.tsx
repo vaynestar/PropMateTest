@@ -9,7 +9,7 @@ type Facility = {
   facility_name: string;
   facility_type: string;
   property: { property_name: string };
-  max_capacity: number;
+  max_capacity: number | null;
   operation_days: string;
   open_time: string;
   close_time: string;
