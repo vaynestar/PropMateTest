@@ -179,6 +179,7 @@ model Invoice {
   due_date     DateTime @db.Date
   total_amount Decimal  @db.Decimal(10, 2)
   status       String   @default("Unpaid") @db.VarChar
+  is_printed   Boolean  @default(false)
 
   // Audit Trail
   created_at   DateTime @default(now())

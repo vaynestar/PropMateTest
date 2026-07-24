@@ -31,7 +31,17 @@ export default function EditInvoiceItemsModal({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
+  const isLocked = invoice.status === "Paid" || invoice.is_printed || invoice.status === "Inactive";
+  const lockReason = invoice.status === "Paid"
+    ? "This invoice is Paid"
+    : invoice.is_printed
+    ? "This invoice has been Printed / Exported"
+    : invoice.status === "Inactive"
+    ? "This invoice is Inactive / Disabled"
+    : "";
+
   const handleChargeSelect = (chargeId: string) => {
+    if (isLocked) return;
     setSelectedChargeId(chargeId);
     const master = chargeMasters.find((c) => c.charge_id === chargeId);
     if (master) {
@@ -58,6 +68,7 @@ export default function EditInvoiceItemsModal({
   }, [addState, router]);
 
   const handleRemoveDetail = (detailId: string) => {
+    if (isLocked) return;
     setDeletingId(detailId);
     const formData = new FormData();
     formData.append("detail_id", detailId);
@@ -96,7 +107,7 @@ export default function EditInvoiceItemsModal({
               </h3>
             </div>
             <p className="text-xs text-on-surface-variant mt-0.5">
-              Tenant: <strong>{invoice.lease.tenant.user_name}</strong> ({invoice.lease.unit.property.property_name} - Unit {invoice.lease.unit.unit_number})
+              Tenant: <strong>{invoice.lease?.tenant?.user_name}</strong> ({invoice.lease?.unit?.property?.property_name} - Unit {invoice.lease?.unit?.unit_number})
             </p>
           </div>
           <button
@@ -110,11 +121,18 @@ export default function EditInvoiceItemsModal({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto space-y-6 pr-1">
-          {/* Helper Banner */}
-          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">info</span>
-            <span>Add one-off items (e.g. Access Card, Water Excess) or edit existing line items for <strong>this specific invoice only</strong>.</span>
-          </div>
+          {/* Helper / Lock Banner */}
+          {isLocked ? (
+            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">lock</span>
+              <span><strong>Locked:</strong> {lockReason} and cannot be modified. To make changes, revert invoice status or create a new invoice.</span>
+            </div>
+          ) : (
+            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px]">info</span>
+              <span>Add one-off items (e.g. Access Card, Water Excess) or edit existing line items for <strong>this specific invoice only</strong>.</span>
+            </div>
+          )}
 
           {/* Current Invoice Line Items Table */}
           <div>
@@ -136,7 +154,7 @@ export default function EditInvoiceItemsModal({
                   {details.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-4 py-6 text-center text-on-surface-variant/70 italic">
-                        No line items on this invoice. Use the form below to add line items.
+                        No line items on this invoice.
                       </td>
                     </tr>
                   ) : (
@@ -157,21 +175,27 @@ export default function EditInvoiceItemsModal({
                             RM {Number(d.total_price).toFixed(2)}
                           </td>
                           <td className="px-4 py-3 text-center">
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveDetail(d.detail_id)}
-                              disabled={isDeleting}
-                              className="text-rose-400 hover:text-rose-300 p-1 disabled:opacity-50"
-                              title="Delete Item"
-                            >
-                              {isDeleting ? (
-                                <span className="material-symbols-outlined animate-spin text-[16px]">
-                                  progress_activity
-                                </span>
-                              ) : (
-                                <span className="material-symbols-outlined text-[16px]">delete</span>
-                              )}
-                            </button>
+                            {isLocked ? (
+                              <span className="material-symbols-outlined text-[16px] text-on-surface-variant/40" title="Locked">
+                                lock
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveDetail(d.detail_id)}
+                                disabled={isDeleting}
+                                className="text-rose-400 hover:text-rose-300 p-1 disabled:opacity-50"
+                                title="Delete Item"
+                              >
+                                {isDeleting ? (
+                                  <span className="material-symbols-outlined animate-spin text-[16px]">
+                                    progress_activity
+                                  </span>
+                                ) : (
+                                  <span className="material-symbols-outlined text-[16px]">delete</span>
+                                )}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       );
@@ -194,118 +218,125 @@ export default function EditInvoiceItemsModal({
           </div>
 
           {/* Add 1-by-1 Item Form */}
-          <div className="border border-outline-variant/60 rounded-xl p-4 bg-surface-container-high/40">
-            <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider mb-3 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-primary text-[16px]">add_circle</span>
-              Add 1-by-1 Item To This Invoice
-            </h4>
+          {!isLocked && (
+            <div className="border border-outline-variant/60 rounded-xl p-4 bg-surface-container-high/40">
+              <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-primary text-[16px]">add_circle</span>
+                Add 1-by-1 Item To This Invoice
+              </h4>
 
-            {addState?.error && (
-              <div className="mb-3 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
-                <span className="material-symbols-outlined text-[16px]">error</span>
-                {addState.error}
-              </div>
-            )}
+              {addState?.error && (
+                <div className="mb-3 p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">error</span>
+                  {addState.error}
+                </div>
+              )}
 
-            <form action={addAction} className="space-y-3">
-              <input type="hidden" name="invoice_id" value={invoice.invoice_id} />
-              <input type="hidden" name="charge_id" value={selectedChargeId} />
-              <input type="hidden" name="uom" value={uom} />
+              <form action={addAction} className="space-y-3">
+                <input type="hidden" name="invoice_id" value={invoice.invoice_id} />
+                <input type="hidden" name="charge_id" value={selectedChargeId} />
+                <input type="hidden" name="uom" value={uom} />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
-                    Template Charge (Optional)
-                  </label>
-                  <select
-                    value={selectedChargeId}
-                    onChange={(e) => handleChargeSelect(e.target.value)}
-                    disabled={isAddPending}
-                    className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-primary"
-                  >
-                    <option value="">Custom Item / Select Template...</option>
-                    {chargeMasters.map((c) => (
-                      <option key={c.charge_id} value={c.charge_id}>
-                        [{c.charge_type}] {c.charge_name} (RM {Number(c.default_amount).toFixed(2)})
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                      Template Charge (Optional)
+                    </label>
+                    <select
+                      value={selectedChargeId}
+                      onChange={(e) => handleChargeSelect(e.target.value)}
+                      disabled={isAddPending}
+                      className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-primary"
+                    >
+                      <option value="">Custom Item / Select Template...</option>
+                      {chargeMasters.map((c) => (
+                        <option key={c.charge_id} value={c.charge_id}>
+                          [{c.charge_type}] {c.charge_name} (RM {Number(c.default_amount).toFixed(2)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                      Item Description <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="description"
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="e.g. Water Excess / Access Card Replacement"
+                      required
+                      disabled={isAddPending}
+                      className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-primary"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
-                    Item Description <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="e.g. Water Excess / Access Card Replacement"
-                    required
-                    disabled={isAddPending}
-                    className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-primary"
-                  />
-                </div>
-              </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                      Unit Price (RM) <span className="text-rose-400">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="unit_price"
+                      value={unitPrice}
+                      onChange={(e) => setUnitPrice(e.target.value)}
+                      placeholder="0.00"
+                      required
+                      disabled={isAddPending}
+                      className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-3 py-2 text-white text-xs font-bold text-primary outline-none focus:border-primary"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
-                    Unit Price (RM) <span className="text-rose-400">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="unit_price"
-                    value={unitPrice}
-                    onChange={(e) => setUnitPrice(e.target.value)}
-                    placeholder="0.00"
-                    required
-                    disabled={isAddPending}
-                    className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-3 py-2 text-white text-xs font-bold text-primary outline-none focus:border-primary"
-                  />
-                </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                      Quantity
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      name="quantity"
+                      value={quantity}
+                      onChange={(e) => setQuantity(e.target.value)}
+                      required
+                      disabled={isAddPending}
+                      className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-3 py-2 text-white text-xs font-medium outline-none focus:border-primary"
+                    />
+                  </div>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    name="quantity"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    required
-                    disabled={isAddPending}
-                    className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-3 py-2 text-white text-xs font-medium outline-none focus:border-primary"
-                  />
+                  <div className="col-span-2 sm:col-span-1">
+                    <button
+                      type="submit"
+                      disabled={isAddPending}
+                      className="w-full btn-primary py-2 px-4 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {isAddPending ? (
+                        <span className="material-symbols-outlined animate-spin text-[16px]">
+                          progress_activity
+                        </span>
+                      ) : (
+                        <span className="material-symbols-outlined text-[16px]">add</span>
+                      )}
+                      {isAddPending ? "Adding..." : "+ Add Line Item"}
+                    </button>
+                  </div>
                 </div>
-
-                <div className="col-span-2 sm:col-span-1">
-                  <button
-                    type="submit"
-                    disabled={isAddPending}
-                    className="w-full btn-primary py-2 px-4 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50"
-                  >
-                    {isAddPending ? (
-                      <span className="material-symbols-outlined animate-spin text-[16px]">
-                        progress_activity
-                      </span>
-                    ) : (
-                      <span className="material-symbols-outlined text-[16px]">add</span>
-                    )}
-                    {isAddPending ? "Adding..." : "+ Add Line Item"}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
+              </form>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="pt-4 border-t border-outline-variant/40 mt-4 flex items-center justify-end shrink-0">
+        <div className="pt-4 border-t border-outline-variant/40 mt-4 flex items-center justify-between shrink-0 text-xs text-on-surface-variant">
+          <div>
+            {invoice.modifier?.user_name && (
+              <span>Last edited by: <strong className="text-on-surface">{invoice.modifier.user_name}</strong></span>
+            )}
+          </div>
           <button
             type="button"
             onClick={onClose}

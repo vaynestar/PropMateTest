@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import StatusBadge from "@/components/dashboard/StatusBadge";
-import { markInvoicePaidAction } from "@/app/admin/invoices/actions";
+import { updateInvoiceStatusAction } from "@/app/admin/invoices/actions";
 import EditInvoiceItemsModal from "./EditInvoiceItemsModal";
+import InvoicePdfPreviewModal from "./InvoicePdfPreviewModal";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-MY", {
     style: "currency",
     currency: "MYR",
-    maximumFractionDigits: 0,
+    maximumFractionDigits: 2,
   }).format(value);
 }
 
@@ -36,12 +38,42 @@ export default function InvoiceBatchList({
   invoices: any[];
   chargeMasters?: any[];
 }) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [selectedBatch, setSelectedBatch] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+
   const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
+  const [pdfPreviewInvoice, setPdfPreviewInvoice] = useState<any | null>(null);
+  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "info" | "error" } | null>(null);
+  const [, startTransition] = useTransition();
+
+  const showToast = (text: string, type: "success" | "info" | "error" = "success") => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleStatusChange = (invoiceId: string, currentInvoiceNo: string, newStatus: string) => {
+    setUpdatingStatusId(invoiceId);
+    startTransition(async () => {
+      try {
+        const res = await updateInvoiceStatusAction(invoiceId, newStatus);
+        if (res.success) {
+          showToast(res.message, newStatus === "Paid" ? "success" : newStatus === "Unpaid" ? "info" : "error");
+          router.refresh();
+        } else if (res.error) {
+          showToast(res.error, "error");
+        }
+      } catch (e: any) {
+        showToast(e.message || "Failed to update status", "error");
+      } finally {
+        setUpdatingStatusId(null);
+      }
+    });
+  };
 
   const filteredInvoices = invoices.filter((inv) => {
     const s = search.toLowerCase();
@@ -66,7 +98,7 @@ export default function InvoiceBatchList({
     return acc;
   }, {} as Record<string, any[]>);
 
-  // Sort batches by latest date first (simple sort by date of first item)
+  // Sort batches by latest date first
   const batchKeys = Object.keys(batches).sort((a, b) => {
     const dateA = new Date(batches[a][0].invoice_date).getTime();
     const dateB = new Date(batches[b][0].invoice_date).getTime();
@@ -76,7 +108,6 @@ export default function InvoiceBatchList({
   // Derive the active batch to show
   let currentBatch = selectedBatch;
   if (!currentBatch || !batchKeys.includes(currentBatch)) {
-    // Determine last month's key
     const lastMonthDate = new Date();
     lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
     const lastMonthKey = getMonthYear(lastMonthDate);
@@ -89,14 +120,33 @@ export default function InvoiceBatchList({
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 relative">
+      {/* Toast Notification Banner */}
+      {toastMessage && (
+        <div
+          className={`fixed top-20 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl border flex items-center gap-3 text-xs font-semibold animate-slide-in backdrop-blur-md ${
+            toastMessage.type === "success"
+              ? "bg-emerald-950/90 border-emerald-500/50 text-emerald-200"
+              : toastMessage.type === "info"
+              ? "bg-sky-950/90 border-sky-500/50 text-sky-200"
+              : "bg-rose-950/90 border-rose-500/50 text-rose-200"
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px]">
+            {toastMessage.type === "success" ? "check_circle" : toastMessage.type === "info" ? "info" : "error"}
+          </span>
+          <span>{toastMessage.text}</span>
+        </div>
+      )}
+
+      {/* Filter Toolbar */}
       <div className="glass-card rounded-xl p-4 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
         <div className="flex flex-wrap items-center gap-3">
           {batchKeys.length > 0 && (
             <select
               value={currentBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-sm focus:border-primary outline-none"
+              className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-sm focus:border-primary outline-none cursor-pointer"
             >
               {batchKeys.map((bk) => (
                 <option key={bk} value={bk}>
@@ -105,15 +155,16 @@ export default function InvoiceBatchList({
               ))}
             </select>
           )}
+
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none"
+            className="px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none cursor-pointer"
           >
             <option value="All">All Statuses</option>
             <option value="Unpaid">Unpaid</option>
             <option value="Paid">Paid</option>
-            <option value="Overdue">Overdue</option>
+            <option value="Inactive">Inactive / Disabled</option>
           </select>
 
           {/* Date Range Inputs */}
@@ -176,10 +227,11 @@ export default function InvoiceBatchList({
         <div className="glass-card rounded-xl p-0 overflow-hidden flex flex-col animate-fade-in">
           <div className="p-4 border-b border-outline-variant/30 bg-surface-container-low flex justify-between items-center">
             <h3 className="font-title-md text-title-md text-on-surface">{currentBatch}</h3>
-            <span className="font-label-sm text-label-sm px-2 py-1 bg-surface-container-high rounded-md text-on-surface-variant">
+            <span className="font-label-sm text-label-sm px-2.5 py-1 bg-surface-container-high rounded-md text-on-surface-variant font-semibold">
               {batches[currentBatch].length} Invoices
             </span>
           </div>
+
           <div className="overflow-x-auto w-full">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant">
@@ -188,77 +240,183 @@ export default function InvoiceBatchList({
                   <th className="px-6 py-3 font-medium">Unit & Tenant</th>
                   <th className="px-6 py-3 font-medium">Due Date</th>
                   <th className="px-6 py-3 font-medium">Amount</th>
-                  <th className="px-6 py-3 font-medium">Status</th>
-                  <th className="px-6 py-3 font-medium text-right">Action</th>
+                  <th className="px-6 py-3 font-medium">Status & Print</th>
+                  <th className="px-6 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/30">
-                {batches[currentBatch].map((inv: any) => (
-                  <tr key={inv.invoice_id} className="hover:bg-surface-container-low/50 transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs font-medium text-on-surface">
-                      {inv.invoice_no}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-medium text-on-surface">{inv.lease.unit.unit_number}</span>
-                        <span className="text-xs text-on-surface-variant">{inv.lease.tenant.user_name}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-on-surface-variant">
-                      {formatDate(inv.due_date)}
-                    </td>
-                    <td className="px-6 py-4 font-medium text-on-surface">
-                      {formatCurrency(Number(inv.total_amount))}
-                    </td>
-                    <td className="px-6 py-4">
-                      <StatusBadge status={inv.status} variant="invoice" />
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setEditingInvoice(inv)}
-                          className="px-2.5 py-1 rounded bg-primary/10 hover:bg-primary/20 text-primary text-xs font-semibold inline-flex items-center gap-1 transition-colors border border-primary/20"
-                          title="Edit Line Items / Add Item"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">edit_note</span>
-                          Edit Items
-                        </button>
-                        <Link
-                          href={`/print/invoice/${inv.invoice_id}`}
-                          target="_blank"
-                          className="text-on-surface-variant hover:text-primary transition-colors p-1"
-                          title="Print Invoice"
-                        >
-                          <span className="material-symbols-outlined text-[18px]">print</span>
-                        </Link>
-                        {inv.status !== "Paid" && (
-                          <form action={markInvoicePaidAction} className="inline-block">
-                            <input type="hidden" name="invoice_id" value={inv.invoice_id} />
+                {batches[currentBatch].map((inv: any) => {
+                  const isPrinted = inv.is_printed;
+                  const isPaid = inv.status === "Paid";
+                  const isInactive = inv.status === "Inactive";
+                  const isLocked = isPaid || isPrinted || isInactive;
+                  const isUpdating = updatingStatusId === inv.invoice_id;
+
+                  const lockTooltip = isPaid
+                    ? "Locked: Paid invoice cannot be edited"
+                    : isPrinted
+                    ? "Locked: Printed invoice cannot be edited"
+                    : isInactive
+                    ? "Locked: Inactive invoice cannot be edited"
+                    : "Edit Line Items";
+
+                  return (
+                    <tr key={inv.invoice_id} className={`transition-colors ${isInactive ? 'opacity-60 bg-surface-container-lowest/40' : 'hover:bg-surface-container-low/50'}`}>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col gap-1">
+                          <span className="font-mono text-xs font-bold text-on-surface">
+                            {inv.invoice_no}
+                          </span>
+                          {isPrinted && (
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-300 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 rounded w-max">
+                              <span className="material-symbols-outlined text-[12px]">print</span>
+                              Printed
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-on-surface">{inv.lease?.unit?.unit_number}</span>
+                          <span className="text-xs text-on-surface-variant">{inv.lease?.tenant?.user_name}</span>
+                          {inv.modifier?.user_name && (
+                            <span className="text-[10px] text-on-surface-variant/70 italic mt-0.5">
+                              Edited by: {inv.modifier.user_name}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-on-surface-variant">
+                        {formatDate(inv.due_date)}
+                      </td>
+
+                      <td className="px-6 py-4 font-mono font-bold text-on-surface">
+                        {formatCurrency(Number(inv.total_amount))}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={inv.status} variant="invoice" />
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end items-center gap-2">
+                          {/* PDF Preview Button */}
+                          <button
+                            type="button"
+                            onClick={() => setPdfPreviewInvoice(inv)}
+                            className="px-2.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-on-surface text-xs font-semibold inline-flex items-center gap-1.5 transition-all pressable"
+                            title="Preview PDF & Print"
+                          >
+                            <span className="material-symbols-outlined text-[16px] text-primary">picture_as_pdf</span>
+                            <span>PDF Preview</span>
+                          </button>
+
+                          {/* Edit Items Button (Disabled if Locked) */}
+                          {isLocked ? (
                             <button
-                              type="submit"
-                              className="text-emerald-600 hover:text-emerald-500 transition-colors p-1"
-                              title="Mark Paid"
+                              type="button"
+                              onClick={() => setEditingInvoice(inv)}
+                              className="px-2.5 py-1.5 rounded-lg bg-surface-container-high/40 text-on-surface-variant/50 border border-outline-variant/30 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:bg-surface-container-high transition-all"
+                              title={lockTooltip}
                             >
-                              <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                              <span className="material-symbols-outlined text-[16px] text-amber-400">lock</span>
+                              <span>Locked</span>
                             </button>
-                          </form>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setEditingInvoice(inv)}
+                              className="px-2.5 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-xs font-semibold inline-flex items-center gap-1.5 transition-all pressable"
+                              title="Edit Line Items / Add Item"
+                            >
+                              <span className="material-symbols-outlined text-[16px]">edit_note</span>
+                              <span>Edit Items</span>
+                            </button>
+                          )}
+
+                          {/* Status Action Controls */}
+                          {isUpdating ? (
+                            <span className="material-symbols-outlined animate-spin text-[18px] text-primary p-1">
+                              progress_activity
+                            </span>
+                          ) : (
+                            <div className="flex items-center gap-1 bg-surface-container-high/50 p-1 rounded-lg border border-outline-variant/30">
+                              {/* Toggle Paid / Unpaid */}
+                              {isPaid ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Unpaid")}
+                                  className="text-amber-400 hover:text-amber-300 p-1 rounded hover:bg-surface-container-highest transition-colors"
+                                  title="Revert Status to Unpaid"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">undo</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Paid")}
+                                  className="text-emerald-400 hover:text-emerald-300 p-1 rounded hover:bg-surface-container-highest transition-colors"
+                                  title="Mark Status as Paid"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                </button>
+                              )}
+
+                              {/* Toggle Inactive / Active */}
+                              {isInactive ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Unpaid")}
+                                  className="text-sky-400 hover:text-sky-300 p-1 rounded hover:bg-surface-container-highest transition-colors"
+                                  title="Re-activate Invoice"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Inactive")}
+                                  className="text-rose-400 hover:text-rose-300 p-1 rounded hover:bg-surface-container-highest transition-colors"
+                                  title="Disable / Deactivate Invoice"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">block</span>
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         </div>
       )}
 
+      {/* Edit Line Items Modal */}
       {editingInvoice && (
         <EditInvoiceItemsModal
           invoice={editingInvoice}
           chargeMasters={chargeMasters}
           onClose={() => setEditingInvoice(null)}
+        />
+      )}
+
+      {/* Interactive PDF Preview Modal */}
+      {pdfPreviewInvoice && (
+        <InvoicePdfPreviewModal
+          invoice={pdfPreviewInvoice}
+          onClose={() => setPdfPreviewInvoice(null)}
+          onPrinted={() => {
+            setPdfPreviewInvoice((prev: any) => (prev ? { ...prev, is_printed: true } : null));
+            router.refresh();
+          }}
         />
       )}
     </div>

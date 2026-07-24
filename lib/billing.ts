@@ -6,6 +6,8 @@ type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   include: {
     lease: { include: { unit: { include: { property: true } }; tenant: true } };
     details: { include: { charge: true } };
+    modifier: { select: { user_name: true; user_email: true } };
+    creator: { select: { user_name: true } };
   };
 }>;
 
@@ -40,6 +42,8 @@ export async function listInvoices(propertyId?: string): Promise<InvoiceWithRela
         },
       },
       details: { include: { charge: true } },
+      modifier: { select: { user_name: true, user_email: true } },
+      creator: { select: { user_name: true } },
     },
   });
 }
@@ -55,6 +59,8 @@ export async function getInvoiceById(invoiceId: string) {
         },
       },
       details: { include: { charge: true } },
+      modifier: { select: { user_name: true, user_email: true } },
+      creator: { select: { user_name: true } },
     },
   });
 }
