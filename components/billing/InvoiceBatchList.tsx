@@ -42,8 +42,12 @@ export default function InvoiceBatchList({
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("All");
   const [selectedBatch, setSelectedBatch] = useState("");
+
+  // Date Filter State & Presets
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [activePreset, setActivePreset] = useState<string>("all");
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
   const [pdfPreviewInvoice, setPdfPreviewInvoice] = useState<any | null>(null);
@@ -75,12 +79,53 @@ export default function InvoiceBatchList({
     });
   };
 
+  // Preset Handlers
+  const handlePresetSelect = (presetKey: string) => {
+    setActivePreset(presetKey);
+    const now = new Date();
+
+    if (presetKey === "all") {
+      setFromDate("");
+      setToDate("");
+    } else if (presetKey === "this_month") {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      setFromDate(start.toISOString().split("T")[0]);
+      setToDate(end.toISOString().split("T")[0]);
+    } else if (presetKey === "last_30") {
+      const start = new Date();
+      start.setDate(now.getDate() - 30);
+      setFromDate(start.toISOString().split("T")[0]);
+      setToDate(now.toISOString().split("T")[0]);
+    } else if (presetKey === "last_90") {
+      const start = new Date();
+      start.setDate(now.getDate() - 90);
+      setFromDate(start.toISOString().split("T")[0]);
+      setToDate(now.toISOString().split("T")[0]);
+    } else if (presetKey === "this_year") {
+      const start = new Date(now.getFullYear(), 0, 1);
+      const end = new Date(now.getFullYear(), 11, 31);
+      setFromDate(start.toISOString().split("T")[0]);
+      setToDate(end.toISOString().split("T")[0]);
+    }
+  };
+
+  const clearDateFilter = () => {
+    setFromDate("");
+    setToDate("");
+    setActivePreset("all");
+    setShowDatePicker(false);
+  };
+
+  const hasDateFilter = Boolean(fromDate || toDate);
+
+  // Filter Logic
   const filteredInvoices = invoices.filter((inv) => {
     const s = search.toLowerCase();
     const matchesSearch =
       inv.invoice_no.toLowerCase().includes(s) ||
-      inv.lease.unit.unit_number.toLowerCase().includes(s) ||
-      inv.lease.tenant.user_name.toLowerCase().includes(s);
+      inv.lease?.unit?.unit_number?.toLowerCase().includes(s) ||
+      inv.lease?.tenant?.user_name?.toLowerCase().includes(s);
       
     const matchesStatus = filterStatus === "All" || inv.status === filterStatus;
 
@@ -105,7 +150,7 @@ export default function InvoiceBatchList({
     return dateB - dateA;
   });
 
-  // Derive the active batch to show
+  // Derive the active batch to show if date filter is NOT active
   let currentBatch = selectedBatch;
   if (!currentBatch || !batchKeys.includes(currentBatch)) {
     const lastMonthDate = new Date();
@@ -118,6 +163,9 @@ export default function InvoiceBatchList({
       currentBatch = batchKeys[0] || "";
     }
   }
+
+  // Active list to render: if date filter is active, show all filteredInvoices across batches!
+  const displayedInvoices = hasDateFilter ? filteredInvoices : (batches[currentBatch] || []);
 
   return (
     <div className="flex flex-col gap-6 relative">
@@ -142,7 +190,8 @@ export default function InvoiceBatchList({
       {/* Filter Toolbar */}
       <div className="glass-card rounded-xl p-4 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
         <div className="flex flex-wrap items-center gap-3">
-          {batchKeys.length > 0 && (
+          {/* Month Batch Selector (only active when custom date filter is off) */}
+          {!hasDateFilter && batchKeys.length > 0 && (
             <select
               value={currentBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
@@ -150,12 +199,13 @@ export default function InvoiceBatchList({
             >
               {batchKeys.map((bk) => (
                 <option key={bk} value={bk}>
-                  {bk} ({batches[bk].length})
+                  📅 {bk} ({batches[bk].length})
                 </option>
               ))}
             </select>
           )}
 
+          {/* Status Filter */}
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
@@ -167,38 +217,142 @@ export default function InvoiceBatchList({
             <option value="Inactive">Inactive / Disabled</option>
           </select>
 
-          {/* Date Range Inputs */}
-          <div className="flex items-center gap-2 bg-surface-container-high/60 border border-outline-variant/60 rounded-lg px-3 py-1.5 text-xs text-on-surface">
-            <span className="material-symbols-outlined text-[16px] text-on-surface-variant">calendar_today</span>
-            <span className="font-semibold text-on-surface-variant">From:</span>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="bg-transparent border-none outline-none text-on-surface text-xs font-mono"
-            />
-            <span className="font-semibold text-on-surface-variant">To:</span>
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="bg-transparent border-none outline-none text-on-surface text-xs font-mono"
-            />
-            {(fromDate || toDate) && (
-              <button
-                onClick={() => {
-                  setFromDate("");
-                  setToDate("");
-                }}
-                className="text-rose-400 hover:text-rose-300 p-0.5 ml-1"
-                title="Clear date filter"
-              >
-                <span className="material-symbols-outlined text-[14px]">cancel</span>
-              </button>
+          {/* User-Friendly Prominent Date Range Button */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all pressable border ${
+                hasDateFilter
+                  ? "bg-primary/15 text-primary border-primary/40 shadow-sm"
+                  : "bg-surface-container-high hover:bg-surface-container-highest text-on-surface border-outline-variant"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[18px] text-primary">
+                calendar_month
+              </span>
+              <span>
+                {hasDateFilter
+                  ? `Date: ${fromDate ? formatDate(fromDate) : "Start"} → ${toDate ? formatDate(toDate) : "End"}`
+                  : "Filter by Date Range"}
+              </span>
+              <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
+                {showDatePicker ? "expand_less" : "expand_more"}
+              </span>
+            </button>
+
+            {/* Interactive Date Picker Popover Panel */}
+            {showDatePicker && (
+              <div className="absolute left-0 top-[calc(100%+8px)] z-40 bg-surface-container-highest border border-outline-variant/80 rounded-2xl p-4 shadow-2xl min-w-[320px] sm:min-w-[360px] animate-scale-up">
+                <div className="flex items-center justify-between pb-3 border-b border-outline-variant/40 mb-3">
+                  <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-primary text-[16px]">date_range</span>
+                    Select Billing Date Range
+                  </span>
+                  <button
+                    onClick={() => setShowDatePicker(false)}
+                    className="text-on-surface-variant hover:text-on-surface p-1 rounded-full"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                </div>
+
+                {/* Quick Presets Chips */}
+                <div className="mb-4">
+                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-2">
+                    ⚡ Quick Range Shortcuts
+                  </label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { key: "all", label: "All Time" },
+                      { key: "this_month", label: "This Month" },
+                      { key: "last_30", label: "Last 30 Days" },
+                      { key: "last_90", label: "Last 90 Days" },
+                      { key: "this_year", label: "This Year" },
+                    ].map((p) => (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => handlePresetSelect(p.key)}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
+                          activePreset === p.key && hasDateFilter
+                            ? "bg-primary text-on-primary shadow-sm"
+                            : "bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/40"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Custom From & To Pickers */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                      From Date
+                    </label>
+                    <input
+                      type="date"
+                      value={fromDate}
+                      onChange={(e) => {
+                        setFromDate(e.target.value);
+                        setActivePreset("custom");
+                      }}
+                      className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-2.5 py-1.5 text-white text-xs font-mono outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                      To Date
+                    </label>
+                    <input
+                      type="date"
+                      value={toDate}
+                      onChange={(e) => {
+                        setToDate(e.target.value);
+                        setActivePreset("custom");
+                      }}
+                      className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-2.5 py-1.5 text-white text-xs font-mono outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                {/* Popover Actions */}
+                <div className="flex items-center justify-between pt-3 border-t border-outline-variant/40">
+                  <button
+                    type="button"
+                    onClick={clearDateFilter}
+                    className="text-xs text-rose-400 hover:text-rose-300 font-semibold px-2 py-1"
+                  >
+                    Reset Filter
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDatePicker(false)}
+                    className="btn-primary px-4 py-1.5 text-xs font-bold rounded-lg"
+                  >
+                    Apply Range
+                  </button>
+                </div>
+              </div>
             )}
           </div>
+
+          {/* Reset All Filters Button when active */}
+          {hasDateFilter && (
+            <button
+              onClick={clearDateFilter}
+              className="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1.5 rounded-lg"
+              title="Reset date filter to monthly batches"
+            >
+              <span className="material-symbols-outlined text-[14px]">cancel</span>
+              Clear Date Range
+            </button>
+          )}
         </div>
         
+        {/* Search Box */}
         <div className="w-full lg:w-64 relative">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
             search
@@ -213,22 +367,44 @@ export default function InvoiceBatchList({
         </div>
       </div>
 
-      {batchKeys.length === 0 || !currentBatch ? (
+      {/* Active Filter Summary Bar */}
+      {hasDateFilter && (
+        <div className="px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/30 text-xs text-primary flex items-center justify-between animate-fade-in">
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[18px]">filter_alt</span>
+            <span>
+              Showing <strong>{displayedInvoices.length}</strong> invoice(s) issued between{" "}
+              <strong>{fromDate ? formatDate(fromDate) : "Beginning"}</strong> and{" "}
+              <strong>{toDate ? formatDate(toDate) : "Today"}</strong>.
+            </span>
+          </div>
+          <button
+            onClick={clearDateFilter}
+            className="font-bold underline hover:text-primary-container"
+          >
+            Switch to Monthly Batches
+          </button>
+        </div>
+      )}
+
+      {displayedInvoices.length === 0 ? (
         <div className="glass-card rounded-xl p-12 text-center flex flex-col items-center justify-center">
           <span className="material-symbols-outlined text-[48px] text-on-surface-variant/50 mb-4">
             receipt_long
           </span>
           <h3 className="font-title-lg text-title-lg text-on-surface">No invoices found</h3>
           <p className="font-body-md text-body-md text-on-surface-variant mt-2">
-            Try adjusting your search or filters.
+            Try adjusting your search or date range filters.
           </p>
         </div>
       ) : (
         <div className="glass-card rounded-xl p-0 overflow-hidden flex flex-col animate-fade-in">
           <div className="p-4 border-b border-outline-variant/30 bg-surface-container-low flex justify-between items-center">
-            <h3 className="font-title-md text-title-md text-on-surface">{currentBatch}</h3>
+            <h3 className="font-title-md text-title-md text-on-surface">
+              {hasDateFilter ? "Filtered Date Range Invoices" : currentBatch}
+            </h3>
             <span className="font-label-sm text-label-sm px-2.5 py-1 bg-surface-container-high rounded-md text-on-surface-variant font-semibold">
-              {batches[currentBatch].length} Invoices
+              {displayedInvoices.length} Invoices
             </span>
           </div>
 
@@ -238,6 +414,7 @@ export default function InvoiceBatchList({
                 <tr>
                   <th className="px-6 py-3 font-medium">Invoice No</th>
                   <th className="px-6 py-3 font-medium">Unit & Tenant</th>
+                  <th className="px-6 py-3 font-medium">Invoice Date</th>
                   <th className="px-6 py-3 font-medium">Due Date</th>
                   <th className="px-6 py-3 font-medium">Amount</th>
                   <th className="px-6 py-3 font-medium">Status & Print</th>
@@ -245,7 +422,7 @@ export default function InvoiceBatchList({
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant/30">
-                {batches[currentBatch].map((inv: any) => {
+                {displayedInvoices.map((inv: any) => {
                   const isPrinted = inv.is_printed;
                   const isPaid = inv.status === "Paid";
                   const isInactive = inv.status === "Inactive";
@@ -288,7 +465,11 @@ export default function InvoiceBatchList({
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-on-surface-variant">
+                      <td className="px-6 py-4 text-on-surface-variant font-mono text-xs">
+                        {formatDate(inv.invoice_date)}
+                      </td>
+
+                      <td className="px-6 py-4 text-on-surface-variant font-mono text-xs">
                         {formatDate(inv.due_date)}
                       </td>
 
