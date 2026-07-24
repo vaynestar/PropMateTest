@@ -1,7 +1,12 @@
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
-import { listFacilities } from "@/lib/facility-management";
+import {
+  listFacilities,
+  createFacility,
+  updateFacility,
+  deleteFacility,
+} from "@/lib/facility-management";
 import { listProperties } from "@/lib/property-management";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 
@@ -54,16 +59,14 @@ function formatDate(date: Date | string) {
 
 async function addFacility(formData: FormData) {
   "use server";
-  await requireUser(["Admin"]);
+  const user = await requireUser(["Admin"]);
   const days = formData.getAll("operation_days").map(String);
   const nextMaint = formData.get("next_maintenance_date");
   const isMaint = formData.get("is_under_maintenance") === "on";
   const capacityStr = formData.get("max_capacity");
 
-  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/facilities`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+  await createFacility(
+    {
       property_id: String(formData.get("property_id")),
       facility_name: String(formData.get("facility_name")),
       facility_type: String(formData.get("facility_type")),
@@ -73,10 +76,11 @@ async function addFacility(formData: FormData) {
       operation_days: days.join(","),
       open_time: String(formData.get("open_time")),
       close_time: String(formData.get("close_time")),
-      max_booking_hours: formData.get("max_booking_hours") ? String(formData.get("max_booking_hours")) : "",
+      max_booking_hours: formData.get("max_booking_hours") ? Number(formData.get("max_booking_hours")) : null,
       next_maintenance_date: nextMaint ? String(nextMaint) : null,
-    }),
-  });
+    },
+    user.userId
+  );
   revalidatePath("/admin/facilities");
 }
 
@@ -84,45 +88,39 @@ async function removeFacility(formData: FormData) {
   "use server";
   await requireUser(["Admin"]);
   const id = String(formData.get("facility_id"));
-  await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/facilities?id=${id}`,
-    { method: "DELETE" }
-  );
+  await deleteFacility(id);
   revalidatePath("/admin/facilities");
 }
 
 async function toggleMaintenanceStatus(formData: FormData) {
   "use server";
-  await requireUser(["Admin"]);
+  const user = await requireUser(["Admin"]);
   const id = String(formData.get("facility_id"));
   const currentStatus = String(formData.get("current_status"));
   const nextStatus = currentStatus === "Maintenance" ? "Available" : "Maintenance";
 
-  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/facilities`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      facility_id: id,
+  await updateFacility(
+    id,
+    {
       facility_status: nextStatus,
       is_bookable: nextStatus === "Available",
-    }),
-  });
+    },
+    user.userId
+  );
   revalidatePath("/admin/facilities");
 }
 
 async function editFacility(formData: FormData) {
   "use server";
-  await requireUser(["Admin"]);
+  const user = await requireUser(["Admin"]);
   const id = String(formData.get("facility_id"));
   const days = formData.getAll("operation_days").map(String);
   const nextMaint = formData.get("next_maintenance_date");
   const capacityStr = formData.get("max_capacity");
 
-  await fetch(`${process.env.NEXT_PUBLIC_BASE_URL ?? ""}/api/facilities`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      facility_id: id,
+  await updateFacility(
+    id,
+    {
       facility_name: String(formData.get("facility_name")),
       facility_type: String(formData.get("facility_type")),
       facility_status: String(formData.get("facility_status")),
@@ -133,8 +131,9 @@ async function editFacility(formData: FormData) {
       is_bookable: formData.get("is_bookable") === "on",
       max_booking_hours: formData.get("max_booking_hours") === "" ? null : (formData.get("max_booking_hours") ? Number(formData.get("max_booking_hours")) : undefined),
       next_maintenance_date: nextMaint === "" ? null : String(nextMaint),
-    }),
-  });
+    },
+    user.userId
+  );
   revalidatePath("/admin/facilities");
 }
 

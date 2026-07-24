@@ -1,8 +1,9 @@
 "use server";
 
-import { createBooking, getBookingsByFacilityAndDate } from "@/lib/booking-management";
+import { createBooking, getBookingsByFacilityAndDate, cancelBooking } from "@/lib/booking-management";
 import { getSessionUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import prisma from "@/lib/prisma";
 
 function toMin(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -49,5 +50,26 @@ export async function bookFacility(state: any, formData: FormData) {
     return { success: true, message: "Booking confirmed successfully!" };
   } catch (error: any) {
     return { error: error.message || "Failed to book facility." };
+  }
+}
+
+export async function cancelResidentBookingAction(bookingId: string) {
+  try {
+    const user = await getSessionUser();
+    if (!user) return { error: "Unauthorized" };
+
+    const booking = await prisma.booking.findUnique({
+      where: { booking_id: bookingId },
+    });
+    if (!booking) return { error: "Booking not found." };
+    if (booking.user_id !== user.userId) {
+      return { error: "Unauthorized: You can only cancel your own bookings." };
+    }
+
+    await cancelBooking(bookingId, user.userId);
+    revalidatePath("/resident/facilities");
+    return { success: true, message: "Booking cancelled successfully." };
+  } catch (error: any) {
+    return { error: error.message || "Failed to cancel booking." };
   }
 }

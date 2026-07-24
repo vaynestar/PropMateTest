@@ -1,20 +1,15 @@
 import { listFacilities } from "@/lib/facility-management";
-import { listBookings } from "@/lib/booking-management";
+import { listUserBookings } from "@/lib/booking-management";
+import { requireUser } from "@/lib/auth";
 import FacilityBooking from "./FacilityBooking";
+import ResidentMyBookingsList from "./ResidentMyBookingsList";
 
 export const dynamic = "force-dynamic";
 
-type BookingDTO = {
-  booking_id: string;
-  facility_id: string;
-  booking_date: string;
-  start_time: string;
-  end_time: string;
-  booking_status: string;
-};
-
 export default async function ResidentFacilitiesPage() {
+  const user = await requireUser(["Resident"]);
   const all = await listFacilities();
+
   const facilities = all
     .filter((f) => f.is_bookable)
     .map((f) => ({
@@ -29,10 +24,11 @@ export default async function ResidentFacilitiesPage() {
       max_booking_hours: f.max_booking_hours,
     }));
 
-  const raw = await listBookings();
-  const bookings: BookingDTO[] = raw.map((b) => ({
+  const userBookingsRaw = await listUserBookings(user.userId);
+  const myBookings = userBookingsRaw.map((b) => ({
     booking_id: b.booking_id,
     facility_id: b.facility_id,
+    facility_name: b.facility.facility_name,
     booking_date:
       b.booking_date instanceof Date
         ? b.booking_date.toISOString().slice(0, 10)
@@ -49,23 +45,39 @@ export default async function ResidentFacilitiesPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <section className="flex flex-col gap-1 w-full min-w-0">
-        <h1 className="font-headline-lg-mobile md:font-headline-lg text-on-surface mb-2">
+        <h1 className="font-headline-lg-mobile md:font-headline-lg text-on-surface mb-1">
           Reserve Facilities
         </h1>
         <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
-          Pick a facility, choose a start and end time, then book it.
+          Pick a facility, choose your preferred slot, and reserve it instantly.
         </p>
       </section>
 
+      {/* Booking Form Component */}
       {facilities.length === 0 ? (
         <p className="font-body-md text-body-md text-on-surface-variant">
           No bookable facilities available right now.
         </p>
       ) : (
-        <FacilityBooking facilities={facilities} bookings={bookings} />
+        <FacilityBooking facilities={facilities} bookings={myBookings} />
       )}
+
+      {/* My Bookings Section */}
+      <section className="space-y-4 pt-6 border-t border-outline-variant/30">
+        <div className="flex items-center justify-between">
+          <h2 className="font-title-lg text-title-lg text-on-surface font-bold flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-[22px]">event_note</span>
+            My Active Bookings
+          </h2>
+          <span className="text-xs text-on-surface-variant bg-surface-container-high px-3 py-1 rounded-full font-medium">
+            {myBookings.filter((b) => b.booking_status !== "Cancelled").length} active
+          </span>
+        </div>
+
+        <ResidentMyBookingsList myBookings={myBookings} />
+      </section>
     </div>
   );
 }
