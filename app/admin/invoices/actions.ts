@@ -63,7 +63,7 @@ export async function updateInvoiceStatusAction(invoiceId: string, newStatus: st
   revalidatePath("/admin/invoices");
   revalidatePath("/admin/billing");
 
-  const modifierName = updated.modifier?.user_name || user.userEmail || "Admin";
+  const modifierName = updated.modifier?.user_name || user.user_email || "Admin";
 
   return {
     success: true,
