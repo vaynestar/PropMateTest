@@ -95,6 +95,7 @@ export default function AdminFacilitiesManager({
   const [propertyFilter, setPropertyFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [bookableFilter, setBookableFilter] = useState("ALL");
 
   // Maintenance Date Filter States (Similar to Billing date filter)
   const [dateFilterShortcut, setDateFilterShortcut] = useState<"ALL" | "30" | "60" | "90" | "CUSTOM">("ALL");
@@ -208,7 +209,15 @@ export default function AdminFacilitiesManager({
         return false;
       }
 
-      // 5. Maintenance Date Range Filter
+      // 5. Bookable Status Filter
+      if (bookableFilter === "BOOKABLE" && !f.is_bookable) {
+        return false;
+      }
+      if (bookableFilter === "NON_BOOKABLE" && f.is_bookable) {
+        return false;
+      }
+
+      // 6. Maintenance Date Range Filter
       if (dateFilterShortcut !== "ALL") {
         if (!f.next_maintenance_date) return false;
 
@@ -244,13 +253,14 @@ export default function AdminFacilitiesManager({
 
       return true;
     });
-  }, [facilities, searchQuery, propertyFilter, typeFilter, statusFilter, dateFilterShortcut, customStartDate, customEndDate]);
+  }, [facilities, searchQuery, propertyFilter, typeFilter, statusFilter, bookableFilter, dateFilterShortcut, customStartDate, customEndDate]);
 
   const isFilterActive =
     searchQuery.trim() !== "" ||
     propertyFilter !== "ALL" ||
     typeFilter !== "ALL" ||
     statusFilter !== "ALL" ||
+    bookableFilter !== "ALL" ||
     dateFilterShortcut !== "ALL";
 
   const resetFilters = () => {
@@ -258,6 +268,7 @@ export default function AdminFacilitiesManager({
     setPropertyFilter("ALL");
     setTypeFilter("ALL");
     setStatusFilter("ALL");
+    setBookableFilter("ALL");
     setDateFilterShortcut("ALL");
     setCustomStartDate("");
     setCustomEndDate("");
@@ -509,7 +520,7 @@ export default function AdminFacilitiesManager({
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
           {/* Keyword Search */}
           <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[18px]">
@@ -561,6 +572,17 @@ export default function AdminFacilitiesManager({
             <option value="ALL">📌 All Statuses</option>
             <option value="AVAILABLE">✅ Available Only</option>
             <option value="MAINTENANCE">🛠️ Under Maintenance Only</option>
+          </select>
+
+          {/* Bookable Rule Filter */}
+          <select
+            value={bookableFilter}
+            onChange={(e) => setBookableFilter(e.target.value)}
+            className="w-full rounded-xl bg-surface-container-high border border-outline-variant px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+          >
+            <option value="ALL">📋 All Booking Rules</option>
+            <option value="BOOKABLE">📅 Bookable Facilities</option>
+            <option value="NON_BOOKABLE">🔒 Non-Bookable (Lifts, Corridors)</option>
           </select>
         </div>
 
