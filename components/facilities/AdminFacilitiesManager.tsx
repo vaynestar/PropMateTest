@@ -20,6 +20,33 @@ const TYPE_ACCENT: Record<string, string> = {
   Other: "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]",
 };
 
+const DYNAMIC_PALETTE = [
+  "bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]",
+  "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]",
+  "bg-primary shadow-[0_0_10px_rgba(208,188,255,0.5)]",
+  "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]",
+  "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]",
+  "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]",
+  "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]",
+  "bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]",
+  "bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.5)]",
+  "bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]",
+  "bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]",
+];
+
+function getFacilityAccentColor(type: string = ""): string {
+  const trimmed = type.trim();
+  if (TYPE_ACCENT[trimmed]) return TYPE_ACCENT[trimmed];
+  if (!trimmed) return TYPE_ACCENT.Other;
+
+  let hash = 0;
+  for (let i = 0; i < trimmed.length; i++) {
+    hash = trimmed.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % DYNAMIC_PALETTE.length;
+  return DYNAMIC_PALETTE[index];
+}
+
 const WEEKDAYS: { value: number; label: string }[] = [
   { value: 1, label: "Mon" },
   { value: 2, label: "Tue" },
@@ -330,7 +357,7 @@ export default function AdminFacilitiesManager({
             </label>
             <FacilityTypeCombobox
               name="facility_type"
-              defaultValue="Swimming Pool"
+              defaultValue=""
               existingTypes={existingTypes}
               required
             />
@@ -685,9 +712,7 @@ export default function AdminFacilitiesManager({
               }`}
             >
               <div
-                className={`absolute top-0 left-0 w-1 h-full ${
-                  TYPE_ACCENT[f.facility_type] ?? TYPE_ACCENT.Other
-                }`}
+                className={`absolute top-0 left-0 w-1 h-full ${getFacilityAccentColor(f.facility_type)}`}
               />
 
               {/* Maintenance Banner */}

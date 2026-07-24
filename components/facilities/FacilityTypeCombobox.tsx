@@ -25,7 +25,7 @@ interface FacilityTypeComboboxProps {
 }
 
 export default function FacilityTypeCombobox({
-  defaultValue = "Swimming Pool",
+  defaultValue = "",
   name = "facility_type",
   existingTypes = [],
   required = false,
