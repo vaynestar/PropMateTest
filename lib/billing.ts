@@ -78,6 +78,8 @@ export async function getRecentInvoices(propertyId?: string, limit = 5): Promise
         },
       },
       details: { include: { charge: true } },
+      modifier: { select: { user_name: true, user_email: true } },
+      creator: { select: { user_name: true } },
     },
   });
 }
