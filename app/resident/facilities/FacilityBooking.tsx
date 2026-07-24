@@ -4,6 +4,7 @@ import { useMemo, useState, Fragment, useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { bookFacility } from "./actions";
 import BookingTimeline from "@/components/facilities/BookingTimeline";
+import BookingCalendarDatePicker from "@/components/facilities/BookingCalendarDatePicker";
 
 type Facility = {
   facility_id: string;
@@ -226,25 +227,11 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
         </div>
       </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="font-label-sm text-label-sm text-on-surface-variant">Date</span>
-        <select
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
-        >
-          {openDates.map((d) => {
-            const iso = dateToISO(d);
-            const isToday = iso === dateToISO(new Date());
-            return (
-              <option key={iso} value={iso}>
-                {isToday ? "Today" : d.toLocaleDateString("en-MY", { weekday: "short" })}{" "}
-                {d.getDate()}
-              </option>
-            );
-          })}
-        </select>
-      </label>
+      <BookingCalendarDatePicker
+        selectedDate={date}
+        onSelectDate={(newDate) => setDate(newDate)}
+        operationDays={facility.operation_days}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">
         <div className="flex flex-col gap-2 border border-outline-variant/30 rounded-lg p-3 md:p-4 bg-surface-container/50 min-w-0">
