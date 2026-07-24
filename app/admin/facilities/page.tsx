@@ -37,11 +37,17 @@ const timeInputClass =
   "rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary text-xs";
 
 function formatDate(date: Date | string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "-";
+    return new Intl.DateTimeFormat("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(d);
+  } catch {
+    return "-";
+  }
 }
 
 async function addFacility(formData: FormData) {
@@ -76,7 +82,9 @@ async function removeFacility(formData: FormData) {
   "use server";
   await requireUser(["Admin"]);
   const id = String(formData.get("facility_id"));
-  await deleteFacility(id);
+  if (id) {
+    await deleteFacility(id);
+  }
   revalidatePath("/admin/facilities");
 }
 
@@ -87,14 +95,16 @@ async function toggleMaintenanceStatus(formData: FormData) {
   const currentStatus = String(formData.get("current_status"));
   const nextStatus = currentStatus === "Maintenance" ? "Available" : "Maintenance";
 
-  await updateFacility(
-    id,
-    {
-      facility_status: nextStatus,
-      is_bookable: nextStatus === "Available",
-    },
-    user.userId
-  );
+  if (id) {
+    await updateFacility(
+      id,
+      {
+        facility_status: nextStatus,
+        is_bookable: nextStatus === "Available",
+      },
+      user.userId
+    );
+  }
   revalidatePath("/admin/facilities");
 }
 
@@ -106,22 +116,24 @@ async function editFacility(formData: FormData) {
   const nextMaint = formData.get("next_maintenance_date");
   const capacityStr = formData.get("max_capacity");
 
-  await updateFacility(
-    id,
-    {
-      facility_name: String(formData.get("facility_name") || ""),
-      facility_type: String(formData.get("facility_type") || "General"),
-      facility_status: String(formData.get("facility_status")),
-      max_capacity: capacityStr === "" ? null : Number(capacityStr),
-      operation_days: days.length > 0 ? days.join(",") : "1,2,3,4,5,6,7",
-      open_time: String(formData.get("open_time") || "08:00"),
-      close_time: String(formData.get("close_time") || "22:00"),
-      is_bookable: formData.get("is_bookable") === "on",
-      max_booking_hours: formData.get("max_booking_hours") === "" ? null : (formData.get("max_booking_hours") ? Number(formData.get("max_booking_hours")) : undefined),
-      next_maintenance_date: nextMaint && String(nextMaint).trim() !== "" ? String(nextMaint) : null,
-    },
-    user.userId
-  );
+  if (id) {
+    await updateFacility(
+      id,
+      {
+        facility_name: String(formData.get("facility_name") || ""),
+        facility_type: String(formData.get("facility_type") || "General"),
+        facility_status: String(formData.get("facility_status")),
+        max_capacity: capacityStr === "" ? null : Number(capacityStr),
+        operation_days: days.length > 0 ? days.join(",") : "1,2,3,4,5,6,7",
+        open_time: String(formData.get("open_time") || "08:00"),
+        close_time: String(formData.get("close_time") || "22:00"),
+        is_bookable: formData.get("is_bookable") === "on",
+        max_booking_hours: formData.get("max_booking_hours") === "" ? null : (formData.get("max_booking_hours") ? Number(formData.get("max_booking_hours")) : undefined),
+        next_maintenance_date: nextMaint && String(nextMaint).trim() !== "" ? String(nextMaint) : null,
+      },
+      user.userId
+    );
+  }
   revalidatePath("/admin/facilities");
 }
 
@@ -130,13 +142,22 @@ export default async function FacilitiesPage() {
   const cookieStore = await cookies();
   const propertyId = cookieStore.get("propmate_property_id")?.value;
 
-  const [facilities, allProperties] = await Promise.all([
-    listFacilities(propertyId),
-    listProperties(),
-  ]);
+  let facilities: any[] = [];
+  let allProperties: any[] = [];
+
+  try {
+    const [facs, props] = await Promise.all([
+      listFacilities(propertyId),
+      listProperties(),
+    ]);
+    facilities = facs || [];
+    allProperties = props || [];
+  } catch (err) {
+    console.error("Error loading facilities data:", err);
+  }
 
   const activeProperty = propertyId 
-    ? allProperties.find(p => p.property_id === propertyId) 
+    ? allProperties.find((p) => p.property_id === propertyId) 
     : allProperties[0];
 
   // Extract all existing unique facility types created by admin
@@ -198,7 +219,7 @@ export default async function FacilitiesPage() {
             />
           </div>
 
-          {/* Requirement 2: Typeable & Auto-Filtering FacilityTypeCombobox */}
+          {/* Typeable & Auto-Filtering FacilityTypeCombobox */}
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-on-surface-variant uppercase">
               Facility Type (Type or Select) <span className="text-rose-400">*</span>
@@ -211,7 +232,7 @@ export default async function FacilitiesPage() {
             />
           </div>
 
-          {/* Requirement 3: Optional Max Capacity */}
+          {/* Optional Max Capacity */}
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-on-surface-variant uppercase">
               Max Capacity (Optional / Leave blank for Unlimited)
@@ -349,7 +370,11 @@ export default async function FacilitiesPage() {
         )}
 
         {facilities.map((f) => {
-          const isMaintenance = f.facility_status === "Maintenance";
+          const isMaintenance = f?.facility_status === "Maintenance";
+          const propertyName = f?.property?.property_name || "General Property";
+          const opDaysList = (f?.operation_days || "1,2,3,4,5,6,7").split(",");
+          const totalBookingsCount = f?._count?.bookings ?? 0;
+
           return (
             <div
               key={f.facility_id}
@@ -373,7 +398,7 @@ export default async function FacilitiesPage() {
 
               <div className="flex justify-between items-start mb-4">
                 <h4 className="font-title-lg text-title-lg text-on-surface font-bold pr-6">
-                  {f.facility_name}
+                  {f.facility_name || "Unnamed Facility"}
                 </h4>
                 <span
                   className={`material-symbols-outlined ${
@@ -393,14 +418,14 @@ export default async function FacilitiesPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-on-surface-variant">Property</span>
                   <span className="font-semibold text-on-surface">
-                    {f.property.property_name}
+                    {propertyName}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <span className="text-on-surface-variant">Type</span>
                   <span className="font-semibold text-primary">
-                    {f.facility_type}
+                    {f.facility_type || "General"}
                   </span>
                 </div>
 
@@ -422,16 +447,15 @@ export default async function FacilitiesPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-on-surface-variant">Operating Hours</span>
                   <span className="font-semibold text-on-surface">
-                    {f.open_time}–{f.close_time}
+                    {f.open_time || "08:00"}–{f.close_time || "22:00"}
                   </span>
                 </div>
 
                 <div className="flex justify-between items-center">
                   <span className="text-on-surface-variant">Open Days</span>
                   <span className="font-semibold text-on-surface">
-                    {f.operation_days
-                      .split(",")
-                      .map((d) => WEEKDAYS.find((w) => String(w.value) === d)?.label)
+                    {opDaysList
+                      .map((d: string) => WEEKDAYS.find((w) => String(w.value) === d)?.label)
                       .filter(Boolean)
                       .join(" ")}
                   </span>
@@ -453,7 +477,7 @@ export default async function FacilitiesPage() {
                 <div className="flex justify-between items-center">
                   <span className="text-on-surface-variant">Total Bookings</span>
                   <span className="font-semibold text-on-surface">
-                    {f._count.bookings}
+                    {totalBookingsCount}
                   </span>
                 </div>
               </div>
@@ -559,9 +583,7 @@ export default async function FacilitiesPage() {
                           type="checkbox"
                           name="operation_days"
                           value={d.value}
-                          defaultChecked={f.operation_days
-                            .split(",")
-                            .includes(String(d.value))}
+                          defaultChecked={opDaysList.includes(String(d.value))}
                           className="w-3.5 h-3.5 accent-[var(--color-primary)]"
                         />
                         <span className="text-[11px]">{d.label}</span>
@@ -573,14 +595,14 @@ export default async function FacilitiesPage() {
                     <input
                       type="time"
                       name="open_time"
-                      defaultValue={f.open_time}
+                      defaultValue={f.open_time || "08:00"}
                       step={300}
                       className={timeInputClass}
                     />
                     <input
                       type="time"
                       name="close_time"
-                      defaultValue={f.close_time}
+                      defaultValue={f.close_time || "22:00"}
                       step={300}
                       className={timeInputClass}
                     />
