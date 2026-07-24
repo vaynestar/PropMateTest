@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { adminBookFacility } from "./actions";
 import BookingTimeline from "@/components/facilities/BookingTimeline";
 import BookingCalendarDatePicker from "@/components/facilities/BookingCalendarDatePicker";
+import BookingResultModal from "@/components/facilities/BookingResultModal";
 
 type Facility = {
   facility_id: string;
@@ -184,26 +185,61 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
     );
   }, [dayBookings, start, end, facility.max_booking_hours]);
 
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    type: "success" | "error";
+    title?: string;
+    message: string;
+    facilityName?: string;
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+  } | null>(null);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setSuccess(false);
 
     if (!leaseId) {
-      setError("Please select a tenant/unit to book for.");
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Tenant / Unit Selection Required",
+        message: "Please select a tenant or unit to create a booking for.",
+        facilityName: facility.facility_name,
+      });
       return;
     }
     if (clash === "max_exceeded") {
-      setError(`Maximum booking duration allowed is ${facility.max_booking_hours} hours.`);
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Duration Limit Exceeded",
+        message: `Maximum booking duration allowed for this facility is ${facility.max_booking_hours} hours.`,
+        facilityName: facility.facility_name,
+      });
       return;
     }
     if (clash) {
-      setError("This time slot has been booked. Please try another time.");
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Time Slot Unavailable",
+        message: "This time slot has already been booked. Please select a different time slot.",
+        facilityName: facility.facility_name,
+      });
       return;
     }
 
     if (start < DAY_START || end > DAY_END) {
-      setError(`Booking must be within operating hours (${facility.open_time} - ${facility.close_time}).`);
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Operating Hours Constraint",
+        message: `Booking must be within operating hours (${facility.open_time} - ${facility.close_time}).`,
+        facilityName: facility.facility_name,
+      });
       return;
     }
 
@@ -217,10 +253,24 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
     startTransition(async () => {
       const res = await adminBookFacility(formData);
       if (res.error) {
-        setError(res.error);
+        setModalConfig({
+          isOpen: true,
+          type: "error",
+          title: "Booking Failed",
+          message: res.error,
+          facilityName: facility.facility_name,
+        });
       } else {
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
+        setModalConfig({
+          isOpen: true,
+          type: "success",
+          title: "Facility Booking Confirmed!",
+          message: "The facility has been successfully booked on behalf of the resident.",
+          facilityName: facility.facility_name,
+          date,
+          startTime: fmt(start),
+          endTime: fmt(end),
+        });
       }
     });
   };
@@ -408,6 +458,20 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
           </button>
         </div>
       </form>
+
+      {modalConfig && (
+        <BookingResultModal
+          isOpen={modalConfig.isOpen}
+          onClose={() => setModalConfig(null)}
+          type={modalConfig.type}
+          title={modalConfig.title}
+          message={modalConfig.message}
+          facilityName={modalConfig.facilityName}
+          date={modalConfig.date}
+          startTime={modalConfig.startTime}
+          endTime={modalConfig.endTime}
+        />
+      )}
     </div>
   );
 }

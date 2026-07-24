@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState, Fragment, useActionState } from "react";
+import { useMemo, useState, Fragment, useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { bookFacility } from "./actions";
 import BookingTimeline from "@/components/facilities/BookingTimeline";
 import BookingCalendarDatePicker from "@/components/facilities/BookingCalendarDatePicker";
+import BookingResultModal from "@/components/facilities/BookingResultModal";
 
 type Facility = {
   facility_id: string;
@@ -164,6 +165,76 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
   const initialEndHour = Math.floor(Math.min(DAY_START + 60, DAY_END) / 60);
 
   const [state, formAction, pending] = useActionState(bookFacility, null);
+  
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    type: "success" | "error";
+    title?: string;
+    message: string;
+    facilityName?: string;
+    date?: string;
+    startTime?: string;
+    endTime?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (state?.success) {
+      setModalConfig({
+        isOpen: true,
+        type: "success",
+        title: "Facility Reserved Successfully!",
+        message: state.message || "Your booking has been recorded. Enjoy your time!",
+        facilityName: facility.facility_name,
+        date,
+        startTime: fmt(start),
+        endTime: fmt(end),
+      });
+    } else if (state?.error) {
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Unable to Reserve Facility",
+        message: state.error,
+        facilityName: facility.facility_name,
+      });
+    }
+  }, [state]);
+
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (clash === "out_of_bounds") {
+      e.preventDefault();
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Operating Hours Constraint",
+        message: `Booking must be within operating hours (${facility.open_time} - ${facility.close_time}).`,
+        facilityName: facility.facility_name,
+      });
+      return;
+    }
+    if (clash === "max_exceeded") {
+      e.preventDefault();
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Duration Limit Exceeded",
+        message: `Maximum booking duration allowed for this facility is ${facility.max_booking_hours} hours.`,
+        facilityName: facility.facility_name,
+      });
+      return;
+    }
+    if (clash) {
+      e.preventDefault();
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Time Slot Unavailable",
+        message: "This time slot has already been booked by another resident. Please select a different time slot.",
+        facilityName: facility.facility_name,
+      });
+      return;
+    }
+  };
   
   const [startDisplayHour, setStartDisplayHour] = useState<number>(initialStartHour % 12 || 12);
   const [startMin, setStartMin] = useState<number>(0);
@@ -373,7 +444,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
         </div>
       )}
 
-      <form action={formAction}>
+      <form action={formAction} onSubmit={handleFormSubmit}>
         <input type="hidden" name="facility_id" value={facility.facility_id} />
         <input type="hidden" name="booking_date" value={date} />
         <input type="hidden" name="start_time" value={fmt(start)} />
@@ -384,6 +455,20 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
         </div>
         <SubmitButton />
       </form>
+
+      {modalConfig && (
+        <BookingResultModal
+          isOpen={modalConfig.isOpen}
+          onClose={() => setModalConfig(null)}
+          type={modalConfig.type}
+          title={modalConfig.title}
+          message={modalConfig.message}
+          facilityName={modalConfig.facilityName}
+          date={modalConfig.date}
+          startTime={modalConfig.startTime}
+          endTime={modalConfig.endTime}
+        />
+      )}
     </div>
   );
 }
