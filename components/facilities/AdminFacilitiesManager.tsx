@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useMemo, useTransition, useRef, useEffect } from "react";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import FacilityTypeCombobox from "@/components/facilities/FacilityTypeCombobox";
 import {
@@ -63,6 +63,30 @@ export default function AdminFacilitiesManager({
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState("");
+  const [propertyFilter, setPropertyFilter] = useState("ALL");
+  const [typeFilter, setTypeFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+
+  // Maintenance Date Filter States (Similar to Billing date filter)
+  const [dateFilterShortcut, setDateFilterShortcut] = useState<"ALL" | "30" | "60" | "90" | "CUSTOM">("ALL");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Click outside to close date popover
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setIsDatePopoverOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const showToast = (message: string, type: "success" | "error") => {
     setToast({ message, type });
     setTimeout(() => {
@@ -122,6 +146,111 @@ export default function AdminFacilitiesManager({
         showToast(res.message, "success");
       }
     });
+  };
+
+  // Filter Computation
+  const filteredFacilities = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return facilities.filter((f) => {
+      // 1. Search Query
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matchName = f.facility_name?.toLowerCase().includes(query);
+        const matchType = f.facility_type?.toLowerCase().includes(query);
+        const matchProp = f.property?.property_name?.toLowerCase().includes(query);
+        if (!matchName && !matchType && !matchProp) return false;
+      }
+
+      // 2. Property Filter
+      if (propertyFilter !== "ALL" && f.property_id !== propertyFilter) {
+        return false;
+      }
+
+      // 3. Facility Type Filter
+      if (typeFilter !== "ALL" && f.facility_type !== typeFilter) {
+        return false;
+      }
+
+      // 4. Status Filter
+      if (statusFilter === "AVAILABLE" && f.facility_status === "Maintenance") {
+        return false;
+      }
+      if (statusFilter === "MAINTENANCE" && f.facility_status !== "Maintenance") {
+        return false;
+      }
+
+      // 5. Maintenance Date Range Filter
+      if (dateFilterShortcut !== "ALL") {
+        if (!f.next_maintenance_date) return false;
+
+        const maintDate = new Date(f.next_maintenance_date);
+        if (isNaN(maintDate.getTime())) return false;
+        maintDate.setHours(0, 0, 0, 0);
+
+        if (dateFilterShortcut === "30") {
+          const maxDate = new Date(today);
+          maxDate.setDate(maxDate.getDate() + 30);
+          if (maintDate < today || maintDate > maxDate) return false;
+        } else if (dateFilterShortcut === "60") {
+          const maxDate = new Date(today);
+          maxDate.setDate(maxDate.getDate() + 60);
+          if (maintDate < today || maintDate > maxDate) return false;
+        } else if (dateFilterShortcut === "90") {
+          const maxDate = new Date(today);
+          maxDate.setDate(maxDate.getDate() + 90);
+          if (maintDate < today || maintDate > maxDate) return false;
+        } else if (dateFilterShortcut === "CUSTOM") {
+          if (customStartDate) {
+            const startD = new Date(customStartDate);
+            startD.setHours(0, 0, 0, 0);
+            if (maintDate < startD) return false;
+          }
+          if (customEndDate) {
+            const endD = new Date(customEndDate);
+            endD.setHours(23, 59, 59, 999);
+            if (maintDate > endD) return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [facilities, searchQuery, propertyFilter, typeFilter, statusFilter, dateFilterShortcut, customStartDate, customEndDate]);
+
+  const isFilterActive =
+    searchQuery.trim() !== "" ||
+    propertyFilter !== "ALL" ||
+    typeFilter !== "ALL" ||
+    statusFilter !== "ALL" ||
+    dateFilterShortcut !== "ALL";
+
+  const resetFilters = () => {
+    setSearchQuery("");
+    setPropertyFilter("ALL");
+    setTypeFilter("ALL");
+    setStatusFilter("ALL");
+    setDateFilterShortcut("ALL");
+    setCustomStartDate("");
+    setCustomEndDate("");
+  };
+
+  const getDateFilterLabel = () => {
+    switch (dateFilterShortcut) {
+      case "30":
+        return "⚡ Next 30 Days";
+      case "60":
+        return "⚡ Next 60 Days";
+      case "90":
+        return "⚡ Next 90 Days";
+      case "CUSTOM":
+        return customStartDate || customEndDate
+          ? `📅 ${customStartDate || "Start"} to ${customEndDate || "End"}`
+          : "📅 Custom Range";
+      default:
+        return "Maintenance Date: All";
+    }
   };
 
   return (
@@ -333,15 +462,216 @@ export default function AdminFacilitiesManager({
         </form>
       </ExpandableForm>
 
+      {/* Requirement 2: Filter Options Bar */}
+      <div className="glass-card rounded-2xl p-4 border border-outline-variant/40 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-title-md text-title-md text-on-surface font-bold flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-[20px]">filter_list</span>
+            Facility Filters & Maintenance Schedule
+          </h3>
+
+          {isFilterActive && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-xs text-rose-300 hover:text-rose-200 flex items-center gap-1 font-semibold transition-colors"
+            >
+              <span className="material-symbols-outlined text-[16px]">restart_alt</span>
+              Reset Filters
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Keyword Search */}
+          <div className="relative">
+            <span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[18px]">
+              search
+            </span>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search facility name..."
+              className="w-full rounded-xl bg-surface-container-high border border-outline-variant pl-9 pr-3 py-2 text-xs text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary"
+            />
+          </div>
+
+          {/* Property Filter */}
+          <select
+            value={propertyFilter}
+            onChange={(e) => setPropertyFilter(e.target.value)}
+            className="w-full rounded-xl bg-surface-container-high border border-outline-variant px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+          >
+            <option value="ALL">🏢 All Properties</option>
+            {allProperties.map((p) => (
+              <option key={p.property_id} value={p.property_id}>
+                {p.property_name}
+              </option>
+            ))}
+          </select>
+
+          {/* Type Filter */}
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="w-full rounded-xl bg-surface-container-high border border-outline-variant px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+          >
+            <option value="ALL">🏷️ All Types</option>
+            {existingTypes.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+
+          {/* Status Filter */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full rounded-xl bg-surface-container-high border border-outline-variant px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
+          >
+            <option value="ALL">📌 All Statuses</option>
+            <option value="AVAILABLE">✅ Available Only</option>
+            <option value="MAINTENANCE">🛠️ Under Maintenance Only</option>
+          </select>
+        </div>
+
+        {/* ⚡ Next Maintenance Date Range Filter (Pop-over picker) */}
+        <div ref={popoverRef} className="relative border-t border-outline-variant/30 pt-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-on-surface-variant font-medium">
+              Maintenance Date Filter:
+            </span>
+            <button
+              type="button"
+              onClick={() => setIsDatePopoverOpen((prev) => !prev)}
+              className={`px-3 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-2 transition-all pressable ${
+                dateFilterShortcut !== "ALL"
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-[0_0_12px_rgba(245,158,11,0.3)]"
+                  : "bg-surface-container-high text-on-surface border-outline-variant hover:border-primary/50"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">calendar_month</span>
+              <span>{getDateFilterLabel()}</span>
+              <span className="material-symbols-outlined text-[16px]">
+                {isDatePopoverOpen ? "arrow_drop_up" : "arrow_drop_down"}
+              </span>
+            </button>
+          </div>
+
+          {/* Active Results Counter */}
+          <div className="text-xs text-on-surface-variant">
+            Showing <strong className="text-primary font-bold">{filteredFacilities.length}</strong> of {facilities.length} facilities
+          </div>
+
+          {/* Date Filter Popover Panel */}
+          {isDatePopoverOpen && (
+            <div className="absolute left-0 top-full mt-2 w-80 rounded-2xl bg-surface-container-high border border-outline-variant/80 shadow-2xl z-[120] p-4 space-y-4 backdrop-blur-md">
+              <div className="flex items-center justify-between border-b border-outline-variant/30 pb-2">
+                <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-amber-400 text-[18px]">build</span>
+                  Next Maintenance Date
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setIsDatePopoverOpen(false)}
+                  className="text-on-surface-variant hover:text-on-surface p-0.5"
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              </div>
+
+              {/* Quick Shortcuts */}
+              <div className="space-y-1.5">
+                <span className="text-[11px] font-bold text-on-surface-variant uppercase">Quick Range Shortcuts</span>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {[
+                    { id: "ALL", label: "All Dates" },
+                    { id: "30", label: "⚡ Next 30 Days" },
+                    { id: "60", label: "⚡ Next 60 Days" },
+                    { id: "90", label: "⚡ Next 90 Days" },
+                  ].map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        setDateFilterShortcut(s.id as any);
+                        if (s.id !== "CUSTOM") setIsDatePopoverOpen(false);
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${
+                        dateFilterShortcut === s.id
+                          ? "bg-amber-500 text-black font-bold"
+                          : "bg-surface-container-highest text-on-surface hover:bg-primary/20"
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom Period Input */}
+              <div className="space-y-2 border-t border-outline-variant/30 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setDateFilterShortcut("CUSTOM")}
+                  className={`w-full px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-left ${
+                    dateFilterShortcut === "CUSTOM"
+                      ? "bg-amber-500 text-black font-bold"
+                      : "bg-surface-container-highest text-on-surface hover:bg-primary/20"
+                  }`}
+                >
+                  📅 Custom Period
+                </button>
+
+                {dateFilterShortcut === "CUSTOM" && (
+                  <div className="space-y-2 pt-1">
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-on-surface-variant uppercase">Start Date</span>
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        className="w-full rounded-lg bg-surface-container border border-outline-variant px-2.5 py-1.5 text-xs text-on-surface outline-none focus:border-primary font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-on-surface-variant uppercase">End Date</span>
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        className="w-full rounded-lg bg-surface-container border border-outline-variant px-2.5 py-1.5 text-xs text-on-surface outline-none focus:border-primary font-mono"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Facilities Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-gutter">
-        {facilities.length === 0 && (
-          <p className="font-body-md text-body-md text-on-surface-variant col-span-full">
-            No facilities yet. Click &quot;New Facility&quot; to add one.
-          </p>
+        {filteredFacilities.length === 0 && (
+          <div className="col-span-full p-8 text-center text-on-surface-variant glass-card rounded-2xl border border-dashed border-outline-variant/40 space-y-2">
+            <span className="material-symbols-outlined text-[36px] opacity-40">filter_alt_off</span>
+            <p className="font-body-md text-body-md">No facilities found matching your selected filters.</p>
+            {isFilterActive && (
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="btn-secondary px-4 py-1.5 text-xs font-semibold mt-2"
+              >
+                Clear All Filters
+              </button>
+            )}
+          </div>
         )}
 
-        {facilities.map((f) => {
+        {filteredFacilities.map((f) => {
           const isMaintenance = f?.facility_status === "Maintenance";
           const propertyName = f?.property?.property_name || "General Property";
           const opDaysList = (f?.operation_days || "1,2,3,4,5,6,7").split(",");
@@ -600,16 +930,25 @@ export default function AdminFacilitiesManager({
                 </form>
               </details>
 
-              {/* Delete Button */}
-              <button
-                type="button"
-                onClick={() => handleDelete(f.facility_id, f.facility_name)}
-                disabled={isPending}
-                className="w-full mt-auto py-2 rounded-lg text-error-container border border-error-container/30 hover:bg-error-container/10 transition-all text-xs font-semibold active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50"
+              {/* Requirement 1: Restored Previous Delete Button Design */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleDelete(f.facility_id, f.facility_name);
+                }}
+                className="mt-auto"
               >
-                <span className="material-symbols-outlined text-[16px]">delete</span>
-                Delete Facility
-              </button>
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="w-full py-2.5 rounded-lg text-error-container border border-error-container/30 hover:bg-error-container/10 transition-all font-label-md text-label-md active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[16px]">
+                    delete
+                  </span>
+                  Delete
+                </button>
+              </form>
             </div>
           );
         })}
