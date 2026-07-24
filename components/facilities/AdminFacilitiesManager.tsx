@@ -941,9 +941,9 @@ export default function AdminFacilitiesManager({
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="w-full py-2.5 rounded-lg text-error-container border border-error-container/30 hover:bg-error-container/10 transition-all font-label-md text-label-md active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full py-2.5 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600 hover:text-white transition-all font-bold text-xs shadow-sm active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <span className="material-symbols-outlined text-[16px]">
+                  <span className="material-symbols-outlined text-[18px]">
                     delete
                   </span>
                   Delete
