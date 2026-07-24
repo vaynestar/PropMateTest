@@ -447,7 +447,7 @@ model Facility {
   facility_name   String   @db.VarChar
   facility_status String?  @db.VarChar
   facility_type   String   @db.VarChar
-  max_capacity    Int
+  max_capacity    Int?
   is_bookable     Boolean  @default(true)
   max_booking_hours Int?
 

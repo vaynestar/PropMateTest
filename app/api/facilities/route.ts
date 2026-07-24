@@ -34,7 +34,7 @@ export async function POST(request: Request) {
         facility_status: body.facility_status
           ? String(body.facility_status)
           : undefined,
-        max_capacity: Number(body.max_capacity),
+        max_capacity: body.max_capacity ? Number(body.max_capacity) : null,
         is_bookable:
           body.is_bookable === undefined ? true : Boolean(body.is_bookable),
         operation_days: body.operation_days
@@ -43,6 +43,7 @@ export async function POST(request: Request) {
         open_time: body.open_time ? String(body.open_time) : undefined,
         close_time: body.close_time ? String(body.close_time) : undefined,
         max_booking_hours: body.max_booking_hours ? Number(body.max_booking_hours) : null,
+        next_maintenance_date: body.next_maintenance_date ? String(body.next_maintenance_date) : null,
       },
       user.userId
     );
@@ -75,7 +76,7 @@ export async function PATCH(request: Request) {
           ? String(body.facility_type)
           : undefined,
         max_capacity:
-          body.max_capacity === undefined ? undefined : Number(body.max_capacity),
+          body.max_capacity === undefined || body.max_capacity === "" ? null : Number(body.max_capacity),
         is_bookable:
           body.is_bookable === undefined ? undefined : Boolean(body.is_bookable),
         operation_days: body.operation_days
@@ -84,6 +85,7 @@ export async function PATCH(request: Request) {
         open_time: body.open_time ? String(body.open_time) : undefined,
         close_time: body.close_time ? String(body.close_time) : undefined,
         max_booking_hours: body.max_booking_hours === "" ? null : (body.max_booking_hours ? Number(body.max_booking_hours) : undefined),
+        next_maintenance_date: body.next_maintenance_date === "" ? null : (body.next_maintenance_date ? String(body.next_maintenance_date) : undefined),
       },
       user.userId
     );

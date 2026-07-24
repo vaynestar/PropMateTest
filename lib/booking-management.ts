@@ -54,7 +54,10 @@ export async function createBooking(input: BookingInput, createdBy?: string) {
   });
   if (!facility) throw new Error("Facility not found");
   if (!facility.is_bookable) {
-    throw new Error("This facility is not open for booking");
+    throw new Error("This facility is not open for booking.");
+  }
+  if (facility.facility_status === "Maintenance") {
+    throw new Error("This facility is currently under maintenance and cannot be booked.");
   }
 
   const requestedDate = new Date(input.booking_date);

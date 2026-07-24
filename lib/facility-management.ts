@@ -1,5 +1,4 @@
 import { Prisma } from "@prisma/client";
-
 import prisma from "@/lib/prisma";
 
 export type FacilityInput = {
@@ -7,12 +6,13 @@ export type FacilityInput = {
   facility_name: string;
   facility_type: string;
   facility_status?: string;
-  max_capacity: number;
+  max_capacity?: number | null;
   is_bookable?: boolean;
   operation_days?: string;
   open_time?: string;
   close_time?: string;
   max_booking_hours?: number | null;
+  next_maintenance_date?: Date | string | null;
 };
 
 export async function listFacilities(propertyId?: string) {
@@ -32,9 +32,12 @@ export async function createFacility(input: FacilityInput, createdBy?: string) {
   const name = input.facility_name.trim();
   if (!name) throw new Error("Facility name is required");
   if (!input.property_id) throw new Error("Property is required");
-  if (!Number.isFinite(input.max_capacity) || input.max_capacity < 1) {
-    throw new Error("Max capacity must be at least 1");
-  }
+
+  const capacity = (input.max_capacity && Number(input.max_capacity) > 0)
+    ? Number(input.max_capacity)
+    : null;
+
+  const nextMaint = input.next_maintenance_date ? new Date(input.next_maintenance_date) : null;
 
   const open_time = input.open_time ?? "08:00";
   const close_time = input.close_time ?? "22:00";
@@ -46,14 +49,15 @@ export async function createFacility(input: FacilityInput, createdBy?: string) {
     data: {
       property_id: input.property_id,
       facility_name: name,
-      facility_type: input.facility_type,
+      facility_type: input.facility_type.trim() || "General",
       facility_status: input.facility_status ?? "Available",
-      max_capacity: input.max_capacity,
+      max_capacity: capacity,
       is_bookable: input.is_bookable ?? true,
       operation_days: input.operation_days ?? "1,2,3,4,5,6,7",
       open_time,
       close_time,
       max_booking_hours: input.max_booking_hours ?? null,
+      next_maintenance_date: nextMaint,
       created_by: createdBy,
     },
   });
@@ -69,12 +73,13 @@ export type FacilityUpdateInput = Partial<{
   facility_name: string;
   facility_status: string;
   facility_type: string;
-  max_capacity: number;
+  max_capacity: number | null;
   is_bookable: boolean;
   operation_days: string;
   open_time: string;
   close_time: string;
   max_booking_hours: number | null;
+  next_maintenance_date: Date | string | null;
 }>;
 
 export async function updateFacility(
@@ -91,12 +96,20 @@ export async function updateFacility(
     }
   }
 
+  const dataToUpdate: any = {
+    ...input,
+    modified_by: modifiedBy,
+  };
+
+  if (input.next_maintenance_date !== undefined) {
+    dataToUpdate.next_maintenance_date = input.next_maintenance_date
+      ? new Date(input.next_maintenance_date)
+      : null;
+  }
+
   return prisma.facility.update({
     where: { facility_id: trimmed },
-    data: {
-      ...input,
-      modified_by: modifiedBy,
-    },
+    data: dataToUpdate,
   });
 }
 
