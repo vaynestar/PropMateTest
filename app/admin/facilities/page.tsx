@@ -9,22 +9,9 @@ import {
 } from "@/lib/facility-management";
 import { listProperties } from "@/lib/property-management";
 import ExpandableForm from "@/components/layout/ExpandableForm";
+import FacilityTypeCombobox from "@/components/facilities/FacilityTypeCombobox";
 
 export const dynamic = "force-dynamic";
-
-const COMMON_FACILITY_TYPES = [
-  "Swimming Pool",
-  "Gym",
-  "Function Hall",
-  "Badminton Court",
-  "BBQ Area",
-  "Tennis Court",
-  "Meeting Room",
-  "Sky Lounge",
-  "Squash Court",
-  "Games Room",
-  "Sauna",
-];
 
 const TYPE_ACCENT: Record<string, string> = {
   "Swimming Pool": "bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]",
@@ -64,20 +51,21 @@ async function addFacility(formData: FormData) {
   const nextMaint = formData.get("next_maintenance_date");
   const isMaint = formData.get("is_under_maintenance") === "on";
   const capacityStr = formData.get("max_capacity");
+  const propertyId = String(formData.get("property_id") || "");
 
   await createFacility(
     {
-      property_id: String(formData.get("property_id")),
-      facility_name: String(formData.get("facility_name")),
-      facility_type: String(formData.get("facility_type")),
+      property_id: propertyId,
+      facility_name: String(formData.get("facility_name") || ""),
+      facility_type: String(formData.get("facility_type") || "General"),
       facility_status: isMaint ? "Maintenance" : "Available",
       max_capacity: capacityStr ? Number(capacityStr) : null,
       is_bookable: formData.get("is_bookable") === "on" && !isMaint,
-      operation_days: days.join(","),
-      open_time: String(formData.get("open_time")),
-      close_time: String(formData.get("close_time")),
+      operation_days: days.length > 0 ? days.join(",") : "1,2,3,4,5,6,7",
+      open_time: String(formData.get("open_time") || "08:00"),
+      close_time: String(formData.get("close_time") || "22:00"),
       max_booking_hours: formData.get("max_booking_hours") ? Number(formData.get("max_booking_hours")) : null,
-      next_maintenance_date: nextMaint ? String(nextMaint) : null,
+      next_maintenance_date: nextMaint && String(nextMaint).trim() !== "" ? String(nextMaint) : null,
     },
     user.userId
   );
@@ -121,16 +109,16 @@ async function editFacility(formData: FormData) {
   await updateFacility(
     id,
     {
-      facility_name: String(formData.get("facility_name")),
-      facility_type: String(formData.get("facility_type")),
+      facility_name: String(formData.get("facility_name") || ""),
+      facility_type: String(formData.get("facility_type") || "General"),
       facility_status: String(formData.get("facility_status")),
       max_capacity: capacityStr === "" ? null : Number(capacityStr),
-      operation_days: days.join(","),
-      open_time: String(formData.get("open_time")),
-      close_time: String(formData.get("close_time")),
+      operation_days: days.length > 0 ? days.join(",") : "1,2,3,4,5,6,7",
+      open_time: String(formData.get("open_time") || "08:00"),
+      close_time: String(formData.get("close_time") || "22:00"),
       is_bookable: formData.get("is_bookable") === "on",
       max_booking_hours: formData.get("max_booking_hours") === "" ? null : (formData.get("max_booking_hours") ? Number(formData.get("max_booking_hours")) : undefined),
-      next_maintenance_date: nextMaint === "" ? null : String(nextMaint),
+      next_maintenance_date: nextMaint && String(nextMaint).trim() !== "" ? String(nextMaint) : null,
     },
     user.userId
   );
@@ -149,7 +137,12 @@ export default async function FacilitiesPage() {
 
   const activeProperty = propertyId 
     ? allProperties.find(p => p.property_id === propertyId) 
-    : null;
+    : allProperties[0];
+
+  // Extract all existing unique facility types created by admin
+  const existingTypes = Array.from(
+    new Set(facilities.map((f) => f.facility_type).filter(Boolean))
+  );
 
   return (
     <div className="flex flex-col gap-stack-lg">
@@ -164,7 +157,7 @@ export default async function FacilitiesPage() {
 
       <ExpandableForm title="Add Facility" buttonLabel="New Facility">
         <form action={addFacility} className="grid gap-4 md:grid-cols-2">
-          {/* Requirement 1: Auto Preset Property Name */}
+          {/* Target Property */}
           {activeProperty ? (
             <div className="md:col-span-2 p-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -183,7 +176,7 @@ export default async function FacilitiesPage() {
               name="property_id"
               required
               defaultValue={allProperties[0]?.property_id || ""}
-              className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary"
+              className="rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary text-sm"
             >
               {allProperties.map((p) => (
                 <option key={p.property_id} value={p.property_id}>
@@ -205,24 +198,17 @@ export default async function FacilitiesPage() {
             />
           </div>
 
-          {/* Requirement 2: Free-Text Facility Type with Suggestions */}
+          {/* Requirement 2: Typeable & Auto-Filtering FacilityTypeCombobox */}
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-on-surface-variant uppercase">
-              Facility Type (Free Input / Suggestions) <span className="text-rose-400">*</span>
+              Facility Type (Type or Select) <span className="text-rose-400">*</span>
             </label>
-            <input
+            <FacilityTypeCombobox
               name="facility_type"
-              list="facility_type_list"
-              placeholder="e.g. Swimming Pool, Gym, BBQ, Tennis..."
               defaultValue="Swimming Pool"
+              existingTypes={existingTypes}
               required
-              className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary text-sm"
             />
-            <datalist id="facility_type_list">
-              {COMMON_FACILITY_TYPES.map((t) => (
-                <option key={t} value={t} />
-              ))}
-            </datalist>
           </div>
 
           {/* Requirement 3: Optional Max Capacity */}
@@ -252,7 +238,7 @@ export default async function FacilitiesPage() {
             />
           </div>
 
-          {/* Requirement 4: Maintenance Decision & Date */}
+          {/* Maintenance Decision & Date */}
           <div className="md:col-span-2 p-3 rounded-xl bg-surface-container-low border border-outline-variant/40 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -512,13 +498,11 @@ export default async function FacilitiesPage() {
 
                   <div className="space-y-1">
                     <span className="text-on-surface-variant font-medium">Facility Type</span>
-                    <input
-                      type="text"
+                    <FacilityTypeCombobox
                       name="facility_type"
-                      list="facility_type_list"
                       defaultValue={f.facility_type}
+                      existingTypes={existingTypes}
                       required
-                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-xs"
                     />
                   </div>
 

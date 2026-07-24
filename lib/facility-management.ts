@@ -25,35 +25,49 @@ export async function listFacilities(propertyId?: string) {
 
 function toMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
+  return (h || 0) * 60 + (m || 0);
+}
+
+function parseNullableDate(val?: Date | string | null): Date | null {
+  if (!val || String(val).trim() === "") return null;
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 export async function createFacility(input: FacilityInput, createdBy?: string) {
-  const name = input.facility_name.trim();
+  const name = input.facility_name?.trim();
   if (!name) throw new Error("Facility name is required");
-  if (!input.property_id) throw new Error("Property is required");
+
+  let propertyId = input.property_id?.trim();
+  if (!propertyId || propertyId === "undefined" || propertyId === "null") {
+    const firstProperty = await prisma.propertyMaster.findFirst({ select: { property_id: true } });
+    if (!firstProperty) throw new Error("No property found in database. Please create a property first.");
+    propertyId = firstProperty.property_id;
+  }
 
   const capacity = (input.max_capacity && Number(input.max_capacity) > 0)
     ? Number(input.max_capacity)
     : null;
 
-  const nextMaint = input.next_maintenance_date ? new Date(input.next_maintenance_date) : null;
+  const nextMaint = parseNullableDate(input.next_maintenance_date);
 
-  const open_time = input.open_time ?? "08:00";
-  const close_time = input.close_time ?? "22:00";
+  const open_time = input.open_time || "08:00";
+  const close_time = input.close_time || "22:00";
   if (toMinutes(close_time) <= toMinutes(open_time)) {
     throw new Error("Closing time must be after opening time");
   }
 
+  const opDays = input.operation_days?.trim() ? input.operation_days : "1,2,3,4,5,6,7";
+
   return prisma.facility.create({
     data: {
-      property_id: input.property_id,
+      property_id: propertyId,
       facility_name: name,
-      facility_type: input.facility_type.trim() || "General",
+      facility_type: input.facility_type?.trim() || "General",
       facility_status: input.facility_status ?? "Available",
       max_capacity: capacity,
       is_bookable: input.is_bookable ?? true,
-      operation_days: input.operation_days ?? "1,2,3,4,5,6,7",
+      operation_days: opDays,
       open_time,
       close_time,
       max_booking_hours: input.max_booking_hours ?? null,
@@ -102,9 +116,7 @@ export async function updateFacility(
   };
 
   if (input.next_maintenance_date !== undefined) {
-    dataToUpdate.next_maintenance_date = input.next_maintenance_date
-      ? new Date(input.next_maintenance_date)
-      : null;
+    dataToUpdate.next_maintenance_date = parseNullableDate(input.next_maintenance_date);
   }
 
   return prisma.facility.update({
