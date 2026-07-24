@@ -6,6 +6,7 @@ import { bookFacility } from "./actions";
 import BookingTimeline from "@/components/facilities/BookingTimeline";
 import BookingCalendarDatePicker from "@/components/facilities/BookingCalendarDatePicker";
 import BookingResultModal from "@/components/facilities/BookingResultModal";
+import { getFacilityAccentColor } from "@/lib/facility-colors";
 
 type Facility = {
   facility_id: string;
@@ -77,61 +78,83 @@ export default function FacilityBooking({
   bookings: Booking[];
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const facility = facilities.find((f) => f.facility_id === selectedId) ?? null;
 
   return (
     <div className="space-y-6 min-w-0 w-full max-w-full">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* 2 Columns per row grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {facilities.map((f) => {
           const active = f.facility_id === selectedId;
+          const colorTheme = getFacilityAccentColor(f.facility_type);
+
           return (
             <Fragment key={f.facility_id}>
-              <button
-                type="button"
+              <div
                 onClick={() => setSelectedId(active ? null : f.facility_id)}
-                className={`rounded-xl p-6 glass-card flex flex-col justify-between group cursor-pointer hover:border-primary/50 transition-colors text-left ${
+                className={`rounded-2xl p-4 glass-card flex flex-col justify-between group cursor-pointer transition-all text-left pressable ${
                   active
-                    ? "border-2 border-primary bg-primary/5"
-                    : "border border-outline-variant"
+                    ? "border-2 border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                    : "border border-outline-variant/50 hover:border-primary/40 hover:bg-surface-container-high/60"
                 }`}
               >
-                <div>
-                  <div className="flex justify-between items-start mb-6">
-                    <div className="w-12 h-12 rounded-lg bg-surface-container-high/30 border border-outline-variant flex items-center justify-center text-primary shadow-inner">
-                      <span className="material-symbols-outlined text-2xl">
-                        sports_tennis
+                <div className="space-y-3">
+                  {/* Top Row: Icon + Type Chip */}
+                  <div className="flex items-center justify-between">
+                    <div className={`w-10 h-10 rounded-xl ${colorTheme.bg} ${colorTheme.border} border flex items-center justify-center ${colorTheme.text} shadow-inner`}>
+                      <span className="material-symbols-outlined text-[22px]">
+                        {colorTheme.icon}
                       </span>
                     </div>
-                    {active && (
-                      <span className="bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded font-label-sm">
-                        Selected
-                      </span>
-                    )}
+
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${colorTheme.badgeBg} ${colorTheme.text} ${colorTheme.border}`}>
+                      {f.facility_type}
+                    </span>
                   </div>
-                  <h3 className="font-title-lg text-on-surface mb-1 truncate">
-                    {f.facility_name}
-                  </h3>
-                  <p className="font-body-md text-on-surface-variant truncate">
-                    {f.facility_type}
-                  </p>
-                </div>
-                <div className="mt-6 pt-4 border-t border-outline-variant/30 flex justify-between items-center w-full">
-                  <div className="text-on-surface-variant font-label-md flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[16px]">
-                      group
-                    </span>{" "}
-                    Max {f.max_capacity}
+
+                  {/* Title */}
+                  <div>
+                    <h3 className="font-title-md text-title-md text-on-surface font-bold truncate group-hover:text-primary transition-colors">
+                      {f.facility_name}
+                    </h3>
+                    <p className="text-xs text-on-surface-variant truncate">
+                      {f.property.property_name}
+                    </p>
                   </div>
-                  <div className="text-primary font-label-md group-hover:translate-x-1 transition-transform flex items-center gap-1">
-                    {active ? "Close" : "Select"}{" "}
-                    <span className="material-symbols-outlined text-[16px]">
-                      {active ? "expand_less" : "chevron_right"}
+
+                  {/* Key specs pills */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <span className="text-[11px] text-on-surface-variant bg-surface-container-highest/60 px-2 py-0.5 rounded-md flex items-center gap-1 font-medium">
+                      <span className="material-symbols-outlined text-[13px] text-primary">group</span>
+                      {f.max_capacity ? `Max ${f.max_capacity} pax` : "Unlimited"}
+                    </span>
+
+                    <span className="text-[11px] text-on-surface-variant bg-surface-container-highest/60 px-2 py-0.5 rounded-md flex items-center gap-1 font-medium">
+                      <span className="material-symbols-outlined text-[13px] text-primary">schedule</span>
+                      {f.open_time} – {f.close_time}
                     </span>
                   </div>
                 </div>
-              </button>
+
+                {/* Minimized Bottom Action Button */}
+                <div className="mt-4 pt-3 border-t border-outline-variant/30">
+                  <div
+                    className={`w-full py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
+                      active
+                        ? "bg-primary text-black shadow-sm"
+                        : "bg-primary/10 text-primary group-hover:bg-primary/20"
+                    }`}
+                  >
+                    <span>{active ? "Close Calendar" : "Reserve Slot"}</span>
+                    <span className="material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-0.5">
+                      {active ? "expand_less" : "arrow_forward"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Expanded Booking Calendar Details (Spans 2 columns) */}
               {active && (
-                <div className="col-span-1 sm:col-span-2 lg:col-span-3 w-full animate-in fade-in slide-in-from-top-4 duration-300">
+                <div className="col-span-1 sm:col-span-2 w-full animate-in fade-in slide-in-from-top-4 duration-300">
                   <BookingCard facility={f} bookings={bookings} />
                 </div>
               )}
