@@ -13,6 +13,7 @@ export type TokenPayload = {
   role: string;
   user_name?: string;
   user_email?: string;
+  iat?: number;
 };
 
 export async function signToken(payload: TokenPayload): Promise<string> {
@@ -39,6 +40,7 @@ export async function verifyToken(
       role: typeof payload.role === "string" ? payload.role : "",
       user_name: typeof payload.user_name === "string" ? payload.user_name : "",
       user_email: typeof payload.user_email === "string" ? payload.user_email : "",
+      iat: typeof payload.iat === "number" ? payload.iat : undefined,
     };
   } catch {
     return null;

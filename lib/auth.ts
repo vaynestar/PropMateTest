@@ -64,6 +64,24 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const token = await verifyToken(raw);
   if (!token || !token.userId) return null;
 
+  // Sliding Session Window: If active session token is > 24 hours old, silently issue a fresh 7-day token!
+  if (token.iat) {
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    const ageInSeconds = nowInSeconds - token.iat;
+    if (ageInSeconds > 86400) {
+      try {
+        await createSession(
+          token.userId,
+          token.role,
+          token.user_name,
+          token.user_email
+        );
+      } catch {
+        // Silently catch if cookies cannot be modified during certain server component render passes
+      }
+    }
+  }
+
   return {
     userId: token.userId,
     role: token.role,
