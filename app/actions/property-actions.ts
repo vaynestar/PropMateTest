@@ -13,3 +13,21 @@ export async function setActiveProperty(propertyId: string) {
   // Revalidate the entire admin section so data is re-fetched for the new property
   revalidatePath("/admin", "layout");
 }
+
+export async function setDefaultPropertyAction(propertyId: string | null) {
+  const prisma = (await import("@/lib/prisma")).default;
+
+  // Reset all properties default flag
+  await prisma.propertyMaster.updateMany({
+    data: { is_default: false },
+  });
+
+  if (propertyId) {
+    await prisma.propertyMaster.update({
+      where: { property_id: propertyId },
+      data: { is_default: true },
+    });
+  }
+
+  revalidatePath("/admin", "layout");
+}

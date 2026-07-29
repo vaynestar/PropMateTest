@@ -14,13 +14,24 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const activePropertyId = cookieStore.get("propmate_property_id")?.value || "";
 
   const properties = await prisma.propertyMaster.findMany({
-    select: { property_id: true, property_name: true },
+    select: { property_id: true, property_name: true, is_default: true },
     orderBy: { created_at: "asc" },
   });
 
-  const testingProperty = properties.find((p) => p.property_name.toLowerCase().includes("testing")) || properties[0];
-  const isValidProperty = properties.some((p) => p.property_id === activePropertyId);
-  const safeActivePropertyId = isValidProperty ? activePropertyId : (testingProperty?.property_id ?? "");
+  // 1. Check if any property has is_default = true in database
+  const defaultProperty = properties.find((p) => p.is_default);
+
+  // 2. Check if user's last session cookie exists and is valid
+  const hasValidUserCookie = properties.some((p) => p.property_id === activePropertyId);
+
+  // Resolution Hierarchy:
+  // - If default property is set (is_default = true), ALWAYS follow that default property on every login!
+  // - If user cancelled default / no default set, fallback to last session property ID from cookie!
+  const safeActivePropertyId = defaultProperty
+    ? defaultProperty.property_id
+    : hasValidUserCookie
+    ? activePropertyId
+    : (properties[0]?.property_id ?? "");
 
   return (
     <div className="bg-surface text-on-surface font-body-md antialiased overflow-x-hidden min-h-screen flex w-full">
@@ -144,7 +155,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </div>
           
           <div className="flex-1 flex items-center justify-start">
-            <PropertySwitcher properties={properties} activePropertyId={safeActivePropertyId} isValid={isValidProperty} />
+            <PropertySwitcher properties={properties} activePropertyId={safeActivePropertyId} isValid={hasValidUserCookie} />
           </div>
 
           {/* Actions */}

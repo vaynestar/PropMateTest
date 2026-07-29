@@ -21,6 +21,7 @@ model PropertyMaster {
   country       String   @db.VarChar
   postal_code   String   @db.VarChar
   total_units   Int
+  is_default    Boolean  @default(false)
 
   // Audit Trail
   created_at    DateTime @default(now())
@@ -488,7 +489,7 @@ model Announcement {
   // Audit Trail
   created_at   DateTime @default(now())
   created_by   String?  @db.Uuid
-  creator      User?    @relation("AnnouncementCreatedBy", fields: [created_by], references: [user_id])
+  creator      User?    @relation("AnnouncementCreatedBy", fields: [created_by], references: [user_id], map: "announcements_creator_custom_fkey")
   modified_at  DateTime @updatedAt @map("_modified_at")
   modified_by  String?  @db.Uuid @map("_modified_by")
   modifier     User?    @relation("AnnouncementModifiedBy", fields: [modified_by], references: [user_id])
@@ -497,7 +498,7 @@ model Announcement {
   property     PropertyMaster @relation(fields: [property_id], references: [property_id])
   
   // THE FIX: Added the `map` argument to prevent constraint name collision
-  author       User?          @relation("AnnouncementAuthor", fields: [created_by], references: [user_id], map: "announcement_author_custom_fkey")
+  author       User?          @relation("AnnouncementAuthor", fields: [created_by], references: [user_id], map: "announcements_created_by_fkey")
 
   @@map("announcements")
 }
