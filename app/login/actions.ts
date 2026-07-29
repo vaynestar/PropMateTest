@@ -22,7 +22,7 @@ export async function loginAction(
     return { error: "Invalid email or password." };
   }
 
-  await createSession(user.user_id, user.role);
+  await createSession(user.user_id, user.role, user.user_name, user.user_email);
 
   if (user.role === "Resident") redirect("/resident");
   redirect("/admin");

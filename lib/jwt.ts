@@ -11,10 +11,16 @@ function getSecretKey(): Uint8Array {
 export type TokenPayload = {
   userId: string;
   role: string;
+  user_name?: string;
+  user_email?: string;
 };
 
 export async function signToken(payload: TokenPayload): Promise<string> {
-  return new SignJWT({ role: payload.role })
+  return new SignJWT({
+    role: payload.role,
+    user_name: payload.user_name ?? "",
+    user_email: payload.user_email ?? "",
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(payload.userId)
     .setIssuedAt()
@@ -31,6 +37,8 @@ export async function verifyToken(
     return {
       userId: payload.sub,
       role: typeof payload.role === "string" ? payload.role : "",
+      user_name: typeof payload.user_name === "string" ? payload.user_name : "",
+      user_email: typeof payload.user_email === "string" ? payload.user_email : "",
     };
   } catch {
     return null;

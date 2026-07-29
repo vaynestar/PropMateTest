@@ -26,8 +26,13 @@ export function verifyPassword(password: string, stored: string): boolean {
   return timingSafeEqual(derived, expected);
 }
 
-export async function createSession(userId: string, role: string) {
-  const token = await signToken({ userId, role });
+export async function createSession(
+  userId: string,
+  role: string,
+  user_name?: string,
+  user_email?: string
+) {
+  const token = await signToken({ userId, role, user_name, user_email });
   const jar = await cookies();
   const isProd = process.env.NODE_ENV === "production";
   jar.set(SESSION_COOKIE, token, {
@@ -57,23 +62,13 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const raw = jar.get(SESSION_COOKIE)?.value;
   if (!raw) return null;
   const token = await verifyToken(raw);
-  if (!token) return null;
-  const user = await prisma.user.findUnique({
-    where: { user_id: token.userId },
-    select: {
-      user_id: true,
-      role: true,
-      user_name: true,
-      user_email: true,
-      is_active: true,
-    },
-  });
-  if (!user || !user.is_active) return null;
+  if (!token || !token.userId) return null;
+
   return {
-    userId: user.user_id,
-    role: user.role,
-    user_name: user.user_name,
-    user_email: user.user_email,
+    userId: token.userId,
+    role: token.role,
+    user_name: token.user_name || "User",
+    user_email: token.user_email || "",
   };
 }
 
