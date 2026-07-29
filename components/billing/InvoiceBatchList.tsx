@@ -152,9 +152,8 @@ export default function InvoiceBatchList({
 
   // Derive the active batch to show if date filter is NOT active
   let currentBatch = selectedBatch;
-  if (!currentBatch || !batchKeys.includes(currentBatch)) {
+  if (!currentBatch || (!batchKeys.includes(currentBatch) && currentBatch !== "ALL")) {
     const lastMonthDate = new Date();
-    lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
     const lastMonthKey = getMonthYear(lastMonthDate);
 
     if (batchKeys.includes(lastMonthKey)) {
@@ -164,8 +163,8 @@ export default function InvoiceBatchList({
     }
   }
 
-  // Active list to render: if date filter is active, show all filteredInvoices across batches!
-  const displayedInvoices = hasDateFilter ? filteredInvoices : (batches[currentBatch] || []);
+  // Active list to render: if date filter is active OR currentBatch is "ALL", show all filteredInvoices across batches!
+  const displayedInvoices = hasDateFilter || currentBatch === "ALL" ? filteredInvoices : (batches[currentBatch] || []);
 
   return (
     <div className="flex flex-col gap-6 relative">
@@ -197,6 +196,7 @@ export default function InvoiceBatchList({
               onChange={(e) => setSelectedBatch(e.target.value)}
               className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-sm focus:border-primary outline-none cursor-pointer"
             >
+              <option value="ALL">📋 All Invoices ({filteredInvoices.length})</option>
               {batchKeys.map((bk) => (
                 <option key={bk} value={bk}>
                   📅 {bk} ({batches[bk].length})
@@ -401,7 +401,11 @@ export default function InvoiceBatchList({
         <div className="glass-card rounded-xl p-0 overflow-hidden flex flex-col animate-fade-in">
           <div className="p-4 border-b border-outline-variant/30 bg-surface-container-low flex justify-between items-center">
             <h3 className="font-title-md text-title-md text-on-surface">
-              {hasDateFilter ? "Filtered Date Range Invoices" : currentBatch}
+              {hasDateFilter
+                ? "Filtered Date Range Invoices"
+                : currentBatch === "ALL"
+                ? "All Invoices Overview"
+                : currentBatch}
             </h3>
             <span className="font-label-sm text-label-sm px-2.5 py-1 bg-surface-container-high rounded-md text-on-surface-variant font-semibold">
               {displayedInvoices.length} Invoices

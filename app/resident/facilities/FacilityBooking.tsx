@@ -63,9 +63,12 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="btn-primary w-full py-3 font-label-md text-label-md rounded-lg transition-all active:scale-95 disabled:opacity-60"
+      className="btn-primary w-full py-3 font-bold text-sm text-white rounded-xl shadow-lg shadow-primary/20 hover:brightness-110 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-60 pressable"
     >
-      {pending ? "Booking…" : "Book Facilities"}
+      <span className="material-symbols-outlined text-[20px]">
+        {pending ? "progress_activity" : "check_circle"}
+      </span>
+      {pending ? "Confirming Booking…" : "Confirm Booking"}
     </button>
   );
 }

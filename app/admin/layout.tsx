@@ -18,8 +18,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     orderBy: { created_at: "asc" },
   });
 
+  const testingProperty = properties.find((p) => p.property_name.toLowerCase().includes("testing")) || properties[0];
   const isValidProperty = properties.some((p) => p.property_id === activePropertyId);
-  const safeActivePropertyId = isValidProperty ? activePropertyId : (properties[0]?.property_id ?? "");
+  const safeActivePropertyId = isValidProperty ? activePropertyId : (testingProperty?.property_id ?? "");
 
   return (
     <div className="bg-surface text-on-surface font-body-md antialiased overflow-x-hidden min-h-screen flex w-full">

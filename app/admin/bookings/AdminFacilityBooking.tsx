@@ -447,12 +447,12 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
           <button
             type="submit"
             disabled={isPending || !!clash || !leaseId}
-            className="gradient-btn px-6 py-2.5 rounded-lg font-medium text-white shadow-lg flex items-center gap-2 disabled:opacity-50 pressable w-full sm:w-auto justify-center"
+            className="btn-primary px-6 py-3 rounded-xl font-bold text-white shadow-lg shadow-primary/20 hover:brightness-110 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all pressable w-full sm:w-auto"
           >
             {isPending ? (
               <span className="material-symbols-outlined animate-spin-slow">progress_activity</span>
             ) : (
-              <span className="material-symbols-outlined">add_task</span>
+              <span className="material-symbols-outlined text-[20px]">check_circle</span>
             )}
             {isPending ? "Booking..." : "Confirm Booking"}
           </button>
