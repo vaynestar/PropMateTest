@@ -16,7 +16,7 @@ export default async function FacilitiesPage() {
 
   try {
     const [facs, props] = await Promise.all([
-      listFacilities(propertyId),
+      listFacilities(),
       listProperties(),
     ]);
     facilities = facs || [];
