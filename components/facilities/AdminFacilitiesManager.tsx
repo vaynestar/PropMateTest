@@ -89,6 +89,8 @@ export default function AdminFacilitiesManager({
 }: AdminFacilitiesManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -141,24 +143,35 @@ export default function AdminFacilitiesManager({
   const handleEditSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const facilityId = String(formData.get("facility_id") || "");
+    setUpdatingId(facilityId);
 
     startTransition(async () => {
-      const res = await editFacilityAction(formData);
-      if (res?.error) {
-        showToast(res.error, "error");
-      } else if (res?.success) {
-        showToast(res.message, "success");
+      try {
+        const res = await editFacilityAction(formData);
+        if (res?.error) {
+          showToast(res.error, "error");
+        } else if (res?.success) {
+          showToast(res.message, "success");
+        }
+      } finally {
+        setUpdatingId(null);
       }
     });
   };
 
   const handleToggleMaintenance = (facilityId: string, currentStatus: string) => {
+    setUpdatingId(facilityId);
     startTransition(async () => {
-      const res = await toggleMaintenanceAction(facilityId, currentStatus);
-      if (res?.error) {
-        showToast(res.error, "error");
-      } else if (res?.success) {
-        showToast(res.message, "success");
+      try {
+        const res = await toggleMaintenanceAction(facilityId, currentStatus);
+        if (res?.error) {
+          showToast(res.error, "error");
+        } else if (res?.success) {
+          showToast(res.message, "success");
+        }
+      } finally {
+        setUpdatingId(null);
       }
     });
   };
@@ -166,12 +179,17 @@ export default function AdminFacilitiesManager({
   const handleDelete = (facilityId: string, facilityName: string) => {
     if (!confirm(`Are you sure you want to delete "${facilityName}"? This action cannot be undone.`)) return;
 
+    setDeletingId(facilityId);
     startTransition(async () => {
-      const res = await deleteFacilityAction(facilityId);
-      if (res?.error) {
-        showToast(res.error, "error");
-      } else if (res?.success) {
-        showToast(res.message, "success");
+      try {
+        const res = await deleteFacilityAction(facilityId);
+        if (res?.error) {
+          showToast(res.error, "error");
+        } else if (res?.success) {
+          showToast(res.message, "success");
+        }
+      } finally {
+        setDeletingId(null);
       }
     });
   };
@@ -725,6 +743,8 @@ export default function AdminFacilitiesManager({
           const propertyName = f?.property?.property_name || "General Property";
           const opDaysList = (f?.operation_days || "1,2,3,4,5,6,7").split(",");
           const totalBookingsCount = f?._count?.bookings ?? 0;
+          const isDeletingThis = deletingId === f.facility_id;
+          const isUpdatingThis = updatingId === f.facility_id;
 
           return (
             <div
@@ -825,7 +845,7 @@ export default function AdminFacilitiesManager({
               <button
                 type="button"
                 onClick={() => handleToggleMaintenance(f.facility_id, f.facility_status || "Available")}
-                disabled={isPending}
+                disabled={isPending || isUpdatingThis || isDeletingThis}
                 className={`w-full mb-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all pressable border disabled:opacity-50 ${
                   isMaintenance
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30"
@@ -833,9 +853,15 @@ export default function AdminFacilitiesManager({
                 }`}
               >
                 <span className="material-symbols-outlined text-[16px]">
-                  {isMaintenance ? "check_circle" : "engineering"}
+                  {isUpdatingThis ? "progress_activity" : isMaintenance ? "check_circle" : "engineering"}
                 </span>
-                <span>{isMaintenance ? "Set Status: Available" : "Set Status: Under Maintenance"}</span>
+                <span>
+                  {isUpdatingThis
+                    ? "Updating Status..."
+                    : isMaintenance
+                    ? "Set Status: Available"
+                    : "Set Status: Under Maintenance"}
+                </span>
               </button>
 
               {/* Edit Details Accordion */}
@@ -969,10 +995,10 @@ export default function AdminFacilitiesManager({
 
                   <button
                     type="submit"
-                    disabled={isPending}
+                    disabled={isPending || isUpdatingThis}
                     className="btn-primary px-4 py-1.5 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50"
                   >
-                    {isPending ? "Saving..." : "Save Changes"}
+                    {isUpdatingThis ? "Saving..." : "Save Changes"}
                   </button>
                 </form>
               </details>
@@ -987,15 +1013,15 @@ export default function AdminFacilitiesManager({
               >
                 <button
                   type="submit"
-                  disabled={isPending}
+                  disabled={isPending || isDeletingThis}
                   className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 transition-colors text-sm disabled:opacity-50 pressable"
                 >
-                  {isPending ? (
+                  {isDeletingThis ? (
                     <span className="material-symbols-outlined animate-spin-slow text-[16px]">progress_activity</span>
                   ) : (
                     <span className="material-symbols-outlined text-[16px]">delete</span>
                   )}
-                  {isPending ? "Deleting..." : "Delete"}
+                  {isDeletingThis ? "Deleting..." : "Delete"}
                 </button>
               </form>
             </div>
