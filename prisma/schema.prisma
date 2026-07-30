@@ -383,6 +383,16 @@ model TicketAttachment {
   @@map("ticket_attachments")
 }
 
+model TicketCategoryMaster {
+  category_id   String   @id @default(uuid()) @db.Uuid
+  category_name String   @unique @db.VarChar
+  description   String?  @db.Text
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+
+  @@map("ticket_category_master")
+}
+
 // ==========================================
 // DOMAIN 6: ACCESS & FACILITIES
 // ==========================================
@@ -489,7 +499,7 @@ model Announcement {
   // Audit Trail
   created_at   DateTime @default(now())
   created_by   String?  @db.Uuid
-  creator      User?    @relation("AnnouncementCreatedBy", fields: [created_by], references: [user_id], map: "announcements_creator_custom_fkey")
+  creator      User?    @relation("AnnouncementCreatedBy", fields: [created_by], references: [user_id], map: "fk_announcements_creator")
   modified_at  DateTime @updatedAt @map("_modified_at")
   modified_by  String?  @db.Uuid @map("_modified_by")
   modifier     User?    @relation("AnnouncementModifiedBy", fields: [modified_by], references: [user_id])
@@ -497,8 +507,7 @@ model Announcement {
   // Relations
   property     PropertyMaster @relation(fields: [property_id], references: [property_id])
   
-  // THE FIX: Added the `map` argument to prevent constraint name collision
-  author       User?          @relation("AnnouncementAuthor", fields: [created_by], references: [user_id], map: "announcements_created_by_fkey")
+  author       User?          @relation("AnnouncementAuthor", fields: [created_by], references: [user_id], map: "fk_announcements_author")
 
   @@map("announcements")
 }

@@ -4,27 +4,48 @@ import { useState } from "react";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { updateTicketAction } from "@/app/admin/maintenance/actions";
 
-const NEXT_STATUSES: Record<string, string> = {
-  Open: "In Progress",
-  "In Progress": "Resolved",
-  Resolved: "Closed",
+type PropertyItem = {
+  property_id: string;
+  property_name: string;
 };
 
-export default function AdminTicketTable({ tickets, admins }: { tickets: any[], admins: any[] }) {
+type AdminTicketTableProps = {
+  tickets: any[];
+  admins: any[];
+  properties?: PropertyItem[];
+  defaultPropertyId?: string;
+};
+
+export default function AdminTicketTable({
+  tickets,
+  admins,
+  properties = [],
+  defaultPropertyId = "",
+}: AdminTicketTableProps) {
   const [search, setSearch] = useState("");
+  const [filterProperty, setFilterProperty] = useState(
+    defaultPropertyId && properties.some((p) => p.property_id === defaultPropertyId)
+      ? defaultPropertyId
+      : "ALL"
+  );
   const [filterPriority, setFilterPriority] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [editingTicket, setEditingTicket] = useState<any>(null);
 
   const filteredTickets = tickets.filter((t) => {
+    const matchesProperty =
+      filterProperty === "ALL" || !filterProperty
+        ? true
+        : t.lease?.unit?.property_id === filterProperty;
     const matchesPriority = filterPriority ? t.priority === filterPriority : true;
     const matchesStatus = filterStatus ? t.status === filterStatus : true;
     const searchLower = search.toLowerCase();
     const matchesSearch =
       t.title.toLowerCase().includes(searchLower) ||
-      t.lease.unit.unit_number.toLowerCase().includes(searchLower);
+      t.lease?.unit?.unit_number?.toLowerCase().includes(searchLower) ||
+      t.ticket_category?.toLowerCase().includes(searchLower);
 
-    return matchesPriority && matchesStatus && matchesSearch;
+    return matchesProperty && matchesPriority && matchesStatus && matchesSearch;
   });
 
   const formatDate = (date: Date) => {
@@ -38,24 +59,40 @@ export default function AdminTicketTable({ tickets, admins }: { tickets: any[], 
   return (
     <>
       <div className="glass-card rounded-xl p-0 overflow-hidden flex flex-col">
-        <div className="p-4 border-b border-outline-variant/30 bg-surface-container-low flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="p-4 border-b border-outline-variant/30 bg-surface-container-low flex flex-col lg:flex-row gap-4 items-center justify-between">
           <div className="flex-1 w-full max-w-md relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
               search
             </span>
             <input
               type="text"
-              placeholder="Search by title or unit number..."
+              placeholder="Search by title, category, or unit number..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none transition-colors"
             />
           </div>
-          <div className="flex w-full md:w-auto gap-2">
+          <div className="flex flex-wrap w-full lg:w-auto gap-2">
+            {/* Property Filter */}
+            {properties.length > 0 && (
+              <select
+                value={filterProperty}
+                onChange={(e) => setFilterProperty(e.target.value)}
+                className="flex-1 lg:w-auto px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none font-medium"
+              >
+                <option value="ALL">📋 All Properties</option>
+                {properties.map((p) => (
+                  <option key={p.property_id} value={p.property_id}>
+                    🏢 {p.property_name} {p.property_id === defaultPropertyId ? " (Active)" : ""}
+                  </option>
+                ))}
+              </select>
+            )}
+
             <select
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value)}
-              className="flex-1 md:w-auto px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none"
+              className="flex-1 lg:w-auto px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none"
             >
               <option value="">All Priorities</option>
               <option value="Low">Low</option>
@@ -66,11 +103,12 @@ export default function AdminTicketTable({ tickets, admins }: { tickets: any[], 
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="flex-1 md:w-auto px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none"
+              className="flex-1 lg:w-auto px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none"
             >
               <option value="">All Statuses</option>
               <option value="Open">Open</option>
               <option value="In Progress">In Progress</option>
+              <option value="Pending Parts">Pending Parts</option>
               <option value="Resolved">Resolved</option>
               <option value="Closed">Closed</option>
             </select>
@@ -82,7 +120,8 @@ export default function AdminTicketTable({ tickets, admins }: { tickets: any[], 
             <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant">
               <tr>
                 <th className="px-6 py-3 font-medium">Ticket ID</th>
-                <th className="px-6 py-3 font-medium">Unit</th>
+                <th className="px-6 py-3 font-medium">Unit & Property</th>
+                <th className="px-6 py-3 font-medium">Category</th>
                 <th className="px-6 py-3 font-medium">Title</th>
                 <th className="px-6 py-3 font-medium">Priority</th>
                 <th className="px-6 py-3 font-medium">Status</th>
@@ -93,7 +132,7 @@ export default function AdminTicketTable({ tickets, admins }: { tickets: any[], 
             <tbody className="divide-y divide-outline-variant/30">
               {filteredTickets.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-on-surface-variant">
+                  <td colSpan={8} className="px-6 py-8 text-center text-on-surface-variant">
                     No tickets found matching your filters.
                   </td>
                 </tr>
@@ -102,22 +141,35 @@ export default function AdminTicketTable({ tickets, admins }: { tickets: any[], 
                   return (
                     <tr key={t.ticket_id} className="hover:bg-surface-container-low/50 transition-colors">
                       <td className="px-6 py-4 font-mono text-xs text-on-surface-variant">
-                        {t.ticket_id.split("-")[0].toUpperCase()}
-                      </td>
-                      <td className="px-6 py-4 font-medium text-on-surface">
-                        {t.lease.unit.unit_number}
+                        #{t.ticket_id.split("-")[0].toUpperCase()}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="max-w-[200px] truncate" title={t.title}>
-                          {t.title}
+                        <div className="font-medium text-on-surface">
+                          {t.lease?.unit?.unit_number}
+                        </div>
+                        <div className="text-[11px] text-on-surface-variant">
+                          {t.lease?.unit?.property?.property_name}
                         </div>
                       </td>
+                      <td className="px-6 py-4 font-medium text-xs text-primary">
+                        {t.ticket_category}
+                      </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                          t.priority === 'Urgent' ? 'bg-error-container text-error-container' : 
-                          t.priority === 'High' ? 'bg-orange-500/20 text-orange-500' :
-                          t.priority === 'Medium' ? 'bg-primary-container text-on-primary-container' :
-                          'bg-surface-variant text-on-surface-variant'
+                        <div className="max-w-[220px] truncate font-medium text-on-surface" title={t.title}>
+                          {t.title}
+                        </div>
+                        {t.description && (
+                          <div className="max-w-[220px] truncate text-[11px] text-on-surface-variant" title={t.description}>
+                            {t.description}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded-md text-xs font-semibold ${
+                          t.priority === 'Urgent' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 
+                          t.priority === 'High' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
+                          t.priority === 'Medium' ? 'bg-primary/20 text-primary border border-primary/40' :
+                          'bg-surface-variant text-on-surface-variant border border-outline-variant'
                         }`}>
                           {t.priority}
                         </span>
@@ -125,16 +177,16 @@ export default function AdminTicketTable({ tickets, admins }: { tickets: any[], 
                       <td className="px-6 py-4">
                         <StatusBadge status={t.status} variant="ticket" />
                       </td>
-                      <td className="px-6 py-4 text-on-surface-variant">
+                      <td className="px-6 py-4 text-on-surface-variant text-xs font-mono">
                         {formatDate(t.created_at)}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
                           type="button"
                           onClick={() => setEditingTicket(t)}
-                          className="font-medium text-primary hover:text-primary-container transition-colors"
+                          className="px-3 py-1.5 rounded-lg bg-surface-container-high border border-outline-variant text-xs font-semibold text-primary hover:bg-surface-variant transition-colors pressable"
                         >
-                          Update
+                          Manage
                         </button>
                       </td>
                     </tr>
@@ -146,15 +198,23 @@ export default function AdminTicketTable({ tickets, admins }: { tickets: any[], 
         </div>
       </div>
 
+      {/* Edit / Manage Ticket Modal */}
       {editingTicket && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-surface-container rounded-xl w-full max-w-md overflow-hidden flex flex-col shadow-lg border border-outline-variant/30">
-            <div className="p-4 border-b border-outline-variant/30 flex justify-between items-center">
-              <h3 className="font-title-md text-title-md text-on-surface">Update Ticket</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-surface-container rounded-2xl w-full max-w-md overflow-hidden flex flex-col shadow-2xl border border-outline-variant/40 animate-slide-up">
+            <div className="p-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
+              <div>
+                <h3 className="font-title-md text-title-md text-on-surface font-bold">
+                  Manage Helpdesk Ticket
+                </h3>
+                <p className="text-xs text-on-surface-variant font-mono">
+                  #{editingTicket.ticket_id.split("-")[0].toUpperCase()} · {editingTicket.lease?.unit?.unit_number}
+                </p>
+              </div>
               <button
                 type="button"
                 onClick={() => setEditingTicket(null)}
-                className="text-on-surface-variant hover:text-on-surface transition-colors"
+                className="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-lg"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -164,42 +224,48 @@ export default function AdminTicketTable({ tickets, admins }: { tickets: any[], 
                 updateTicketAction(formData);
                 setEditingTicket(null);
               }}
-              className="p-4 flex flex-col gap-4"
+              className="p-5 flex flex-col gap-4"
             >
               <input type="hidden" name="ticket_id" value={editingTicket.ticket_id} />
 
+              <div className="p-3 rounded-xl bg-surface-container-high/50 border border-outline-variant/30 text-xs space-y-1">
+                <div className="font-semibold text-on-surface">{editingTicket.title}</div>
+                <div className="text-on-surface-variant line-clamp-2">{editingTicket.description}</div>
+              </div>
+
               <div className="flex flex-col gap-1">
-                <label className="text-sm text-on-surface-variant">Status</label>
+                <label className="text-xs font-medium text-on-surface-variant">Ticket Status</label>
                 <select
                   name="status"
                   defaultValue={editingTicket.status}
-                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
+                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary text-sm font-semibold"
                 >
                   <option value="Open">Open</option>
                   <option value="In Progress">In Progress</option>
+                  <option value="Pending Parts">Pending Parts</option>
                   <option value="Resolved">Resolved</option>
                   <option value="Closed">Closed</option>
                 </select>
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm text-on-surface-variant">Assignee</label>
+                <label className="text-xs font-medium text-on-surface-variant">Assignee (Staff / Admin)</label>
                 <select
                   name="assigned_to"
                   defaultValue={editingTicket.assigned_to || ""}
-                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
+                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary text-sm"
                 >
                   <option value="">Unassigned</option>
                   {admins?.map((admin) => (
                     <option key={admin.user_id} value={admin.user_id}>
-                      {admin.user_name}
+                      👤 {admin.user_name}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm text-on-surface-variant">Maintenance Cost (RM)</label>
+                <label className="text-xs font-medium text-on-surface-variant">Maintenance Cost (RM)</label>
                 <input
                   type="number"
                   name="cost"
@@ -207,21 +273,21 @@ export default function AdminTicketTable({ tickets, admins }: { tickets: any[], 
                   min="0"
                   defaultValue={editingTicket.cost ? Number(editingTicket.cost) : ""}
                   placeholder="0.00"
-                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary"
+                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary text-sm font-mono"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 mt-4">
+              <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-outline-variant/30">
                 <button
                   type="button"
                   onClick={() => setEditingTicket(null)}
-                  className="px-4 py-2 rounded-lg font-medium text-on-surface-variant hover:bg-surface-variant transition-colors"
+                  className="px-4 py-2 rounded-lg font-medium text-xs text-on-surface-variant hover:bg-surface-variant transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary px-4 py-2 rounded-lg font-medium transition-colors"
+                  className="btn-primary px-5 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition-all pressable"
                 >
                   Save Changes
                 </button>

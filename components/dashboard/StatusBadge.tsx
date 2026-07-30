@@ -6,6 +6,7 @@ type StatusBadgeProps = {
 const ticketStyles: Record<string, string> = {
   Open: "bg-amber-400/20 text-amber-300 border-amber-400/40",
   "In Progress": "bg-primary/20 text-primary border-primary/40",
+  "Pending Parts": "bg-purple-500/20 text-purple-300 border-purple-500/40",
   Resolved: "bg-emerald-400/20 text-emerald-300 border-emerald-400/40",
   Closed: "bg-surface-container-highest text-on-surface-variant border-outline-variant",
 };

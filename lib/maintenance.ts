@@ -9,12 +9,41 @@ type TicketWithRelations = Prisma.TicketGetPayload<{
 }>;
 
 const VALID_PRIORITIES = ["Low", "Medium", "High", "Urgent"];
-const VALID_STATUSES = ["Open", "In Progress", "Resolved", "Closed"];
+const VALID_STATUSES = ["Open", "In Progress", "Pending Parts", "Resolved", "Closed"];
 
 function requireText(value: unknown, fieldName: string): string {
   const trimmed = String(value ?? "").trim();
   if (!trimmed) throw new Error(`${fieldName} is required`);
   return trimmed;
+}
+
+export async function listTicketCategories() {
+  return prisma.ticketCategoryMaster.findMany({
+    orderBy: { category_name: "asc" },
+  });
+}
+
+export async function createTicketCategory(categoryName: string, description?: string) {
+  const name = requireText(categoryName, "Category name");
+  return prisma.ticketCategoryMaster.create({
+    data: {
+      category_name: name,
+      description: description?.trim() || null,
+    },
+  });
+}
+
+export async function toggleTicketCategory(categoryId: string, isActive: boolean) {
+  return prisma.ticketCategoryMaster.update({
+    where: { category_id: categoryId },
+    data: { is_active: isActive },
+  });
+}
+
+export async function deleteTicketCategory(categoryId: string) {
+  return prisma.ticketCategoryMaster.delete({
+    where: { category_id: categoryId },
+  });
 }
 
 export async function listTickets(propertyId?: string): Promise<TicketWithRelations[]> {
