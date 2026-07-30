@@ -6,14 +6,20 @@ import { updateTicketStatus } from "@/lib/maintenance";
 
 export async function updateTicketAction(formData: FormData) {
   const user = await requireUser(["Admin"]);
-  const ticketId = String(formData.get("ticket_id"));
-  const status = String(formData.get("status"));
+  const ticketId = String(formData.get("ticket_id") || "");
+  const status = String(formData.get("status") || "Open");
   const costStr = formData.get("cost");
-  const cost = costStr ? parseFloat(String(costStr)) : undefined;
-  const assignedTo = formData.get("assigned_to") ? String(formData.get("assigned_to")) : undefined;
-  
-  await updateTicketStatus(ticketId, status, user.userId, cost, assignedTo);
-  revalidatePath("/admin/maintenance");
+  const cost = costStr !== null && String(costStr).trim() !== "" ? parseFloat(String(costStr)) : undefined;
+  const assignedTo = formData.get("assigned_to") !== null ? String(formData.get("assigned_to")) : undefined;
+  const remark = formData.get("remark") !== null ? String(formData.get("remark")) : undefined;
+
+  try {
+    await updateTicketStatus(ticketId, status, user.userId, cost, assignedTo, remark);
+    revalidatePath("/admin/maintenance");
+    return { success: true, message: "Ticket updated successfully!" };
+  } catch (err: any) {
+    return { error: err?.message || "Failed to update ticket." };
+  }
 }
 
 export async function raiseTicketAction(formData: FormData) {

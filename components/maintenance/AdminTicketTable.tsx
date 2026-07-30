@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { updateTicketAction } from "@/app/admin/maintenance/actions";
 
@@ -31,6 +31,8 @@ export default function AdminTicketTable({
   const [filterPriority, setFilterPriority] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [editingTicket, setEditingTicket] = useState<any>(null);
+  const [isPending, startTransition] = useTransition();
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const filteredTickets = tickets.filter((t) => {
     const matchesProperty =
@@ -54,6 +56,24 @@ export default function AdminTicketTable({
       month: "short",
       year: "numeric",
     }).format(new Date(date));
+  };
+
+  const handleUpdateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+
+    startTransition(async () => {
+      const res = await updateTicketAction(formData);
+      if (res?.error) {
+        setToast({ message: res.error, type: "error" });
+      } else {
+        setToast({ message: "Ticket updated successfully!", type: "success" });
+        setTimeout(() => {
+          setEditingTicket(null);
+          setToast(null);
+        }, 600);
+      }
+    });
   };
 
   return (
@@ -109,6 +129,7 @@ export default function AdminTicketTable({
               <option value="Open">Open</option>
               <option value="In Progress">In Progress</option>
               <option value="Pending Parts">Pending Parts</option>
+              <option value="KIV">KIV (Keep In View)</option>
               <option value="Resolved">Resolved</option>
               <option value="Closed">Closed</option>
             </select>
@@ -122,7 +143,7 @@ export default function AdminTicketTable({
                 <th className="px-6 py-3 font-medium">Ticket ID</th>
                 <th className="px-6 py-3 font-medium">Unit & Property</th>
                 <th className="px-6 py-3 font-medium">Category</th>
-                <th className="px-6 py-3 font-medium">Title</th>
+                <th className="px-6 py-3 font-medium">Title & Remark</th>
                 <th className="px-6 py-3 font-medium">Priority</th>
                 <th className="px-6 py-3 font-medium">Status</th>
                 <th className="px-6 py-3 font-medium">Date</th>
@@ -158,11 +179,16 @@ export default function AdminTicketTable({
                         <div className="max-w-[220px] truncate font-medium text-on-surface" title={t.title}>
                           {t.title}
                         </div>
-                        {t.description && (
+                        {t.remark ? (
+                          <div className="max-w-[220px] truncate text-[11px] text-amber-300 flex items-center gap-1" title={t.remark}>
+                            <span className="material-symbols-outlined text-[13px]">sticky_note_2</span>
+                            <span>{t.remark}</span>
+                          </div>
+                        ) : t.description ? (
                           <div className="max-w-[220px] truncate text-[11px] text-on-surface-variant" title={t.description}>
                             {t.description}
                           </div>
-                        )}
+                        ) : null}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 rounded-md text-xs font-semibold ${
@@ -183,7 +209,10 @@ export default function AdminTicketTable({
                       <td className="px-6 py-4 text-right">
                         <button
                           type="button"
-                          onClick={() => setEditingTicket(t)}
+                          onClick={() => {
+                            setEditingTicket(t);
+                            setToast(null);
+                          }}
                           className="px-3 py-1.5 rounded-lg bg-surface-container-high border border-outline-variant text-xs font-semibold text-primary hover:bg-surface-variant transition-colors pressable"
                         >
                           Manage
@@ -213,19 +242,32 @@ export default function AdminTicketTable({
               </div>
               <button
                 type="button"
-                onClick={() => setEditingTicket(null)}
+                onClick={() => {
+                  setEditingTicket(null);
+                  setToast(null);
+                }}
                 className="text-on-surface-variant hover:text-on-surface transition-colors p-1 rounded-lg"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
-            <form
-              action={(formData) => {
-                updateTicketAction(formData);
-                setEditingTicket(null);
-              }}
-              className="p-5 flex flex-col gap-4"
-            >
+
+            <form onSubmit={handleUpdateSubmit} className="p-5 flex flex-col gap-4">
+              {toast && (
+                <div
+                  className={`p-3 rounded-lg text-xs font-semibold flex items-center gap-2 border ${
+                    toast.type === "success"
+                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                      : "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[18px]">
+                    {toast.type === "success" ? "check_circle" : "error"}
+                  </span>
+                  <span>{toast.message}</span>
+                </div>
+              )}
+
               <input type="hidden" name="ticket_id" value={editingTicket.ticket_id} />
 
               <div className="p-3 rounded-xl bg-surface-container-high/50 border border-outline-variant/30 text-xs space-y-1">
@@ -233,6 +275,7 @@ export default function AdminTicketTable({
                 <div className="text-on-surface-variant line-clamp-2">{editingTicket.description}</div>
               </div>
 
+              {/* Status Dropdown with KIV Option */}
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-on-surface-variant">Ticket Status</label>
                 <select
@@ -243,11 +286,13 @@ export default function AdminTicketTable({
                   <option value="Open">Open</option>
                   <option value="In Progress">In Progress</option>
                   <option value="Pending Parts">Pending Parts</option>
+                  <option value="KIV">KIV (Keep In View)</option>
                   <option value="Resolved">Resolved</option>
                   <option value="Closed">Closed</option>
                 </select>
               </div>
 
+              {/* Assignee */}
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-on-surface-variant">Assignee (Staff / Admin)</label>
                 <select
@@ -264,6 +309,7 @@ export default function AdminTicketTable({
                 </select>
               </div>
 
+              {/* Maintenance Cost */}
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-on-surface-variant">Maintenance Cost (RM)</label>
                 <input
@@ -277,19 +323,44 @@ export default function AdminTicketTable({
                 />
               </div>
 
-              <div className="flex justify-end gap-2 mt-4 pt-3 border-t border-outline-variant/30">
+              {/* Optional Remark / Admin Notes */}
+              <div className="flex flex-col gap-1">
+                <label className="text-xs font-medium text-on-surface-variant flex items-center justify-between">
+                  <span>Remark / Admin Notes</span>
+                  <span className="text-[10px] text-on-surface-variant font-normal">(Optional)</span>
+                </label>
+                <textarea
+                  name="remark"
+                  defaultValue={editingTicket.remark || ""}
+                  placeholder="Internal admin notes, parts status, or resolution remarks..."
+                  rows={2}
+                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary text-xs resize-none placeholder:text-on-surface-variant/60"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-outline-variant/30">
                 <button
                   type="button"
-                  onClick={() => setEditingTicket(null)}
-                  className="px-4 py-2 rounded-lg font-medium text-xs text-on-surface-variant hover:bg-surface-variant transition-colors"
+                  onClick={() => {
+                    setEditingTicket(null);
+                    setToast(null);
+                  }}
+                  disabled={isPending}
+                  className="px-4 py-2 rounded-lg font-medium text-xs text-on-surface-variant hover:bg-surface-variant transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="btn-primary px-5 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition-all pressable"
+                  disabled={isPending}
+                  className="btn-primary px-5 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition-all pressable disabled:opacity-50 flex items-center gap-1.5"
                 >
-                  Save Changes
+                  {isPending ? (
+                    <span className="material-symbols-outlined animate-spin-slow text-[16px]">progress_activity</span>
+                  ) : (
+                    <span className="material-symbols-outlined text-[16px]">check</span>
+                  )}
+                  {isPending ? "Saving Changes..." : "Save Changes"}
                 </button>
               </div>
             </form>

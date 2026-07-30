@@ -121,7 +121,8 @@ export async function updateTicketStatus(
   status: string,
   modifiedBy?: string,
   cost?: number,
-  assignedTo?: string
+  assignedTo?: string,
+  remark?: string
 ) {
   const trimmedId = ticketId.trim();
   if (!trimmedId) throw new Error("Ticket ID is required");
@@ -134,7 +135,8 @@ export async function updateTicketStatus(
     resolved_at?: Date; 
     modified_by?: string;
     cost?: number;
-    assigned_to?: string;
+    assigned_to?: string | null;
+    remark?: string | null;
   } = {
     status,
     modified_by: modifiedBy,
@@ -146,8 +148,11 @@ export async function updateTicketStatus(
   if (cost !== undefined) {
     data.cost = cost;
   }
-  if (assignedTo !== undefined && assignedTo !== "") {
-    data.assigned_to = assignedTo;
+  if (assignedTo !== undefined) {
+    data.assigned_to = assignedTo === "" ? null : assignedTo;
+  }
+  if (remark !== undefined) {
+    data.remark = remark.trim() || null;
   }
 
   return prisma.ticket.update({
