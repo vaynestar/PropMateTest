@@ -79,21 +79,35 @@ export default function AdminBookingList({
     return endTime >= now.getTime();
   };
 
-  // Split bookings into Active vs Past lists
-  const { activeBookingsList, pastBookingsList } = useMemo(() => {
+  // Split bookings into Active vs Past lists (Property-scoped for accurate tab count alignment)
+  const { activeBookingsList, pastBookingsList, propertyScopedTotal } = useMemo(() => {
     const active: any[] = [];
     const past: any[] = [];
+    let propTotal = 0;
 
     bookings.forEach((b) => {
-      if (isBookingActive(b)) {
-        active.push(b);
-      } else {
-        past.push(b);
+      const matchesProperty =
+        filterProperty === "ALL" || !filterProperty
+          ? true
+          : b.facility?.property_id === filterProperty ||
+            b.lease?.unit?.property_id === filterProperty;
+
+      if (matchesProperty) {
+        propTotal++;
+        if (isBookingActive(b)) {
+          active.push(b);
+        } else {
+          past.push(b);
+        }
       }
     });
 
-    return { activeBookingsList: active, pastBookingsList: past };
-  }, [bookings]);
+    return {
+      activeBookingsList: active,
+      pastBookingsList: past,
+      propertyScopedTotal: propTotal,
+    };
+  }, [bookings, filterProperty]);
 
   // Current tab source list
   const currentTabList = activeTab === "active" ? activeBookingsList : pastBookingsList;
@@ -102,26 +116,19 @@ export default function AdminBookingList({
   const filteredBookings = currentTabList.filter((b) => {
     const effectiveStatus = getEffectiveStatus(b);
 
-    // 1. Property Filter
-    const matchesProperty =
-      filterProperty === "ALL" || !filterProperty
-        ? true
-        : b.facility?.property_id === filterProperty ||
-          b.lease?.unit?.property_id === filterProperty;
-
-    // 2. Facility Filter
+    // 1. Facility Filter
     const matchesFacility =
       filterFacility === "ALL" || !filterFacility
         ? true
         : b.facility_id === filterFacility;
 
-    // 3. Status Filter
+    // 2. Status Filter
     const matchesStatus =
       filterStatus === "ALL" || !filterStatus
         ? true
         : effectiveStatus.toLowerCase() === filterStatus.toLowerCase();
 
-    // 4. Past Date Range Filter (From / To)
+    // 3. Past Date Range Filter (From / To)
     let matchesDateRange = true;
     if (activeTab === "past") {
       const bDate = new Date(b.booking_date || b.start_time);
@@ -139,7 +146,7 @@ export default function AdminBookingList({
       }
     }
 
-    // 5. Search Filter
+    // 4. Search Filter
     const q = search.toLowerCase().trim();
     const matchesSearch =
       !q ||
@@ -149,7 +156,7 @@ export default function AdminBookingList({
       b.purpose?.toLowerCase().includes(q) ||
       b.booking_id?.toLowerCase().includes(q);
 
-    return matchesProperty && matchesFacility && matchesStatus && matchesDateRange && matchesSearch;
+    return matchesFacility && matchesStatus && matchesDateRange && matchesSearch;
   });
 
   // Action: Update status (Approve or Cancel)
@@ -202,17 +209,16 @@ export default function AdminBookingList({
     }).format(new Date(isoString));
   };
 
-  // Scoped KPIs
-  const propertyScopedList = bookings.filter((b) =>
-    filterProperty === "ALL" || !filterProperty
-      ? true
-      : b.facility?.property_id === filterProperty ||
-        b.lease?.unit?.property_id === filterProperty
-  );
-  const activeCount = propertyScopedList.filter((b) => isBookingActive(b)).length;
-  const pendingCount = propertyScopedList.filter((b) => isBookingActive(b) && (b.booking_status || "").toLowerCase() === "pending").length;
-  const confirmedCount = propertyScopedList.filter((b) => isBookingActive(b) && (b.booking_status || "").toLowerCase() === "confirmed").length;
-  const pastCount = propertyScopedList.filter((b) => !isBookingActive(b)).length;
+  // Scoped KPIs (Aligned with Property Filter)
+  const activeCount = activeBookingsList.length;
+  const pendingCount = activeBookingsList.filter((b) => (b.booking_status || "").toLowerCase() === "pending").length;
+  const confirmedCount = activeBookingsList.filter((b) => (b.booking_status || "").toLowerCase() === "confirmed").length;
+  const pastCount = pastBookingsList.length;
+
+  const currentPropertyName =
+    filterProperty === "ALL"
+      ? "All Properties"
+      : properties.find((p) => p.property_id === filterProperty)?.property_name || "Active Property";
 
   return (
     <div className="space-y-6">
@@ -285,7 +291,7 @@ export default function AdminBookingList({
             <span className="material-symbols-outlined text-[18px]">event_available</span>
             <span>Active Bookings</span>
             <span
-              className={`text-xs px-2 py-0.5 rounded-full font-mono ${
+              className={`text-xs px-2 py-0.5 rounded-full font-mono font-bold ${
                 activeTab === "active"
                   ? "bg-on-primary/20 text-on-primary"
                   : "bg-surface-container-highest text-on-surface-variant"
@@ -310,7 +316,7 @@ export default function AdminBookingList({
             <span className="material-symbols-outlined text-[18px]">history</span>
             <span>Past Bookings</span>
             <span
-              className={`text-xs px-2 py-0.5 rounded-full font-mono ${
+              className={`text-xs px-2 py-0.5 rounded-full font-mono font-bold ${
                 activeTab === "past"
                   ? "bg-on-primary/20 text-on-primary"
                   : "bg-surface-container-highest text-on-surface-variant"
@@ -508,14 +514,14 @@ export default function AdminBookingList({
       <div className="flex items-center justify-between px-1">
         <span className="text-xs text-on-surface-variant">
           Showing <span className="font-semibold text-on-surface">{filteredBookings.length}</span> of {currentTabList.length}{" "}
-          {activeTab === "active" ? "active" : "past"} bookings
+          {activeTab === "active" ? "active" : "past"} bookings{" "}
+          <span className="text-on-surface-variant/70 font-mono">({currentPropertyName})</span>
         </span>
-        {(search || filterProperty !== "ALL" || filterFacility !== "ALL" || filterStatus !== "ALL" || pastDateFrom || pastDateTo) && (
+        {(search || filterFacility !== "ALL" || filterStatus !== "ALL" || pastDateFrom || pastDateTo) && (
           <button
             type="button"
             onClick={() => {
               setSearch("");
-              setFilterProperty("ALL");
               setFilterFacility("ALL");
               setFilterStatus("ALL");
               setPastDateFrom("");
@@ -524,7 +530,7 @@ export default function AdminBookingList({
             className="text-xs text-primary hover:underline font-medium flex items-center gap-1"
           >
             <span className="material-symbols-outlined text-[14px]">close</span>
-            Reset Filters
+            Reset Sub-Filters
           </button>
         )}
       </div>
@@ -538,7 +544,7 @@ export default function AdminBookingList({
           <p className="font-medium text-sm text-on-surface">
             No {activeTab === "active" ? "active" : "past"} bookings found matching your filters.
           </p>
-          <p className="text-xs text-on-surface-variant mt-1">Try adjusting your search keywords, property, or date range.</p>
+          <p className="text-xs text-on-surface-variant mt-1">Try selecting a different property, facility, or date range.</p>
         </div>
       )}
 
