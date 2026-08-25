@@ -40,7 +40,11 @@ export default async function MaintenancePage() {
 
   const allOpenCount = tickets.filter((t) => isUnresolved(t.status)).length;
   const activePropOpenCount = tickets.filter(
-    (t) => isUnresolved(t.status) && t.lease?.unit?.property_id === activePropId
+    (t) =>
+      isUnresolved(t.status) &&
+      (t.property_id === activePropId ||
+        t.lease?.unit?.property_id === activePropId ||
+        t.unit?.property_id === activePropId)
   ).length;
 
   return (

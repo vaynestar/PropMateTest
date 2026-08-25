@@ -1,76 +1,47 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { raiseTicketAction } from "@/app/admin/maintenance/actions";
-
-type PropertyItem = {
-  property_id: string;
-  property_name: string;
-};
-
-type UnitItem = {
-  unit_id: string;
-  unit_number: string;
-  property_id: string;
-  property: {
-    property_name: string;
-  };
-};
 
 type CategoryItem = {
   category_id: string;
   category_name: string;
-  description?: string | null;
-  is_active: boolean;
 };
 
-type AdminRaiseTicketFormProps = {
-  properties: PropertyItem[];
-  occupiedUnits: UnitItem[];
+type ResidentRaiseTicketFormProps = {
+  unitId: string;
+  unitNumber: string;
+  propertyId: string;
+  propertyName: string;
   categories: CategoryItem[];
-  defaultPropertyId: string;
+  raiseAction: (formData: FormData) => Promise<{ success?: boolean; error?: string }>;
 };
-
-const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 
 const COMMON_AREA_PRESETS = [
   "Hallway / Corridor",
   "Passenger Lift / Lift Lobby",
-  "Carpark / Driveway & Ramps",
+  "Carpark / Driveway",
   "Swimming Pool & Pool Deck",
   "Resident Gym & Fitness Area",
-  "Security Guardhouse & Boom Gate",
+  "Security Guardhouse / Main Gate",
   "Refuse Room & Waste Chute",
-  "Roof & Sky Garden",
-  "Staircase & Emergency Fire Exit",
-  "Management Office & Reception",
+  "Staircase / Fire Exit",
   "Surrounding Landscape & Playground",
-  "EV Charging Station Hub",
+  "EV Charging Hub",
   "Others / Custom Location",
 ];
 
-export default function AdminRaiseTicketForm({
-  properties,
-  occupiedUnits,
+export default function ResidentRaiseTicketForm({
+  unitId,
+  unitNumber,
+  propertyId,
+  propertyName,
   categories,
-  defaultPropertyId,
-}: AdminRaiseTicketFormProps) {
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(
-    defaultPropertyId && properties.some((p) => p.property_id === defaultPropertyId)
-      ? defaultPropertyId
-      : (properties[0]?.property_id ?? "ALL")
-  );
+  raiseAction,
+}: ResidentRaiseTicketFormProps) {
   const [locationType, setLocationType] = useState<"Unit" | "Common Area">("Unit");
   const [commonAreaPreset, setCommonAreaPreset] = useState("Hallway / Corridor");
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-
-  // Filter occupied units based on selected property in ticket form
-  const filteredUnits = selectedPropertyId === "ALL"
-    ? occupiedUnits
-    : occupiedUnits.filter((u) => u.property_id === selectedPropertyId);
-
-  const activeCategories = categories.filter((c) => c.is_active);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -78,11 +49,11 @@ export default function AdminRaiseTicketForm({
     const formEl = e.currentTarget;
 
     startTransition(async () => {
-      const res = await raiseTicketAction(formData);
+      const res = await raiseAction(formData);
       if (res?.error) {
         setToast({ message: res.error, type: "error" });
-      } else if (res?.success) {
-        setToast({ message: res.message, type: "success" });
+      } else {
+        setToast({ message: "Helpdesk request submitted successfully!", type: "success" });
         formEl.reset();
         setLocationType("Unit");
       }
@@ -107,31 +78,15 @@ export default function AdminRaiseTicketForm({
         </div>
       )}
 
-      {/* Property Selector */}
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-on-surface-variant">
-          Property <span className="text-rose-400">*</span>
-        </label>
-        <select
-          name="property_id"
-          value={selectedPropertyId}
-          onChange={(e) => setSelectedPropertyId(e.target.value)}
-          className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary text-sm font-medium"
-        >
-          {properties.map((p) => (
-            <option key={p.property_id} value={p.property_id}>
-              🏢 {p.property_name} {p.property_id === defaultPropertyId ? " (Active)" : ""}
-            </option>
-          ))}
-        </select>
-      </div>
+      <input type="hidden" name="property_id" value={propertyId} />
+      <input type="hidden" name="location_type" value={locationType} />
+      {locationType === "Unit" && <input type="hidden" name="unit_id" value={unitId} />}
 
-      {/* Location Type Selector Toggle */}
-      <div className="space-y-1">
+      {/* Location Scope Toggle */}
+      <div className="space-y-1 md:col-span-2">
         <label className="text-xs font-medium text-on-surface-variant block">
-          Issue Location Scope <span className="text-rose-400">*</span>
+          Issue Location <span className="text-rose-400">*</span>
         </label>
-        <input type="hidden" name="location_type" value={locationType} />
         <div className="grid grid-cols-2 gap-1.5 bg-surface-container-high p-1 rounded-lg border border-outline-variant">
           <button
             type="button"
@@ -143,7 +98,7 @@ export default function AdminRaiseTicketForm({
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">meeting_room</span>
-            <span>Specific Unit</span>
+            <span>My Unit ({unitNumber})</span>
           </button>
           <button
             type="button"
@@ -160,33 +115,7 @@ export default function AdminRaiseTicketForm({
         </div>
       </div>
 
-      {/* Conditional: Unit Selector */}
-      {locationType === "Unit" && (
-        <div className="space-y-1 md:col-span-2">
-          <label className="text-xs font-medium text-on-surface-variant">
-            Occupied Unit <span className="text-rose-400">*</span>
-          </label>
-          <select
-            name="unit_id"
-            required={locationType === "Unit"}
-            defaultValue=""
-            className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary text-sm"
-          >
-            <option value="">
-              {filteredUnits.length === 0
-                ? "No occupied units under selected property"
-                : "Select occupied unit..."}
-            </option>
-            {filteredUnits.map((u) => (
-              <option key={u.unit_id} value={u.unit_id}>
-                Unit {u.unit_number} ({u.property.property_name})
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* Conditional: Common Area / Hallway Details */}
+      {/* Conditional: Common Area Details */}
       {locationType === "Common Area" && (
         <>
           <div className="space-y-1">
@@ -208,11 +137,11 @@ export default function AdminRaiseTicketForm({
 
           <div className="space-y-1">
             <label className="text-xs font-medium text-on-surface-variant">
-              Location Specifics / Floor <span className="text-rose-400">*</span>
+              Location Specifics <span className="text-rose-400">*</span>
             </label>
             <input
               name="location_detail"
-              placeholder={`e.g. Level 3 Hallway near Unit 302, Lift B lobby, etc.`}
+              placeholder={`e.g. Level 3 Hallway, Lift A, Carpark Bay 12`}
               defaultValue={commonAreaPreset}
               required={locationType === "Common Area"}
               className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 outline-none focus:border-primary text-sm"
@@ -221,43 +150,31 @@ export default function AdminRaiseTicketForm({
         </>
       )}
 
-      {/* Ticket Category Dropdown (From Category Master) */}
-      <div className="space-y-1">
+      {/* Ticket Category */}
+      <div className="space-y-1 md:col-span-2">
         <label className="text-xs font-medium text-on-surface-variant">
           Category <span className="text-rose-400">*</span>
         </label>
         <select
           name="ticket_category"
           required
-          defaultValue={activeCategories[0]?.category_name ?? "General Maintenance"}
+          defaultValue={categories[0]?.category_name ?? "General Maintenance"}
           className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary text-sm"
         >
-          {activeCategories.map((c) => (
+          {categories.map((c) => (
             <option key={c.category_id} value={c.category_name}>
               {c.category_name}
             </option>
           ))}
-          {activeCategories.length === 0 && (
-            <option value="General Maintenance">General Maintenance</option>
+          {categories.length === 0 && (
+            <>
+              <option value="General Maintenance">General Maintenance</option>
+              <option value="Plumbing">Plumbing</option>
+              <option value="Electrical">Electrical</option>
+              <option value="Security">Security</option>
+              <option value="Others">Others</option>
+            </>
           )}
-        </select>
-      </div>
-
-      {/* Priority Level Dropdown */}
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-on-surface-variant">
-          Priority <span className="text-rose-400">*</span>
-        </label>
-        <select
-          name="priority"
-          defaultValue="Medium"
-          className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary text-sm"
-        >
-          {PRIORITIES.map((p) => (
-            <option key={p} value={p}>
-              {p}
-            </option>
-          ))}
         </select>
       </div>
 
@@ -268,7 +185,7 @@ export default function AdminRaiseTicketForm({
         </label>
         <input
           name="title"
-          placeholder="Brief summary of the issue (e.g. Hallway ceiling light blinking, Water pipe leaking)"
+          placeholder="Brief summary of the issue (e.g. Hallway light not working, Water leaking)"
           required
           className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 outline-none focus:border-primary text-sm"
         />
@@ -281,7 +198,7 @@ export default function AdminRaiseTicketForm({
         </label>
         <textarea
           name="description"
-          placeholder="Provide context, observations, or technician notes about the problem..."
+          placeholder="Describe what happened and any details that can help management fix it..."
           required
           rows={3}
           className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 outline-none focus:border-primary text-sm resize-none"
@@ -289,18 +206,16 @@ export default function AdminRaiseTicketForm({
       </div>
 
       {/* Submit Button */}
-      <div className="md:col-span-2 pt-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="btn-primary w-full py-2.5 rounded-lg text-white font-label-md text-label-md flex items-center justify-center gap-2 shadow-sm hover:brightness-110 transition-all disabled:opacity-50 pressable"
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            {isPending ? "sync" : "add_task"}
-          </span>
-          <span>{isPending ? "Submitting Ticket..." : "Submit Ticket"}</span>
-        </button>
-      </div>
+      <button
+        type="submit"
+        disabled={isPending}
+        className="btn-primary px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2 transition-all md:col-span-2 rounded-lg text-white shadow-sm hover:brightness-110 disabled:opacity-50 pressable"
+      >
+        <span className="material-symbols-outlined text-[18px]">
+          {isPending ? "sync" : "add_alert"}
+        </span>
+        <span>{isPending ? "Submitting Request..." : "Submit Request"}</span>
+      </button>
     </form>
   );
 }

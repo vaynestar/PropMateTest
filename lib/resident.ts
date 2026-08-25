@@ -41,8 +41,17 @@ export async function getResidentInvoices(userId: string) {
 export async function getResidentTickets(userId: string) {
   return prisma.ticket.findMany({
     orderBy: { created_at: "desc" },
-    where: { lease: { tenant: { user_id: userId } } },
-    include: { lease: { include: { unit: true } } },
+    where: {
+      OR: [
+        { requester_id: userId },
+        { lease: { tenant: { user_id: userId } } },
+      ],
+    },
+    include: {
+      property: true,
+      unit: true,
+      lease: { include: { unit: true } },
+    },
   });
 }
 

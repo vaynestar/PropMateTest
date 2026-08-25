@@ -26,18 +26,29 @@ export async function raiseTicketAction(formData: FormData) {
   const user = await requireUser(["Admin"]);
   const { raiseTicket } = await import("@/lib/maintenance");
 
+  const propertyId = String(formData.get("property_id") || "");
+  const locationType = String(formData.get("location_type") || "Unit");
   const unitId = String(formData.get("unit_id") || "");
+  const locationDetail = String(formData.get("location_detail") || "");
   const title = String(formData.get("title") || "");
   const description = String(formData.get("description") || "");
   const category = String(formData.get("ticket_category") || "");
   const priority = String(formData.get("priority") || "Medium");
 
-  if (!unitId) return { error: "Please select an occupied unit." };
-  if (!title) return { error: "Please enter an issue title." };
+  if (!title.trim()) return { error: "Please enter an issue title." };
+  if (locationType === "Unit" && !unitId) {
+    return { error: "Please select a unit or choose Common Area." };
+  }
+  if (locationType === "Common Area" && !locationDetail.trim()) {
+    return { error: "Please provide the common area location details (e.g. Level 3 Hallway, Lift Lobby B)." };
+  }
 
   try {
     await raiseTicket({
-      unit_id: unitId,
+      property_id: propertyId && propertyId !== "ALL" ? propertyId : undefined,
+      unit_id: locationType === "Unit" ? unitId : undefined,
+      location_type: locationType,
+      location_detail: locationDetail,
       requester_id: user.userId,
       title,
       description,

@@ -1,15 +1,17 @@
 import { Prisma } from "@prisma/client";
-
 import prisma from "@/lib/prisma";
 
 type TicketWithRelations = Prisma.TicketGetPayload<{
   include: {
+    property: true;
+    unit: { include: { property: true } };
     lease: { include: { unit: { include: { property: true } }; tenant: true } };
+    reporter: { select: { user_name: true; user_email: true; phone_number: true } };
   };
 }>;
 
 const VALID_PRIORITIES = ["Low", "Medium", "High", "Urgent"];
-const VALID_STATUSES = ["Open", "In Progress", "Pending Parts", "Resolved", "Closed"];
+const VALID_STATUSES = ["Open", "In Progress", "Pending Parts", "KIV", "Resolved", "Closed"];
 
 function requireText(value: unknown, fieldName: string): string {
   const trimmed = String(value ?? "").trim();
@@ -48,15 +50,26 @@ export async function deleteTicketCategory(categoryId: string) {
 
 export async function listTickets(propertyId?: string): Promise<TicketWithRelations[]> {
   return prisma.ticket.findMany({
-    where: propertyId ? { lease: { unit: { property_id: propertyId } } } : undefined,
+    where: propertyId
+      ? {
+          OR: [
+            { property_id: propertyId },
+            { lease: { unit: { property_id: propertyId } } },
+            { unit: { property_id: propertyId } },
+          ],
+        }
+      : undefined,
     orderBy: { created_at: "desc" },
     include: {
+      property: true,
+      unit: { include: { property: true } },
       lease: {
         include: {
           unit: { include: { property: true } },
           tenant: true,
         },
       },
+      reporter: { select: { user_name: true, user_email: true, phone_number: true } },
     },
   });
 }
@@ -66,18 +79,24 @@ export async function getRecentTickets(limit = 5): Promise<TicketWithRelations[]
     orderBy: { created_at: "desc" },
     take: limit,
     include: {
+      property: true,
+      unit: { include: { property: true } },
       lease: {
         include: {
           unit: { include: { property: true } },
           tenant: true,
         },
       },
+      reporter: { select: { user_name: true, user_email: true, phone_number: true } },
     },
   });
 }
 
 export async function raiseTicket(input: {
-  unit_id: string;
+  property_id?: string;
+  unit_id?: string;
+  location_type?: string; // "Unit" | "Common Area"
+  location_detail?: string;
   requester_id: string;
   title: string;
   description: string;
@@ -85,15 +104,28 @@ export async function raiseTicket(input: {
   priority: string;
   createdBy?: string;
 }) {
-  const unit = await prisma.unit.findUnique({
-    where: { unit_id: input.unit_id },
-    include: { leases: { where: { status: "Active" }, take: 1 } },
-  });
-  if (!unit) throw new Error("Selected unit does not exist");
+  let propertyId = input.property_id || null;
+  let leaseId: string | null = null;
+  let unitId = input.unit_id || null;
+  const locationType = input.location_type || (unitId ? "Unit" : "Common Area");
 
-  const lease = unit.leases[0];
-  if (!lease) {
-    throw new Error("Selected unit has no active lease to attach the ticket to");
+  if (locationType === "Unit" && unitId) {
+    const unit = await prisma.unit.findUnique({
+      where: { unit_id: unitId },
+      include: { leases: { where: { status: "Active" }, take: 1 } },
+    });
+    if (unit) {
+      propertyId = unit.property_id;
+      if (unit.leases.length > 0) {
+        leaseId = unit.leases[0].lease_id;
+      }
+    }
+  } else if (!propertyId && unitId) {
+    const unit = await prisma.unit.findUnique({
+      where: { unit_id: unitId },
+      select: { property_id: true },
+    });
+    if (unit) propertyId = unit.property_id;
   }
 
   const priority = VALID_PRIORITIES.includes(input.priority)
@@ -103,9 +135,12 @@ export async function raiseTicket(input: {
 
   return prisma.ticket.create({
     data: {
-      lease_id: lease.lease_id,
+      property_id: propertyId,
+      lease_id: leaseId,
+      unit_id: locationType === "Unit" ? unitId : null,
+      location_type: locationType,
+      location_detail: input.location_detail?.trim() || null,
       requester_id: input.requester_id,
-      unit_id: unit.unit_id,
       title: requireText(input.title, "Title"),
       description: requireText(input.description, "Description"),
       ticket_category: category,
@@ -135,24 +170,27 @@ export async function updateTicketStatus(
     resolved_at?: Date; 
     modified_by?: string;
     cost?: number;
-    assigned_to?: string | null;
-    remark?: string | null;
+    assigned_to?: string;
+    remark?: string;
   } = {
     status,
     modified_by: modifiedBy,
   };
-  
-  if (status === "Resolved" || status === "Closed") {
-    data.resolved_at = new Date();
-  }
-  if (cost !== undefined) {
+
+  if (cost !== undefined && !isNaN(cost)) {
     data.cost = cost;
   }
+
   if (assignedTo !== undefined) {
-    data.assigned_to = assignedTo === "" ? null : assignedTo;
+    data.assigned_to = assignedTo.trim() === "" ? undefined : assignedTo;
   }
+
   if (remark !== undefined) {
-    data.remark = remark.trim() || null;
+    data.remark = remark.trim() === "" ? undefined : remark.trim();
+  }
+
+  if (status === "Resolved" || status === "Closed") {
+    data.resolved_at = new Date();
   }
 
   return prisma.ticket.update({

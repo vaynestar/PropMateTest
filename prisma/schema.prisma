@@ -35,6 +35,7 @@ model PropertyMaster {
   units         Unit[]
   facilities    Facility[]
   announcements Announcement[]
+  tickets       Ticket[]
 
   @@map("property_master")
 }
@@ -60,6 +61,7 @@ model Unit {
   // Relations
   property     PropertyMaster @relation(fields: [property_id], references: [property_id])
   leases       TenantLease[]
+  tickets      Ticket[]
 
   @@map("units")
 }
@@ -302,10 +304,13 @@ model LeaseCharge {
 
 model Ticket {
   ticket_id         String    @id @default(uuid()) @db.Uuid
-  lease_id          String    @db.Uuid
+  property_id       String?   @db.Uuid
+  lease_id          String?   @db.Uuid
   requester_id      String    @db.Uuid
   assigned_to       String?   @db.Uuid
   unit_id           String?   @db.Uuid 
+  location_type     String    @default("Unit") @db.VarChar // "Unit" | "Common Area"
+  location_detail   String?   @db.VarChar // e.g. "Level 3 Hallway", "Lift A Lobby", "Visitor Parking"
   requester_name    String?   @db.VarChar
   requester_contact String?   @db.VarChar
   title             String    @db.VarChar
@@ -326,9 +331,11 @@ model Ticket {
   modifier     User?    @relation("TicketModifiedBy", fields: [modified_by], references: [user_id])
 
   // Relations
-  lease        TenantLease @relation(fields: [lease_id], references: [lease_id])
-  reporter     User        @relation("TicketReporter", fields: [requester_id], references: [user_id])
-  assignee     User?       @relation("TicketAssignee", fields: [assigned_to], references: [user_id])
+  property     PropertyMaster? @relation(fields: [property_id], references: [property_id])
+  lease        TenantLease?    @relation(fields: [lease_id], references: [lease_id])
+  unit         Unit?           @relation(fields: [unit_id], references: [unit_id])
+  reporter     User            @relation("TicketReporter", fields: [requester_id], references: [user_id])
+  assignee     User?           @relation("TicketAssignee", fields: [assigned_to], references: [user_id])
   
   comments     TicketComment[]
   attachments  TicketAttachment[]
