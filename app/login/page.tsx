@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Image from "next/image";
 import { loginAction } from "./actions";
 
 export default function LoginPage() {
   const [state, formAction, pending] = useActionState(loginAction, {});
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <div className="bg-surface text-on-surface font-body-md h-screen w-full flex overflow-hidden">
@@ -85,14 +86,25 @@ export default function LoginPage() {
                   lock
                 </span>
                 <input
-                  className="w-full pl-10 pr-4 py-3 bg-surface-container-lowest border border-outline-variant rounded text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-on-surface-variant/50 outline-none"
+                  className="w-full pl-10 pr-10 py-3 bg-surface-container-lowest border border-outline-variant rounded text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-on-surface-variant/50 outline-none"
                   id="password"
                   name="password"
                   placeholder="••••••••"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors p-1 flex items-center justify-center rounded"
+                  title={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {showPassword ? "visibility_off" : "visibility"}
+                  </span>
+                </button>
               </div>
             </div>
 
