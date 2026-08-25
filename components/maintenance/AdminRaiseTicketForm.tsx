@@ -62,6 +62,9 @@ export default function AdminRaiseTicketForm({
   );
   const [locationType, setLocationType] = useState<"Unit" | "Common Area">("Unit");
   const [commonAreaPreset, setCommonAreaPreset] = useState("Hallway / Corridor");
+  const [locationDetail, setLocationDetail] = useState("Hallway / Corridor");
+  const [isDetailCustomized, setIsDetailCustomized] = useState(false);
+
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -71,6 +74,26 @@ export default function AdminRaiseTicketForm({
     : occupiedUnits.filter((u) => u.property_id === selectedPropertyId);
 
   const activeCategories = categories.filter((c) => c.is_active);
+
+  // When changing zone preset: update text input if user hasn't typed custom content
+  const handlePresetChange = (newPreset: string) => {
+    setCommonAreaPreset(newPreset);
+    if (!isDetailCustomized || locationDetail === commonAreaPreset || !locationDetail.trim()) {
+      setLocationDetail(newPreset);
+      setIsDetailCustomized(false);
+    }
+  };
+
+  const handleDetailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setLocationDetail(val);
+    setIsDetailCustomized(val.trim() !== "" && val !== commonAreaPreset);
+  };
+
+  const resetToPreset = () => {
+    setLocationDetail(commonAreaPreset);
+    setIsDetailCustomized(false);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -85,6 +108,9 @@ export default function AdminRaiseTicketForm({
         setToast({ message: res.message, type: "success" });
         formEl.reset();
         setLocationType("Unit");
+        setCommonAreaPreset("Hallway / Corridor");
+        setLocationDetail("Hallway / Corridor");
+        setIsDetailCustomized(false);
       }
       setTimeout(() => setToast(null), 5000);
     });
@@ -195,7 +221,7 @@ export default function AdminRaiseTicketForm({
             </label>
             <select
               value={commonAreaPreset}
-              onChange={(e) => setCommonAreaPreset(e.target.value)}
+              onChange={(e) => handlePresetChange(e.target.value)}
               className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary text-sm font-medium"
             >
               {COMMON_AREA_PRESETS.map((preset) => (
@@ -207,13 +233,27 @@ export default function AdminRaiseTicketForm({
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium text-on-surface-variant">
-              Location Specifics / Floor <span className="text-rose-400">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-on-surface-variant">
+                Location Specifics / Floor <span className="text-rose-400">*</span>
+              </label>
+              {isDetailCustomized && (
+                <button
+                  type="button"
+                  onClick={resetToPreset}
+                  className="text-[11px] text-primary hover:underline flex items-center gap-0.5"
+                  title="Reset to selected zone name"
+                >
+                  <span className="material-symbols-outlined text-[13px]">refresh</span>
+                  <span>Reset to zone</span>
+                </button>
+              )}
+            </div>
             <input
               name="location_detail"
+              value={locationDetail}
+              onChange={handleDetailChange}
               placeholder={`e.g. Level 3 Hallway near Unit 302, Lift B lobby, etc.`}
-              defaultValue={commonAreaPreset}
               required={locationType === "Common Area"}
               className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 outline-none focus:border-primary text-sm"
             />
