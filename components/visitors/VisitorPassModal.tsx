@@ -65,14 +65,14 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Print Pass Slip
+  // Open dedicated print pass window
   const handlePrint = () => {
-    window.print();
+    window.open(`/print/visitor/${visitor.visitor_id}`, "_blank");
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl w-full max-w-sm p-6 shadow-2xl relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+      <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl w-full max-w-sm p-5 sm:p-6 shadow-2xl relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
         {/* Close Button */}
         <button
           type="button"
@@ -84,9 +84,9 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
         </button>
 
         {/* Security Badge Header */}
-        <div className="flex flex-col items-center gap-1.5 mb-4">
-          <div className="px-3 py-1 rounded-full bg-primary/10 border border-primary/20 text-primary text-[11px] font-semibold tracking-wider uppercase flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[14px]">badge</span>
+        <div className="flex flex-col items-center gap-1 mb-3">
+          <div className="px-3 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-semibold tracking-wider uppercase flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[13px]">badge</span>
             <span>Digital Access Pass</span>
           </div>
           <h3 className="text-lg font-bold text-white tracking-tight mt-1">
@@ -98,21 +98,21 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
         </div>
 
         {/* QR Code Card Frame */}
-        <div className="bg-white p-4 rounded-2xl shadow-xl border border-white/20 mb-4 flex flex-col items-center">
+        <div className="bg-white p-3.5 rounded-2xl shadow-xl border border-white/20 mb-3.5 flex flex-col items-center">
           <QRCodeCanvas
             ref={canvasRef}
             value={visitor.visitor_id}
-            size={180}
+            size={175}
             level="H"
             includeMargin={true}
           />
-          <span className="text-[10px] font-mono text-gray-500 mt-2 font-semibold">
+          <span className="text-[10px] font-mono text-gray-500 mt-1.5 font-semibold">
             SCAN AT GUARDHOUSE
           </span>
         </div>
 
         {/* Pass Metadata Summary Box */}
-        <div className="w-full bg-surface-container-high/60 border border-outline-variant/40 rounded-xl p-3 text-left text-xs space-y-1.5 mb-5">
+        <div className="w-full bg-surface-container-high/60 border border-outline-variant/40 rounded-xl p-3 text-left text-xs space-y-1.5 mb-4">
           <div className="flex justify-between">
             <span className="text-on-surface-variant text-[11px]">Destination:</span>
             <span className="font-bold text-white">{destinationText}</span>
@@ -141,26 +141,37 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
           )}
         </div>
 
-        {/* Action Buttons */}
-        <div className="w-full grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="btn-primary py-2.5 rounded-xl text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all pressable"
-          >
-            <span className="material-symbols-outlined text-[16px]">download</span>
-            <span>Save QR Image</span>
-          </button>
+        {/* Action Buttons: Print, Download, Copy */}
+        <div className="w-full flex flex-col gap-2">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              className="btn-primary py-2.5 rounded-xl text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all pressable"
+            >
+              <span className="material-symbols-outlined text-[16px]">print</span>
+              <span>Print Pass Slip</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownload}
+              className="py-2.5 rounded-xl bg-surface-container-high border border-outline-variant hover:bg-surface-container-highest text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors pressable"
+            >
+              <span className="material-symbols-outlined text-[16px] text-primary">download</span>
+              <span>Save QR Image</span>
+            </button>
+          </div>
 
           <button
             type="button"
             onClick={handleCopyId}
-            className="py-2.5 rounded-xl bg-surface-container-high border border-outline-variant hover:bg-surface-container-highest text-white font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors pressable"
+            className="w-full py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/60 hover:bg-surface-container-high text-on-surface-variant hover:text-white font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors pressable"
           >
-            <span className="material-symbols-outlined text-[16px] text-primary">
+            <span className="material-symbols-outlined text-[15px]">
               {copied ? "check" : "content_copy"}
             </span>
-            <span>{copied ? "Copied ID!" : "Copy Pass ID"}</span>
+            <span>{copied ? "Copied Pass ID to Clipboard!" : "Copy Pass UUID"}</span>
           </button>
         </div>
       </div>
