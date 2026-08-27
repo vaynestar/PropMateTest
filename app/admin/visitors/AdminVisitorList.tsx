@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import StatusBadge from "@/components/dashboard/StatusBadge";
+import VisitorPassModal from "@/components/visitors/VisitorPassModal";
 import { updateVisitorStatus } from "./actions";
 
 interface VisitorRecord {
@@ -39,6 +40,7 @@ interface VisitorRecord {
 export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord[] }) {
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [viewingPassVisitor, setViewingPassVisitor] = useState<VisitorRecord | null>(null);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState("");
@@ -318,7 +320,18 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                         {v.visitor_name}
                       </h3>
                     </div>
-                    <StatusBadge status={v.status || "Pending"} />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <StatusBadge status={v.status || "Pending"} />
+                      <button
+                        type="button"
+                        onClick={() => setViewingPassVisitor(v)}
+                        className="p-1.5 rounded-lg bg-primary/10 border border-primary/25 hover:bg-primary/20 text-primary transition-colors flex items-center justify-center pressable"
+                        title="View / Download QR Pass"
+                        aria-label="View QR Pass"
+                      >
+                        <span className="material-symbols-outlined text-[17px]">qr_code_2</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Destination Tag */}
@@ -514,44 +527,64 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                     <StatusBadge status={v.status || "Pending"} />
                   </td>
                   <td className="px-4 py-3.5 text-right">
-                    {v.status === "Pending" ? (
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          onClick={() => handleUpdateStatus(v.visitor_id, "Approved")}
-                          className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold hover:bg-emerald-500/25"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => handleUpdateStatus(v.visitor_id, "Declined")}
-                          className="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[11px] font-semibold hover:bg-rose-500/25"
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    ) : v.status === "Approved" ? (
+                    <div className="flex items-center justify-end gap-1.5">
                       <button
-                        onClick={() => handleUpdateStatus(v.visitor_id, "Checked In")}
-                        className="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold hover:bg-emerald-500/30"
+                        type="button"
+                        onClick={() => setViewingPassVisitor(v)}
+                        className="p-1 rounded-lg bg-surface-container-high border border-outline-variant/60 hover:border-primary text-primary transition-colors flex items-center justify-center pressable"
+                        title="View / Download QR Pass"
+                        aria-label="View QR Pass"
                       >
-                        Check In
+                        <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
                       </button>
-                    ) : v.status === "Checked In" ? (
-                      <button
-                        onClick={() => handleUpdateStatus(v.visitor_id, "Checked Out")}
-                        className="px-3 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[11px] font-bold hover:bg-cyan-500/25"
-                      >
-                        Check Out
-                      </button>
-                    ) : (
-                      <span className="text-[11px] text-on-surface-variant opacity-50">-</span>
-                    )}
+
+                      {v.status === "Pending" ? (
+                        <>
+                          <button
+                            onClick={() => handleUpdateStatus(v.visitor_id, "Approved")}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 text-[11px] font-semibold hover:bg-emerald-500/25"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(v.visitor_id, "Declined")}
+                            className="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[11px] font-semibold hover:bg-rose-500/25"
+                          >
+                            Decline
+                          </button>
+                        </>
+                      ) : v.status === "Approved" ? (
+                        <button
+                          onClick={() => handleUpdateStatus(v.visitor_id, "Checked In")}
+                          className="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold hover:bg-emerald-500/30"
+                        >
+                          Check In
+                        </button>
+                      ) : v.status === "Checked In" ? (
+                        <button
+                          onClick={() => handleUpdateStatus(v.visitor_id, "Checked Out")}
+                          className="px-3 py-1 rounded-lg bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[11px] font-bold hover:bg-cyan-500/25"
+                        >
+                          Check Out
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-on-surface-variant opacity-50 px-1">-</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* VISITOR PASS MODAL */}
+      {viewingPassVisitor && (
+        <VisitorPassModal
+          visitor={viewingPassVisitor}
+          onClose={() => setViewingPassVisitor(null)}
+        />
       )}
     </div>
   );
