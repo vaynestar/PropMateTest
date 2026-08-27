@@ -503,10 +503,16 @@ model Facility {
 
 model Announcement {
   announcement_id String   @id @default(uuid()) @db.Uuid
-  property_id     String   @db.Uuid 
+  property_id     String?  @db.Uuid 
   title           String   @db.VarChar
   content         String   @db.Text
+  category        String   @default("Notice") @db.VarChar
+  priority        String   @default("Normal") @db.VarChar
+  status          String   @default("Published") @db.VarChar
+  is_pinned       Boolean  @default(false)
+  target_audience String   @default("All") @db.VarChar
   image_url       String?  @db.Text
+  attachment_url  String?  @db.Text
   publish_date    DateTime @db.Date
   expiry_date     DateTime @db.Date
 
@@ -519,9 +525,9 @@ model Announcement {
   modifier     User?    @relation("AnnouncementModifiedBy", fields: [modified_by], references: [user_id])
 
   // Relations
-  property     PropertyMaster @relation(fields: [property_id], references: [property_id])
+  property     PropertyMaster? @relation(fields: [property_id], references: [property_id])
   
-  author       User?          @relation("AnnouncementAuthor", fields: [created_by], references: [user_id], map: "announcements_author_custom_fkey")
+  author       User?           @relation("AnnouncementAuthor", fields: [created_by], references: [user_id], map: "announcements_author_custom_fkey")
 
   @@map("announcements")
 }

@@ -71,11 +71,22 @@ export async function getResidentBookings(userId: string) {
 }
 
 export async function getLatestAnnouncement(propertyId: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   return prisma.announcement.findFirst({
     where: {
-      property_id: propertyId,
-      expiry_date: { gte: new Date() },
+      OR: [
+        { property_id: propertyId },
+        { property_id: null },
+      ],
+      status: "Published",
+      expiry_date: { gte: today },
     },
-    orderBy: { publish_date: "desc" },
+    orderBy: [
+      { is_pinned: "desc" },
+      { priority: "desc" },
+      { publish_date: "desc" },
+    ],
   });
 }

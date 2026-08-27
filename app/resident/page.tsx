@@ -24,7 +24,9 @@ const QUICK_ACTIONS = [
   { label: "Invoices", icon: "receipt_long", href: "/resident/invoices" },
   { label: "Helpdesk", icon: "build_circle", href: "/resident/maintenance" },
   { label: "Facilities", icon: "pool", href: "/resident/facilities" },
-  { label: "Visitors", icon: "group_add", href: "#" },
+  { label: "Visitors", icon: "person_search", href: "/resident/visitors" },
+  { label: "Notices", icon: "campaign", href: "/resident/announcements" },
+  { label: "My Unit", icon: "apartment", href: "/resident/unit" },
 ];
 
 export default async function ResidentDashboardPage() {
@@ -117,19 +119,19 @@ export default async function ResidentDashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-stack-sm">
+      <section className="grid grid-cols-3 sm:grid-cols-6 gap-stack-sm">
         {QUICK_ACTIONS.map((action) => (
           <Link
             key={action.label}
             href={action.href}
             className="pressable glass-card rounded-xl p-stack-md flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-colors group"
           >
-            <div className="w-12 h-12 rounded-full bg-surface-container-high/50 flex items-center justify-center border border-outline-variant group-hover:border-primary/50 transition-colors">
-              <span className="material-symbols-outlined text-primary group-hover:text-on-surface transition-colors">
+            <div className="w-11 h-11 rounded-full bg-surface-container-high/50 flex items-center justify-center border border-outline-variant group-hover:border-primary/50 transition-colors">
+              <span className="material-symbols-outlined text-primary group-hover:text-on-surface transition-colors text-[20px]">
                 {action.icon}
               </span>
             </div>
-            <span className="font-label-md text-label-md text-on-surface">
+            <span className="font-label-sm text-label-sm text-on-surface text-center truncate w-full">
               {action.label}
             </span>
           </Link>
@@ -149,24 +151,26 @@ export default async function ResidentDashboardPage() {
               today.setHours(0,0,0,0);
               const tomorrow = new Date(today);
               tomorrow.setDate(tomorrow.getDate() + 1);
-              
-              const dTime = d.setHours(0,0,0,0);
-              let dateLabel = formatDate(booking.booking_date);
-              if (dTime === today.getTime()) dateLabel = "Today";
-              else if (dTime === tomorrow.getTime()) dateLabel = "Tomorrow";
 
-              const startStr = new Date(booking.start_time).toTimeString().slice(0,5);
-              const endStr = new Date(booking.end_time).toTimeString().slice(0,5);
+              let dateDisplay = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+              if (d.getTime() === today.getTime()) dateDisplay = "Today";
+              else if (d.getTime() === tomorrow.getTime()) dateDisplay = "Tomorrow";
+
+              const startStr = new Date(booking.start_time).toTimeString().slice(0, 5);
+              const endStr = new Date(booking.end_time).toTimeString().slice(0, 5);
 
               return (
-                <div key={booking.booking_id} className="glass-card rounded-lg min-w-[240px] flex-shrink-0 flex flex-col">
-                  <div className="h-24 rounded-t-lg bg-surface-container-highest/50 overflow-hidden relative flex items-center justify-center border-b border-outline-variant/30">
-                    <span className="material-symbols-outlined text-4xl text-primary/40">meeting_room</span>
-                    <div className="absolute top-2 right-2 bg-surface-container-highest/90 backdrop-blur px-2 py-1 rounded font-label-sm text-label-sm border border-outline-variant">
-                      {dateLabel}
-                    </div>
+                <div
+                  key={booking.booking_id}
+                  className="glass-card rounded-xl p-stack-md flex flex-col gap-stack-sm flex-shrink-0 w-64 border-l-4 border-l-primary"
+                >
+                  <div className="flex justify-between items-start">
+                    <span className="font-label-sm text-label-sm text-primary font-bold">{dateDisplay}</span>
+                    <span className="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant">
+                      {booking.booking_status}
+                    </span>
                   </div>
-                  <div className="p-stack-md flex flex-col gap-2">
+                  <div>
                     <span className="font-label-md text-label-md text-on-surface">{booking.facility.facility_name}</span>
                     <div className="flex items-center gap-2 text-on-secondary">
                       <span className="material-symbols-outlined text-[16px]">schedule</span>
@@ -184,32 +188,71 @@ export default async function ResidentDashboardPage() {
 
       {announcement && (
         <section className="flex flex-col gap-stack-sm mb-4">
-          <h2 className="font-title-lg text-title-lg text-on-surface">
-            Latest Announcement
-          </h2>
-          <div className="glass-card rounded-lg p-stack-md flex items-start gap-stack-md">
-            <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0 mt-1">
+          <div className="flex justify-between items-center">
+            <h2 className="font-title-lg text-title-lg text-on-surface flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[20px]">campaign</span>
+              <span>Latest Announcement</span>
+            </h2>
+            <Link
+              href="/resident/announcements"
+              className="font-label-sm text-label-sm text-primary hover:underline flex items-center gap-0.5"
+            >
+              <span>View All Circulars</span>
+              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </Link>
+          </div>
+
+          <Link
+            href="/resident/announcements"
+            className={`glass-card rounded-2xl p-4 sm:p-5 flex items-start gap-4 hover:border-primary/50 transition-all ${
+              announcement.priority === "Urgent"
+                ? "border-rose-500/50 bg-rose-950/20 shadow-lg shadow-rose-950/30"
+                : "hover:bg-surface-container-high"
+            }`}
+          >
+            <div
+              className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 border ${
+                announcement.priority === "Urgent"
+                  ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                  : "bg-primary/10 text-primary border-primary/20"
+              }`}
+            >
               <span
-                className="material-symbols-outlined text-primary"
+                className="material-symbols-outlined text-[22px]"
                 style={{ fontVariationSettings: "'FILL' 1" }}
               >
-                campaign
+                {announcement.priority === "Urgent" ? "warning" : "campaign"}
               </span>
             </div>
-            <div className="flex flex-col gap-1 w-full">
-              <div className="flex justify-between items-center">
-                <span className="font-label-md text-label-md text-on-surface">
-                  {announcement.title}
-                </span>
-                <span className="font-label-sm text-label-sm text-on-surface-variant">
+
+            <div className="flex flex-col gap-1 w-full min-w-0">
+              <div className="flex justify-between items-start gap-2">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  {announcement.priority === "Urgent" && (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-extrabold uppercase tracking-wider">
+                      🚨 Urgent
+                    </span>
+                  )}
+                  {announcement.is_pinned && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold flex items-center gap-0.5">
+                      <span className="material-symbols-outlined text-[11px]">push_pin</span>
+                      Pinned
+                    </span>
+                  )}
+                  <h3 className="font-bold text-white text-base truncate">
+                    {announcement.title}
+                  </h3>
+                </div>
+                <span className="font-label-sm text-label-sm text-on-surface-variant shrink-0">
                   {formatDate(announcement.publish_date)}
                 </span>
               </div>
-              <p className="font-body-md text-body-md text-on-surface-variant line-clamp-2">
+
+              <p className="font-body-md text-body-md text-on-surface-variant line-clamp-2 mt-0.5">
                 {announcement.content}
               </p>
             </div>
-          </div>
+          </Link>
         </section>
       )}
     </div>

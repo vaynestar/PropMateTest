@@ -15,6 +15,8 @@ const PRIMARY: NavItem[] = [
 ];
 
 const MORE: NavItem[] = [
+  { label: "Notice Board", href: "/resident/announcements", icon: "campaign" },
+  { label: "Visitors", href: "/resident/visitors", icon: "person_search" },
   { label: "My Unit", href: "/resident/unit", icon: "apartment" },
   { label: "Profile", href: "/resident/profile", icon: "person" },
 ];
