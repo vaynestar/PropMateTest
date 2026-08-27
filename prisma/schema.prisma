@@ -36,6 +36,7 @@ model PropertyMaster {
   facilities    Facility[]
   announcements Announcement[]
   tickets       Ticket[]
+  visitors      Visitor[]
 
   @@map("property_master")
 }
@@ -407,11 +408,15 @@ model TicketCategoryMaster {
 
 model Visitor {
   visitor_id     String    @id @default(uuid()) @db.Uuid
-  lease_id       String    @db.Uuid
+  property_id    String?   @db.Uuid
+  lease_id       String?   @db.Uuid
+  visitor_type   String    @default("Guest") @db.VarChar
   visitor_name   String    @db.VarChar
   visitor_ic_no  String    @db.VarChar
+  contact_no     String?   @db.VarChar
   vehicle_plate  String?   @db.VarChar
   visit_purpose  String?   @db.VarChar
+  destination    String?   @db.VarChar
   visit_date     DateTime? @db.Date
   check_in_time  DateTime? 
   check_out_time DateTime? 
@@ -426,7 +431,8 @@ model Visitor {
   modifier     User?    @relation("VisitorModifiedBy", fields: [modified_by], references: [user_id])
 
   // Relations
-  lease          TenantLease @relation(fields: [lease_id], references: [lease_id])
+  property       PropertyMaster? @relation(fields: [property_id], references: [property_id])
+  lease          TenantLease?    @relation(fields: [lease_id], references: [lease_id])
 
   @@map("visitors")
 }

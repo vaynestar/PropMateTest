@@ -23,6 +23,7 @@ export async function checkInVisitorByQR(rawQrData: string) {
     const visitor = await prisma.visitor.findUnique({
       where: { visitor_id: visitorId },
       include: {
+        property: true,
         lease: {
           include: {
             unit: { include: { property: true } },
@@ -39,12 +40,16 @@ export async function checkInVisitorByQR(rawQrData: string) {
     if (visitor.status === "Checked In") {
       return {
         success: false,
-        error: `Visitor "${visitor.visitor_name}" was already checked in${visitor.check_in_time ? ` at ${new Date(visitor.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ""}.`,
+        error: `Visitor "${visitor.visitor_name}" was already checked in${
+          visitor.check_in_time
+            ? ` at ${new Date(visitor.check_in_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+            : ""
+        }.`,
         visitor,
       };
     }
 
-    if (visitor.status === "Cancelled" || visitor.status === "Rejected") {
+    if (visitor.status === "Cancelled" || visitor.status === "Declined" || visitor.status === "Rejected") {
       return {
         success: false,
         error: `Visitor pass is ${visitor.status}. Entry not permitted.`,
@@ -60,6 +65,7 @@ export async function checkInVisitorByQR(rawQrData: string) {
         modified_by: user.userId,
       },
       include: {
+        property: true,
         lease: {
           include: {
             unit: { include: { property: true } },

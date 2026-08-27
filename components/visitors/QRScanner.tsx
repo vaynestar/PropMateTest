@@ -209,38 +209,42 @@ export default function QRScanner({ onClose }: QRScannerProps) {
             <div className="grid grid-cols-2 gap-3 text-xs pt-1">
               <div>
                 <span className="text-[10px] text-on-surface-variant uppercase tracking-wider block font-medium">
-                  Visitor Name
+                  Visitor & Type
                 </span>
                 <span className="text-sm font-bold text-white">
                   {checkedInVisitor.visitor_name}
                 </span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-[10px] font-semibold text-primary px-1.5 py-0.2 rounded bg-primary/10 border border-primary/20">
+                    {checkedInVisitor.visitor_type || "Resident Guest"}
+                  </span>
+                </div>
                 <span className="text-[11px] text-on-surface-variant font-mono block mt-0.5">
                   IC: {checkedInVisitor.visitor_ic_no || "N/A"}
                 </span>
+                {checkedInVisitor.contact_no && (
+                  <span className="text-[11px] text-on-surface-variant block">
+                    📞 {checkedInVisitor.contact_no}
+                  </span>
+                )}
               </div>
 
               <div>
                 <span className="text-[10px] text-on-surface-variant uppercase tracking-wider block font-medium">
-                  Destination Unit
+                  Destination / Area
                 </span>
-                <span className="text-sm font-bold text-primary">
-                  Unit {checkedInVisitor.lease?.unit?.unit_number || "N/A"}
+                <span className="text-sm font-bold text-white">
+                  {checkedInVisitor.destination || (checkedInVisitor.lease?.unit ? `Unit ${checkedInVisitor.lease.unit.unit_number}` : "General Property")}
                 </span>
-                <span className="text-[11px] text-on-surface-variant truncate block mt-0.5" title={checkedInVisitor.lease?.unit?.property?.property_name}>
-                  🏢 {checkedInVisitor.lease?.unit?.property?.property_name || "Testing"}
+                <span className="text-[11px] text-on-surface-variant truncate block mt-0.5">
+                  🏢 {checkedInVisitor.property?.property_name || checkedInVisitor.lease?.unit?.property?.property_name || "Testing Condominium"}
                 </span>
+                {checkedInVisitor.lease?.tenant && (
+                  <span className="text-[11px] text-primary truncate block mt-0.5">
+                    Host: {checkedInVisitor.lease.tenant.user_name}
+                  </span>
+                )}
               </div>
-
-              {checkedInVisitor.lease?.tenant && (
-                <div>
-                  <span className="text-[10px] text-on-surface-variant uppercase tracking-wider block font-medium">
-                    Host Resident
-                  </span>
-                  <span className="font-semibold text-white">
-                    {checkedInVisitor.lease.tenant.user_name}
-                  </span>
-                </div>
-              )}
 
               {checkedInVisitor.vehicle_plate && (
                 <div>
@@ -254,7 +258,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
               )}
 
               {checkedInVisitor.visit_purpose && (
-                <div className="col-span-2 text-[11px] text-on-surface-variant bg-surface-container-high/60 p-2 rounded-lg border border-outline-variant/30">
+                <div className={`${checkedInVisitor.vehicle_plate ? "" : "col-span-2"} text-[11px] text-on-surface-variant bg-surface-container-high/60 p-2 rounded-lg border border-outline-variant/30`}>
                   <span className="font-semibold text-on-surface">Purpose:</span>{" "}
                   {checkedInVisitor.visit_purpose}
                 </div>
