@@ -1,13 +1,101 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, Suspense } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { loginAction } from "./actions";
 
-export default function LoginPage() {
+function LoginForm() {
   const [state, formAction, pending] = useActionState(loginAction, {});
   const [showPassword, setShowPassword] = useState(false);
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "";
 
+  return (
+    <form className="flex flex-col gap-5" action={formAction}>
+      <input type="hidden" name="redirectTo" value={redirectTo} />
+
+      {redirectTo && (
+        <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/30 text-xs text-primary flex items-center gap-2">
+          <span className="material-symbols-outlined text-[16px]">lock</span>
+          <span>Please sign in to access that page.</span>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-2">
+        <label className="font-label-md text-label-md text-on-surface" htmlFor="email">
+          Email Address
+        </label>
+        <div className="relative">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
+            mail
+          </span>
+          <input
+            className="w-full pl-10 pr-4 py-3 bg-surface-container-lowest border border-outline-variant rounded text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-on-surface-variant/50 outline-none"
+            id="email"
+            name="email"
+            placeholder="admin@propmate.com"
+            type="email"
+            autoComplete="email"
+            required
+          />
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label className="font-label-md text-label-md text-on-surface" htmlFor="password">
+          Password
+        </label>
+        <div className="relative">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
+            lock
+          </span>
+          <input
+            className="w-full pl-10 pr-10 py-3 bg-surface-container-lowest border border-outline-variant rounded text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-on-surface-variant/50 outline-none"
+            id="password"
+            name="password"
+            placeholder="••••••••"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors p-1 flex items-center justify-center rounded"
+            title={showPassword ? "Hide password" : "Show password"}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            <span className="material-symbols-outlined text-[20px]">
+              {showPassword ? "visibility_off" : "visibility"}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {state.error && (
+        <p className="font-label-sm text-label-sm text-error-container bg-error/20 border border-error/40 rounded px-3 py-2">
+          {state.error}
+        </p>
+      )}
+
+      <button
+        className="mt-4 w-full py-3 bg-gradient-to-r from-primary-container to-inverse-primary hover:brightness-110 text-white font-label-md text-label-md rounded shadow-[0_0_15px_rgba(160,120,255,0.2)] hover:shadow-[0_0_25px_rgba(160,120,255,0.4)] transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-60 pressable"
+        type="submit"
+        disabled={pending}
+      >
+        {pending ? "Signing in..." : "Sign in"}
+        {!pending && (
+          <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
+            arrow_forward
+          </span>
+        )}
+      </button>
+    </form>
+  );
+}
+
+export default function LoginPage() {
   return (
     <div className="bg-surface text-on-surface font-body-md h-screen w-full flex overflow-hidden">
       {/* Left Panel */}
@@ -24,7 +112,7 @@ export default function LoginPage() {
             priority
           />
           <h1 className="font-display-lg text-display-lg text-on-surface mb-6 drop-shadow-lg">
-           Prop Mate
+            Prop Mate
           </h1>
           <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
             Your Best Mate of Solution for Property Management.
@@ -56,77 +144,9 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form className="flex flex-col gap-5" action={formAction}>
-            <div className="flex flex-col gap-2">
-              <label className="font-label-md text-label-md text-on-surface" htmlFor="email">
-                Email Address
-              </label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
-                  mail
-                </span>
-                <input
-                  className="w-full pl-10 pr-4 py-3 bg-surface-container-lowest border border-outline-variant rounded text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-on-surface-variant/50 outline-none"
-                  id="email"
-                  name="email"
-                  placeholder="admin@propmate.com"
-                  type="email"
-                  autoComplete="email"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <label className="font-label-md text-label-md text-on-surface" htmlFor="password">
-                Password
-              </label>
-              <div className="relative">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">
-                  lock
-                </span>
-                <input
-                  className="w-full pl-10 pr-10 py-3 bg-surface-container-lowest border border-outline-variant rounded text-on-surface font-body-md focus:border-primary focus:ring-1 focus:ring-primary transition-colors placeholder:text-on-surface-variant/50 outline-none"
-                  id="password"
-                  name="password"
-                  placeholder="••••••••"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors p-1 flex items-center justify-center rounded"
-                  title={showPassword ? "Hide password" : "Show password"}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  <span className="material-symbols-outlined text-[20px]">
-                    {showPassword ? "visibility_off" : "visibility"}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {state.error && (
-              <p className="font-label-sm text-label-sm text-error-container bg-error/20 border border-error/40 rounded px-3 py-2">
-                {state.error}
-              </p>
-            )}
-
-            <button
-              className="mt-4 w-full py-3 bg-gradient-to-r from-primary-container to-inverse-primary hover:brightness-110 text-white font-label-md text-label-md rounded shadow-[0_0_15px_rgba(160,120,255,0.2)] hover:shadow-[0_0_25px_rgba(160,120,255,0.4)] transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-60"
-              type="submit"
-              disabled={pending}
-            >
-              {pending ? "Signing in..." : "Sign in"}
-              {!pending && (
-                <span className="material-symbols-outlined text-[18px] group-hover:translate-x-1 transition-transform">
-                  arrow_forward
-                </span>
-              )}
-            </button>
-          </form>
+          <Suspense fallback={<div className="text-center py-8 text-on-surface-variant text-sm">Loading sign in...</div>}>
+            <LoginForm />
+          </Suspense>
 
           <div className="pt-4 border-t border-outline-variant text-center">
             <p className="font-body-md text-body-md text-on-surface-variant">

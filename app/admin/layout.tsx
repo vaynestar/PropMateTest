@@ -2,14 +2,14 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { cookies } from "next/headers";
-import { getSessionUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { logoutAction } from "@/app/logout/actions";
 import AdminMobileNav, { AdminMenuButton } from "@/components/layout/AdminMobileNav";
 import PropertySwitcher from "@/components/layout/PropertySwitcher";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const user = await getSessionUser();
+  const user = await requireUser(["Admin"]);
   const cookieStore = await cookies();
   const activePropertyId = cookieStore.get("propmate_property_id")?.value || "";
 

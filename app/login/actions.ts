@@ -12,6 +12,7 @@ export async function loginAction(
 ): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const redirectTo = String(formData.get("redirectTo") ?? "").trim();
 
   if (!email || !password) {
     return { error: "Please enter both email and password." };
@@ -23,6 +24,15 @@ export async function loginAction(
   }
 
   await createSession(user.user_id, user.role, user.user_name, user.user_email);
+
+  if (redirectTo && redirectTo.startsWith("/") && !redirectTo.startsWith("//")) {
+    if (user.role === "Admin" && (redirectTo.startsWith("/admin") || redirectTo.startsWith("/print"))) {
+      redirect(redirectTo);
+    }
+    if (user.role === "Resident" && redirectTo.startsWith("/resident")) {
+      redirect(redirectTo);
+    }
+  }
 
   if (user.role === "Resident") redirect("/resident");
   redirect("/admin");

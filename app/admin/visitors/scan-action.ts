@@ -4,37 +4,74 @@ import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
-export async function checkInVisitorByQR(visitorId: string) {
+export async function checkInVisitorByQR(rawQrData: string) {
   try {
     const user = await getSessionUser();
     if (!user || user.role !== "Admin") {
-      return { success: false, error: "Unauthorized" };
+      return { success: false, error: "Unauthorized access: Admin login required." };
     }
+
+    if (!rawQrData || typeof rawQrData !== "string") {
+      return { success: false, error: "Empty or invalid QR code data." };
+    }
+
+    // Extract UUID if full URL or JSON was encoded
+    const trimmed = rawQrData.trim();
+    const uuidMatch = trimmed.match(/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}/);
+    const visitorId = uuidMatch ? uuidMatch[0] : trimmed;
 
     const visitor = await prisma.visitor.findUnique({
       where: { visitor_id: visitorId },
+      include: {
+        lease: {
+          include: {
+            unit: { include: { property: true } },
+            tenant: { select: { user_name: true, user_email: true, phone_number: true } },
+          },
+        },
+      },
     });
 
     if (!visitor) {
-      return { success: false, error: "Invalid QR Code: Visitor not found" };
+      return { success: false, error: "QR Code not recognized: No visitor record found." };
     }
 
     if (visitor.status === "Checked In") {
-      return { success: false, error: "Visitor is already checked in" };
+      return {
+        success: false,
+        error: `Visitor "${visitor.visitor_name}" was already checked in${visitor.check_in_time ? ` at ${new Date(visitor.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ""}.`,
+        visitor,
+      };
     }
 
-    if (visitor.status !== "Approved") {
-      return { success: false, error: `Visitor status is ${visitor.status}. Must be Approved.` };
+    if (visitor.status === "Cancelled" || visitor.status === "Rejected") {
+      return {
+        success: false,
+        error: `Visitor pass is ${visitor.status}. Entry not permitted.`,
+        visitor,
+      };
     }
 
-    await prisma.visitor.update({
+    const updatedVisitor = await prisma.visitor.update({
       where: { visitor_id: visitorId },
-      data: { status: "Checked In" },
+      data: {
+        status: "Checked In",
+        check_in_time: new Date(),
+        modified_by: user.userId,
+      },
+      include: {
+        lease: {
+          include: {
+            unit: { include: { property: true } },
+            tenant: { select: { user_name: true, user_email: true, phone_number: true } },
+          },
+        },
+      },
     });
 
     revalidatePath("/admin/visitors");
-    return { success: true, visitor };
+    return { success: true, visitor: updatedVisitor };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    return { success: false, error: error?.message || "Failed to process QR check-in." };
   }
 }
