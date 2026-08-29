@@ -549,3 +549,20 @@ model Notification {
 
   @@map("notifications")
 }
+
+// ==========================================
+// DOMAIN 8: SYSTEM CONFIGURATION & PARAMETERS
+// ==========================================
+
+model AppParameter {
+  param_id      String   @id @default(uuid()) @db.Uuid
+  param_key     String   @unique @db.VarChar
+  param_value   String   @db.Text
+  category      String   @default("SYSTEM") @db.VarChar
+  description   String?  @db.Text
+  is_active     Boolean  @default(true)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt @map("_updated_at")
+
+  @@map("app_parameters")
+}

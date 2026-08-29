@@ -536,14 +536,16 @@ export default function AdminAnnouncementList({
                         type="button"
                         onClick={() => handleTogglePin(a)}
                         disabled={isItemUpdating}
-                        className={`p-1.5 rounded-lg border transition-colors ${
+                        className={`p-1.5 rounded-lg border transition-colors disabled:opacity-50 ${
                           a.is_pinned
                             ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
                             : "bg-surface-container-high text-on-surface-variant border-outline-variant hover:text-white"
                         }`}
                         title={a.is_pinned ? "Unpin from top" : "Pin to top"}
                       >
-                        <span className="material-symbols-outlined text-[16px]">push_pin</span>
+                        <span className={`material-symbols-outlined text-[16px] ${isItemUpdating ? "animate-spin" : ""}`}>
+                          {isItemUpdating ? "progress_activity" : "push_pin"}
+                        </span>
                       </button>
 
                       {/* View Reader */}
@@ -577,18 +579,38 @@ export default function AdminAnnouncementList({
                           type="button"
                           onClick={() => handleUpdateStatus(a.announcement_id, "Archived")}
                           disabled={isItemUpdating}
-                          className="px-2 py-1 rounded-lg bg-surface-container-high text-on-surface-variant hover:text-white text-[11px] font-medium border border-outline-variant"
+                          className="px-2.5 py-1 rounded-lg bg-surface-container-high text-on-surface-variant hover:text-white text-[11px] font-medium border border-outline-variant flex items-center gap-1 transition-all disabled:opacity-50"
                         >
-                          Archive
+                          {isItemUpdating ? (
+                            <>
+                              <span className="material-symbols-outlined text-[13px] animate-spin">progress_activity</span>
+                              <span>Archiving...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-[13px]">archive</span>
+                              <span>Archive</span>
+                            </>
+                          )}
                         </button>
                       ) : (
                         <button
                           type="button"
                           onClick={() => handleUpdateStatus(a.announcement_id, "Published")}
                           disabled={isItemUpdating}
-                          className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 text-[11px] font-semibold border border-emerald-500/40"
+                          className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 text-[11px] font-semibold border border-emerald-500/40 flex items-center gap-1 transition-all disabled:opacity-50"
                         >
-                          Publish
+                          {isItemUpdating ? (
+                            <>
+                              <span className="material-symbols-outlined text-[13px] animate-spin">progress_activity</span>
+                              <span>Publishing...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-[13px]">send</span>
+                              <span>Publish</span>
+                            </>
+                          )}
                         </button>
                       )}
 
@@ -596,7 +618,7 @@ export default function AdminAnnouncementList({
                         type="button"
                         onClick={() => handleDelete(a.announcement_id)}
                         disabled={isItemUpdating}
-                        className="p-1.5 rounded-lg bg-rose-500/10 text-rose-300 border border-rose-500/20 hover:bg-rose-500/20 transition-colors"
+                        className="p-1.5 rounded-lg bg-rose-500/10 text-rose-300 border border-rose-500/20 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
                         title="Delete Announcement"
                       >
                         <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -625,6 +647,7 @@ export default function AdminAnnouncementList({
             <tbody className="divide-y divide-outline-variant/30">
               {filteredAnnouncements.map((a) => {
                 const catMeta = CATEGORY_MAP[a.category] || CATEGORY_MAP.Notice;
+                const isItemUpdating = isPending && updatingId === a.announcement_id;
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
                 const isExpired = new Date(a.expiry_date) < today;
@@ -691,14 +714,53 @@ export default function AdminAnnouncementList({
                     </td>
 
                     <td className="px-4 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {a.status === "Published" ? (
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(a.announcement_id, "Archived")}
+                            disabled={isItemUpdating}
+                            className="px-2 py-1 rounded-lg bg-surface-container-high text-on-surface-variant hover:text-white text-[11px] font-medium border border-outline-variant flex items-center gap-1 transition-all disabled:opacity-50"
+                            title="Archive notice"
+                          >
+                            {isItemUpdating ? (
+                              <span className="material-symbols-outlined text-[13px] animate-spin">progress_activity</span>
+                            ) : (
+                              <span className="material-symbols-outlined text-[13px]">archive</span>
+                            )}
+                            <span className="hidden sm:inline">{isItemUpdating ? "..." : "Archive"}</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(a.announcement_id, "Published")}
+                            disabled={isItemUpdating}
+                            className="px-2 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30 text-[11px] font-semibold border border-emerald-500/40 flex items-center gap-1 transition-all disabled:opacity-50"
+                            title="Publish notice"
+                          >
+                            {isItemUpdating ? (
+                              <span className="material-symbols-outlined text-[13px] animate-spin">progress_activity</span>
+                            ) : (
+                              <span className="material-symbols-outlined text-[13px]">send</span>
+                            )}
+                            <span className="hidden sm:inline">{isItemUpdating ? "..." : "Publish"}</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => handleTogglePin(a)}
-                          className="p-1 rounded-lg bg-surface-container-high border border-outline-variant hover:text-white"
+                          disabled={isItemUpdating}
+                          className={`p-1 rounded-lg border transition-colors disabled:opacity-50 ${
+                            a.is_pinned
+                              ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                              : "bg-surface-container-high border-outline-variant hover:text-white"
+                          }`}
                           title={a.is_pinned ? "Unpin" : "Pin"}
                         >
-                          <span className="material-symbols-outlined text-[15px]">push_pin</span>
+                          <span className={`material-symbols-outlined text-[15px] ${isItemUpdating ? "animate-spin" : ""}`}>
+                            {isItemUpdating ? "progress_activity" : "push_pin"}
+                          </span>
                         </button>
                         <button
                           type="button"
@@ -722,7 +784,8 @@ export default function AdminAnnouncementList({
                         <button
                           type="button"
                           onClick={() => handleDelete(a.announcement_id)}
-                          className="p-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25"
+                          disabled={isItemUpdating}
+                          className="p-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 disabled:opacity-50"
                           title="Delete"
                         >
                           <span className="material-symbols-outlined text-[15px]">delete</span>
