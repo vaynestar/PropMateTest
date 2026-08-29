@@ -10,6 +10,26 @@ type QRScannerProps = {
   onClose: () => void;
 };
 
+// Explicitly terminate all video streams/tracks across the entire browser context
+export function terminateAllMediaStreams() {
+  if (typeof window === "undefined") return;
+  try {
+    const videoElements = document.querySelectorAll("video");
+    videoElements.forEach((video) => {
+      if (video.srcObject) {
+        const stream = video.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => {
+          track.stop();
+          track.enabled = false;
+        });
+        video.srcObject = null;
+      }
+    });
+  } catch (err) {
+    console.warn("Error stopping video stream tracks:", err);
+  }
+}
+
 // Ultra-Resilient Multi-Pass QR Decoder for uploaded image files & screenshots
 async function decodeQrFromImageFile(file: File): Promise<string | null> {
   // Pass 1: Native Hardware BarcodeDetector API
@@ -114,6 +134,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null);
 
   const html5QrRef = useRef<Html5Qrcode | null>(null);
+  const isMountedRef = useRef(true);
   const isHandlingScanRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -126,12 +147,24 @@ export default function QRScanner({ onClose }: QRScannerProps) {
         if (html5QrRef.current.isScanning) {
           await html5QrRef.current.stop();
         }
-        await html5QrRef.current.clear();
       } catch (err) {
         console.warn("Error stopping QR camera:", err);
       }
+      try {
+        await html5QrRef.current.clear();
+      } catch (err) {}
+    }
+    terminateAllMediaStreams();
+    if (isMountedRef.current) {
       setIsCameraActive(false);
     }
+  };
+
+  // Safe wrapper for closing scanner
+  const handleModalClose = async () => {
+    isMountedRef.current = false;
+    await stopCamera();
+    onClose();
   };
 
   // Process scanned text
@@ -141,7 +174,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
     setErrorMessage(null);
 
-    // Stop camera if running
+    // Stop camera immediately upon decode
     await stopCamera();
 
     startTransition(async () => {
@@ -172,6 +205,8 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
   // Start live camera
   const startCamera = async (cameraIdOrFacing?: string | { facingMode: string }) => {
+    if (!isMountedRef.current) return;
+
     setCameraError(null);
     setErrorMessage(null);
 
@@ -184,7 +219,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
       try {
         const availableDevices = await Html5Qrcode.getCameras();
-        if (availableDevices && availableDevices.length > 0) {
+        if (availableDevices && availableDevices.length > 0 && isMountedRef.current) {
           setCameras(availableDevices);
         }
       } catch {
@@ -212,23 +247,35 @@ export default function QRScanner({ onClose }: QRScannerProps) {
         }
       );
 
+      if (!isMountedRef.current) {
+        await stopCamera();
+        return;
+      }
+
       setIsCameraActive(true);
       isHandlingScanRef.current = false;
     } catch (err: any) {
       console.warn("Camera start error:", err);
-      setIsCameraActive(false);
-      setCameraError(
-        "Camera stream unavailable or permission denied. Please grant camera permission or switch to upload mode."
-      );
+      if (isMountedRef.current) {
+        setIsCameraActive(false);
+        setCameraError(
+          "Camera stream unavailable or permission denied. Please grant camera permission or switch to upload mode."
+        );
+      }
     }
   };
 
   // Auto-start camera when in 'camera' tab and no active modal result
   useEffect(() => {
+    isMountedRef.current = true;
+
     if (activeTab === "camera" && !verifiedVisitor) {
       const t = setTimeout(() => {
-        startCamera();
-      }, 100);
+        if (isMountedRef.current) {
+          startCamera();
+        }
+      }, 120);
+
       return () => {
         clearTimeout(t);
         stopCamera();
@@ -236,6 +283,11 @@ export default function QRScanner({ onClose }: QRScannerProps) {
     } else {
       stopCamera();
     }
+
+    return () => {
+      isMountedRef.current = false;
+      stopCamera();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, verifiedVisitor]);
 
@@ -528,7 +580,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleModalClose}
               className="flex-1 btn-primary py-2.5 rounded-xl text-white text-xs font-bold shadow-lg transition-all pressable flex items-center justify-center gap-1"
             >
               <span className="material-symbols-outlined text-[18px]">check</span>

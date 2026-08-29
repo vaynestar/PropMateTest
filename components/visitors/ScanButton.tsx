@@ -1,10 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import QRScanner from "./QRScanner";
+import QRScanner, { terminateAllMediaStreams } from "./QRScanner";
 
 export default function ScanButton() {
   const [open, setOpen] = useState(false);
+
+  const handleClose = () => {
+    terminateAllMediaStreams();
+    setOpen(false);
+  };
 
   return (
     <>
@@ -38,7 +43,7 @@ export default function ScanButton() {
 
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={handleClose}
                 className="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant hover:text-white hover:bg-surface-variant transition-colors flex items-center justify-center p-1"
                 aria-label="Close scanner"
               >
@@ -47,7 +52,7 @@ export default function ScanButton() {
             </div>
 
             {/* Scanner Component */}
-            <QRScanner onClose={() => setOpen(false)} />
+            <QRScanner onClose={handleClose} />
           </div>
         </div>
       )}
