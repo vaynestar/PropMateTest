@@ -84,13 +84,12 @@ export default function ResidentAnnouncementList({
     <div className="space-y-6">
       {/* EMERGENCY CRITICAL BANNER (if urgent announcement exists) */}
       {urgentAnnouncement && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/40 border border-rose-500/50 shadow-xl relative overflow-hidden animate-in fade-in duration-300">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="p-4 sm:p-5 rounded-2xl bg-rose-950/30 border border-rose-500/40 shadow-lg relative overflow-hidden animate-in fade-in duration-300">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3">
               <span className="w-10 h-10 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="material-symbols-outlined text-[22px] animate-pulse">
-                  emergency_home
+                <span className="material-symbols-outlined text-[22px]">
+                  emergency
                 </span>
               </span>
               <div>
@@ -114,7 +113,7 @@ export default function ResidentAnnouncementList({
             <button
               type="button"
               onClick={() => setReadingItem(urgentAnnouncement)}
-              className="px-4 py-2 rounded-xl bg-rose-500 text-white hover:bg-rose-600 text-xs font-bold shrink-0 shadow-lg transition-colors flex items-center gap-1.5 self-end sm:self-center pressable"
+              className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold shrink-0 shadow-md transition-colors flex items-center gap-1.5 self-end sm:self-center pressable"
             >
               <span>View Notice</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>

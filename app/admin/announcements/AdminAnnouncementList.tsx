@@ -425,12 +425,12 @@ export default function AdminAnnouncementList({
             return (
               <div
                 key={a.announcement_id}
-                className={`bg-surface-container border rounded-2xl p-5 shadow-lg relative flex flex-col justify-between transition-all gap-4 ${
+                className={`bg-surface-container border rounded-2xl p-5 shadow-md relative flex flex-col justify-between transition-all gap-4 ${
                   a.is_pinned
-                    ? "border-amber-500/50 bg-gradient-to-b from-surface-container to-amber-950/10 ring-1 ring-amber-500/30"
+                    ? "border-amber-500/40 bg-[#161c2e]"
                     : a.priority === "Urgent"
-                    ? "border-rose-500/50 bg-gradient-to-b from-surface-container to-rose-950/15"
-                    : "border-outline-variant/60 hover:border-primary/40"
+                    ? "border-rose-500/40 bg-[#1a1520]"
+                    : "border-outline-variant/50 hover:border-primary/40"
                 }`}
               >
                 {/* Header & Badges */}
