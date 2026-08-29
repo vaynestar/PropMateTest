@@ -33,13 +33,13 @@ interface AdminAnnouncementFormProps {
   onCancel?: () => void;
 }
 
-const CATEGORY_OPTIONS = [
-  { value: "Notice", label: "📢 General Notice" },
-  { value: "Maintenance", label: "🔧 Maintenance & Disruption" },
-  { value: "Emergency", label: "🚨 Emergency Alert" },
-  { value: "Security", label: "🛡️ Security Advisory" },
-  { value: "Event", label: "🎉 Community Event" },
-  { value: "Billing", label: "💳 Billing & Admin" },
+const CATEGORIES = [
+  { value: "Notice", label: "Notice" },
+  { value: "Maintenance", label: "Maintenance" },
+  { value: "Emergency", label: "Emergency" },
+  { value: "Security", label: "Security" },
+  { value: "Event", label: "Event" },
+  { value: "Billing", label: "Billing" },
 ];
 
 export default function AdminAnnouncementForm({
@@ -51,7 +51,6 @@ export default function AdminAnnouncementForm({
 }: AdminAnnouncementFormProps) {
   const isEditing = Boolean(initialData);
 
-  // Form States
   const [category, setCategory] = useState(initialData?.category || "Notice");
   const [priority, setPriority] = useState(initialData?.priority || "Normal");
   const [isPinned, setIsPinned] = useState(initialData?.is_pinned || false);
@@ -81,7 +80,6 @@ export default function AdminAnnouncementForm({
   const [imageUrl, setImageUrl] = useState(initialData?.image_url || "");
   const [attachmentUrl, setAttachmentUrl] = useState(initialData?.attachment_url || "");
 
-  // Upload States
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -89,8 +87,7 @@ export default function AdminAnnouncementForm({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const attachmentInputRef = useRef<HTMLInputElement>(null);
 
-  // Collapsible Advanced Settings
-  const [showAdvanced, setShowAdvanced] = useState(
+  const [showOptions, setShowOptions] = useState(
     Boolean(
       initialData?.image_url ||
       initialData?.attachment_url ||
@@ -99,7 +96,6 @@ export default function AdminAnnouncementForm({
     )
   );
 
-  // Handle Photo File Upload
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -119,19 +115,17 @@ export default function AdminAnnouncementForm({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to upload image");
+        throw new Error(data.error || "Upload failed");
       }
 
       setImageUrl(data.url);
     } catch (err: any) {
-      console.error(err);
-      setUploadError(err.message || "Failed to upload image");
+      setUploadError(err.message || "Upload failed");
     } finally {
       setIsUploadingImage(false);
     }
   };
 
-  // Handle Attachment File Upload
   const handleAttachmentFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -151,19 +145,17 @@ export default function AdminAnnouncementForm({
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to upload circular attachment");
+        throw new Error(data.error || "Upload failed");
       }
 
       setAttachmentUrl(data.url);
     } catch (err: any) {
-      console.error(err);
-      setUploadError(err.message || "Failed to upload circular attachment");
+      setUploadError(err.message || "Upload failed");
     } finally {
       setIsUploadingAttachment(false);
     }
   };
 
-  // Form submission via Server Action
   const [state, formAction, isPending] = useActionState(
     async (prevState: any, formData: FormData) => {
       formData.set("category", category);
@@ -192,85 +184,75 @@ export default function AdminAnnouncementForm({
   }, [state, onSuccess]);
 
   return (
-    <div className="bg-[#111625] border border-outline-variant/60 rounded-3xl p-5 sm:p-7 shadow-2xl text-white">
-      {/* HEADER */}
-      <div className="flex items-center justify-between pb-4 border-b border-outline-variant/30">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 text-primary flex items-center justify-center font-bold">
-            <span className="material-symbols-outlined text-[22px]">
-              {isEditing ? "edit_note" : "campaign"}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-base sm:text-lg font-bold text-white tracking-tight leading-none">
-              {isEditing ? "Edit Announcement" : "Create New Announcement"}
-            </h2>
-            <p className="text-[11px] text-on-surface-variant mt-1">
-              Broadcast circulars, maintenance advisories, and emergency alerts to residents
-            </p>
-          </div>
-        </div>
+    <div className="bg-[#10141f] border border-outline-variant/60 rounded-2xl p-5 sm:p-6 shadow-2xl text-white">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
+        <h2 className="text-base font-bold text-white">
+          {isEditing ? "Edit announcement" : "New announcement"}
+        </h2>
 
-        {onCancel && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant hover:text-white flex items-center justify-center transition-colors"
-            aria-label="Close"
+        <div className="flex items-center gap-2">
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="bg-surface-container border border-outline-variant/60 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-primary cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
-          </button>
-        )}
+            <option value="Published">Published</option>
+            <option value="Draft">Draft</option>
+            <option value="Archived">Archived</option>
+          </select>
+
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="w-7 h-7 rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-container flex items-center justify-center transition-colors"
+              aria-label="Close"
+            >
+              <span className="material-symbols-outlined text-[18px]">close</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {state?.error && (
-        <div className="my-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
-          <span className="material-symbols-outlined text-[18px]">error</span>
-          <span>{state.error}</span>
+        <div className="my-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+          {state.error}
         </div>
       )}
 
       {uploadError && (
-        <div className="my-4 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2 animate-in fade-in">
-          <span className="material-symbols-outlined text-[18px]">cloud_off</span>
-          <span>{uploadError}</span>
+        <div className="my-3 p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+          {uploadError}
         </div>
       )}
 
-      <form action={formAction} className="mt-5 space-y-4">
-        {/* ROW 1: CATEGORY & PRIORITY WITH DESCRIPTIVE SUBTITLES */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          {/* CATEGORY DROPDOWN */}
-          <div className="space-y-1 sm:col-span-1">
-            <label htmlFor="category" className="text-xs font-bold text-white flex items-center gap-1">
-              <span>Notice Category</span>
-              <span className="text-rose-400">*</span>
+      <form action={formAction} className="mt-4 space-y-3.5">
+        {/* Controls row: Category, Priority, Pin */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-center">
+          {/* Category */}
+          <div>
+            <label className="text-[11px] font-medium text-on-surface-variant block mb-1">
+              Category
             </label>
-            <p className="text-[10px] text-on-surface-variant leading-tight">
-              Classification for filtering & resident feed
-            </p>
             <select
-              id="category"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-surface-container-lowest border border-outline-variant/60 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary cursor-pointer transition-colors"
+              className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary cursor-pointer"
             >
-              {CATEGORY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              {CATEGORIES.map((c) => (
+                <option key={c.value} value={c.value}>
+                  {c.label}
                 </option>
               ))}
             </select>
           </div>
 
-          {/* PRIORITY SELECTOR */}
-          <div className="space-y-1 sm:col-span-1">
-            <label className="text-xs font-bold text-white flex items-center gap-1">
-              <span>Urgency & Priority</span>
+          {/* Priority */}
+          <div>
+            <label className="text-[11px] font-medium text-on-surface-variant block mb-1">
+              Priority
             </label>
-            <p className="text-[10px] text-on-surface-variant leading-tight">
-              Urgent triggers a prominent alert banner
-            </p>
             <div className="grid grid-cols-3 gap-1">
               {(["Normal", "High", "Urgent"] as const).map((p) => {
                 const isSelected = priority === p;
@@ -279,124 +261,116 @@ export default function AdminAnnouncementForm({
                     type="button"
                     key={p}
                     onClick={() => setPriority(p)}
-                    className={`py-2 px-1 rounded-xl text-[11px] font-bold border transition-all text-center pressable ${
+                    className={`py-1.5 rounded-lg text-xs font-semibold border transition-all text-center ${
                       isSelected
                         ? p === "Urgent"
-                          ? "bg-rose-500/20 text-rose-300 border-rose-500/50 shadow-sm"
+                          ? "bg-rose-500/20 text-rose-300 border-rose-500/50"
                           : p === "High"
-                          ? "bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm"
-                          : "bg-primary/20 text-primary border-primary/50 shadow-sm"
-                        : "bg-surface-container-lowest border-outline-variant/50 text-on-surface-variant hover:text-white"
+                          ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
+                          : "bg-primary/20 text-primary border-primary/50"
+                        : "bg-surface-container border-outline-variant/40 text-on-surface-variant hover:text-white"
                     }`}
                   >
-                    {p === "Urgent" ? "🚨 Urgent" : p === "High" ? "⚠️ High" : "Normal"}
+                    {p}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* STATUS & PIN ROW */}
-          <div className="space-y-1 sm:col-span-1">
-            <label className="text-xs font-bold text-white flex items-center gap-1">
-              <span>Status & Pin</span>
-            </label>
-            <p className="text-[10px] text-on-surface-variant leading-tight">
-              Control visibility & pin to feed header
-            </p>
-            <div className="flex items-center gap-2">
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="flex-1 bg-surface-container-lowest border border-outline-variant/60 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none focus:border-primary cursor-pointer"
-              >
-                <option value="Published">🟢 Published</option>
-                <option value="Draft">📝 Draft</option>
-                <option value="Archived">📦 Archived</option>
-              </select>
-
-              <button
-                type="button"
-                onClick={() => setIsPinned(!isPinned)}
-                className={`px-3 py-2 rounded-xl text-xs font-bold border transition-colors flex items-center gap-1 pressable ${
-                  isPinned
-                    ? "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                    : "bg-surface-container-lowest text-on-surface-variant border-outline-variant/50 hover:text-white"
-                }`}
-                title="Pin announcement to top of feed"
-              >
-                <span className="material-symbols-outlined text-[15px] text-amber-400">push_pin</span>
-                <span>{isPinned ? "Pinned" : "Pin"}</span>
-              </button>
-            </div>
+          {/* Pin */}
+          <div className="sm:pt-5">
+            <button
+              type="button"
+              onClick={() => setIsPinned(!isPinned)}
+              className={`w-full py-2 px-3 rounded-xl text-xs font-medium border transition-colors flex items-center justify-center gap-1.5 ${
+                isPinned
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/40 font-semibold"
+                  : "bg-surface-container text-on-surface-variant border-outline-variant/50 hover:text-white"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px] text-amber-400">push_pin</span>
+              <span>{isPinned ? "Pinned to top" : "Pin notice"}</span>
+            </button>
           </div>
         </div>
 
-        {/* FIELD 2: TITLE WITH SUBTITLE */}
-        <div className="space-y-1 pt-1">
-          <div className="flex justify-between items-baseline">
-            <label htmlFor="title" className="text-xs font-bold text-white flex items-center gap-1">
-              <span>Announcement Title</span>
-              <span className="text-rose-400">*</span>
-            </label>
-          </div>
-          <p className="text-[10px] text-on-surface-variant leading-tight">
-            A concise, descriptive headline displayed on cards and emergency notifications
-          </p>
+        {/* Title */}
+        <div>
+          <label htmlFor="title" className="text-[11px] font-medium text-on-surface-variant block mb-1">
+            Title <span className="text-rose-400">*</span>
+          </label>
           <input
             type="text"
             id="title"
             name="title"
             defaultValue={initialData?.title || ""}
             required
-            placeholder="e.g. Scheduled Water Supply Disruption — Level 1 to 20"
-            className="w-full bg-surface-container-lowest border border-outline-variant/60 rounded-2xl px-4 py-2.5 text-sm sm:text-base font-bold text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+            placeholder="e.g. Water supply maintenance notice"
+            className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-3.5 py-2 text-sm font-semibold text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary"
           />
         </div>
 
-        {/* FIELD 3: CONTENT BODY WITH SUBTITLE */}
-        <div className="space-y-1">
-          <label htmlFor="content" className="text-xs font-bold text-white flex items-center gap-1">
-            <span>Announcement Body & Details</span>
-            <span className="text-rose-400">*</span>
+        {/* Body content */}
+        <div>
+          <label htmlFor="content" className="text-[11px] font-medium text-on-surface-variant block mb-1">
+            Details <span className="text-rose-400">*</span>
           </label>
-          <p className="text-[10px] text-on-surface-variant leading-tight">
-            Comprehensive description, affected units/zones, emergency contacts, and actionable advice
-          </p>
           <textarea
             id="content"
             name="content"
-            rows={5}
+            rows={4}
             defaultValue={initialData?.content || ""}
             required
-            placeholder="Provide complete circular details, affected areas, dates, times, alternative arrangements, and contact person..."
-            className="w-full bg-surface-container-lowest border border-outline-variant/60 rounded-2xl px-4 py-3 text-xs sm:text-sm text-gray-200 placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-y leading-relaxed font-sans"
+            placeholder="Notice details, affected areas, dates, or contact information..."
+            className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-gray-200 placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary resize-y leading-relaxed font-sans"
           />
         </div>
 
-        {/* FIELD 4: COVER IMAGE UPLOADER & URL */}
-        <div className="p-3.5 rounded-2xl bg-surface-container-lowest border border-outline-variant/40 space-y-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px] text-primary">image</span>
-                <span>Cover Photo (Manual Upload or URL)</span>
-              </label>
-              <p className="text-[10px] text-on-surface-variant leading-tight mt-0.5">
-                Upload a photo directly from your device (auto-linked to cloud storage) or paste a web URL
-              </p>
-            </div>
+        {/* Cover Photo */}
+        <div>
+          <label className="text-[11px] font-medium text-on-surface-variant block mb-1">
+            Photo (optional)
+          </label>
+          <div className="flex items-center gap-2">
+            {imageUrl ? (
+              <div className="relative w-16 h-10 rounded-lg overflow-hidden border border-outline-variant shrink-0 bg-surface-container group">
+                <Image
+                  src={imageUrl}
+                  alt="Preview"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+                <button
+                  type="button"
+                  onClick={() => setImageUrl("")}
+                  className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-rose-300 transition-opacity"
+                  title="Remove"
+                >
+                  <span className="material-symbols-outlined text-[16px]">close</span>
+                </button>
+              </div>
+            ) : null}
+
+            <input
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="Image URL or upload file..."
+              className="flex-1 bg-surface-container border border-outline-variant/50 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary"
+            />
 
             <button
               type="button"
               onClick={() => imageInputRef.current?.click()}
               disabled={isUploadingImage}
-              className="px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 text-primary text-xs font-bold flex items-center gap-1.5 transition-colors pressable"
+              className="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant text-xs text-white font-medium flex items-center gap-1 shrink-0 transition-colors"
             >
-              <span className="material-symbols-outlined text-[16px]">
-                {isUploadingImage ? "sync" : "cloud_upload"}
+              <span className="material-symbols-outlined text-[15px]">
+                {isUploadingImage ? "sync" : "upload"}
               </span>
-              <span>{isUploadingImage ? "Uploading..." : "Upload Photo"}</span>
+              <span>{isUploadingImage ? "Uploading..." : "Upload"}</span>
             </button>
 
             <input
@@ -407,172 +381,110 @@ export default function AdminAnnouncementForm({
               className="hidden"
             />
           </div>
-
-          {/* Image Preview & URL input */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 pt-1">
-            {imageUrl ? (
-              <div className="relative w-24 h-16 rounded-xl overflow-hidden border border-outline-variant/60 shrink-0 bg-surface-container group">
-                <Image
-                  src={imageUrl}
-                  alt="Cover preview"
-                  fill
-                  className="object-cover"
-                  unoptimized
-                />
-                <button
-                  type="button"
-                  onClick={() => setImageUrl("")}
-                  className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-rose-300 transition-opacity"
-                  title="Remove image"
-                >
-                  <span className="material-symbols-outlined text-[18px]">delete</span>
-                </button>
-              </div>
-            ) : null}
-
-            <div className="w-full relative flex-1">
-              <input
-                type="url"
-                id="image_url"
-                name="image_url"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://... or click 'Upload Photo' to choose local file"
-                className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-3 py-2 text-xs text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary font-mono text-[11px]"
-              />
-              {imageUrl && (
-                <button
-                  type="button"
-                  onClick={() => setImageUrl("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-white"
-                  title="Clear URL"
-                >
-                  <span className="material-symbols-outlined text-[14px]">close</span>
-                </button>
-              )}
-            </div>
-          </div>
         </div>
 
-        {/* EXPANDABLE SECTION: AUDIENCE, DATES & DOCUMENT ATTACHMENT */}
-        <div className="border border-outline-variant/40 rounded-2xl bg-surface-container-lowest/50 overflow-hidden">
+        {/* Options accordion (Scope, dates, PDF) */}
+        <div className="border border-outline-variant/40 rounded-xl bg-surface-container/40 overflow-hidden">
           <button
             type="button"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-            className="w-full px-4 py-2.5 flex items-center justify-between text-xs text-on-surface-variant hover:text-white transition-colors select-none"
+            onClick={() => setShowOptions(!showOptions)}
+            className="w-full px-3.5 py-2 flex items-center justify-between text-xs text-on-surface-variant hover:text-white transition-colors"
           >
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[17px] text-primary">tune</span>
-              <span className="font-semibold text-white">Target Scope, Validity Dates & Attachment</span>
-              <span className="text-[10px] text-on-surface-variant/70">
-                ({selectedPropertyId === "ALL" ? "All Properties" : "1 Property"} • {targetAudience})
-              </span>
-            </div>
+            <span className="font-medium text-white">More options (dates, scope, PDF attachment)</span>
             <span className="material-symbols-outlined text-[18px]">
-              {showAdvanced ? "expand_less" : "expand_more"}
+              {showOptions ? "expand_less" : "expand_more"}
             </span>
           </button>
 
-          {showAdvanced && (
-            <div className="p-4 pt-2 border-t border-outline-variant/30 space-y-3.5 text-xs animate-in fade-in duration-150">
-              {/* Target Property & Audience */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-white block">
-                    Target Property Scope
+          {showOptions && (
+            <div className="p-3.5 pt-2 border-t border-outline-variant/30 space-y-3 text-xs">
+              {/* Property & Audience */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] text-on-surface-variant block mb-1">
+                    Property
                   </label>
-                  <p className="text-[10px] text-on-surface-variant leading-tight">
-                    Broadcast across all properties or restrict to one
-                  </p>
                   <select
                     value={selectedPropertyId}
                     onChange={(e) => setSelectedPropertyId(e.target.value)}
-                    className="w-full bg-surface-container border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-primary"
                   >
-                    <option value="ALL">🌐 Broadcast to All Managed Properties</option>
+                    <option value="ALL">All properties</option>
                     {properties.map((p) => (
                       <option key={p.property_id} value={p.property_id}>
-                        🏢 {p.property_name}
+                        {p.property_name}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-white block">
-                    Target Resident Audience
+                <div>
+                  <label className="text-[11px] text-on-surface-variant block mb-1">
+                    Audience
                   </label>
-                  <p className="text-[10px] text-on-surface-variant leading-tight">
-                    Specify which resident group can view this circular
-                  </p>
                   <select
                     value={targetAudience}
                     onChange={(e) => setTargetAudience(e.target.value)}
-                    className="w-full bg-surface-container border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
+                    className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-primary"
                   >
-                    <option value="All">👥 All Residents (Tenants & Owners)</option>
-                    <option value="Tenants">🏠 Tenants Only</option>
-                    <option value="Owners">🔑 Property Owners Only</option>
+                    <option value="All">All residents</option>
+                    <option value="Tenants">Tenants only</option>
+                    <option value="Owners">Owners only</option>
                   </select>
                 </div>
               </div>
 
-              {/* Validity Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-white block">
-                    Publish Date
+              {/* Dates */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="text-[11px] text-on-surface-variant block mb-1">
+                    Publish date
                   </label>
-                  <p className="text-[10px] text-on-surface-variant leading-tight">
-                    When this circular becomes live on noticeboards
-                  </p>
                   <input
                     type="date"
                     value={publishDate}
                     onChange={(e) => setPublishDate(e.target.value)}
-                    className="w-full bg-surface-container border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary [color-scheme:dark]"
+                    className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-primary [color-scheme:dark]"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-white block">
-                    Expiry Date
+                <div>
+                  <label className="text-[11px] text-on-surface-variant block mb-1">
+                    Expiry date
                   </label>
-                  <p className="text-[10px] text-on-surface-variant leading-tight">
-                    When this notice will automatically archive
-                  </p>
                   <input
                     type="date"
                     value={expiryDate}
                     onChange={(e) => setExpiryDate(e.target.value)}
-                    className="w-full bg-surface-container border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary [color-scheme:dark]"
+                    className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-primary [color-scheme:dark]"
                   />
                 </div>
               </div>
 
-              {/* Attachment PDF Document */}
-              <div className="space-y-1.5 pt-1">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-[16px] text-primary">picture_as_pdf</span>
-                      <span>Official PDF Circular Document (Optional)</span>
-                    </label>
-                    <p className="text-[10px] text-on-surface-variant leading-tight">
-                      Upload a PDF circular for residents to download
-                    </p>
-                  </div>
+              {/* Attachment PDF */}
+              <div>
+                <label className="text-[11px] text-on-surface-variant block mb-1">
+                  PDF attachment (optional)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={attachmentUrl}
+                    onChange={(e) => setAttachmentUrl(e.target.value)}
+                    placeholder="PDF link or upload file..."
+                    className="flex-1 bg-surface-container border border-outline-variant/50 rounded-xl px-3 py-1.5 text-xs text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary"
+                  />
 
                   <button
                     type="button"
                     onClick={() => attachmentInputRef.current?.click()}
                     disabled={isUploadingAttachment}
-                    className="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant text-white text-xs font-semibold flex items-center gap-1.5 transition-colors pressable"
+                    className="px-3 py-1.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant text-xs text-white font-medium flex items-center gap-1 shrink-0 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-[16px]">
+                    <span className="material-symbols-outlined text-[15px]">
                       {isUploadingAttachment ? "sync" : "attach_file"}
                     </span>
-                    <span>{isUploadingAttachment ? "Uploading..." : "Upload File"}</span>
+                    <span>{isUploadingAttachment ? "Uploading..." : "Upload PDF"}</span>
                   </button>
 
                   <input
@@ -583,28 +495,18 @@ export default function AdminAnnouncementForm({
                     className="hidden"
                   />
                 </div>
-
-                <input
-                  type="url"
-                  id="attachment_url"
-                  name="attachment_url"
-                  value={attachmentUrl}
-                  onChange={(e) => setAttachmentUrl(e.target.value)}
-                  placeholder="https://.../official_notice.pdf"
-                  className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-3 py-2 text-xs text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary font-mono text-[11px]"
-                />
               </div>
             </div>
           )}
         </div>
 
-        {/* FOOTER ACTIONS */}
-        <div className="flex items-center justify-end gap-3 pt-3 border-t border-outline-variant/30">
+        {/* Footer actions */}
+        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-outline-variant/30">
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2.5 rounded-xl bg-surface-container border border-outline-variant hover:bg-surface-container-high text-white text-xs font-semibold transition-colors pressable"
+              className="px-4 py-2 rounded-xl bg-surface-container border border-outline-variant hover:bg-surface-container-high text-white text-xs font-medium transition-colors"
             >
               Cancel
             </button>
@@ -613,13 +515,13 @@ export default function AdminAnnouncementForm({
           <button
             type="submit"
             disabled={isPending || isUploadingImage || isUploadingAttachment}
-            className="btn-primary px-6 py-2.5 rounded-xl text-white font-bold text-xs flex items-center gap-2 shadow-lg pressable disabled:opacity-50"
+            className="btn-primary px-5 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 shadow-md disabled:opacity-50"
           >
-            <span className="material-symbols-outlined text-[17px]">
-              {isPending ? "sync" : "send"}
+            <span className="material-symbols-outlined text-[16px]">
+              {isPending ? "sync" : "check"}
             </span>
             <span>
-              {isPending ? "Saving..." : isEditing ? "Save Changes" : "Publish Announcement"}
+              {isPending ? "Saving..." : isEditing ? "Save changes" : "Publish"}
             </span>
           </button>
         </div>
