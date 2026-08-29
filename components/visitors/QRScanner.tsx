@@ -2,12 +2,98 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Html5Qrcode } from "html5-qrcode";
+import jsQR from "jsqr";
 import Image from "next/image";
 import { scanVisitorQR, checkOutVisitorById } from "@/app/admin/visitors/scan-action";
 
 type QRScannerProps = {
   onClose: () => void;
 };
+
+// Ultra-Resilient Multi-Pass QR Decoder for uploaded image files & screenshots
+async function decodeQrFromImageFile(file: File): Promise<string | null> {
+  // Pass 1: Native Hardware BarcodeDetector API
+  if (typeof window !== "undefined" && "BarcodeDetector" in window) {
+    try {
+      const barcodeDetector = new (window as any).BarcodeDetector({ formats: ["qr_code"] });
+      const imageBitmap = await createImageBitmap(file);
+      const barcodes = await barcodeDetector.detect(imageBitmap);
+      if (barcodes && barcodes.length > 0 && barcodes[0]?.rawValue) {
+        return barcodes[0].rawValue;
+      }
+    } catch {
+      // Fall through to canvas
+    }
+  }
+
+  // Load image into HTML Image object
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const image = document.createElement("img");
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = reader.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return null;
+
+  // Pass 2: Full Original Resolution Scan with jsQR (inversion attempt: both)
+  try {
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imgData.data, imgData.width, imgData.height, {
+      inversionAttempts: "attemptBoth",
+    });
+    if (code && code.data) return code.data;
+  } catch {}
+
+  // Pass 3: Multi-Scale Resampling (Downscaling large 4K phone screenshots / photos)
+  const maxDimensions = [1200, 800, 500];
+  for (const maxDim of maxDimensions) {
+    if (img.naturalWidth > maxDim || img.naturalHeight > maxDim) {
+      try {
+        const scale = maxDim / Math.max(img.naturalWidth, img.naturalHeight);
+        canvas.width = Math.floor(img.naturalWidth * scale);
+        canvas.height = Math.floor(img.naturalHeight * scale);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imgData.data, imgData.width, imgData.height, {
+          inversionAttempts: "attemptBoth",
+        });
+        if (code && code.data) return code.data;
+      } catch {}
+    }
+  }
+
+  // Pass 4: Center Region Crop (focusing on middle 70% of pass slip)
+  try {
+    const minSide = Math.min(img.naturalWidth, img.naturalHeight);
+    const cropSize = Math.floor(minSide * 0.7);
+    const cropX = Math.floor((img.naturalWidth - cropSize) / 2);
+    const cropY = Math.floor((img.naturalHeight - cropSize) / 2);
+
+    canvas.width = cropSize;
+    canvas.height = cropSize;
+    ctx.clearRect(0, 0, cropSize, cropSize);
+    ctx.drawImage(img, cropX, cropY, cropSize, cropSize, 0, 0, cropSize, cropSize);
+    const imgData = ctx.getImageData(0, 0, cropSize, cropSize);
+    const code = jsQR(imgData.data, imgData.width, imgData.height, {
+      inversionAttempts: "attemptBoth",
+    });
+    if (code && code.data) return code.data;
+  } catch {}
+
+  return null;
+}
 
 export default function QRScanner({ onClose }: QRScannerProps) {
   const [activeTab, setActiveTab] = useState<"camera" | "upload">("camera");
@@ -162,7 +248,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
     }
   };
 
-  // Image Upload File Handler
+  // Image Upload File Handler (Multi-Engine)
   const handleImageFile = async (file: File) => {
     if (!file || !file.type.startsWith("image/")) {
       setErrorMessage("Please select a valid image file (PNG, JPG, or WEBP).");
@@ -174,26 +260,16 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
     startTransition(async () => {
       try {
-        if (!html5QrRef.current) {
-          html5QrRef.current = new Html5Qrcode(scannerElementId);
-        }
-
-        let decodedText: string | null = null;
-        try {
-          decodedText = await html5QrRef.current.scanFile(file, true);
-        } catch {
-          // Fallback without rendering canvas
-          decodedText = await html5QrRef.current.scanFile(file, false);
-        }
+        const decodedText = await decodeQrFromImageFile(file);
 
         if (decodedText) {
           await processDecodedText(decodedText);
         } else {
-          setErrorMessage("No valid QR code was detected in the uploaded image. Please try a clearer screenshot.");
+          setErrorMessage("Could not detect a QR code in this image. Please ensure the QR code is clearly visible.");
         }
       } catch (err: any) {
-        console.error("QR File Scan Error:", err);
-        setErrorMessage("Could not detect a readable QR code. Please upload a clear, uncropped QR pass screenshot.");
+        console.error("QR File Decode Error:", err);
+        setErrorMessage("Could not parse image. Please upload a clear QR pass screenshot.");
       }
     });
   };
@@ -232,7 +308,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
   return (
     <div className="flex flex-col gap-4 w-full">
-      {/* PERSISTENT HEADLESS SCANNER DOM ELEMENT (Always mounted so scanFile never fails) */}
+      {/* PERSISTENT CAMERA SCANNER DOM CONTAINER */}
       <div className={activeTab === "camera" && !verifiedVisitor ? "block" : "hidden"}>
         <div className="relative w-full aspect-square max-w-[340px] mx-auto rounded-2xl overflow-hidden bg-black border border-outline-variant shadow-inner flex items-center justify-center">
           <div
@@ -306,11 +382,6 @@ export default function QRScanner({ onClose }: QRScannerProps) {
           )}
         </div>
       </div>
-
-      {/* Hidden container placeholder for scanner when not in camera view to keep DOM valid */}
-      {activeTab !== "camera" && (
-        <div id="pm-scanner-offscreen" className="hidden" aria-hidden="true" />
-      )}
 
       {/* RESULT VIEW: VERIFIED, ALREADY CHECKED-IN, OR CHECKED OUT */}
       {verifiedVisitor ? (
