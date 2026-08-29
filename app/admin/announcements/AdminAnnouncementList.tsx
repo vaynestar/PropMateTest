@@ -260,22 +260,24 @@ export default function AdminAnnouncementList({
         </div>
       </div>
 
-      {/* CREATE / EDIT FORM MODAL */}
+      {/* CREATE / EDIT FORM POPUP MODAL */}
       {(isCreating || editingItem) && (
-        <div className="animate-in fade-in zoom-in-95 duration-200">
-          <AdminAnnouncementForm
-            properties={properties}
-            defaultPropertyId={defaultPropertyId}
-            initialData={editingItem}
-            onSuccess={() => {
-              setIsCreating(false);
-              setEditingItem(null);
-            }}
-            onCancel={() => {
-              setIsCreating(false);
-              setEditingItem(null);
-            }}
-          />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-3xl animate-in zoom-in-95 duration-200 shadow-2xl">
+            <AdminAnnouncementForm
+              properties={properties}
+              defaultPropertyId={defaultPropertyId}
+              initialData={editingItem}
+              onSuccess={() => {
+                setIsCreating(false);
+                setEditingItem(null);
+              }}
+              onCancel={() => {
+                setIsCreating(false);
+                setEditingItem(null);
+              }}
+            />
+          </div>
         </div>
       )}
 
