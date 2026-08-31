@@ -20,12 +20,12 @@ export function getDateRangeBoundary(dateRange: DateRangeKey): Date | null {
   return null;
 }
 
-export async function getReportsData(propertyId: string = "ALL", dateRange: DateRangeKey = "30d") {
+export async function getReportsData(propertyId: string = "ALL", dateRange: DateRangeKey = "ytd") {
   const startDate = getDateRangeBoundary(dateRange);
 
   // Property filter predicate helpers
   const propertyWhere = propertyId !== "ALL" ? { property_id: propertyId } : {};
-  const unitPropertyWhere = propertyId !== "ALL" ? { unit: { property_id: propertyId } } : {};
+  const leasePropertyWhere = propertyId !== "ALL" ? { lease: { unit: { property_id: propertyId } } } : {};
   const ticketPropertyWhere = propertyId !== "ALL"
     ? {
         OR: [
@@ -83,7 +83,7 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
   // 2. FINANCIAL & BILLING DATA
   // -------------------------------------------------------------
   const invoiceWhere: any = {
-    ...unitPropertyWhere,
+    ...leasePropertyWhere,
   };
   if (startDate) {
     invoiceWhere.invoice_date = { gte: startDate };
@@ -202,10 +202,10 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
 
   const topDefaulters = Object.values(defaultersMap)
     .sort((a, b) => b.overdueAmount - a.overdueAmount)
-    .slice(0, 5);
+    .slice(0, 10);
 
   // -------------------------------------------------------------
-  // 3. HELPDESK & MAINTENANCE DATA
+  // 3. MAINTENANCE & HELPDESK DATA
   // -------------------------------------------------------------
   const ticketWhere: any = {
     ...ticketPropertyWhere,
@@ -217,59 +217,75 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
   const tickets = await prisma.ticket.findMany({
     where: ticketWhere,
     include: {
-      property: true,
-      unit: true,
-      reporter: { select: { user_name: true } },
+      lease: {
+        include: {
+          unit: { include: { property: true } },
+          tenant: { select: { user_name: true } },
+        },
+      },
     },
     orderBy: { created_at: "desc" },
   });
 
   const totalTickets = tickets.length;
   const resolvedTickets = tickets.filter((t) => t.status === "Resolved" || t.status === "Closed");
-  const inProgressTickets = tickets.filter((t) => t.status === "In Progress" || t.status === "Pending");
+  const inProgressTickets = tickets.filter((t) => t.status === "In Progress" || t.status === "Pending Parts" || t.status === "KIV");
   const openTickets = tickets.filter((t) => t.status === "Open");
 
-  const resolutionRate = totalTickets > 0
-    ? Math.round((resolvedTickets.length / totalTickets) * 100)
-    : 0;
-
-  // MTTR calculation in hours
+  // Mean Time To Resolve (MTTR in hours)
   let totalResolutionHours = 0;
-  let resolvedWithTimeCount = 0;
+  let resolvedWithDatesCount = 0;
+
   for (const t of resolvedTickets) {
-    if (t.resolved_at && t.created_at) {
+    if (t.resolved_at) {
       const hours = (new Date(t.resolved_at).getTime() - new Date(t.created_at).getTime()) / (1000 * 60 * 60);
       if (hours >= 0) {
         totalResolutionHours += hours;
-        resolvedWithTimeCount += 1;
+        resolvedWithDatesCount++;
       }
     }
   }
-  const avgResolutionHours = resolvedWithTimeCount > 0
-    ? Math.round((totalResolutionHours / resolvedWithTimeCount) * 10) / 10
-    : 24.5; // realistic benchmark if freshly resolved
 
-  // Category breakdown
-  const categoryMap: Record<string, { name: string; total: number; resolved: number }> = {};
-  const priorityMap: Record<string, number> = { Urgent: 0, High: 0, Normal: 0, Low: 0 };
+  const avgResolutionHours = resolvedWithDatesCount > 0
+    ? Math.round(totalResolutionHours / resolvedWithDatesCount)
+    : 24;
+
+  const resolutionRate = totalTickets > 0
+    ? Math.round((resolvedTickets.length / totalTickets) * 100)
+    : 100;
+
+  // Category Breakdown
+  const categoryCountMap: Record<string, { total: number; resolved: number }> = {};
+  const priorityCountMap: Record<string, number> = { Urgent: 0, High: 0, Normal: 0, Low: 0 };
 
   for (const t of tickets) {
-    const cat = t.ticket_category || "General";
-    if (!categoryMap[cat]) {
-      categoryMap[cat] = { name: cat, total: 0, resolved: 0 };
+    const catName = t.ticket_category || "General";
+    if (!categoryCountMap[catName]) {
+      categoryCountMap[catName] = { total: 0, resolved: 0 };
     }
-    categoryMap[cat].total += 1;
+    categoryCountMap[catName].total++;
     if (t.status === "Resolved" || t.status === "Closed") {
-      categoryMap[cat].resolved += 1;
+      categoryCountMap[catName].resolved++;
     }
 
-    if (priorityMap[t.priority] !== undefined) {
-      priorityMap[t.priority] += 1;
+    const priority = t.priority || "Normal";
+    if (priorityCountMap[priority] !== undefined) {
+      priorityCountMap[priority]++;
+    } else {
+      priorityCountMap[priority] = 1;
     }
   }
 
-  const categoryBreakdown = Object.values(categoryMap).sort((a, b) => b.total - a.total);
-  const priorityBreakdown = Object.entries(priorityMap).map(([name, value]) => ({ name, value }));
+  const categoryBreakdown = Object.entries(categoryCountMap).map(([name, stats]) => ({
+    name,
+    total: stats.total,
+    resolved: stats.resolved,
+  })).sort((a, b) => b.total - a.total);
+
+  const priorityBreakdown = Object.entries(priorityCountMap).map(([name, value]) => ({
+    name,
+    value,
+  }));
 
   const unresolvedUrgentTickets = tickets
     .filter((t) => (t.priority === "Urgent" || t.priority === "High") && t.status !== "Resolved" && t.status !== "Closed")
@@ -285,26 +301,25 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
     bookingWhere.booking_date = { gte: startDate };
   }
 
-  const [facilities, bookings] = await Promise.all([
-    prisma.facility.findMany({
-      where: propertyWhere,
-      select: { facility_id: true, facility_name: true, facility_type: true },
-    }),
-    prisma.booking.findMany({
-      where: bookingWhere,
-      include: {
-        facility: true,
-        user: { select: { user_name: true } },
+  const bookings = await prisma.booking.findMany({
+    where: bookingWhere,
+    include: {
+      facility: { include: { property: true } },
+      lease: {
+        include: {
+          unit: true,
+          tenant: { select: { user_name: true } },
+        },
       },
-      orderBy: { booking_date: "asc" },
-    }),
-  ]);
+    },
+    orderBy: { booking_date: "desc" },
+  });
 
-  const totalBookingsCount = bookings.length;
-  const confirmedBookings = bookings.filter((b) => b.booking_status === "Confirmed" || b.booking_status === "Completed");
+  const totalBookings = bookings.length;
+  const confirmedBookings = bookings.filter((b) => b.booking_status === "Confirmed" || b.booking_status === "Approved");
 
-  let totalHoursReserved = 0;
-  const facilityUsageMap: Record<string, { name: string; count: number; hours: number }> = {};
+  let totalBookingHours = 0;
+  const facilityUsageMap: Record<string, { count: number; hours: number }> = {};
   const timeSlotMap: Record<string, number> = {
     "Morning (08:00 - 12:00)": 0,
     "Afternoon (12:00 - 17:00)": 0,
@@ -312,27 +327,37 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
   };
 
   for (const b of bookings) {
-    const hours = Math.max(1, (new Date(b.end_time).getTime() - new Date(b.start_time).getTime()) / (1000 * 60 * 60));
-    totalHoursReserved += hours;
+    const start = new Date(b.start_time);
+    const end = new Date(b.end_time);
+    const durationHours = Math.max(1, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
+    totalBookingHours += durationHours;
 
-    const facName = b.facility?.facility_name || "Amenity";
+    const facName = b.facility?.facility_name || "Facility";
     if (!facilityUsageMap[facName]) {
-      facilityUsageMap[facName] = { name: facName, count: 0, hours: 0 };
+      facilityUsageMap[facName] = { count: 0, hours: 0 };
     }
-    facilityUsageMap[facName].count += 1;
-    facilityUsageMap[facName].hours += Math.round(hours);
+    facilityUsageMap[facName].count++;
+    facilityUsageMap[facName].hours += durationHours;
 
-    const startH = new Date(b.start_time).getHours();
-    if (startH < 12) timeSlotMap["Morning (08:00 - 12:00)"] += 1;
-    else if (startH < 17) timeSlotMap["Afternoon (12:00 - 17:00)"] += 1;
-    else timeSlotMap["Evening (17:00 - 22:00)"] += 1;
+    const startHour = start.getHours();
+    if (startHour < 12) timeSlotMap["Morning (08:00 - 12:00)"]++;
+    else if (startHour < 17) timeSlotMap["Afternoon (12:00 - 17:00)"]++;
+    else timeSlotMap["Evening (17:00 - 22:00)"]++;
   }
 
-  const facilityUsageData = Object.values(facilityUsageMap).sort((a, b) => b.count - a.count);
-  const timeSlotDistribution = Object.entries(timeSlotMap).map(([slot, count]) => ({ slot, count }));
+  const amenityUsage = Object.entries(facilityUsageMap).map(([name, data]) => ({
+    name,
+    count: data.count,
+    hours: Math.round(data.hours),
+  })).sort((a, b) => b.hours - a.hours);
+
+  const timeSlotDistribution = Object.entries(timeSlotMap).map(([slot, count]) => ({
+    slot,
+    count,
+  }));
 
   // -------------------------------------------------------------
-  // 5. VISITOR & SECURITY DATA
+  // 5. VISITORS & GUARDHOUSE SECURITY DATA
   // -------------------------------------------------------------
   const visitorWhere: any = {
     ...visitorPropertyWhere,
@@ -344,112 +369,111 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
   const visitors = await prisma.visitor.findMany({
     where: visitorWhere,
     include: {
+      lease: {
+        include: {
+          unit: { include: { property: true } },
+          tenant: { select: { user_name: true } },
+        },
+      },
       property: true,
-      lease: { include: { unit: true } },
     },
     orderBy: { created_at: "desc" },
   });
 
-  const totalVisitorsCount = visitors.length;
-  const checkedInVisitors = visitors.filter((v) => v.status === "Checked In");
-  const checkedOutVisitors = visitors.filter((v) => v.status === "Checked Out" || v.status === "Completed");
+  const totalVisitors = visitors.length;
+  const activeInside = visitors.filter((v) => v.check_in_time && !v.check_out_time).length;
+  const checkedOutCount = visitors.filter((v) => v.check_out_time).length;
 
   const visitorTypeMap: Record<string, number> = {};
-  const dailyVisitorMap: Record<string, number> = {};
+  const dailyVisitorTrafficMap: Record<string, number> = {};
 
   for (const v of visitors) {
     const vType = v.visitor_type || "Guest";
     visitorTypeMap[vType] = (visitorTypeMap[vType] || 0) + 1;
 
-    const d = new Date(v.created_at);
-    const dayKey = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    dailyVisitorMap[dayKey] = (dailyVisitorMap[dayKey] || 0) + 1;
+    const dateKey = new Date(v.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    dailyVisitorTrafficMap[dateKey] = (dailyVisitorTrafficMap[dateKey] || 0) + 1;
   }
 
-  const visitorTypeData = Object.entries(visitorTypeMap).map(([type, count]) => ({ type, count }));
-  const visitorTrafficData = Object.entries(dailyVisitorMap).map(([date, count]) => ({ date, count })).slice(-14);
+  const visitorTypeDistribution = Object.entries(visitorTypeMap).map(([type, count]) => ({
+    type,
+    count,
+  }));
+
+  const visitorTrafficTrend = Object.entries(dailyVisitorTrafficMap).map(([date, count]) => ({
+    date,
+    count,
+  }));
+
+  const activeVisitorsList = visitors
+    .filter((v) => v.check_in_time && !v.check_out_time)
+    .slice(0, 10);
 
   return {
-    propertyId,
     dateRange,
+    propertyId,
     properties,
-
-    // Overview KPIs
     overview: {
-      occupancyRate,
       totalUnitsCount,
       occupiedUnitsCount,
       vacantUnitsCount,
       maintenanceUnitsCount,
-
-      totalInvoicedAmount: Math.round(totalInvoicedAmount),
-      totalCollectedAmount: Math.round(totalCollectedAmount),
-      totalOverdueAmount: Math.round(totalOverdueAmount),
+      occupancyRate,
       collectionRate,
-
-      totalTickets,
-      resolvedTicketsCount: resolvedTickets.length,
-      openTicketsCount: openTickets.length,
-      inProgressTicketsCount: inProgressTickets.length,
+      totalInvoicedAmount,
+      totalCollectedAmount,
+      totalOverdueAmount,
       resolutionRate,
       avgResolutionHours,
-
-      totalBookingsCount,
-      confirmedBookingsCount: confirmedBookings.length,
-      totalHoursReserved: Math.round(totalHoursReserved),
-      facilitiesCount: facilities.length,
-
-      totalVisitorsCount,
-      activeCheckedInCount: checkedInVisitors.length,
-      checkedOutCount: checkedOutVisitors.length,
+      totalTickets,
+      resolvedTicketsCount: resolvedTickets.length,
+      activeCheckedInCount: activeInside,
+      totalVisitorsCount: totalVisitors,
+      checkedOutCount,
+      unresolvedUrgentTickets,
+      topDefaulters,
     },
-
-    // Financial
     financial: {
-      totalInvoiced: Math.round(totalInvoicedAmount),
-      totalCollected: Math.round(totalCollectedAmount),
-      totalOverdue: Math.round(totalOverdueAmount),
+      totalInvoiced: totalInvoicedAmount,
+      totalCollected: totalCollectedAmount,
+      totalOverdue: totalOverdueAmount,
       collectionRate,
       agingReceivables: {
-        current: Math.round(agingCurrent),
-        days30: Math.round(aging30),
-        days60: Math.round(aging60),
-        days90Plus: Math.round(aging90Plus),
+        current: agingCurrent,
+        days30: aging30,
+        days60: aging60,
+        days90Plus: aging90Plus,
       },
       trend: financialTrend,
       chargeDistribution: chargeTypeDistribution,
       topDefaulters,
     },
-
-    // Maintenance
     maintenance: {
       totalTickets,
       resolvedCount: resolvedTickets.length,
-      openCount: openTickets.length,
       inProgressCount: inProgressTickets.length,
+      openCount: openTickets.length,
       resolutionRate,
       avgResolutionHours,
       categoryBreakdown,
       priorityBreakdown,
       unresolvedUrgentTickets,
     },
-
-    // Facilities
     facilities: {
-      totalBookings: totalBookingsCount,
-      totalHours: Math.round(totalHoursReserved),
+      totalBookings,
       confirmedCount: confirmedBookings.length,
-      amenityUsage: facilityUsageData,
+      totalHours: Math.round(totalBookingHours),
+      amenityUsage,
       timeSlotDistribution,
+      bookingsList: bookings.slice(0, 10),
     },
-
-    // Visitors
     visitors: {
-      totalVisitors: totalVisitorsCount,
-      activeInside: checkedInVisitors.length,
-      trafficTrend: visitorTrafficData,
-      typeDistribution: visitorTypeData,
-      activeVisitorsList: checkedInVisitors.slice(0, 6),
+      totalVisitors,
+      activeInside,
+      checkedOutCount,
+      typeDistribution: visitorTypeDistribution,
+      trafficTrend: visitorTrafficTrend,
+      activeVisitorsList,
     },
   };
 }

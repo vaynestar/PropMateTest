@@ -16,7 +16,7 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
 
   const resolvedParams = await searchParams;
   const propertyId = resolvedParams.propertyId || "ALL";
-  const dateRange = (resolvedParams.dateRange || "30d") as DateRangeKey;
+  const dateRange = (resolvedParams.dateRange || "ytd") as DateRangeKey;
 
   const reportData = await getReportsData(propertyId, dateRange);
 

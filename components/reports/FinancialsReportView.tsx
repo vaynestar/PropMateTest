@@ -88,8 +88,10 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
                     borderColor: "#334155",
                     borderRadius: "12px",
                     fontSize: "12px",
-                    color: "#fff",
+                    color: "#ffffff",
                   }}
+                  itemStyle={{ color: "#ffffff" }}
+                  labelStyle={{ color: "#ffffff", fontWeight: "bold" }}
                   formatter={(val: any) => [`RM ${Number(val).toLocaleString()}`, "Outstanding"]}
                 />
                 <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
@@ -132,8 +134,10 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
                       borderColor: "#334155",
                       borderRadius: "12px",
                       fontSize: "12px",
-                      color: "#fff",
+                      color: "#ffffff",
                     }}
+                    itemStyle={{ color: "#ffffff" }}
+                    labelStyle={{ color: "#ffffff", fontWeight: "bold" }}
                     formatter={(val: any) => [`RM ${Number(val).toLocaleString()}`, "Billed"]}
                   />
                 </PieChart>

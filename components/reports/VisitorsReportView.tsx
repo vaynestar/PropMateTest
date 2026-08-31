@@ -86,8 +86,10 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
                       borderColor: "#334155",
                       borderRadius: "12px",
                       fontSize: "12px",
-                      color: "#fff",
+                      color: "#ffffff",
                     }}
+                    itemStyle={{ color: "#ffffff" }}
+                    labelStyle={{ color: "#ffffff", fontWeight: "bold" }}
                     formatter={(val: any) => [`${val} visitors`, "Entry Volume"]}
                   />
                   <Area type="monotone" dataKey="count" stroke="#a855f7" strokeWidth={2} fillOpacity={1} fill="url(#visitorGrad)" />
@@ -131,8 +133,10 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
                       borderColor: "#334155",
                       borderRadius: "12px",
                       fontSize: "12px",
-                      color: "#fff",
+                      color: "#ffffff",
                     }}
+                    itemStyle={{ color: "#ffffff" }}
+                    labelStyle={{ color: "#ffffff", fontWeight: "bold" }}
                     formatter={(val: any) => [`${val} visitors`, "Total"]}
                   />
                 </PieChart>

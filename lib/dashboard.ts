@@ -46,6 +46,11 @@ export type DashboardStats = {
     created_at: Date;
     ticket_category: string;
   }[];
+  financialTrend: {
+    month: string;
+    invoiced: number;
+    collected: number;
+  }[];
 };
 
 export async function getDashboardStats(propertyId?: string): Promise<DashboardStats> {
@@ -93,6 +98,7 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
     recentPaidInvoices,
     recentAnnouncements,
     openTicketsList,
+    trendInvoices,
   ] = await Promise.all([
     prisma.propertyMaster.count(),
     prisma.facility.count({ where: facilityWhere }),
@@ -139,10 +145,10 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
         lease: {
           include: {
             unit: { select: { unit_number: true } },
+            tenant: { select: { user_name: true } },
           },
         },
       },
-      orderBy: { created_at: "desc" },
       take: 5,
     }),
     prisma.tenantLease.findMany({
@@ -231,12 +237,43 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
         ticket_category: true,
       },
     }),
+    prisma.invoice.findMany({
+      where: { lease: leaseWhere },
+      select: {
+        invoice_date: true,
+        total_amount: true,
+        status: true,
+        transactions: {
+          where: { transaction_status: { in: ["Success", "Completed"] } },
+          select: { transaction_amount: true },
+        },
+      },
+      orderBy: { invoice_date: "asc" },
+    }),
   ]);
 
   const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
   const outstandingAmount = Number(outstandingAgg._sum.total_amount ?? 0);
   const monthlyRevenue = Number(monthlyRevenueAgg._sum.monthly_rent ?? 0);
   const todayCollectedAmount = Number(todayPaidInvoices._sum.total_amount ?? 0);
+
+  // Compile Financial Trend for Area/Line Chart
+  const monthlyTrendMap: Record<string, { month: string; invoiced: number; collected: number }> = {};
+  for (const inv of trendInvoices) {
+    const d = new Date(inv.invoice_date);
+    const monthKey = d.toLocaleString("en-US", { month: "short", year: "2-digit" });
+    if (!monthlyTrendMap[monthKey]) {
+      monthlyTrendMap[monthKey] = { month: monthKey, invoiced: 0, collected: 0 };
+    }
+    const invTotal = Number(inv.total_amount) || 0;
+    const paidSum = inv.transactions.reduce((sum, tx) => sum + (Number(tx.transaction_amount) || 0), 0);
+    const isPaid = inv.status === "Paid" || paidSum >= invTotal;
+    const invCollected = isPaid ? invTotal : paidSum;
+
+    monthlyTrendMap[monthKey].invoiced += invTotal;
+    monthlyTrendMap[monthKey].collected += invCollected;
+  }
+  const financialTrend = Object.values(monthlyTrendMap);
 
   // Compile Urgent Action Items
   const urgentActionItems: DashboardStats["urgentActionItems"] = [];
@@ -354,5 +391,6 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
     urgentActionItems,
     activityFeed: activityFeed.slice(0, 10),
     openTicketsList,
+    financialTrend,
   };
 }

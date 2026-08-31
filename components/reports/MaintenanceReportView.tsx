@@ -80,8 +80,10 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
                       borderColor: "#334155",
                       borderRadius: "12px",
                       fontSize: "12px",
-                      color: "#fff",
+                      color: "#ffffff",
                     }}
+                    itemStyle={{ color: "#ffffff" }}
+                    labelStyle={{ color: "#ffffff", fontWeight: "bold" }}
                     formatter={(val: any) => [`${val} tickets`, "Total Logged"]}
                   />
                   <Bar dataKey="total" radius={[8, 8, 0, 0]}>

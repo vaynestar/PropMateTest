@@ -40,7 +40,7 @@ export default function AdminReportsClient({
     if (propId === "ALL") params.delete("propertyId");
     else params.set("propertyId", propId);
 
-    if (range === "30d") params.delete("dateRange");
+    if (range === "ytd") params.delete("dateRange");
     else params.set("dateRange", range);
 
     startTransition(() => {

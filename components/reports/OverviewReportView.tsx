@@ -159,8 +159,10 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
                       borderColor: "#334155",
                       borderRadius: "12px",
                       fontSize: "12px",
-                      color: "#fff",
+                      color: "#ffffff",
                     }}
+                    itemStyle={{ color: "#ffffff" }}
+                    labelStyle={{ color: "#ffffff", fontWeight: "bold" }}
                     formatter={(value: any) => [`RM ${Number(value).toLocaleString()}`, ""]}
                   />
                   <Area type="monotone" dataKey="invoiced" stroke="#38bdf8" strokeWidth={2} fillOpacity={1} fill="url(#invoicedGrad)" name="Invoiced" />
@@ -205,8 +207,10 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
                       borderColor: "#334155",
                       borderRadius: "12px",
                       fontSize: "12px",
-                      color: "#fff",
+                      color: "#ffffff",
                     }}
+                    itemStyle={{ color: "#ffffff" }}
+                    labelStyle={{ color: "#ffffff", fontWeight: "bold" }}
                   />
                 </PieChart>
               </ResponsiveContainer>
