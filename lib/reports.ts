@@ -268,11 +268,12 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
       categoryCountMap[catName].resolved++;
     }
 
-    const priority = t.priority || "Normal";
+    let priority = t.priority || "Normal";
+    if (priority === "Medium") priority = "Normal";
     if (priorityCountMap[priority] !== undefined) {
       priorityCountMap[priority]++;
     } else {
-      priorityCountMap[priority] = 1;
+      priorityCountMap["Normal"] = (priorityCountMap["Normal"] || 0) + 1;
     }
   }
 

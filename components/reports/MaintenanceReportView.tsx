@@ -68,12 +68,24 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
             <p className="text-[11px] text-on-surface-variant">Classification of reported defects and maintenance requests</p>
           </div>
 
-          <div className="h-64 w-full pt-4">
+          <div className="w-full pt-4 min-h-[300px]">
             {categoryBreakdown && categoryBreakdown.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={categoryBreakdown} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} allowDecimals={false} />
+              <ResponsiveContainer width="100%" height={Math.max(280, categoryBreakdown.length * 36)}>
+                <BarChart
+                  layout="vertical"
+                  data={categoryBreakdown}
+                  margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                >
+                  <XAxis type="number" stroke="#94a3b8" fontSize={11} tickLine={false} allowDecimals={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={150}
+                    stroke="#94a3b8"
+                    fontSize={11}
+                    tickLine={false}
+                    tick={{ fill: "#cbd5e1" }}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#161b26",
@@ -86,7 +98,7 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
                     labelStyle={{ color: "#ffffff", fontWeight: "bold" }}
                     formatter={(val: any) => [`${val} tickets`, "Total Logged"]}
                   />
-                  <Bar dataKey="total" radius={[8, 8, 0, 0]}>
+                  <Bar dataKey="total" radius={[0, 6, 6, 0]}>
                     {categoryBreakdown.map((entry: any, index: number) => (
                       <Cell key={`cat-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
                     ))}
@@ -94,7 +106,7 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-on-surface-variant">
+              <div className="h-full flex items-center justify-center text-xs text-on-surface-variant py-12">
                 No maintenance tickets found for this timeframe.
               </div>
             )}

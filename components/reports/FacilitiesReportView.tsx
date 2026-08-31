@@ -66,12 +66,24 @@ export default function FacilitiesReportView({ data }: FacilitiesReportViewProps
             <p className="text-[11px] text-on-surface-variant">Cumulative hours reserved per amenity</p>
           </div>
 
-          <div className="h-64 w-full pt-4">
+          <div className="w-full pt-4 min-h-[300px]">
             {amenityUsage && amenityUsage.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={amenityUsage} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} allowDecimals={false} />
+              <ResponsiveContainer width="100%" height={Math.max(280, amenityUsage.length * 38)}>
+                <BarChart
+                  layout="vertical"
+                  data={amenityUsage}
+                  margin={{ top: 5, right: 30, left: 10, bottom: 5 }}
+                >
+                  <XAxis type="number" stroke="#94a3b8" fontSize={11} tickLine={false} allowDecimals={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={150}
+                    stroke="#94a3b8"
+                    fontSize={11}
+                    tickLine={false}
+                    tick={{ fill: "#cbd5e1" }}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "#161b26",
@@ -84,7 +96,7 @@ export default function FacilitiesReportView({ data }: FacilitiesReportViewProps
                     labelStyle={{ color: "#ffffff", fontWeight: "bold" }}
                     formatter={(val: any) => [`${val} hours`, "Total Hours"]}
                   />
-                  <Bar dataKey="hours" radius={[8, 8, 0, 0]}>
+                  <Bar dataKey="hours" radius={[0, 6, 6, 0]}>
                     {amenityUsage.map((entry: any, index: number) => (
                       <Cell key={`fac-${index}`} fill={FACILITY_COLORS[index % FACILITY_COLORS.length]} />
                     ))}
@@ -92,7 +104,7 @@ export default function FacilitiesReportView({ data }: FacilitiesReportViewProps
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-xs text-on-surface-variant">
+              <div className="h-full flex items-center justify-center text-xs text-on-surface-variant py-12">
                 No facility bookings logged for this timeframe.
               </div>
             )}

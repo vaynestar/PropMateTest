@@ -80,7 +80,7 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
           <div className="h-56 w-full pt-4">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={agingData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                <XAxis dataKey="name" stroke="#94a3b8" fontSize={11} tickLine={false} interval={0} />
                 <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} tickFormatter={(v) => `RM${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
                 <Tooltip
                   contentStyle={{
