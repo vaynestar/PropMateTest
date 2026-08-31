@@ -22,6 +22,7 @@ const MORE = [
   { label: "Visitors", href: "/admin/visitors", icon: "person_search" },
   { label: "Announcements", href: "/admin/announcements", icon: "campaign" },
   { label: "Reports", href: "/admin/reports", icon: "analytics" },
+  { label: "Settings", href: "/admin/settings", icon: "settings" },
   { label: "Profile", href: "/admin/profile", icon: "person" },
 ];
 
