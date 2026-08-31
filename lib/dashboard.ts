@@ -14,14 +14,29 @@ export type DashboardStats = {
   overdueInvoices: number;
   outstandingAmount: number;
   monthlyRevenue: number;
+  todayCollectedAmount: number;
   openTickets: number;
+  urgentTicketsCount: number;
+  severeOverdueCount: number;
+  expiringLeasesCount: number;
+  activeVisitorsCount: number;
   totalTenants: number;
-  recentTickets: {
-    ticket_id: string;
+  urgentActionItems: {
+    id: string;
+    type: "TICKET" | "OVERDUE" | "LEASE_EXPIRY";
     title: string;
-    status: string;
-    priority: string;
-    created_at: Date;
+    subtitle: string;
+    urgency: "CRITICAL" | "HIGH" | "MEDIUM";
+    href: string;
+    timestamp: Date | string;
+  }[];
+  activityFeed: {
+    id: string;
+    type: "VISITOR" | "TICKET" | "PAYMENT" | "ANNOUNCEMENT";
+    title: string;
+    detail: string;
+    badge?: string;
+    timestamp: Date;
   }[];
   openTicketsList: {
     ticket_id: string;
@@ -31,20 +46,27 @@ export type DashboardStats = {
     created_at: Date;
     ticket_category: string;
   }[];
-  maintenanceCosts: {
-    month: string;
-    cost: number;
-  }[];
 };
 
 export async function getDashboardStats(propertyId?: string): Promise<DashboardStats> {
-  const nextMonth = new Date();
-  nextMonth.setDate(nextMonth.getDate() + 30);
+  const now = new Date();
+  const next30Days = new Date();
+  next30Days.setDate(next30Days.getDate() + 30);
+
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   const facilityWhere = propertyId ? { property_id: propertyId } : {};
   const unitWhere = propertyId ? { property_id: propertyId } : {};
   const leaseWhere = propertyId ? { unit: { property_id: propertyId } } : {};
   const ticketWhere = propertyId ? { lease: { unit: { property_id: propertyId } } } : {};
+  const visitorWhere = propertyId
+    ? {
+        OR: [
+          { property_id: propertyId },
+          { lease: { unit: { property_id: propertyId } } },
+        ],
+      }
+    : {};
 
   const [
     totalProperties,
@@ -59,11 +81,18 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
     overdueInvoices,
     outstandingAgg,
     monthlyRevenueAgg,
+    todayPaidInvoices,
     openTicketsCount,
+    urgentTickets,
+    expiringLeases,
+    severeOverdueInvoices,
+    activeVisitorsCount,
     totalTenants,
+    recentVisitors,
     recentTickets,
+    recentPaidInvoices,
+    recentAnnouncements,
     openTicketsList,
-    closedTickets,
   ] = await Promise.all([
     prisma.propertyMaster.count(),
     prisma.facility.count({ where: facilityWhere }),
@@ -71,8 +100,8 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
       where: {
         ...facilityWhere,
         next_maintenance_date: {
-          lte: nextMonth,
-          gte: new Date(),
+          lte: next30Days,
+          gte: now,
         },
       },
     }),
@@ -91,28 +120,108 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
       _sum: { monthly_rent: true },
       where: { ...unitWhere, status: "Occupied" },
     }),
+    prisma.invoice.aggregate({
+      _sum: { total_amount: true },
+      where: {
+        status: "Paid",
+        lease: leaseWhere,
+        modified_at: { gte: startOfToday },
+      },
+    }),
     prisma.ticket.count({ where: { ...ticketWhere, status: { in: ["Open", "In Progress"] } } }),
-    prisma.user.count({ 
-      where: { 
-        role: "Resident", 
-        tenant_leases: propertyId ? { some: { unit: { property_id: propertyId } } } : undefined 
-      } 
+    prisma.ticket.findMany({
+      where: {
+        ...ticketWhere,
+        priority: { in: ["Urgent", "High"] },
+        status: { in: ["Open", "In Progress"] },
+      },
+      include: {
+        lease: {
+          include: {
+            unit: { select: { unit_number: true } },
+          },
+        },
+      },
+      orderBy: { created_at: "desc" },
+      take: 5,
+    }),
+    prisma.tenantLease.findMany({
+      where: {
+        ...leaseWhere,
+        status: "Active",
+        move_out_date: { lte: next30Days, gte: now },
+      },
+      include: {
+        unit: { select: { unit_number: true } },
+        tenant: { select: { user_name: true } },
+      },
+      take: 5,
+    }),
+    prisma.invoice.findMany({
+      where: {
+        status: "Overdue",
+        lease: leaseWhere,
+      },
+      include: {
+        lease: {
+          include: {
+            unit: { select: { unit_number: true } },
+            tenant: { select: { user_name: true } },
+          },
+        },
+      },
+      orderBy: { due_date: "asc" },
+      take: 5,
+    }),
+    prisma.visitor.count({
+      where: {
+        ...visitorWhere,
+        check_in_time: { not: null },
+        check_out_time: null,
+      },
+    }),
+    prisma.user.count({
+      where: {
+        role: "Resident",
+        tenant_leases: propertyId ? { some: { unit: { property_id: propertyId } } } : undefined,
+      },
+    }),
+    prisma.visitor.findMany({
+      where: {
+        ...visitorWhere,
+        check_in_time: { not: null },
+      },
+      orderBy: { check_in_time: "desc" },
+      take: 6,
+      include: {
+        lease: { include: { unit: { select: { unit_number: true } } } },
+      },
     }),
     prisma.ticket.findMany({
       where: ticketWhere,
       orderBy: { created_at: "desc" },
-      take: 5,
-      select: {
-        ticket_id: true,
-        title: true,
-        status: true,
-        priority: true,
-        created_at: true,
+      take: 6,
+      include: {
+        lease: { include: { unit: { select: { unit_number: true } } } },
       },
+    }),
+    prisma.invoice.findMany({
+      where: { status: "Paid", lease: leaseWhere },
+      orderBy: { modified_at: "desc" },
+      take: 6,
+      include: {
+        lease: { include: { unit: { select: { unit_number: true } }, tenant: { select: { user_name: true } } } },
+      },
+    }),
+    prisma.announcement.findMany({
+      where: propertyId ? { property_id: propertyId } : {},
+      orderBy: { created_at: "desc" },
+      take: 4,
     }),
     prisma.ticket.findMany({
       where: { ...ticketWhere, status: { in: ["Open", "In Progress"] } },
       orderBy: { created_at: "desc" },
+      take: 10,
       select: {
         ticket_id: true,
         title: true,
@@ -122,50 +231,104 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
         ticket_category: true,
       },
     }),
-    prisma.ticket.findMany({
-      where: { 
-        ...ticketWhere,
-        status: { in: ["Resolved", "Closed"] },
-        cost: { gt: 0 } 
-      },
-      select: {
-        cost: true,
-        resolved_at: true,
-      }
-    }),
   ]);
 
-  const occupancyRate =
-    totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
-
+  const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
   const outstandingAmount = Number(outstandingAgg._sum.total_amount ?? 0);
   const monthlyRevenue = Number(monthlyRevenueAgg._sum.monthly_rent ?? 0);
+  const todayCollectedAmount = Number(todayPaidInvoices._sum.total_amount ?? 0);
 
-  // Group costs by month (last 6 months)
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const costMap: Record<string, number> = {};
-  
-  // Initialize last 6 months to 0
-  const d = new Date();
-  for (let i = 5; i >= 0; i--) {
-    const past = new Date(d.getFullYear(), d.getMonth() - i, 1);
-    const key = `${monthNames[past.getMonth()]} ${past.getFullYear()}`;
-    costMap[key] = 0;
-  }
+  // Compile Urgent Action Items
+  const urgentActionItems: DashboardStats["urgentActionItems"] = [];
 
-  for (const t of closedTickets) {
-    if (t.resolved_at) {
-      const key = `${monthNames[t.resolved_at.getMonth()]} ${t.resolved_at.getFullYear()}`;
-      if (costMap[key] !== undefined) {
-        costMap[key] += Number(t.cost ?? 0);
-      }
+  urgentTickets.forEach((t) => {
+    urgentActionItems.push({
+      id: t.ticket_id,
+      type: "TICKET",
+      title: `Urgent Ticket: ${t.title}`,
+      subtitle: `Unit ${t.lease?.unit?.unit_number || "General"} • Logged ${t.created_at.toLocaleDateString()}`,
+      urgency: t.priority === "Urgent" ? "CRITICAL" : "HIGH",
+      href: "/admin/maintenance",
+      timestamp: t.created_at,
+    });
+  });
+
+  severeOverdueInvoices.forEach((inv) => {
+    urgentActionItems.push({
+      id: inv.invoice_id,
+      type: "OVERDUE",
+      title: `Overdue Invoice: RM ${Number(inv.total_amount).toFixed(2)}`,
+      subtitle: `Unit ${inv.lease.unit.unit_number} (${inv.lease.tenant.user_name}) • Due ${new Date(inv.due_date).toLocaleDateString()}`,
+      urgency: "HIGH",
+      href: "/admin/invoices",
+      timestamp: inv.due_date,
+    });
+  });
+
+  expiringLeases.forEach((l) => {
+    const expiryDate = l.move_out_date ? new Date(l.move_out_date) : new Date();
+    urgentActionItems.push({
+      id: l.lease_id,
+      type: "LEASE_EXPIRY",
+      title: `Lease Expiring: Unit ${l.unit.unit_number}`,
+      subtitle: `Tenant ${l.tenant.user_name} • Ends ${expiryDate.toLocaleDateString()}`,
+      urgency: "MEDIUM",
+      href: "/admin/leases",
+      timestamp: expiryDate,
+    });
+  });
+
+  // Compile Live Activity Feed
+  const activityFeed: DashboardStats["activityFeed"] = [];
+
+  recentVisitors.forEach((v) => {
+    if (v.check_in_time) {
+      activityFeed.push({
+        id: `vis-${v.visitor_id}`,
+        type: "VISITOR",
+        title: `Visitor Checked In: ${v.visitor_name}`,
+        detail: `To Unit ${v.lease?.unit?.unit_number || "Property"} • ${v.vehicle_plate || "Pedestrian"}`,
+        badge: v.visitor_type || "Guest",
+        timestamp: new Date(v.check_in_time),
+      });
     }
-  }
+  });
 
-  const maintenanceCosts = Object.keys(costMap).map(k => ({
-    month: k,
-    cost: costMap[k],
-  }));
+  recentTickets.forEach((t) => {
+    activityFeed.push({
+      id: `tkt-${t.ticket_id}`,
+      type: "TICKET",
+      title: `Helpdesk Ticket Lodged`,
+      detail: `${t.title} • Unit ${t.lease?.unit?.unit_number || "General"}`,
+      badge: t.priority,
+      timestamp: new Date(t.created_at),
+    });
+  });
+
+  recentPaidInvoices.forEach((inv) => {
+    activityFeed.push({
+      id: `inv-${inv.invoice_id}`,
+      type: "PAYMENT",
+      title: `Payment Received: RM ${Number(inv.total_amount).toFixed(2)}`,
+      detail: `Unit ${inv.lease.unit.unit_number} (${inv.lease.tenant.user_name})`,
+      badge: "Paid",
+      timestamp: new Date(inv.modified_at || inv.created_at),
+    });
+  });
+
+  recentAnnouncements.forEach((a) => {
+    activityFeed.push({
+      id: `ann-${a.announcement_id}`,
+      type: "ANNOUNCEMENT",
+      title: `Announcement Published`,
+      detail: a.title,
+      badge: a.category || "General",
+      timestamp: new Date(a.created_at),
+    });
+  });
+
+  // Sort activity feed newest first
+  activityFeed.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
   return {
     totalProperties,
@@ -181,10 +344,15 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
     overdueInvoices,
     outstandingAmount,
     monthlyRevenue,
+    todayCollectedAmount,
     openTickets: openTicketsCount,
+    urgentTicketsCount: urgentTickets.length,
+    severeOverdueCount: severeOverdueInvoices.length,
+    expiringLeasesCount: expiringLeases.length,
+    activeVisitorsCount,
     totalTenants,
-    recentTickets,
+    urgentActionItems,
+    activityFeed: activityFeed.slice(0, 10),
     openTicketsList,
-    maintenanceCosts,
   };
 }

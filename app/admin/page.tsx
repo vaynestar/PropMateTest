@@ -1,148 +1,351 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { getDashboardStats } from "@/lib/dashboard";
-import MaintenanceCostChart from "@/components/dashboard/MaintenanceCostChart";
+import ScanButton from "@/components/visitors/ScanButton";
 import FilterableTicketQueue from "@/components/dashboard/FilterableTicketQueue";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
   const cookieStore = await cookies();
   const propertyId = cookieStore.get("propmate_property_id")?.value;
   const stats = await getDashboardStats(propertyId);
 
-  // Outstanding amount formatted logic
-  const isK = stats.outstandingAmount >= 10000;
-  const displayOutstanding = isK
-    ? (stats.outstandingAmount / 1000).toFixed(1)
-    : stats.outstandingAmount.toFixed(0);
-
   return (
-    <>
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-stack-lg gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto">
+      {/* 1. Header & Live Indicator */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-outline-variant/40">
         <div>
-          <h2 className="font-headline-lg text-headline-lg text-on-surface mb-1">Dashboard Overview</h2>
-          <p className="font-body-md text-body-md text-on-surface-variant">Real-time performance metrics across all properties.</p>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+              Operations Command Center
+            </h1>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>LIVE PULSE</span>
+            </span>
+          </div>
+          <p className="text-xs text-on-surface-variant mt-0.5">
+            Real-time building operations, priority action items, and security logs
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button className="btn-secondary px-4 py-2 rounded text-secondary font-label-md text-label-md hover:bg-secondary/10 transition-colors flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">download</span> Generate Report
-          </button>
-          <Link href="/admin/properties" className="btn-primary px-4 py-2 rounded text-white font-label-md text-label-md hover:brightness-110 transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(139,92,246,0.3)]">
-            <span className="material-symbols-outlined text-[18px]">add</span> Add Property
+
+        <div className="flex items-center gap-2">
+          <ScanButton />
+          <Link
+            href="/admin/reports"
+            className="px-3.5 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant text-xs text-white font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[16px] text-primary">analytics</span>
+            <span>Analytics & Reports</span>
           </Link>
         </div>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-gutter mb-stack-lg">
-        {/* KPI 1: Upcoming Maintenance */}
-        <div className="glass-card rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-primary/50 transition-colors">
-          <div className="absolute -right-6 -top-6 w-24 h-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors"></div>
-          <div className="flex justify-between items-start mb-4">
-            <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Upcoming Maintenance</span>
-            <div className="bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 rounded flex items-center gap-1 font-label-sm text-[10px]">
-              <span className="material-symbols-outlined text-[12px]">calendar_month</span> Next 30 Days
+      {/* 2. Critical Attention Priority Banner (if urgent items exist) */}
+      {stats.urgentActionItems.length > 0 && (
+        <div className="p-4 rounded-2xl bg-amber-950/30 border border-amber-500/40 shadow-lg animate-in fade-in">
+          <div className="flex items-center justify-between pb-2.5 border-b border-amber-500/20 mb-3">
+            <div className="flex items-center gap-2 text-amber-300">
+              <span className="material-symbols-outlined text-[18px]">priority_high</span>
+              <span className="text-xs font-bold uppercase tracking-wider">
+                Priority Action Required ({stats.urgentActionItems.length} items)
+              </span>
             </div>
+            <span className="text-[11px] text-amber-200/80">Requires prompt management attention</span>
           </div>
-          <div className="flex items-end justify-between">
-            <span className="font-display-lg text-display-lg text-on-surface">{stats.upcomingMaintenance}</span>
-            <div className="w-16 h-8 relative">
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30">
-                <path className="sparkline-path" d="M0,25 L20,15 L40,20 L60,5 L80,10 L100,0" fill="none" stroke="#d0bcff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"></path>
-              </svg>
-            </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {stats.urgentActionItems.map((item) => (
+              <Link
+                key={item.id}
+                href={item.href}
+                className="p-3 rounded-xl bg-surface-container-lowest/80 border border-amber-500/30 hover:border-amber-400 transition-colors flex items-start justify-between gap-2 group"
+              >
+                <div>
+                  <span className="text-xs font-bold text-white group-hover:text-amber-300 transition-colors block">
+                    {item.title}
+                  </span>
+                  <span className="text-[11px] text-on-surface-variant block mt-0.5">
+                    {item.subtitle}
+                  </span>
+                </div>
+                <span
+                  className={`text-[9px] font-mono uppercase px-1.5 py-0.5 rounded font-bold shrink-0 ${
+                    item.urgency === "CRITICAL"
+                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                      : item.urgency === "HIGH"
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                      : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                  }`}
+                >
+                  {item.urgency}
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
+      )}
 
-        {/* KPI 2: Total Facilities */}
-        <div className="glass-card rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-primary/50 transition-colors">
-          <div className="absolute -right-6 -top-6 w-24 h-24 bg-[#a3defe]/5 rounded-full blur-2xl group-hover:bg-[#a3defe]/10 transition-colors"></div>
-          <div className="flex justify-between items-start mb-4">
-            <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Total Facilities</span>
-            <div className="bg-primary/10 border border-primary/20 text-primary px-2 py-0.5 rounded flex items-center gap-1 font-label-sm text-[10px]">
-              <span className="material-symbols-outlined text-[12px]">domain</span> All Properties
+      {/* 3. 4 Operational Pulse Scorecards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Scorecard 1: Unit Occupancy */}
+        <Link
+          href="/admin/units"
+          className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-primary/50 transition-all group flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-xs text-on-surface-variant font-medium">Occupancy Pulse</span>
+            <span className="material-symbols-outlined text-[18px] text-primary group-hover:scale-110 transition-transform">
+              domain
+            </span>
+          </div>
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-white">{stats.occupancyRate}%</span>
+              <span className="text-xs text-on-surface-variant font-mono">
+                ({stats.occupiedUnits}/{stats.totalUnits} units)
+              </span>
+            </div>
+            {/* Occupancy Progress Bar */}
+            <div className="w-full h-1.5 bg-surface-container-high rounded-full mt-2 overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all"
+                style={{ width: `${stats.occupancyRate}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-on-surface-variant mt-1.5">
+              <span>{stats.vacantUnits} vacant</span>
+              <span>{stats.maintenanceUnits} under repair</span>
             </div>
           </div>
-          <div className="flex items-end justify-between">
-            <span className="font-display-lg text-display-lg text-on-surface">{stats.totalFacilities}</span>
-            <div className="w-16 h-8 relative">
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30">
-                <path className="sparkline-path" d="M0,20 L25,18 L50,15 L75,10 L100,5" fill="none" stroke="#a3defe" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" style={{ animationDelay: '0.1s' }}></path>
-              </svg>
-            </div>
-          </div>
-        </div>
+        </Link>
 
-        {/* KPI 3: Outstanding Balance */}
-        <div className="glass-card rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-error/30 transition-colors">
-          <div className="absolute -right-6 -top-6 w-24 h-24 bg-error/5 rounded-full blur-2xl group-hover:bg-error/10 transition-colors"></div>
-          <div className="flex justify-between items-start mb-4">
-            <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Outstanding Bal</span>
-            <div className="bg-error/10 border border-error/20 text-error px-2 py-0.5 rounded flex items-center gap-1 font-label-sm text-[10px]">
-              <span className="material-symbols-outlined text-[12px]">warning</span> {stats.overdueInvoices} Overdue
+        {/* Scorecard 2: Cash & Overdue */}
+        <Link
+          href="/admin/invoices"
+          className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-emerald-500/50 transition-all group flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-xs text-emerald-400 font-medium">Today&apos;s Collections</span>
+            <span className="material-symbols-outlined text-[18px] text-emerald-400 group-hover:scale-110 transition-transform">
+              payments
+            </span>
+          </div>
+          <div>
+            <span className="text-2xl font-bold text-emerald-300 font-mono">
+              RM {stats.todayCollectedAmount.toFixed(2)}
+            </span>
+            <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30 text-on-surface-variant">
+              <span>Total Overdue:</span>
+              <span className="font-mono font-bold text-rose-300">
+                RM {stats.outstandingAmount.toLocaleString()}
+              </span>
             </div>
           </div>
-          <div className="flex items-end justify-between">
-            <span className="font-display-lg text-display-lg text-on-surface"><span className="text-headline-md">$</span>{displayOutstanding}{isK && <span className="text-headline-md">k</span>}</span>
-            <div className="w-16 h-8 relative">
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30">
-                <path className="sparkline-path" d="M0,10 L20,15 L40,5 L60,20 L80,15 L100,25" fill="none" stroke="#ffb4ab" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" style={{ animationDelay: '0.2s' }}></path>
-              </svg>
-            </div>
-          </div>
-        </div>
+        </Link>
 
-        {/* KPI 4: Open Tickets */}
-        <div className="glass-card rounded-xl p-6 flex flex-col justify-between relative overflow-hidden group hover:border-tertiary/50 transition-colors">
-          <div className="absolute -right-6 -top-6 w-24 h-24 bg-tertiary/5 rounded-full blur-2xl group-hover:bg-tertiary/10 transition-colors"></div>
-          <div className="flex justify-between items-start mb-4">
-            <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Open Tickets</span>
-            <div className="bg-surface-variant border border-outline-variant text-on-surface-variant px-2 py-0.5 rounded flex items-center gap-1 font-label-sm text-[10px]">
-              <span className="material-symbols-outlined text-[12px]">build</span>
+        {/* Scorecard 3: Active Visitors On-Site */}
+        <Link
+          href="/admin/visitors"
+          className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-purple-500/50 transition-all group flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-xs text-purple-400 font-medium">Visitors Inside</span>
+            <span className="material-symbols-outlined text-[18px] text-purple-400 group-hover:scale-110 transition-transform">
+              badge
+            </span>
+          </div>
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-purple-300 font-mono">
+                {stats.activeVisitorsCount}
+              </span>
+              <span className="text-xs text-purple-400/80">currently on-site</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30 text-on-surface-variant">
+              <span>Guardhouse Gate:</span>
+              <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span>Active</span>
+              </span>
             </div>
           </div>
-          <div className="flex items-end justify-between">
-            <span className="font-display-lg text-display-lg text-on-surface">{stats.openTickets}</span>
-            <div className="w-16 h-8 relative">
-              <svg className="w-full h-full overflow-visible" viewBox="0 0 100 30">
-                <path className="sparkline-path" d="M0,5 L25,10 L50,8 L75,15 L100,20" fill="none" stroke="#d2bbff" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" style={{ animationDelay: '0.3s' }}></path>
-              </svg>
+        </Link>
+
+        {/* Scorecard 4: Open Helpdesk Backlog */}
+        <Link
+          href="/admin/maintenance"
+          className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-amber-500/50 transition-all group flex flex-col justify-between"
+        >
+          <div className="flex items-center justify-between pb-2">
+            <span className="text-xs text-amber-400 font-medium">Helpdesk Backlog</span>
+            <span className="material-symbols-outlined text-[18px] text-amber-400 group-hover:scale-110 transition-transform">
+              build
+            </span>
+          </div>
+          <div>
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold text-white font-mono">{stats.openTickets}</span>
+              <span className="text-xs text-on-surface-variant">active tickets</span>
+            </div>
+            <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30">
+              <span className="text-on-surface-variant">Urgent / High:</span>
+              <span className="text-amber-300 font-mono font-bold">
+                {stats.urgentTicketsCount} tickets
+              </span>
             </div>
           </div>
+        </Link>
+      </div>
+
+      {/* 4. Fast Action Matrix */}
+      <div className="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="text-on-surface-variant font-semibold shrink-0">Quick Operations:</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/maintenance"
+            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[15px] text-amber-400">add_task</span>
+            <span>Raise Ticket</span>
+          </Link>
+
+          <Link
+            href="/admin/invoices"
+            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[15px] text-emerald-400">receipt_long</span>
+            <span>Issue Invoice</span>
+          </Link>
+
+          <Link
+            href="/admin/announcements"
+            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[15px] text-primary">campaign</span>
+            <span>Post Notice</span>
+          </Link>
+
+          <Link
+            href="/admin/bookings"
+            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[15px] text-cyan-400">event_available</span>
+            <span>Facility Schedule</span>
+          </Link>
         </div>
       </div>
 
-      {/* Main Grid Section */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-gutter h-auto min-h-[500px]">
-        {/* Maintenance Cost Graph (Col Span 8) */}
-        <div className="xl:col-span-8 flex flex-col">
-          <MaintenanceCostChart data={stats.maintenanceCosts} />
-        </div>
+      {/* 5. Two-Column Real-Time Operational Workspace */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column (2 Cols): Active Ticket Queue */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-white">Active Maintenance Queue</h3>
+                <p className="text-[11px] text-on-surface-variant">
+                  Open and in-progress work orders across units
+                </p>
+              </div>
+              <Link
+                href="/admin/maintenance"
+                className="text-xs text-primary hover:underline font-semibold"
+              >
+                View all tickets →
+              </Link>
+            </div>
 
-        {/* Maintenance Queue and Quick Actions (Col Span 4) */}
-        <div className="xl:col-span-4 flex flex-col gap-gutter max-h-[500px]">
-          <div className="flex-1 min-h-[300px] overflow-hidden">
             <FilterableTicketQueue tickets={stats.openTicketsList} />
           </div>
-          
-          {/* Quick Actions Mini Panel */}
-          <div className="glass-card rounded-xl p-5 flex flex-col gap-3 shrink-0">
-            <h4 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-1">Quick Actions</h4>
-            <button className="w-full flex items-center gap-3 p-3 rounded-lg bg-surface-container-low hover:bg-surface-container-high border border-transparent hover:border-outline-variant transition-all text-on-surface text-left">
-              <div className="w-8 h-8 rounded bg-primary/20 flex items-center justify-center text-primary">
-                <span className="material-symbols-outlined text-[18px]">campaign</span>
+        </div>
+
+        {/* Right Column (1 Col): Live Activity Stream & Facility Snapshot */}
+        <div className="space-y-6">
+          {/* Live Operational Activity Stream */}
+          <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-4">
+              <div>
+                <h3 className="text-sm font-bold text-white">Live Activity Stream</h3>
+                <p className="text-[11px] text-on-surface-variant">Today&apos;s operational events log</p>
               </div>
-              <span className="font-body-md font-medium">New Announcement</span>
-            </button>
-            <button className="w-full flex items-center gap-3 p-3 rounded-lg bg-surface-container-low hover:bg-surface-container-high border border-transparent hover:border-outline-variant transition-all text-on-surface text-left">
-              <div className="w-8 h-8 rounded bg-secondary/20 flex items-center justify-center text-secondary">
-                <span className="material-symbols-outlined text-[18px]">receipt_long</span>
-              </div>
-              <span className="font-body-md font-medium">Create Invoice</span>
-            </button>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            </div>
+
+            <div className="space-y-3">
+              {stats.activityFeed.length > 0 ? (
+                stats.activityFeed.map((event) => (
+                  <div
+                    key={event.id}
+                    className="p-2.5 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/40 flex items-start gap-2.5 text-xs"
+                  >
+                    <span
+                      className={`material-symbols-outlined text-[16px] shrink-0 mt-0.5 ${
+                        event.type === "VISITOR"
+                          ? "text-purple-400"
+                          : event.type === "TICKET"
+                          ? "text-amber-400"
+                          : event.type === "PAYMENT"
+                          ? "text-emerald-400"
+                          : "text-primary"
+                      }`}
+                    >
+                      {event.type === "VISITOR"
+                        ? "badge"
+                        : event.type === "TICKET"
+                        ? "build"
+                        : event.type === "PAYMENT"
+                        ? "payments"
+                        : "campaign"}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="font-semibold text-white truncate block">
+                          {event.title}
+                        </span>
+                        <span className="text-[10px] text-on-surface-variant shrink-0 font-mono">
+                          {new Date(event.timestamp).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-on-surface-variant truncate block">
+                        {event.detail}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-6 text-center text-xs text-on-surface-variant">
+                  No activity events recorded yet today.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Quick Facility Maintenance Snapshot */}
+          <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
+            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-3">
+              <h3 className="text-sm font-bold text-white">Facility Status</h3>
+              <Link href="/admin/facilities" className="text-xs text-primary hover:underline font-semibold">
+                Manage →
+              </Link>
+            </div>
+            <div className="flex items-center justify-between text-xs text-on-surface-variant">
+              <span>Total Active Amenities:</span>
+              <span className="font-bold text-white font-mono">{stats.totalFacilities}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-on-surface-variant mt-2 pt-2 border-t border-outline-variant/20">
+              <span>Upcoming Maintenance (30d):</span>
+              <span className="font-bold text-amber-300 font-mono">
+                {stats.upcomingMaintenance} facilities
+              </span>
+            </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

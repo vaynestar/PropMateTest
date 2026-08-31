@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import StatusBadge from "./StatusBadge";
 
 type Ticket = {
@@ -17,95 +18,89 @@ type Props = {
 };
 
 export default function FilterableTicketQueue({ tickets }: Props) {
-  const [filter, setFilter] = useState<"All" | "High" | "Medium" | "Low">("All");
+  const [filter, setFilter] = useState<string>("All");
 
   const filteredTickets = tickets.filter((ticket) => {
     if (filter === "All") return true;
-    return ticket.priority === filter;
+    if (filter === "Urgent/High") return ticket.priority === "Urgent" || ticket.priority === "High";
+    return ticket.priority.toLowerCase() === filter.toLowerCase();
   });
 
-  // Helper for relative time (e.g., "2 hours ago")
   const getRelativeTime = (date: Date) => {
-    const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
-    const diffMs = date.getTime() - new Date().getTime();
+    const diffMs = Date.now() - new Date(date).getTime();
+    const diffMins = Math.round(diffMs / (1000 * 60));
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
     const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      const diffHours = Math.round(diffMs / (1000 * 60 * 60));
-      if (diffHours === 0) return "Just now";
-      return rtf.format(diffHours, "hour");
-    }
-    return rtf.format(diffDays, "day");
+
+    if (diffMins < 60) return `${Math.max(1, diffMins)}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
   };
 
   return (
-    <div className="glass-card p-6 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-title-md font-semibold text-primary-900 dark:text-primary-100">
-          All Open Tickets
-        </h3>
-        
-        {/* Filter Dropdown/Tabs */}
-        <div className="flex items-center gap-2">
-          {["All", "High", "Medium", "Low"].map((level) => (
-            <button
-              key={level}
-              onClick={() => setFilter(level as any)}
-              className={`px-3 py-1 text-sm rounded-full transition-colors ${
-                filter === level
-                  ? "bg-primary-900 text-white dark:bg-primary-100 dark:text-primary-900 font-medium"
-                  : "bg-surface-200 text-primary-600 hover:bg-surface-300 dark:bg-surface-800 dark:text-primary-300"
-              }`}
-            >
-              {level}
-            </button>
-          ))}
-        </div>
+    <div className="flex flex-col gap-3">
+      {/* Priority Filter Pills */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 hide-scrollbar text-xs">
+        {["All", "Urgent/High", "Normal", "Low"].map((level) => (
+          <button
+            key={level}
+            type="button"
+            onClick={() => setFilter(level)}
+            className={`px-3 py-1 rounded-xl font-semibold transition-all shrink-0 ${
+              filter === level
+                ? "bg-primary text-on-primary shadow-xs"
+                : "bg-surface-container-high text-on-surface-variant hover:text-white"
+            }`}
+          >
+            {level}
+          </button>
+        ))}
       </div>
 
-      <div className="space-y-4 overflow-y-auto flex-1 pr-2 custom-scrollbar">
+      {/* Ticket List */}
+      <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">
         {filteredTickets.length > 0 ? (
           filteredTickets.map((ticket) => (
-            <div
+            <Link
               key={ticket.ticket_id}
-              className="flex items-start justify-between p-4 rounded-xl bg-surface-50 dark:bg-surface-900/50 border border-surface-200 dark:border-surface-800 hover:border-primary-200 transition-colors"
+              href="/admin/maintenance"
+              className="p-3.5 rounded-xl bg-surface-container-lowest/90 border border-outline-variant/40 hover:border-primary/50 transition-colors flex items-center justify-between gap-3 group block"
             >
-              <div className="flex flex-col gap-1">
-                <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
+              <div className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-xs font-bold text-white group-hover:text-primary transition-colors truncate">
                   {ticket.title}
                 </span>
-                <span className="text-xs text-primary-500">
-                  {ticket.ticket_category} • {getRelativeTime(new Date(ticket.created_at))}
+                <span className="text-[11px] text-on-surface-variant flex items-center gap-2">
+                  <span className="px-1.5 py-0.2 rounded bg-surface-container-high text-[10px] text-on-surface font-medium">
+                    {ticket.ticket_category || "General"}
+                  </span>
+                  <span>•</span>
+                  <span>{getRelativeTime(new Date(ticket.created_at))}</span>
                 </span>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                {ticket.priority === "High" || ticket.priority === "Urgent" ? (
-                  <span className="bg-error/10 text-error border border-error/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase shrink-0">{ticket.priority}</span>
-                ) : ticket.priority === "Medium" ? (
-                  <span className="bg-secondary/10 text-secondary border border-secondary/20 px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase shrink-0">Med</span>
-                ) : (
-                  <span className="bg-surface-variant text-on-surface-variant border border-outline-variant px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase shrink-0">Low</span>
-                )}
+
+              <div className="flex items-center gap-2 shrink-0">
+                <span
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
+                    ticket.priority === "Urgent"
+                      ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
+                      : ticket.priority === "High"
+                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                      : ticket.priority === "Normal"
+                      ? "bg-blue-500/20 text-blue-300 border border-blue-500/30"
+                      : "bg-surface-container-high text-on-surface-variant border border-outline-variant/40"
+                  }`}
+                >
+                  {ticket.priority}
+                </span>
                 <StatusBadge status={ticket.status} />
               </div>
-            </div>
+            </Link>
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-primary-500 text-sm">
-            <svg
-              className="w-12 h-12 mb-2 text-surface-300 dark:text-surface-700"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            No {filter !== "All" ? filter : ""} open tickets
+          <div className="py-8 text-center text-xs text-on-surface-variant flex flex-col items-center gap-1.5">
+            <span className="material-symbols-outlined text-2xl text-emerald-400">check_circle</span>
+            <span>No {filter !== "All" ? filter : ""} active tickets in queue.</span>
           </div>
         )}
       </div>
