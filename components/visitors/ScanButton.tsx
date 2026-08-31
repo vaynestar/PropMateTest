@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import QRScanner, { terminateAllMediaStreams } from "./QRScanner";
 
 export default function ScanButton() {
@@ -10,6 +10,27 @@ export default function ScanButton() {
     terminateAllMediaStreams();
     setOpen(false);
   };
+
+  // Ensure camera streams are terminated if user navigates away or unmounts
+  useEffect(() => {
+    if (!open) {
+      terminateAllMediaStreams();
+    }
+    return () => {
+      terminateAllMediaStreams();
+    };
+  }, [open]);
+
+  // Handle ESC key press to close modal and stop camera
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && open) {
+        handleClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   return (
     <>

@@ -10,9 +10,43 @@ type QRScannerProps = {
   onClose: () => void;
 };
 
+// Global set tracking every single MediaStream created by the browser
+const globalActiveStreams = new Set<MediaStream>();
+
+if (typeof window !== "undefined" && navigator?.mediaDevices?.getUserMedia) {
+  const originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getUserMedia = async function (constraints) {
+    const stream = await originalGetUserMedia(constraints);
+    globalActiveStreams.add(stream);
+
+    stream.getTracks().forEach((track) => {
+      track.addEventListener("ended", () => {
+        globalActiveStreams.delete(stream);
+      });
+    });
+
+    return stream;
+  };
+}
+
 // Explicitly terminate all video streams/tracks across the entire browser context
 export function terminateAllMediaStreams() {
   if (typeof window === "undefined") return;
+
+  // 1. Direct hardware kill on all captured MediaStreams
+  globalActiveStreams.forEach((stream) => {
+    try {
+      stream.getTracks().forEach((track) => {
+        track.stop();
+        track.enabled = false;
+      });
+    } catch (err) {
+      console.warn("Error stopping captured stream track:", err);
+    }
+  });
+  globalActiveStreams.clear();
+
+  // 2. Stop all video elements in DOM
   try {
     const videoElements = document.querySelectorAll("video");
     videoElements.forEach((video) => {
@@ -164,6 +198,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
   const handleModalClose = async () => {
     isMountedRef.current = false;
     await stopCamera();
+    terminateAllMediaStreams();
     onClose();
   };
 
@@ -176,6 +211,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
     // Stop camera immediately upon decode
     await stopCamera();
+    terminateAllMediaStreams();
 
     startTransition(async () => {
       try {
@@ -249,6 +285,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
       if (!isMountedRef.current) {
         await stopCamera();
+        terminateAllMediaStreams();
         return;
       }
 
@@ -279,14 +316,17 @@ export default function QRScanner({ onClose }: QRScannerProps) {
       return () => {
         clearTimeout(t);
         stopCamera();
+        terminateAllMediaStreams();
       };
     } else {
       stopCamera();
+      terminateAllMediaStreams();
     }
 
     return () => {
       isMountedRef.current = false;
       stopCamera();
+      terminateAllMediaStreams();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, verifiedVisitor]);
@@ -613,6 +653,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
               onClick={() => {
                 setActiveTab("upload");
                 setErrorMessage(null);
+                terminateAllMediaStreams();
               }}
               className={`py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
                 activeTab === "upload"
