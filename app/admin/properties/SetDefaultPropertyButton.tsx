@@ -14,29 +14,33 @@ export default function SetDefaultPropertyButton({
 
   if (isDefault) {
     return (
-      <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-label-md text-xs font-semibold shadow-sm">
-        <span className="material-symbols-outlined text-[16px]">check_circle</span>
-        Default Property
+      <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold shadow-xs">
+        <span className="material-symbols-outlined text-[15px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+          star
+        </span>
+        <span>Default</span>
       </div>
     );
   }
 
   return (
     <button
+      type="button"
       onClick={() => {
         startTransition(() => {
           setActiveProperty(propertyId);
         });
       }}
       disabled={isPending}
-      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-high border border-outline-variant hover:border-primary/50 text-on-surface-variant hover:text-primary transition-all text-xs font-medium pressable disabled:opacity-50"
+      className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-high border border-outline-variant/60 hover:border-amber-500/50 text-on-surface-variant hover:text-amber-300 transition-all text-xs font-medium pressable disabled:opacity-50"
+      title="Set as active operational default"
     >
       {isPending ? (
-        <span className="material-symbols-outlined animate-spin-slow text-[16px]">progress_activity</span>
+        <span className="material-symbols-outlined animate-spin-slow text-[15px]">progress_activity</span>
       ) : (
-        <span className="material-symbols-outlined text-[16px]">star</span>
+        <span className="material-symbols-outlined text-[15px]">star_border</span>
       )}
-      {isPending ? "Setting..." : "Set as Default"}
+      <span>{isPending ? "Setting..." : "Set Default"}</span>
     </button>
   );
 }

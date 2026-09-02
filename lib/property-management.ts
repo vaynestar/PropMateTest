@@ -28,7 +28,21 @@ type PropertyInput = {
 export async function listProperties() {
   return prisma.propertyMaster.findMany({
     orderBy: { created_at: "desc" },
-    include: { _count: { select: { units: true } } },
+    include: {
+      _count: {
+        select: {
+          units: true,
+          facilities: true,
+          tickets: true,
+          announcements: true,
+        },
+      },
+      units: {
+        select: {
+          status: true,
+        },
+      },
+    },
   });
 }
 
