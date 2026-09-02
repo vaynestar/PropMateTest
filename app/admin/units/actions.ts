@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { createUnit, deleteUnit } from "@/lib/unit-management";
+import { createUnit, updateUnit, deleteUnit } from "@/lib/unit-management";
 
 export async function addUnit(state: any, formData: FormData) {
   try {
@@ -13,8 +13,9 @@ export async function addUnit(state: any, formData: FormData) {
     const unit_type = String(formData.get("unit_type") || "Standard");
     const floor_number = String(formData.get("floor_number"));
     const area_sqft = String(formData.get("area_sqft"));
-    const status = String(formData.get("status"));
-    const mode = String(formData.get("creation_mode"));
+    const monthly_rent = String(formData.get("monthly_rent") || "0");
+    const status = String(formData.get("status") || "Vacant");
+    const mode = String(formData.get("creation_mode") || "single");
 
     let count = 0;
 
@@ -28,7 +29,7 @@ export async function addUnit(state: any, formData: FormData) {
         unit_type,
         floor_number,
         area_sqft,
-        monthly_rent: "0",
+        monthly_rent,
         status,
       });
       count = 1;
@@ -56,7 +57,7 @@ export async function addUnit(state: any, formData: FormData) {
           unit_type,
           floor_number,
           area_sqft,
-          monthly_rent: "0",
+          monthly_rent,
           status,
         });
         count++;
@@ -64,9 +65,43 @@ export async function addUnit(state: any, formData: FormData) {
     }
 
     revalidatePath("/admin/units");
+    revalidatePath("/admin/properties");
     return { success: true, message: `Successfully ${mode === "single" ? "added" : "generated"} ${count} unit${count === 1 ? '' : 's'}!` };
   } catch (error: any) {
     return { error: error.message || "Failed to add unit" };
+  }
+}
+
+export async function updateUnitAction(state: any, formData: FormData) {
+  try {
+    await requireUser(["Admin"]);
+    const unit_id = String(formData.get("unit_id") || "");
+    if (!unit_id) throw new Error("Unit ID is required.");
+
+    const property_id = (formData.get("property_id") as string) || null;
+    const unit_number = String(formData.get("unit_number") || "");
+    const unit_type = String(formData.get("unit_type") || "Standard");
+    const floor_number = String(formData.get("floor_number") || "1");
+    const area_sqft = String(formData.get("area_sqft") || "800");
+    const monthly_rent = String(formData.get("monthly_rent") || "0");
+    const status = String(formData.get("status") || "Vacant");
+
+    await updateUnit({
+      unit_id,
+      property_id,
+      unit_number,
+      unit_type,
+      floor_number,
+      area_sqft,
+      monthly_rent,
+      status,
+    });
+
+    revalidatePath("/admin/units");
+    revalidatePath("/admin/properties");
+    return { success: true, message: "Unit updated successfully!" };
+  } catch (error: any) {
+    return { error: error.message || "Failed to update unit" };
   }
 }
 
@@ -78,6 +113,7 @@ export async function removeUnit(state: any, formData: FormData) {
       await deleteUnit(unitId);
     }
     revalidatePath("/admin/units");
+    revalidatePath("/admin/properties");
     return { success: true, message: "Unit deleted successfully!" };
   } catch (error: any) {
     return { error: error.message || "Failed to delete unit" };
