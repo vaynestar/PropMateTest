@@ -1,3 +1,5 @@
+import { UNIT_STATUSES, unitStatus } from "@/lib/unit-status";
+
 type StatusBadgeProps = {
   status: string;
   variant?: "ticket" | "invoice" | "unit" | "lease";
@@ -24,12 +26,14 @@ const invoiceStyles: Record<string, string> = {
   Partial: "bg-amber-400/20 text-amber-300 border-amber-400/40",
 };
 
+// Unit status styling lives in lib/unit-status.ts so the badge, the KPI row,
+// the floor summary and the card rail can never drift apart again.
 const unitStyles: Record<string, string> = {
-  Occupied: "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 font-semibold",
-  Vacant: "bg-sky-500/15 text-sky-300 border-sky-500/30 font-medium",
-  Maintenance: "bg-amber-500/20 text-amber-300 border-amber-500/40 font-semibold",
-  Repair: "bg-amber-500/20 text-amber-300 border-amber-500/40 font-semibold",
-  "Not Available": "bg-rose-500/20 text-rose-300 border-rose-500/40 font-semibold",
+  Occupied: UNIT_STATUSES.Occupied.chip,
+  Vacant: UNIT_STATUSES.Vacant.chip,
+  Repair: UNIT_STATUSES.Repair.chip,
+  Maintenance: UNIT_STATUSES.Repair.chip,
+  "Not Available": UNIT_STATUSES["Not Available"].chip,
 };
 
 const leaseStyles: Record<string, { cls: string; icon: string }> = {
@@ -67,10 +71,11 @@ export default function StatusBadge({ status, variant }: StatusBadgeProps) {
 
   const map = variant === "invoice" ? invoiceStyles : variant === "unit" ? unitStyles : ticketStyles;
   const cls = map[status] ?? "bg-surface-container-highest text-on-surface-variant border-outline-variant";
+  const label = variant === "unit" ? unitStatus(status).label : status;
 
   return (
     <span className={`px-2.5 py-1 rounded-md text-xs border font-medium ${cls}`}>
-      {status}
+      {label}
     </span>
   );
 }
