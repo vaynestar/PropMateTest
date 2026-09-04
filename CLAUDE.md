@@ -19,6 +19,8 @@
    - `01 Feature List`: `77cef05f-4108-4ce6-bb24-dc96e17f00fc`
    - `03 Components Reference`: `efa526a9-ad6c-49eb-804b-bfe85ee43b6b`
    - `Master Note`: `d28fffa4-7383-4c80-a24d-3c7ad36b053f`
+   - `00 Architecture & Agent Handoff`: `94d5748c-1178-4743-96bf-17c1d8383f60` **← read first: schema, auth layers, module pattern, conventions, known drift**
+   - `🗃️ Knotpad Cleanup Archive — 2026-09-04`: `bda49e9e-4731-438b-b3bd-e89f52f8d547` (recovery record for removed/merged content)
 3. **Scratch files:** `E:\Unitar document\Course\Year 3 Sem 1\Minor Project\FYP\Gemini\claude-scratch\` (NEVER write to `C:\`).
 4. **Always log after finishing:**
    - Increment to `DEV-(NN+1)` (next is `DEV-123`) in `05_Changelog.md` and check off tasks in `04_Index_Roadmap_Stack.md`.

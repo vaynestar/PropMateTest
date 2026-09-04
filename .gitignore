@@ -33,3 +33,6 @@ seed.out
 next-env.d.ts
 
 .vercel
+
+# agent scratch (AGENTS.md Rule 2: scratch belongs in FYP/Gemini, not the repo)
+/scratch/
