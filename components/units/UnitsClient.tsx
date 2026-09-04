@@ -56,15 +56,16 @@ function InlineStatusSelector({
 }: {
   unit: UnitItem;
   status: string;
-  onSelect: (next: string) => void;
+  onSelect: (next: string | null) => void;
 }) {
   const [state, formAction, isPending] = useActionState(updateUnitStatusAction, null);
   const isLeased = !!unit.leases && unit.leases.length > 0;
   const meta = unitStatus(status);
 
-  // If the server rejects the change, fall back to the persisted value.
+  // If the server rejects the change, drop the optimistic value and fall back
+  // to whatever is actually persisted.
   useEffect(() => {
-    if (state?.error) onSelect(unit.status);
+    if (state?.error) onSelect(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
@@ -152,14 +153,16 @@ function UnitCard({
   unit,
   onEdit,
   onDelete,
+  onStatusChange,
 }: {
   unit: UnitItem;
   onEdit: (u: UnitItem) => void;
   onDelete: (u: UnitItem) => void;
+  onStatusChange: (unitId: string, next: string | null) => void;
 }) {
-  const [status, setStatus] = useState(unit.status);
-  useEffect(() => setStatus(unit.status), [unit.status]);
-
+  // `unit.status` already carries the list's optimistic value, so the card,
+  // the filters, the counts and the floor meter all move together.
+  const status = unit.status;
   const activeLease = unit.leases?.[0];
   const tenant = activeLease?.tenant;
   const meta = unitStatus(status);
@@ -179,7 +182,11 @@ function UnitCard({
             <h4 className="truncate text-sm font-bold text-white">{unit.unit_number}</h4>
             <span className="text-[11px] text-on-surface-variant">{unit.unit_type}</span>
           </div>
-          <InlineStatusSelector unit={unit} status={status} onSelect={setStatus} />
+          <InlineStatusSelector
+            unit={unit}
+            status={status}
+            onSelect={(next) => onStatusChange(unit.unit_id, next)}
+          />
         </div>
 
         <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-on-surface-variant">
@@ -286,8 +293,46 @@ export default function UnitsClient({
   const [editingUnit, setEditingUnit] = useState<UnitItem | null>(null);
   const [deletingUnit, setDeletingUnit] = useState<UnitItem | null>(null);
 
+  // Optimistic status lives here, not in the card. A status change has to be
+  // visible to the filters, the counts and the floor meter immediately —
+  // otherwise a unit switched to Repair keeps sitting under the Vacant filter
+  // until the page is refreshed.
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
+
+  const units = useMemo(
+    () =>
+      initialUnits.map((u) => {
+        const override = statusOverrides[u.unit_id];
+        return override && override !== u.status ? { ...u, status: override } : u;
+      }),
+    [initialUnits, statusOverrides]
+  );
+
+  // Once the server catches up, drop the override so the row is server-driven again.
+  useEffect(() => {
+    setStatusOverrides((prev) => {
+      let changed = false;
+      const next: Record<string, string> = {};
+      for (const [id, value] of Object.entries(prev)) {
+        const persisted = initialUnits.find((u) => u.unit_id === id)?.status;
+        if (persisted === value || persisted === undefined) changed = true;
+        else next[id] = value;
+      }
+      return changed ? next : prev;
+    });
+  }, [initialUnits]);
+
+  const handleStatusChange = (unitId: string, next: string | null) => {
+    setStatusOverrides((prev) => {
+      const copy = { ...prev };
+      if (next === null) delete copy[unitId];
+      else copy[unitId] = next;
+      return copy;
+    });
+  };
+
   const filteredUnits = useMemo(() => {
-    return initialUnits.filter((u) => {
+    return units.filter((u) => {
       const matchesProperty =
         selectedPropertyId === "ALL" || u.property_id === selectedPropertyId;
 
@@ -307,7 +352,7 @@ export default function UnitsClient({
 
       return matchesProperty && matchesStatus && matchesSearch;
     });
-  }, [initialUnits, selectedPropertyId, statusFilter, searchQuery]);
+  }, [units, selectedPropertyId, statusFilter, searchQuery]);
 
   const unitsByFloor = useMemo(() => {
     const map = new Map<number, UnitItem[]>();
@@ -329,9 +374,9 @@ export default function UnitsClient({
   const scopedUnits = useMemo(
     () =>
       selectedPropertyId === "ALL"
-        ? initialUnits
-        : initialUnits.filter((u) => u.property_id === selectedPropertyId),
-    [initialUnits, selectedPropertyId]
+        ? units
+        : units.filter((u) => u.property_id === selectedPropertyId),
+    [units, selectedPropertyId]
   );
 
   const countOf = (key: UnitStatusKey) => scopedUnits.filter((u) => u.status === key).length;
@@ -565,6 +610,7 @@ export default function UnitsClient({
                     unit={unit}
                     onEdit={setEditingUnit}
                     onDelete={setDeletingUnit}
+                    onStatusChange={handleStatusChange}
                   />
                 ))}
               </div>
