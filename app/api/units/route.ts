@@ -1,26 +1,34 @@
-import { NextResponse } from 'next/server';
-
+import { NextResponse } from "next/server";
 import {
   createUnit,
   deleteUnit,
   listUnits,
   updateUnit,
-} from '@/lib/unit-management';
+} from "@/lib/unit-management";
+import { getSessionUser } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const units = await listUnits();
     return NextResponse.json(units);
   } catch (error: unknown) {
     const message =
-      error instanceof Error ? error.message : 'Failed to fetch units';
-
+      error instanceof Error ? error.message : "Failed to fetch units";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
   try {
+    const user = await getSessionUser();
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const unit = await createUnit({
@@ -36,14 +44,18 @@ export async function POST(request: Request) {
     return NextResponse.json(unit, { status: 201 });
   } catch (error: unknown) {
     const message =
-      error instanceof Error ? error.message : 'Failed to create unit';
-
+      error instanceof Error ? error.message : "Failed to create unit";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function PUT(request: Request) {
   try {
+    const user = await getSessionUser();
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
+
     const body = await request.json();
 
     const unit = await updateUnit({
@@ -60,27 +72,30 @@ export async function PUT(request: Request) {
     return NextResponse.json(unit);
   } catch (error: unknown) {
     const message =
-      error instanceof Error ? error.message : 'Failed to update unit';
-
+      error instanceof Error ? error.message : "Failed to update unit";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
+    const user = await getSessionUser();
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const unitId = searchParams.get('id');
+    const unitId = searchParams.get("id");
 
     if (!unitId) {
-      throw new Error('Unit ID is required');
+      throw new Error("Unit ID is required");
     }
 
     await deleteUnit(unitId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const message =
-      error instanceof Error ? error.message : 'Failed to delete unit';
-
+      error instanceof Error ? error.message : "Failed to delete unit";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

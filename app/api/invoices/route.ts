@@ -10,6 +10,10 @@ import {
 
 export async function GET() {
   try {
+    const user = await getSessionUser();
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
     const invoices = await listInvoices();
     return NextResponse.json(invoices);
   } catch (error: unknown) {
@@ -22,9 +26,12 @@ export async function GET() {
 export async function POST() {
   try {
     const user = await getSessionUser();
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
     const eligible = await getEligibleLeasesForInvoicing();
     const leaseIds = eligible.map(l => l.lease_id);
-    const result = await generateInvoicesForLeases(leaseIds, user?.userId);
+    const result = await generateInvoicesForLeases(leaseIds, user.userId);
     return NextResponse.json(result, { status: 201 });
   } catch (error: unknown) {
     const message =
@@ -36,9 +43,12 @@ export async function POST() {
 export async function PUT(request: Request) {
   try {
     const user = await getSessionUser();
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
     const body = await request.json();
     if (!body.invoice_id) throw new Error("Invoice ID is required");
-    await markInvoicePaid(body.invoice_id, user?.userId);
+    await markInvoicePaid(body.invoice_id, user.userId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const message =

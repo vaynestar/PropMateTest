@@ -4,6 +4,10 @@ import { getSessionUser } from "@/lib/auth";
 
 export async function GET() {
   try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const properties = await listProperties();
     return NextResponse.json(properties);
   } catch (error: unknown) {
@@ -16,8 +20,11 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await getSessionUser();
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
     const body = await request.json();
-    const property = await createProperty(body, user?.userId);
+    const property = await createProperty(body, user.userId);
     return NextResponse.json(property, { status: 201 });
   } catch (error: unknown) {
     const message =

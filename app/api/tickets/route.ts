@@ -9,6 +9,10 @@ import {
 
 export async function GET() {
   try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const tickets = await listTickets();
     return NextResponse.json(tickets);
   } catch (error: unknown) {
@@ -45,11 +49,14 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const user = await getSessionUser();
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
+    }
     const body = await request.json();
     if (!body.ticket_id || !body.status) {
       throw new Error("Ticket ID and status are required");
     }
-    await updateTicketStatus(body.ticket_id, body.status, user?.userId);
+    await updateTicketStatus(body.ticket_id, body.status, user.userId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const message =

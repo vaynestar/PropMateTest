@@ -9,6 +9,10 @@ import {
 
 export async function GET(request: Request) {
   try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
     const facilityId = searchParams.get("facility") ?? undefined;
     const bookings = await listBookings(facilityId);
@@ -49,9 +53,12 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const body = await request.json();
     if (!body.booking_id) throw new Error("Booking ID is required");
-    await cancelBooking(body.booking_id, user?.userId);
+    await cancelBooking(body.booking_id, user.userId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const message =

@@ -10,6 +10,10 @@ import {
 
 export async function GET() {
   try {
+    const user = await getSessionUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const facilities = await listFacilities();
     return NextResponse.json(facilities);
   } catch (error: unknown) {
@@ -22,8 +26,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
     const body = await request.json();
     const facility = await createFacility(
@@ -58,8 +62,8 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
     const body = await request.json();
     if (!body.facility_id) throw new Error("Facility ID is required");
@@ -100,8 +104,8 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");
