@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import UnitFormModal from "./UnitFormModal";
 import UnitEditModal from "./UnitEditModal";
@@ -49,19 +49,41 @@ interface UnitsClientProps {
  * Status control. Carries the status colour itself, so the state of a unit is
  * legible from the control rather than only from a separate badge.
  */
-function InlineStatusSelector({ unit }: { unit: UnitItem }) {
+function InlineStatusSelector({
+  unit,
+  status,
+  onSelect,
+}: {
+  unit: UnitItem;
+  status: string;
+  onSelect: (next: string) => void;
+}) {
   const [state, formAction, isPending] = useActionState(updateUnitStatusAction, null);
   const isLeased = !!unit.leases && unit.leases.length > 0;
-  const meta = unitStatus(unit.status);
+  const meta = unitStatus(status);
+
+  // If the server rejects the change, fall back to the persisted value.
+  useEffect(() => {
+    if (state?.error) onSelect(unit.status);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <form action={formAction} className="relative shrink-0">
       <input type="hidden" name="unit_id" value={unit.unit_id} />
       <select
+        // Remount when the status changes. React's controlled-<select> value
+        // tracker can hold a stale node value after a change event, which is
+        // what made the label keep saying "Vacant" while the colour updated.
+        // Keying on the value sidesteps the tracker entirely.
+        key={status}
         name="status"
-        value={unit.status}
+        value={status}
         aria-label={`Status for unit ${unit.unit_number}`}
-        onChange={(e) => e.target.form?.requestSubmit()}
+        onChange={(e) => {
+          onSelect(e.target.value);
+          e.target.form?.requestSubmit();
+        }}
         disabled={isPending}
         className={`appearance-none text-[11px] font-semibold rounded-lg border pl-2.5 pr-6 py-1.5 outline-none cursor-pointer transition-colors disabled:opacity-50 ${meta.chip}`}
       >
@@ -77,21 +99,24 @@ function InlineStatusSelector({ unit }: { unit: UnitItem }) {
         })}
       </select>
 
-      <span
-        className="material-symbols-outlined pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[14px] opacity-70"
-        aria-hidden="true"
-      >
-        {isPending ? "" : "expand_more"}
-      </span>
-
-      {isPending && (
-        <span className="material-symbols-outlined animate-spin-slow absolute right-1 top-1/2 -translate-y-1/2 text-[13px]">
+      {isPending ? (
+        <span className="material-symbols-outlined animate-spin-slow pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[13px]">
           progress_activity
+        </span>
+      ) : (
+        <span
+          className="material-symbols-outlined pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[14px] opacity-70"
+          aria-hidden="true"
+        >
+          expand_more
         </span>
       )}
 
       {state?.error && (
-        <span className="absolute left-0 top-full mt-1 whitespace-nowrap text-[10px] text-rose-300">
+        <span
+          role="alert"
+          className="absolute right-0 top-full z-10 mt-1 max-w-[16rem] rounded-md border border-rose-500/40 bg-surface-container px-2 py-1 text-[10px] leading-snug text-rose-300 shadow-lg"
+        >
           {state.error}
         </span>
       )}
@@ -114,6 +139,138 @@ function FloorMeter({ counts, total }: { counts: Record<string, number>; total: 
         />
       ))}
     </div>
+  );
+}
+
+/**
+ * One unit. Holds the optimistic status so the rail, the control and the
+ * supporting copy all move together the instant the user picks a new state —
+ * previously the colour and the label were driven by two different sources and
+ * visibly disagreed while the server round-trip completed.
+ */
+function UnitCard({
+  unit,
+  onEdit,
+  onDelete,
+}: {
+  unit: UnitItem;
+  onEdit: (u: UnitItem) => void;
+  onDelete: (u: UnitItem) => void;
+}) {
+  const [status, setStatus] = useState(unit.status);
+  useEffect(() => setStatus(unit.status), [unit.status]);
+
+  const activeLease = unit.leases?.[0];
+  const tenant = activeLease?.tenant;
+  const meta = unitStatus(status);
+
+  return (
+    <article className="group relative flex flex-col justify-between gap-3 overflow-hidden rounded-lg border border-outline-variant/50 bg-surface-container-high/60 p-4 pl-5 transition-colors hover:border-outline-variant">
+      {/* Status rail — the one bold mark on the card. Lets a manager read a
+          whole floor's state without reading any text. */}
+      <span
+        className={`absolute inset-y-0 left-0 w-1 transition-colors ${meta.rail}`}
+        aria-hidden="true"
+      />
+
+      <div>
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h4 className="truncate text-sm font-bold text-white">{unit.unit_number}</h4>
+            <span className="text-[11px] text-on-surface-variant">{unit.unit_type}</span>
+          </div>
+          <InlineStatusSelector unit={unit} status={status} onSelect={setStatus} />
+        </div>
+
+        <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-on-surface-variant">
+          <div className="flex items-center gap-1.5">
+            <dt className="sr-only">Floor area</dt>
+            <span className="material-symbols-outlined text-[14px]" aria-hidden="true">
+              straighten
+            </span>
+            <dd>{Number(unit.area_sqft)} sqft</dd>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <dt className="sr-only">Monthly rent</dt>
+            <span className="material-symbols-outlined text-[14px]" aria-hidden="true">
+              payments
+            </span>
+            <dd>RM {Number(unit.monthly_rent || 0).toLocaleString()}</dd>
+          </div>
+        </dl>
+
+        {tenant ? (
+          <div className="mt-3 rounded-md border border-outline-variant/40 bg-surface-container/70 p-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="truncate text-xs font-semibold text-white">{tenant.user_name}</span>
+              {activeLease && (
+                <Link
+                  href={`/admin/leases?unit=${encodeURIComponent(unit.unit_number)}`}
+                  className="shrink-0 text-[11px] font-semibold text-primary hover:underline"
+                >
+                  View lease
+                </Link>
+              )}
+            </div>
+            <span className="mt-0.5 block truncate text-[11px] text-on-surface-variant">
+              {tenant.user_email}
+            </span>
+          </div>
+        ) : (
+          <p className="mt-3 rounded-md border border-dashed border-outline-variant/40 p-2.5 text-[11px] text-on-surface-variant">
+            {status === "Repair"
+              ? "Out of service — no tenant assigned."
+              : status === "Not Available"
+              ? "Held off the market."
+              : "No tenant yet."}
+          </p>
+        )}
+      </div>
+
+      {/* Edit and Delete are a matched labelled pair — delete used to be an
+          unlabelled 24px icon. The forward action sits right, where the eye ends. */}
+      <div className="flex items-center justify-between gap-2 border-t border-outline-variant/30 pt-3">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => onEdit(unit)}
+            className="pressable flex items-center gap-1 rounded-md border border-outline-variant/60 bg-surface-container px-2.5 py-1.5 text-[11px] font-semibold text-on-surface transition-colors hover:bg-surface-variant hover:text-white"
+          >
+            <span className="material-symbols-outlined text-[14px]" aria-hidden="true">
+              edit
+            </span>
+            Edit
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onDelete(unit)}
+            className="pressable flex items-center gap-1 rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-500/20"
+          >
+            <span className="material-symbols-outlined text-[14px]" aria-hidden="true">
+              delete
+            </span>
+            Delete
+          </button>
+        </div>
+
+        {status === "Vacant" ? (
+          <Link
+            href="/admin/leases"
+            className="pressable rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-sky-300 transition-colors hover:bg-sky-500/20"
+          >
+            Create lease
+          </Link>
+        ) : activeLease ? (
+          <Link
+            href={`/admin/leases/${activeLease.lease_id}/charges`}
+            className="pressable rounded-md border border-outline-variant/60 bg-surface-container px-2.5 py-1.5 text-[11px] font-semibold text-on-surface transition-colors hover:text-white"
+          >
+            Billing
+          </Link>
+        ) : null}
+      </div>
+    </article>
   );
 }
 
@@ -228,11 +385,29 @@ export default function UnitsClient({
     },
   ];
 
-  const filters: { key: string; label: string; activeClass: string }[] = [
-    { key: "ALL", label: "All", activeClass: "bg-primary text-on-primary" },
+  // The filter row doubles as the colour legend: every chip carries its status
+  // dot whether or not it is active, plus a live count. No separate legend
+  // strip needed — the control and the key are the same object.
+  const statusCounts: Record<string, number> = {
+    Vacant: vacantUnits,
+    Occupied: occupiedUnits,
+    Repair: repairUnits,
+    "Not Available": reservedUnits,
+  };
+
+  const filters = [
+    {
+      key: "ALL",
+      label: "All",
+      count: totalUnits,
+      dot: "",
+      activeClass: "bg-primary text-on-primary",
+    },
     ...UNIT_STATUS_ORDER.map((k) => ({
-      key: k,
+      key: k as string,
       label: UNIT_STATUSES[k].label,
+      count: statusCounts[k] ?? 0,
+      dot: UNIT_STATUSES[k].rail,
       activeClass: `${UNIT_STATUSES[k].chip} border`,
     })),
   ];
@@ -310,13 +485,17 @@ export default function UnitsClient({
                 type="button"
                 onClick={() => setStatusFilter(f.key)}
                 aria-pressed={statusFilter === f.key}
-                className={`pressable rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                className={`pressable flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                   statusFilter === f.key
                     ? f.activeClass
                     : "border border-transparent text-on-surface-variant hover:text-white"
                 }`}
               >
-                {f.label}
+                {f.dot && (
+                  <span className={`h-2 w-2 shrink-0 rounded-full ${f.dot}`} aria-hidden="true" />
+                )}
+                <span>{f.label}</span>
+                <span className="tabular-nums opacity-60">{f.count}</span>
               </button>
             ))}
           </div>
@@ -380,142 +559,14 @@ export default function UnitsClient({
               </header>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {units.map((unit) => {
-                  const activeLease = unit.leases?.[0];
-                  const tenant = activeLease?.tenant;
-                  const meta = unitStatus(unit.status);
-
-                  return (
-                    <article
-                      key={unit.unit_id}
-                      className="group relative flex flex-col justify-between gap-3 overflow-hidden rounded-lg border border-outline-variant/50 bg-surface-container-high/60 p-4 pl-5 transition-colors hover:border-outline-variant"
-                    >
-                      {/* Status rail — the one bold mark on the card. Lets a manager
-                          read a whole floor's state without reading any text. */}
-                      <span
-                        className={`absolute inset-y-0 left-0 w-1 ${meta.rail}`}
-                        aria-hidden="true"
-                      />
-
-                      <div>
-                        <div className="mb-2 flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h4 className="truncate text-sm font-bold text-white">
-                              {unit.unit_number}
-                            </h4>
-                            <span className="text-[11px] text-on-surface-variant">
-                              {unit.unit_type}
-                            </span>
-                          </div>
-                          <InlineStatusSelector unit={unit} />
-                        </div>
-
-                        <dl className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-on-surface-variant">
-                          <div className="flex items-center gap-1.5">
-                            <dt className="sr-only">Floor area</dt>
-                            <span
-                              className="material-symbols-outlined text-[14px]"
-                              aria-hidden="true"
-                            >
-                              straighten
-                            </span>
-                            <dd>{Number(unit.area_sqft)} sqft</dd>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <dt className="sr-only">Monthly rent</dt>
-                            <span
-                              className="material-symbols-outlined text-[14px]"
-                              aria-hidden="true"
-                            >
-                              payments
-                            </span>
-                            <dd>RM {Number(unit.monthly_rent || 0).toLocaleString()}</dd>
-                          </div>
-                        </dl>
-
-                        {tenant ? (
-                          <div className="mt-3 rounded-md border border-outline-variant/40 bg-surface-container/70 p-2.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="truncate text-xs font-semibold text-white">
-                                {tenant.user_name}
-                              </span>
-                              {activeLease && (
-                                <Link
-                                  href={`/admin/leases?unit=${encodeURIComponent(unit.unit_number)}`}
-                                  className="shrink-0 text-[11px] font-semibold text-primary hover:underline"
-                                >
-                                  View lease
-                                </Link>
-                              )}
-                            </div>
-                            <span className="mt-0.5 block truncate text-[11px] text-on-surface-variant">
-                              {tenant.user_email}
-                            </span>
-                          </div>
-                        ) : (
-                          <p className="mt-3 rounded-md border border-dashed border-outline-variant/40 p-2.5 text-[11px] text-on-surface-variant">
-                            {unit.status === "Repair"
-                              ? "Out of service — no tenant assigned."
-                              : unit.status === "Not Available"
-                              ? "Held off the market."
-                              : "No tenant yet."}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Actions. Edit and Delete are a matched labelled pair — the
-                          delete used to be an unlabelled 24px icon. The forward
-                          action sits on the right, where the eye finishes. */}
-                      <div className="flex items-center justify-between gap-2 border-t border-outline-variant/30 pt-3">
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setEditingUnit(unit)}
-                            className="pressable flex items-center gap-1 rounded-md border border-outline-variant/60 bg-surface-container px-2.5 py-1.5 text-[11px] font-semibold text-on-surface transition-colors hover:bg-surface-variant hover:text-white"
-                          >
-                            <span
-                              className="material-symbols-outlined text-[14px]"
-                              aria-hidden="true"
-                            >
-                              edit
-                            </span>
-                            Edit
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => setDeletingUnit(unit)}
-                            className="pressable flex items-center gap-1 rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-500/20"
-                          >
-                            <span
-                              className="material-symbols-outlined text-[14px]"
-                              aria-hidden="true"
-                            >
-                              delete
-                            </span>
-                            Delete
-                          </button>
-                        </div>
-
-                        {unit.status === "Vacant" ? (
-                          <Link
-                            href="/admin/leases"
-                            className="pressable rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-sky-300 transition-colors hover:bg-sky-500/20"
-                          >
-                            Create lease
-                          </Link>
-                        ) : activeLease ? (
-                          <Link
-                            href={`/admin/leases/${activeLease.lease_id}/charges`}
-                            className="pressable rounded-md border border-outline-variant/60 bg-surface-container px-2.5 py-1.5 text-[11px] font-semibold text-on-surface transition-colors hover:text-white"
-                          >
-                            Billing
-                          </Link>
-                        ) : null}
-                      </div>
-                    </article>
-                  );
-                })}
+                {units.map((unit) => (
+                  <UnitCard
+                    key={unit.unit_id}
+                    unit={unit}
+                    onEdit={setEditingUnit}
+                    onDelete={setDeletingUnit}
+                  />
+                ))}
               </div>
             </section>
           );

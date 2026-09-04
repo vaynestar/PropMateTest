@@ -21,6 +21,36 @@ export default async function UnitsPage(props: {
 
   const activePropertyId = urlPropertyId || cookiePropertyId || (properties[0]?.property_id ?? null);
 
+  // Prisma returns Decimal for area_sqft / monthly_rent. Passing those straight
+  // into a Client Component makes React log "Only plain objects can be passed to
+  // Client Components" for every unit on every render. Serialise here — this is
+  // AGENTS.md Rule 6.
+  const serialisedUnits = units.map((u) => ({
+    unit_id: u.unit_id,
+    property_id: u.property_id,
+    unit_number: u.unit_number,
+    unit_type: u.unit_type,
+    floor_number: u.floor_number,
+    area_sqft: Number(u.area_sqft),
+    monthly_rent: Number(u.monthly_rent ?? 0),
+    status: u.status,
+    property: u.property
+      ? { property_id: u.property.property_id, property_name: u.property.property_name }
+      : undefined,
+    leases: (u.leases ?? []).map((l: any) => ({
+      lease_id: l.lease_id,
+      status: l.status,
+      tenant: l.tenant
+        ? {
+            user_id: l.tenant.user_id,
+            user_name: l.tenant.user_name,
+            user_email: l.tenant.user_email,
+            phone_number: l.tenant.phone_number ?? null,
+          }
+        : undefined,
+    })),
+  }));
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -40,7 +70,7 @@ export default async function UnitsPage(props: {
 
       {/* Interactive Units Client */}
       <UnitsClient
-        initialUnits={units as any}
+        initialUnits={serialisedUnits}
         properties={properties}
         activePropertyId={activePropertyId}
       />
