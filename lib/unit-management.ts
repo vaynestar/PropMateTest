@@ -123,6 +123,8 @@ export async function listPropertiesForUnits() {
       property_type: true,
       city: true,
       state: true,
+      // needed by resolveActivePropertyId() as the starting-point fallback
+      is_default: true,
     },
     orderBy: { created_at: 'asc' },
   });

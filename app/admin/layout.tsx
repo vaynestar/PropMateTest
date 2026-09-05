@@ -8,6 +8,7 @@ import { logoutAction } from "@/app/logout/actions";
 import AdminMobileNav, { AdminMenuButton } from "@/components/layout/AdminMobileNav";
 import PropertySwitcher from "@/components/layout/PropertySwitcher";
 import { getAdminNotifications } from "@/lib/notifications";
+import { resolveActivePropertyId } from "@/lib/property-context";
 import NotificationCenter from "@/components/layout/NotificationCenter";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -23,20 +24,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     getAdminNotifications(),
   ]);
 
-  // 1. Check if any property has is_default = true in database
-  const defaultProperty = properties.find((p) => p.is_default);
-
-  // 2. Check if user's last session cookie exists and is valid
+  // Resolution lives in lib/property-context.ts so the switcher and every
+  // module agree. The user's cookie outranks the is_default flag: the default
+  // is a starting point, not a lock. Resolving the default first pinned the
+  // switcher to it permanently — picking another property wrote the cookie, the
+  // layout re-rendered, and the default won again, so switching did nothing
+  // and modules reading the cookie disagreed with the header (fixed DEV-128).
   const hasValidUserCookie = properties.some((p) => p.property_id === activePropertyId);
-
-  // Resolution Hierarchy:
-  // - If default property is set (is_default = true), ALWAYS follow that default property on every login!
-  // - If user cancelled default / no default set, fallback to last session property ID from cookie!
-  const safeActivePropertyId = defaultProperty
-    ? defaultProperty.property_id
-    : hasValidUserCookie
-    ? activePropertyId
-    : (properties[0]?.property_id ?? "");
+  const safeActivePropertyId = resolveActivePropertyId(properties, activePropertyId) ?? "";
 
   return (
     <div className="bg-surface text-on-surface font-body-md antialiased overflow-x-hidden min-h-screen flex w-full">

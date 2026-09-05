@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
 import UnitsClient from "@/components/units/UnitsClient";
+import { resolveActivePropertyId, shouldPersistProperty } from "@/lib/property-context";
 
 export const dynamic = "force-dynamic";
 
@@ -15,17 +16,15 @@ export default async function UnitsPage(props: {
   const cookiePropertyId = cookieStore.get("propmate_property_id")?.value;
 
   const properties = await listPropertiesForUnits();
-  const isReal = (id?: string) => !!id && properties.some((p) => p.property_id === id);
 
   // Units are always managed one property at a time — there is no "all
-  // properties" view. Precedence: a ?property= deep link (e.g. "View units"
-  // from a property card) → the universal property picked in the top bar →
-  // the first property. Only ids that actually exist are accepted.
-  const activePropertyId =
-    (isReal(urlPropertyId) ? urlPropertyId : undefined) ??
-    (isReal(cookiePropertyId) ? cookiePropertyId : undefined) ??
-    properties[0]?.property_id ??
-    null;
+  // properties" view. The active property comes from the SAME resolver the
+  // top-bar switcher uses, so the header and the list can never disagree.
+  const activePropertyId = resolveActivePropertyId(
+    properties,
+    cookiePropertyId,
+    urlPropertyId
+  );
 
   // Scope the query itself, so every filter and count downstream is already
   // confined to this property.
@@ -33,9 +32,10 @@ export default async function UnitsPage(props: {
 
   const activeProperty = properties.find((p) => p.property_id === activePropertyId) ?? null;
 
-  // A deep link can point at a different property than the top-bar switcher.
-  // Tell the client to push it into the universal context so the two agree.
-  const contextOutOfSync = !!activePropertyId && cookiePropertyId !== activePropertyId;
+  // If the resolved property is not what the cookie holds (a deep link, or a
+  // first visit with no cookie yet), tell the client to persist it so the
+  // universal context and this page agree from here on.
+  const contextOutOfSync = shouldPersistProperty(activePropertyId, cookiePropertyId);
 
   // Prisma returns Decimal for area_sqft / monthly_rent. Passing those straight
   // into a Client Component makes React log "Only plain objects can be passed to
