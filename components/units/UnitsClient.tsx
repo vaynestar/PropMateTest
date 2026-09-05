@@ -75,6 +75,16 @@ function InlineStatusSelector({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
+  // A save used to be completely silent — only failures showed. Changing a
+  // dozen units gave no sign anything had persisted.
+  const [justSaved, setJustSaved] = useState(false);
+  useEffect(() => {
+    if (!state?.success) return;
+    setJustSaved(true);
+    const timer = setTimeout(() => setJustSaved(false), 1600);
+    return () => clearTimeout(timer);
+  }, [state]);
+
   return (
     <form action={formAction} className="relative shrink-0">
       <input type="hidden" name="unit_id" value={unit.unit_id} />
@@ -109,12 +119,22 @@ function InlineStatusSelector({
         <span className="material-symbols-outlined animate-spin-slow pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[13px]">
           progress_activity
         </span>
+      ) : justSaved ? (
+        <span className="material-symbols-outlined pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[14px] text-emerald-300">
+          check
+        </span>
       ) : (
         <span
           className="material-symbols-outlined pointer-events-none absolute right-1 top-1/2 -translate-y-1/2 text-[14px] opacity-70"
           aria-hidden="true"
         >
           expand_more
+        </span>
+      )}
+
+      {justSaved && (
+        <span role="status" className="sr-only">
+          Status saved
         </span>
       )}
 
@@ -235,20 +255,72 @@ function StatusRemark({ unit, status }: { unit: UnitItem; status: string }) {
   );
 }
 
-/** Occupancy meter for a floor. Shows real proportions, not decoration. */
+/**
+ * Occupancy meter for a floor. Each segment is a real control: hovering or
+ * tab-focusing it shows the exact count and share, positioned over that
+ * segment. Replaces the native `title` tooltip, which was slow to appear and
+ * could not be styled or reached by keyboard.
+ */
 function FloorMeter({ counts, total }: { counts: Record<string, number>; total: number }) {
+  const [hovered, setHovered] = useState<string | null>(null);
+
   if (total === 0) return null;
-  const segments = UNIT_STATUS_ORDER.filter((k) => counts[k] > 0);
+
+  const present = UNIT_STATUS_ORDER.filter((k) => counts[k] > 0);
+
+  // Cumulative widths, so the tooltip can sit over the centre of its segment.
+  let acc = 0;
+  const segments = present.map((k) => {
+    const width = (counts[k] / total) * 100;
+    const centre = acc + width / 2;
+    acc += width;
+    return { key: k, width, centre, count: counts[k], pct: Math.round(width) };
+  });
+
+  const active = segments.find((s) => s.key === hovered);
+
   return (
-    <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-surface-container-high">
-      {segments.map((k) => (
+    <div className="relative">
+      <div className="flex h-2 w-full overflow-hidden rounded-b-[7px] bg-surface-container">
+        {segments.map((s) => (
+          <button
+            key={s.key}
+            type="button"
+            style={{ width: `${s.width}%` }}
+            onMouseEnter={() => setHovered(s.key)}
+            onMouseLeave={() => setHovered(null)}
+            onFocus={() => setHovered(s.key)}
+            onBlur={() => setHovered(null)}
+            aria-label={`${s.count} ${UNIT_STATUSES[s.key as UnitStatusKey].label}, ${s.pct}% of this floor`}
+            className={`h-full cursor-default outline-none transition-[filter,opacity] hover:brightness-125 focus-visible:brightness-125 ${
+              UNIT_STATUSES[s.key as UnitStatusKey].rail
+            } ${hovered && hovered !== s.key ? "opacity-45" : ""}`}
+          />
+        ))}
+      </div>
+
+      {active && (
         <div
-          key={k}
-          className={UNIT_STATUSES[k].rail}
-          style={{ width: `${(counts[k] / total) * 100}%` }}
-          title={`${counts[k]} ${UNIT_STATUSES[k].label}`}
-        />
-      ))}
+          role="status"
+          style={{ left: `${active.centre}%` }}
+          className="pointer-events-none absolute bottom-full z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-outline-variant bg-surface-container-highest px-2.5 py-1.5 shadow-lg"
+        >
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`h-2 w-2 shrink-0 rounded-full ${
+                UNIT_STATUSES[active.key as UnitStatusKey].rail
+              }`}
+              aria-hidden="true"
+            />
+            <span className="text-[11px] font-semibold text-white">
+              {active.count} {UNIT_STATUSES[active.key as UnitStatusKey].label}
+            </span>
+            <span className="text-[11px] text-on-surface-variant">
+              {active.pct}% of {total}
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -269,6 +341,9 @@ function UnitCard({
   const activeLease = unit.leases?.[0];
   const tenant = activeLease?.tenant;
   const meta = unitStatus(status);
+  // Deleting a leased unit was offered identically to deleting a vacant one;
+  // the guard only appeared inside the modal, one click after commitment.
+  const hasActiveLease = (unit.leases?.length ?? 0) > 0;
 
   return (
     <article className="group relative flex flex-col justify-between gap-3 overflow-hidden rounded-lg border border-outline-variant/50 bg-surface-container-high/60 p-4 pl-5 transition-colors hover:border-outline-variant">
@@ -353,7 +428,13 @@ function UnitCard({
           <button
             type="button"
             onClick={() => onDelete(unit)}
-            className="pressable flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-500/25"
+            disabled={hasActiveLease}
+            title={
+              hasActiveLease
+                ? `${unit.unit_number} has an active lease. End the lease before deleting the unit.`
+                : undefined
+            }
+            className="pressable flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:border-outline-variant/40 disabled:bg-surface-container disabled:text-on-surface-variant/50 disabled:hover:bg-surface-container"
           >
             <span className="material-symbols-outlined text-[14px]" aria-hidden="true">
               delete
@@ -565,6 +646,32 @@ export default function UnitsClient({
 
   const isFiltered = searchQuery !== "" || statusFilter !== "ALL";
 
+  // "No units match these filters" gave no clue which constraint was to blame.
+  // Name the one that is actually excluding things.
+  const activeStatusLabel =
+    statusFilter === "ALL"
+      ? null
+      : UNIT_STATUSES[statusFilter as UnitStatusKey]?.label ?? statusFilter;
+  const trimmedQuery = searchQuery.trim();
+
+  const emptyHeadline = !isFiltered
+    ? "No units yet"
+    : activeStatusLabel && trimmedQuery
+    ? `No ${activeStatusLabel} units match “${trimmedQuery}”`
+    : activeStatusLabel
+    ? `No ${activeStatusLabel} units in ${activePropertyName ?? "this property"}`
+    : `No units match “${trimmedQuery}”`;
+
+  const emptyDetail = !isFiltered
+    ? activePropertyName
+      ? `Add the first unit to ${activePropertyName}.`
+      : "Add a property first."
+    : activeStatusLabel && trimmedQuery
+    ? "Try another status, or clear the search."
+    : activeStatusLabel
+    ? "Every unit here is in a different state."
+    : "Check the unit number, layout, tenant name or note.";
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -677,35 +784,44 @@ export default function UnitsClient({
               key={floor}
               className="space-y-4 rounded-xl border border-outline-variant/60 bg-surface-container p-5"
             >
-              <header className="space-y-2.5">
-                <div className="flex flex-wrap items-center justify-between gap-3">
+              {/* The floor band reads as a drawer front: press it to open, with
+                  the occupancy strip fused to its bottom edge as a fill gauge.
+                  Collapsing dims the whole band, so a folded floor is obvious
+                  from across the page rather than only from a rotated chevron. */}
+              <header
+                className={`rounded-lg border transition-colors ${
+                  collapsed
+                    ? "border-outline-variant/40 bg-surface-container-high/40"
+                    : "border-outline-variant/60 bg-surface-container-high"
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3 p-2.5">
                   <button
                     type="button"
                     onClick={() => toggleFloor(floor)}
                     aria-expanded={!collapsed}
                     aria-controls={panelId}
-                    className="pressable -m-1 flex items-center gap-2.5 rounded-md p-1 text-left transition-colors hover:bg-surface-container-high/60"
+                    className="pressable flex items-center gap-2.5 rounded-md border border-outline-variant/60 bg-surface-container-highest py-2 pl-2 pr-3 text-left transition-colors hover:border-primary/50 hover:bg-surface-variant"
                   >
                     <span
-                      className="material-symbols-outlined text-[20px] text-on-surface-variant transition-transform"
+                      className="material-symbols-outlined rounded bg-primary/15 p-0.5 text-[20px] leading-none text-primary transition-transform"
                       style={{ transform: collapsed ? "rotate(-90deg)" : "none" }}
                       aria-hidden="true"
                     >
                       expand_more
                     </span>
-                    <div className="flex h-7 w-7 items-center justify-center rounded-md border border-outline-variant/40 bg-surface-container-high text-xs font-bold text-primary">
-                      {floor}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-bold text-white">Floor {floor}</h3>
+                    <span className="block">
+                      <h3 className="text-sm font-bold leading-tight text-white">Floor {floor}</h3>
                       <span className="text-[11px] text-on-surface-variant">
                         {floorUnits.length} unit{floorUnits.length === 1 ? "" : "s"}
-                        {collapsed ? " — collapsed" : ""}
                       </span>
-                    </div>
+                    </span>
+                    <span className="ml-1 border-l border-outline-variant/50 pl-3 text-[11px] font-semibold text-on-surface-variant">
+                      {collapsed ? "Show" : "Hide"}
+                    </span>
                   </button>
 
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pr-1 text-[11px]">
                     {UNIT_STATUS_ORDER.filter((k) => counts[k] > 0).map((k) => (
                       <span key={k} className="flex items-center gap-1.5">
                         <span
@@ -751,16 +867,8 @@ export default function UnitsClient({
               </span>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">
-                {isFiltered ? "No units match these filters" : "No units yet"}
-              </h4>
-              <p className="mt-1 text-xs text-on-surface-variant">
-                {isFiltered
-                  ? "Clear the filters to see the full list."
-                  : activePropertyName
-                  ? `Add the first unit to ${activePropertyName}.`
-                  : "Add a property first."}
-              </p>
+              <h4 className="text-sm font-bold text-white">{emptyHeadline}</h4>
+              <p className="mt-1 text-xs text-on-surface-variant">{emptyDetail}</p>
             </div>
             {isFiltered ? (
               <button
