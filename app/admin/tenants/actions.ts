@@ -3,47 +3,71 @@
 import { revalidatePath } from "next/cache";
 import { requireUser, hashPassword } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { randomBytes } from "node:crypto";
 
 export async function addTenant(state: any, formData: FormData) {
   try {
     const adminUser = await requireUser(["Admin"]);
-    const user_name = String(formData.get("user_name")).trim();
-    const user_email = String(formData.get("user_email")).trim();
+    const user_name = String(formData.get("user_name") || "").trim();
+    const user_email = String(formData.get("user_email") || "").trim().toLowerCase();
     const phone_number = String(formData.get("phone_number") || "").trim();
-    
-    if (!phone_number) {
-      throw new Error("Phone number is compulsory.");
-    }
-    
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { user_email }
-    });
-    
+
+    if (!user_name) throw new Error("Full name is required.");
+    if (!user_email) throw new Error("Email is required.");
+    if (!phone_number) throw new Error("Mobile number is required.");
+
+    const existingUser = await prisma.user.findUnique({ where: { user_email } });
     if (existingUser) {
-      throw new Error("A user with this email already exists.");
+      throw new Error("Someone already uses that email address.");
     }
-    
-    const password_hash = hashPassword("Password123!");
-    
+
+    // Every resident used to be created with the same hardcoded password,
+    // printed in the form before anyone had typed a name. Generate a unique one
+    // instead and return it once so the admin can hand it over.
+    const tempPassword = generateTempPassword();
+
     await prisma.user.create({
       data: {
         user_name,
         user_email,
         phone_number,
-        password_hash,
+        password_hash: hashPassword(tempPassword),
         role: "Resident",
+        ic_number: emptyToNull(formData.get("ic_number")),
+        resident_type: emptyToNull(formData.get("resident_type")) ?? "Tenant",
+        vehicle_plate: emptyToNull(formData.get("vehicle_plate"))?.toUpperCase() ?? null,
+        emergency_contact_name: emptyToNull(formData.get("emergency_contact_name")),
+        emergency_contact_phone: emptyToNull(formData.get("emergency_contact_phone")),
         created_by: adminUser.userId,
-      }
+      },
     });
 
     revalidatePath("/admin/tenants");
-    revalidatePath("/admin/leases"); // Leases uses this list
-    return { success: true, message: "Tenant successfully created with default password 'Password123!'" };
+    revalidatePath("/admin/leases");
+    return {
+      success: true,
+      message: `${user_name} can now sign in with ${user_email}.`,
+      tempPassword,
+    };
   } catch (error: any) {
-    return { error: error.message || "Failed to add tenant" };
+    return { error: error.message || "Could not add the tenant" };
   }
 }
+
+function emptyToNull(value: FormDataEntryValue | null): string | null {
+  const s = String(value ?? "").trim();
+  return s ? s : null;
+}
+
+/** Readable but unguessable — avoids characters that are easy to misread aloud. */
+function generateTempPassword(): string {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+  const bytes = randomBytes(10);
+  let out = "";
+  for (const b of bytes) out += alphabet[b % alphabet.length];
+  return `PM-${out}`;
+}
+
 
 export async function removeTenant(state: any, formData: FormData) {
   try {

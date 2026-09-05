@@ -84,6 +84,17 @@ model User {
   role          String   @db.VarChar
   is_active     Boolean  @default(true)
 
+  // Resident details for Malaysian strata management (DEV-134).
+  // NRIC/MyKad (or passport for non-citizens) is the identifier used for access
+  // cards and the guardhouse; resident_type separates an owner-occupier from a
+  // renting tenant, which differ on AGM voting and service-charge liability
+  // under the Strata Management Act 2013. All optional so existing rows stand.
+  ic_number               String? @db.VarChar
+  resident_type           String? @db.VarChar // "Owner" | "Tenant"
+  vehicle_plate           String? @db.VarChar
+  emergency_contact_name  String? @db.VarChar
+  emergency_contact_phone String? @db.VarChar
+
   // Audit Trail
   created_at    DateTime @default(now())
   created_by    String?  @db.Uuid

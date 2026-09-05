@@ -55,8 +55,11 @@ export default function TenantsClient({
         tenant.user_email.toLowerCase().includes(q) ||
         (tenant.phone_number && tenant.phone_number.toLowerCase().includes(q));
 
+      // A tenant with no lease belongs to no property yet, so a property filter
+      // would hide them — including the one you just created. They always show.
       const matchesProperty =
         selectedPropertyId === "ALL" ||
+        tenant.tenant_leases.length === 0 ||
         tenant.tenant_leases.some((l) => l.unit.property_id === selectedPropertyId);
 
       const hasActiveLease = tenant.tenant_leases.length > 0;
@@ -201,6 +204,7 @@ export default function TenantsClient({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filteredTenants.map((tenant) => {
           const hasLease = tenant.tenant_leases.length > 0;
+          const leaseCount = tenant.tenant_leases.length;
 
           return (
             <div
@@ -276,9 +280,9 @@ export default function TenantsClient({
               <div className="flex items-center gap-2 pt-2 border-t border-outline-variant/30">
                 <Link
                   href={`/admin/leases?tenant=${tenant.user_id}`}
-                  className="flex-1 px-3 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs pressable"
+                  className="pressable flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-on-primary shadow-xs transition-colors hover:bg-primary/90"
                 >
-                  <span>View leases</span>
+                  <span>{leaseCount === 0 ? "Create lease" : "View leases"}</span>
                 </Link>
 
                 <button
@@ -293,7 +297,13 @@ export default function TenantsClient({
                 <button
                   type="button"
                   onClick={() => setDeletingTenant(tenant)}
-                  className="pressable flex items-center justify-center gap-1 rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/25"
+                  disabled={leaseCount > 0}
+                  title={
+                    leaseCount > 0
+                      ? `${tenant.user_name} still holds ${leaseCount} lease${leaseCount === 1 ? "" : "s"}. End them before deleting the account.`
+                      : undefined
+                  }
+                  className="pressable flex items-center justify-center gap-1 rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:border-outline-variant/40 disabled:bg-surface-container disabled:text-on-surface-variant/50 disabled:hover:bg-surface-container"
                 >
                   <span className="material-symbols-outlined text-[15px]">delete</span>
                   Delete

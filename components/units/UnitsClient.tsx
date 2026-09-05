@@ -49,7 +49,7 @@ interface UnitsClientProps {
 }
 
 /** Statuses that warrant an explanation. */
-const REMARK_STATUSES: string[] = ["Repair", "Not Available"];
+const REMARK_STATUSES: string[] = ["Repair"];
 
 /**
  * Status control. Carries the status colour itself, so the state of a unit is
@@ -445,7 +445,9 @@ function UnitCard({
 
         {status === "Vacant" ? (
           <Link
-            href="/admin/leases"
+            // Carries the unit through, so the leases page opens already
+            // filtered to it instead of the whole property's list.
+            href={`/admin/leases?unit=${encodeURIComponent(unit.unit_number)}`}
             className="pressable rounded-md border border-sky-500/30 bg-sky-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-sky-300 transition-colors hover:bg-sky-500/20"
           >
             Create lease

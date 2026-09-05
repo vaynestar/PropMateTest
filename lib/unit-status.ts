@@ -79,13 +79,16 @@ export const UNIT_STATUSES: Record<UnitStatusKey, UnitStatusMeta> = {
   },
 };
 
-/** Order used by filters and the status dropdown. */
-export const UNIT_STATUS_ORDER: UnitStatusKey[] = [
-  "Vacant",
-  "Occupied",
-  "Repair",
-  "Not Available",
-];
+/**
+ * Order used by filters and the status dropdown.
+ *
+ * "Not Available" (Reserved) was dropped in DEV-134. It had no workflow behind
+ * it — nothing set it, nothing read it, and there was no record of who reserved
+ * the unit or until when. A unit being held for someone is really a lease with
+ * a future move-in date, which the system already models. The key is kept in
+ * UNIT_STATUSES so any legacy row still renders, but it cannot be chosen.
+ */
+export const UNIT_STATUS_ORDER: UnitStatusKey[] = ["Vacant", "Occupied", "Repair"];
 
 const FALLBACK: UnitStatusMeta = {
   value: "Vacant",
