@@ -1,16 +1,15 @@
-import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import AdminFacilityBooking from "./AdminFacilityBooking";
 import AdminBookingList from "./AdminBookingList";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminBookingsPage() {
   await requireUser(["Admin"]);
-  const cookieStore = await cookies();
-  const propertyId = cookieStore.get("propmate_property_id")?.value;
+  const propertyId = await getActivePropertyId();
 
   // 1. Fetch properties for dropdown filter
   const properties = await prisma.propertyMaster.findMany({

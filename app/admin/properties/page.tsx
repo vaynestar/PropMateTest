@@ -1,16 +1,15 @@
-import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listProperties } from "@/lib/property-management";
 import PropertiesClient from "@/components/properties/PropertiesClient";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
 
 export default async function PropertiesPage() {
   await requireUser(["Admin"]);
-  const cookieStore = await cookies();
   const properties = await listProperties();
   
-  const activePropertyId = cookieStore.get("propmate_property_id")?.value || (properties[0]?.property_id ?? "");
+  const activePropertyId = (await getActivePropertyId()) ?? "";
 
   return (
     <div className="space-y-6">

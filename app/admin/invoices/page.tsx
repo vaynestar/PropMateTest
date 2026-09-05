@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listInvoices } from "@/lib/billing";
 import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton";
@@ -9,6 +8,7 @@ import InvoiceBatchList from "@/components/billing/InvoiceBatchList";
 import prisma from "@/lib/prisma";
 
 import RefreshDataButton from "@/components/billing/RefreshDataButton";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +18,7 @@ export default async function InvoicesDetailPage({
   searchParams: { status?: string };
 }) {
   await requireUser(["Admin"]);
-  const cookieStore = await cookies();
-  const propertyId = cookieStore.get("propmate_property_id")?.value;
+  const propertyId = (await getActivePropertyId()) ?? undefined;
 
   let invoices = await listInvoices(propertyId);
   const chargeMasters = await prisma.chargeMaster.findMany({

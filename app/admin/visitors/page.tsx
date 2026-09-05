@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ExpandableForm from "@/components/layout/ExpandableForm";
@@ -6,13 +5,13 @@ import AdminVisitorForm from "./AdminVisitorForm";
 import AdminVisitorList from "./AdminVisitorList";
 import { getAllVisitors } from "@/lib/visitor-management";
 import ScanButton from "@/components/visitors/ScanButton";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminVisitorsPage() {
   await requireUser(["Admin"]);
-  const cookieStore = await cookies();
-  const propertyId = cookieStore.get("propmate_property_id")?.value;
+  const propertyId = (await getActivePropertyId()) ?? undefined;
 
   const [visitors, properties, leases] = await Promise.all([
     getAllVisitors(propertyId),

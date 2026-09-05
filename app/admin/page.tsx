@@ -1,15 +1,14 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
 import { getDashboardStats } from "@/lib/dashboard";
 import ScanButton from "@/components/visitors/ScanButton";
 import FilterableTicketQueue from "@/components/dashboard/FilterableTicketQueue";
 import FinancialTrendChart from "@/components/dashboard/FinancialTrendChart";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const cookieStore = await cookies();
-  const propertyId = cookieStore.get("propmate_property_id")?.value;
+  const propertyId = (await getActivePropertyId()) ?? undefined;
   const stats = await getDashboardStats(propertyId);
 
   return (

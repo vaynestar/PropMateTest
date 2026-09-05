@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getAllLeases } from "@/lib/lease-management";
 import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
 import LeasesClient from "@/components/leases/LeasesClient";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,11 @@ export default async function AdminLeasesPage(props: {
   const cookiePropertyId = cookieStore.get("propmate_property_id")?.value;
 
   const properties = await listPropertiesForUnits();
-  const activePropertyId =
-    urlPropertyId || (urlTenantId ? null : cookiePropertyId || (properties[0]?.property_id ?? null));
+  // Filtering by tenant deliberately spans every property, so that view stays
+  // unscoped. Otherwise use the shared universal-property resolution.
+  const activePropertyId = urlTenantId
+    ? null
+    : await getActivePropertyId(urlPropertyId);
 
   const [leases, units, users] = await Promise.all([
     getAllLeases(

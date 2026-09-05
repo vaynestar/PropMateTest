@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listInvoices } from "@/lib/billing";
 import StatusBadge from "@/components/dashboard/StatusBadge";
@@ -26,11 +25,11 @@ function formatDate(date: Date) {
 import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton";
 import BillingMonthlyBarChart from "@/components/billing/BillingMonthlyBarChart";
 import RefreshDataButton from "@/components/billing/RefreshDataButton";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
 export default async function BillingPage() {
   await requireUser(["Admin"]);
-  const cookieStore = await cookies();
-  const propertyId = cookieStore.get("propmate_property_id")?.value;
+  const propertyId = (await getActivePropertyId()) ?? undefined;
 
   const invoices = await listInvoices(propertyId);
 

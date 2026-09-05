@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listTickets, listTicketCategories } from "@/lib/maintenance";
 import { listUnits } from "@/lib/unit-management";
@@ -8,13 +7,13 @@ import AdminTicketTable from "@/components/maintenance/AdminTicketTable";
 import AdminRaiseTicketForm from "@/components/maintenance/AdminRaiseTicketForm";
 import CategoryMasterManager from "@/components/maintenance/CategoryMasterManager";
 import prisma from "@/lib/prisma";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
 
 export default async function MaintenancePage() {
   await requireUser(["Admin"]);
-  const cookieStore = await cookies();
-  const propertyId = cookieStore.get("propmate_property_id")?.value || "";
+  const propertyId = (await getActivePropertyId()) ?? "";
 
   const [tickets, units, properties, admins, categories] = await Promise.all([
     listTickets(),

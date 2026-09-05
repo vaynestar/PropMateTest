@@ -1,15 +1,14 @@
-import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth";
 import { listFacilities } from "@/lib/facility-management";
 import { listProperties } from "@/lib/property-management";
 import AdminFacilitiesManager from "@/components/facilities/AdminFacilitiesManager";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
 
 export default async function FacilitiesPage() {
   await requireUser(["Admin"]);
-  const cookieStore = await cookies();
-  const propertyId = cookieStore.get("propmate_property_id")?.value;
+  const propertyId = await getActivePropertyId();
 
   let facilities: any[] = [];
   let allProperties: any[] = [];
