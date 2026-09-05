@@ -50,6 +50,10 @@ model Unit {
   area_sqft    Decimal  @db.Decimal(10, 2)
   monthly_rent Decimal  @db.Decimal(10, 2)
   status       String   @default("Vacant") @db.VarChar
+  // Free-text note explaining a non-standard status (why a unit is under
+  // Repair, or who it is Reserved for). Optional; retained when the status
+  // changes so history is not silently discarded.
+  status_remark String? @db.Text
 
   // Audit Trail
   created_at   DateTime @default(now())

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useActionState } from "react";
 import Link from "next/link";
 import UnitFormModal from "./UnitFormModal";
 import UnitEditModal from "./UnitEditModal";
 import UnitDeleteModal from "./UnitDeleteModal";
-import { updateUnitStatusAction } from "@/app/admin/units/actions";
-import { useActionState } from "react";
+import { updateUnitStatusAction, updateUnitRemarkAction } from "@/app/admin/units/actions";
+import { setActiveProperty } from "@/app/actions/property-actions";
 import {
   unitStatus,
   UNIT_STATUSES,
@@ -23,6 +23,7 @@ interface UnitItem {
   area_sqft: any;
   monthly_rent?: any;
   status: string;
+  status_remark?: string | null;
   property?: {
     property_id: string;
     property_name: string;
@@ -43,7 +44,12 @@ interface UnitsClientProps {
   initialUnits: UnitItem[];
   properties: { property_id: string; property_name: string }[];
   activePropertyId: string | null;
+  activePropertyName: string | null;
+  contextOutOfSync: boolean;
 }
+
+/** Statuses that warrant an explanation. */
+const REMARK_STATUSES: string[] = ["Repair", "Not Available"];
 
 /**
  * Status control. Carries the status colour itself, so the state of a unit is
@@ -76,7 +82,6 @@ function InlineStatusSelector({
         // Remount when the status changes. React's controlled-<select> value
         // tracker can hold a stale node value after a change event, which is
         // what made the label keep saying "Vacant" while the colour updated.
-        // Keying on the value sidesteps the tracker entirely.
         key={status}
         name="status"
         value={status}
@@ -125,6 +130,111 @@ function InlineStatusSelector({
   );
 }
 
+/**
+ * Editable note explaining why a unit is under Repair or Reserved. Shown only
+ * for those statuses, but the stored text survives a status change so the
+ * history is not thrown away.
+ */
+function StatusRemark({ unit, status }: { unit: UnitItem; status: string }) {
+  const [state, formAction, isPending] = useActionState(updateUnitRemarkAction, null);
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(unit.status_remark ?? "");
+  const meta = unitStatus(status);
+
+  useEffect(() => setValue(unit.status_remark ?? ""), [unit.status_remark]);
+  useEffect(() => {
+    if (state?.success) setEditing(false);
+  }, [state]);
+
+  const saved = state?.success ? (state.remark as string | null) : unit.status_remark;
+
+  if (editing) {
+    return (
+      <form action={formAction} className="mt-3 space-y-2">
+        <input type="hidden" name="unit_id" value={unit.unit_id} />
+        <label
+          htmlFor={`remark-${unit.unit_id}`}
+          className="block text-[11px] font-semibold text-on-surface"
+        >
+          {meta.label} note
+          <span className="ml-1 font-normal text-on-surface-variant">
+            — why this unit is off the market
+          </span>
+        </label>
+        <textarea
+          id={`remark-${unit.unit_id}`}
+          name="status_remark"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          maxLength={500}
+          rows={2}
+          autoFocus
+          placeholder={
+            status === "Repair"
+              ? "e.g. Bathroom waterproofing, contractor booked 12 Sept"
+              : "e.g. Held for incoming tenant, viewing on Friday"
+          }
+          className="w-full resize-y rounded-md border border-outline-variant/60 bg-surface-container px-2.5 py-2 text-[11px] leading-snug text-white outline-none transition-colors placeholder:text-on-surface-variant/60 focus:border-primary"
+        />
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10px] text-on-surface-variant">{value.length}/500</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setValue(unit.status_remark ?? "");
+                setEditing(false);
+              }}
+              className="pressable rounded-md border border-outline-variant/60 bg-surface-container px-2.5 py-1.5 text-[11px] font-semibold text-on-surface transition-colors hover:text-white"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="pressable flex items-center gap-1 rounded-md bg-primary px-2.5 py-1.5 text-[11px] font-bold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-60"
+            >
+              {isPending && (
+                <span className="material-symbols-outlined animate-spin-slow text-[13px]">
+                  progress_activity
+                </span>
+              )}
+              Save note
+            </button>
+          </div>
+        </div>
+        {state?.error && (
+          <p role="alert" className="text-[10px] text-rose-300">
+            {state.error}
+          </p>
+        )}
+      </form>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded-md border border-dashed border-outline-variant/50 p-2.5">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <span className={`text-[10px] font-semibold uppercase-none ${meta.text}`}>
+            {meta.label} note
+          </span>
+          <p className="mt-0.5 text-[11px] leading-snug text-on-surface-variant">
+            {saved ? saved : <span className="italic opacity-70">No note yet.</span>}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="pressable shrink-0 rounded-md border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[11px] font-semibold text-blue-300 transition-colors hover:bg-blue-500/20"
+        >
+          {saved ? "Edit" : "Add"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Occupancy meter for a floor. Shows real proportions, not decoration. */
 function FloorMeter({ counts, total }: { counts: Record<string, number>; total: number }) {
   if (total === 0) return null;
@@ -143,12 +253,7 @@ function FloorMeter({ counts, total }: { counts: Record<string, number>; total: 
   );
 }
 
-/**
- * One unit. Holds the optimistic status so the rail, the control and the
- * supporting copy all move together the instant the user picks a new state —
- * previously the colour and the label were driven by two different sources and
- * visibly disagreed while the server round-trip completed.
- */
+/** One unit. Status comes from the list, so card, filters and counts agree. */
 function UnitCard({
   unit,
   onEdit,
@@ -160,8 +265,6 @@ function UnitCard({
   onDelete: (u: UnitItem) => void;
   onStatusChange: (unitId: string, next: string | null) => void;
 }) {
-  // `unit.status` already carries the list's optimistic value, so the card,
-  // the filters, the counts and the floor meter all move together.
   const status = unit.status;
   const activeLease = unit.leases?.[0];
   const tenant = activeLease?.tenant;
@@ -223,25 +326,23 @@ function UnitCard({
               {tenant.user_email}
             </span>
           </div>
+        ) : REMARK_STATUSES.includes(status) ? (
+          <StatusRemark unit={unit} status={status} />
         ) : (
           <p className="mt-3 rounded-md border border-dashed border-outline-variant/40 p-2.5 text-[11px] text-on-surface-variant">
-            {status === "Repair"
-              ? "Out of service — no tenant assigned."
-              : status === "Not Available"
-              ? "Held off the market."
-              : "No tenant yet."}
+            No tenant yet.
           </p>
         )}
       </div>
 
-      {/* Edit and Delete are a matched labelled pair — delete used to be an
-          unlabelled 24px icon. The forward action sits right, where the eye ends. */}
+      {/* Blue for the safe action, red for the destructive one — the two are
+          told apart by colour before either label is read. */}
       <div className="flex items-center justify-between gap-2 border-t border-outline-variant/30 pt-3">
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => onEdit(unit)}
-            className="pressable flex items-center gap-1 rounded-md border border-outline-variant/60 bg-surface-container px-2.5 py-1.5 text-[11px] font-semibold text-on-surface transition-colors hover:bg-surface-variant hover:text-white"
+            className="pressable flex items-center gap-1 rounded-md border border-blue-500/30 bg-blue-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-blue-300 transition-colors hover:bg-blue-500/20"
           >
             <span className="material-symbols-outlined text-[14px]" aria-hidden="true">
               edit
@@ -252,7 +353,7 @@ function UnitCard({
           <button
             type="button"
             onClick={() => onDelete(unit)}
-            className="pressable flex items-center gap-1 rounded-md border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-500/20"
+            className="pressable flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-500/25"
           >
             <span className="material-symbols-outlined text-[14px]" aria-hidden="true">
               delete
@@ -284,19 +385,25 @@ function UnitCard({
 export default function UnitsClient({
   initialUnits,
   properties,
-  activePropertyId: initialActiveProp,
+  activePropertyId,
+  activePropertyName,
+  contextOutOfSync,
 }: UnitsClientProps) {
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(initialActiveProp || "ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<UnitItem | null>(null);
   const [deletingUnit, setDeletingUnit] = useState<UnitItem | null>(null);
+  const [collapsedFloors, setCollapsedFloors] = useState<Set<number>>(new Set());
 
-  // Optimistic status lives here, not in the card. A status change has to be
-  // visible to the filters, the counts and the floor meter immediately —
-  // otherwise a unit switched to Repair keeps sitting under the Vacant filter
-  // until the page is refreshed.
+  // A ?property= deep link can point somewhere other than the top-bar
+  // selection. Push it into the universal context so the two never disagree.
+  useEffect(() => {
+    if (contextOutOfSync && activePropertyId) setActiveProperty(activePropertyId);
+  }, [contextOutOfSync, activePropertyId]);
+
+  // Optimistic status lives here, not in the card, so a change is visible to
+  // the filters, the counts and the floor meter in the same frame.
   const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
 
   const units = useMemo(
@@ -331,11 +438,10 @@ export default function UnitsClient({
     });
   };
 
+  // `units` is already confined to the active property by the server, so every
+  // filter and figure below is scoped to it by construction.
   const filteredUnits = useMemo(() => {
     return units.filter((u) => {
-      const matchesProperty =
-        selectedPropertyId === "ALL" || u.property_id === selectedPropertyId;
-
       const matchesStatus =
         statusFilter === "ALL" || u.status.toLowerCase() === statusFilter.toLowerCase();
 
@@ -346,13 +452,14 @@ export default function UnitsClient({
         u.unit_number.toLowerCase().includes(q) ||
         u.unit_type.toLowerCase().includes(q) ||
         u.floor_number.toString().includes(q) ||
+        (u.status_remark ?? "").toLowerCase().includes(q) ||
         (activeTenant &&
           (activeTenant.user_name.toLowerCase().includes(q) ||
             activeTenant.user_email.toLowerCase().includes(q)));
 
-      return matchesProperty && matchesStatus && matchesSearch;
+      return matchesStatus && matchesSearch;
     });
-  }, [units, selectedPropertyId, statusFilter, searchQuery]);
+  }, [units, statusFilter, searchQuery]);
 
   const unitsByFloor = useMemo(() => {
     const map = new Map<number, UnitItem[]>();
@@ -370,31 +477,33 @@ export default function UnitsClient({
       }));
   }, [filteredUnits]);
 
-  // Counts are scoped to the selected property so the figures match what is on screen.
-  const scopedUnits = useMemo(
-    () =>
-      selectedPropertyId === "ALL"
-        ? units
-        : units.filter((u) => u.property_id === selectedPropertyId),
-    [units, selectedPropertyId]
-  );
-
-  const countOf = (key: UnitStatusKey) => scopedUnits.filter((u) => u.status === key).length;
-  const totalUnits = scopedUnits.length;
+  const countOf = (key: UnitStatusKey) => units.filter((u) => u.status === key).length;
+  const totalUnits = units.length;
   const occupiedUnits = countOf("Occupied");
   const vacantUnits = countOf("Vacant");
   const repairUnits = countOf("Repair");
   const reservedUnits = countOf("Not Available");
   const occupancyPct = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
 
+  const allFloors = unitsByFloor.map((f) => f.floor);
+  const allCollapsed = allFloors.length > 0 && allFloors.every((f) => collapsedFloors.has(f));
+
+  const toggleFloor = (floor: number) =>
+    setCollapsedFloors((prev) => {
+      const next = new Set(prev);
+      if (next.has(floor)) next.delete(floor);
+      else next.add(floor);
+      return next;
+    });
+
+  const toggleAllFloors = () =>
+    setCollapsedFloors(allCollapsed ? new Set() : new Set(allFloors));
+
   const kpis = [
     {
       label: "Total units",
       value: totalUnits,
-      detail:
-        selectedPropertyId === "ALL"
-          ? `Across ${properties.length} propert${properties.length === 1 ? "y" : "ies"}`
-          : "In this property",
+      detail: activePropertyName ?? "No property selected",
       icon: "apartment",
       accent: "bg-surface-container-high border-outline-variant/60 text-on-surface-variant",
       detailClass: "text-on-surface-variant",
@@ -430,9 +539,6 @@ export default function UnitsClient({
     },
   ];
 
-  // The filter row doubles as the colour legend: every chip carries its status
-  // dot whether or not it is active, plus a live count. No separate legend
-  // strip needed — the control and the key are the same object.
   const statusCounts: Record<string, number> = {
     Vacant: vacantUnits,
     Occupied: occupiedUnits,
@@ -457,10 +563,10 @@ export default function UnitsClient({
     })),
   ];
 
+  const isFiltered = searchQuery !== "" || statusFilter !== "ALL";
+
   return (
     <div className="space-y-6">
-      {/* Summary. Sentence-case labels, and each figure carries its status colour
-          so the palette is learned here and reused on every card below. */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k) => (
           <div
@@ -483,39 +589,24 @@ export default function UnitsClient({
         ))}
       </div>
 
-      {/* Controls */}
+      {/* Controls. No property picker here — units are managed one property at
+          a time and the property is chosen once, in the top bar. */}
       <div className="flex flex-col gap-3 rounded-xl border border-outline-variant/60 bg-surface-container p-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center xl:max-w-xl">
-          <select
-            value={selectedPropertyId}
-            onChange={(e) => setSelectedPropertyId(e.target.value)}
-            aria-label="Filter by property"
-            className="shrink-0 rounded-lg border border-outline-variant/60 bg-surface-container-high px-3 py-2 text-xs text-white outline-none focus:border-primary"
+        <div className="relative flex-1 xl:max-w-md">
+          <span
+            className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
+            aria-hidden="true"
           >
-            <option value="ALL">All properties</option>
-            {properties.map((p) => (
-              <option key={p.property_id} value={p.property_id}>
-                {p.property_name}
-              </option>
-            ))}
-          </select>
-
-          <div className="relative flex-1">
-            <span
-              className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
-              aria-hidden="true"
-            >
-              search
-            </span>
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search units"
-              placeholder="Search unit number, layout or tenant"
-              className="w-full rounded-lg border border-outline-variant/60 bg-surface-container-high py-2 pl-9 pr-3 text-xs text-white outline-none transition-colors placeholder:text-on-surface-variant/60 focus:border-primary"
-            />
-          </div>
+            search
+          </span>
+          <input
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search units"
+            placeholder="Search unit number, layout, tenant or note"
+            className="w-full rounded-lg border border-outline-variant/60 bg-surface-container-high py-2 pl-9 pr-3 text-xs text-white outline-none transition-colors placeholder:text-on-surface-variant/60 focus:border-primary"
+          />
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
@@ -545,10 +636,24 @@ export default function UnitsClient({
             ))}
           </div>
 
+          {allFloors.length > 1 && (
+            <button
+              type="button"
+              onClick={toggleAllFloors}
+              className="pressable flex shrink-0 items-center gap-1 rounded-lg border border-outline-variant/60 bg-surface-container-high px-2.5 py-2 text-xs font-semibold text-on-surface transition-colors hover:text-white"
+            >
+              <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+                {allCollapsed ? "unfold_more" : "unfold_less"}
+              </span>
+              {allCollapsed ? "Expand all" : "Collapse all"}
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="pressable flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-md transition-colors hover:bg-primary/90"
+            disabled={!activePropertyId}
+            className="pressable flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-md transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
               add
@@ -558,32 +663,47 @@ export default function UnitsClient({
         </div>
       </div>
 
-      {/* Units, grouped by floor */}
       <div className="space-y-5">
-        {unitsByFloor.map(({ floor, units }) => {
+        {unitsByFloor.map(({ floor, units: floorUnits }) => {
           const counts = UNIT_STATUS_ORDER.reduce<Record<string, number>>((acc, k) => {
-            acc[k] = units.filter((u) => u.status === k).length;
+            acc[k] = floorUnits.filter((u) => u.status === k).length;
             return acc;
           }, {});
+          const collapsed = collapsedFloors.has(floor);
+          const panelId = `floor-panel-${floor}`;
 
           return (
             <section
               key={floor}
               className="space-y-4 rounded-xl border border-outline-variant/60 bg-surface-container p-5"
             >
-              <header className="space-y-2.5 border-b border-outline-variant/30 pb-3">
+              <header className="space-y-2.5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => toggleFloor(floor)}
+                    aria-expanded={!collapsed}
+                    aria-controls={panelId}
+                    className="pressable -m-1 flex items-center gap-2.5 rounded-md p-1 text-left transition-colors hover:bg-surface-container-high/60"
+                  >
+                    <span
+                      className="material-symbols-outlined text-[20px] text-on-surface-variant transition-transform"
+                      style={{ transform: collapsed ? "rotate(-90deg)" : "none" }}
+                      aria-hidden="true"
+                    >
+                      expand_more
+                    </span>
                     <div className="flex h-7 w-7 items-center justify-center rounded-md border border-outline-variant/40 bg-surface-container-high text-xs font-bold text-primary">
                       {floor}
                     </div>
                     <div>
                       <h3 className="text-sm font-bold text-white">Floor {floor}</h3>
                       <span className="text-[11px] text-on-surface-variant">
-                        {units.length} unit{units.length === 1 ? "" : "s"}
+                        {floorUnits.length} unit{floorUnits.length === 1 ? "" : "s"}
+                        {collapsed ? " — collapsed" : ""}
                       </span>
                     </div>
-                  </div>
+                  </button>
 
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                     {UNIT_STATUS_ORDER.filter((k) => counts[k] > 0).map((k) => (
@@ -600,20 +720,25 @@ export default function UnitsClient({
                   </div>
                 </div>
 
-                <FloorMeter counts={counts} total={units.length} />
+                <FloorMeter counts={counts} total={floorUnits.length} />
               </header>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                {units.map((unit) => (
-                  <UnitCard
-                    key={unit.unit_id}
-                    unit={unit}
-                    onEdit={setEditingUnit}
-                    onDelete={setDeletingUnit}
-                    onStatusChange={handleStatusChange}
-                  />
-                ))}
-              </div>
+              {!collapsed && (
+                <div
+                  id={panelId}
+                  className="grid grid-cols-1 gap-3 border-t border-outline-variant/30 pt-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+                >
+                  {floorUnits.map((unit) => (
+                    <UnitCard
+                      key={unit.unit_id}
+                      unit={unit}
+                      onEdit={setEditingUnit}
+                      onDelete={setDeletingUnit}
+                      onStatusChange={handleStatusChange}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           );
         })}
@@ -627,36 +752,37 @@ export default function UnitsClient({
             </div>
             <div>
               <h4 className="text-sm font-bold text-white">
-                {searchQuery || statusFilter !== "ALL" || selectedPropertyId !== "ALL"
-                  ? "No units match these filters"
-                  : "No units yet"}
+                {isFiltered ? "No units match these filters" : "No units yet"}
               </h4>
               <p className="mt-1 text-xs text-on-surface-variant">
-                {searchQuery || statusFilter !== "ALL" || selectedPropertyId !== "ALL"
+                {isFiltered
                   ? "Clear the filters to see the full list."
-                  : "Add the first unit to start tracking occupancy."}
+                  : activePropertyName
+                  ? `Add the first unit to ${activePropertyName}.`
+                  : "Add a property first."}
               </p>
             </div>
-            {searchQuery || statusFilter !== "ALL" || selectedPropertyId !== "ALL" ? (
+            {isFiltered ? (
               <button
                 type="button"
                 onClick={() => {
                   setSearchQuery("");
                   setStatusFilter("ALL");
-                  setSelectedPropertyId("ALL");
                 }}
                 className="pressable rounded-lg border border-outline-variant/60 bg-surface-container-high px-4 py-2 text-xs font-semibold text-on-surface transition-colors hover:text-white"
               >
                 Clear filters
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(true)}
-                className="pressable rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary transition-colors hover:bg-primary/90"
-              >
-                Add unit
-              </button>
+              activePropertyId && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="pressable rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary transition-colors hover:bg-primary/90"
+                >
+                  Add unit
+                </button>
+              )
             )}
           </div>
         )}
@@ -664,7 +790,7 @@ export default function UnitsClient({
 
       <UnitFormModal
         properties={properties}
-        activePropertyId={selectedPropertyId !== "ALL" ? selectedPropertyId : undefined}
+        activePropertyId={activePropertyId ?? undefined}
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
       />

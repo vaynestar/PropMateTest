@@ -151,3 +151,31 @@ export async function updateUnitStatusAction(state: any, formData: FormData) {
     return { error: error.message || "Failed to update unit status" };
   }
 }
+
+/**
+ * Save the free-text note explaining a non-standard status (why a unit is under
+ * Repair, or who it is Reserved for). Kept when the status changes so the
+ * history is not silently discarded.
+ */
+export async function updateUnitRemarkAction(state: any, formData: FormData) {
+  try {
+    const user = await requireUser(["Admin"]);
+    const unitId = String(formData.get("unit_id") || "");
+    const remark = String(formData.get("status_remark") || "").trim();
+
+    if (!unitId) throw new Error("Unit ID is required.");
+    if (remark.length > 500) {
+      throw new Error("Note is too long - keep it to 500 characters or fewer.");
+    }
+
+    await prisma.unit.update({
+      where: { unit_id: unitId },
+      data: { status_remark: remark || null, modified_by: user.userId },
+    });
+
+    revalidatePath("/admin/units");
+    return { success: true, remark: remark || null };
+  } catch (error: any) {
+    return { error: error.message || "Failed to save the note" };
+  }
+}

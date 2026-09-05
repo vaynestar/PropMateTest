@@ -14,12 +14,28 @@ export default async function UnitsPage(props: {
   const urlPropertyId = searchParams.property as string | undefined;
   const cookiePropertyId = cookieStore.get("propmate_property_id")?.value;
 
-  const [units, properties] = await Promise.all([
-    listUnits(),
-    listPropertiesForUnits(),
-  ]);
+  const properties = await listPropertiesForUnits();
+  const isReal = (id?: string) => !!id && properties.some((p) => p.property_id === id);
 
-  const activePropertyId = urlPropertyId || cookiePropertyId || (properties[0]?.property_id ?? null);
+  // Units are always managed one property at a time — there is no "all
+  // properties" view. Precedence: a ?property= deep link (e.g. "View units"
+  // from a property card) → the universal property picked in the top bar →
+  // the first property. Only ids that actually exist are accepted.
+  const activePropertyId =
+    (isReal(urlPropertyId) ? urlPropertyId : undefined) ??
+    (isReal(cookiePropertyId) ? cookiePropertyId : undefined) ??
+    properties[0]?.property_id ??
+    null;
+
+  // Scope the query itself, so every filter and count downstream is already
+  // confined to this property.
+  const units = activePropertyId ? await listUnits(activePropertyId) : [];
+
+  const activeProperty = properties.find((p) => p.property_id === activePropertyId) ?? null;
+
+  // A deep link can point at a different property than the top-bar switcher.
+  // Tell the client to push it into the universal context so the two agree.
+  const contextOutOfSync = !!activePropertyId && cookiePropertyId !== activePropertyId;
 
   // Prisma returns Decimal for area_sqft / monthly_rent. Passing those straight
   // into a Client Component makes React log "Only plain objects can be passed to
@@ -34,6 +50,7 @@ export default async function UnitsPage(props: {
     area_sqft: Number(u.area_sqft),
     monthly_rent: Number(u.monthly_rent ?? 0),
     status: u.status,
+    status_remark: (u as { status_remark?: string | null }).status_remark ?? null,
     property: u.property
       ? { property_id: u.property.property_id, property_name: u.property.property_name }
       : undefined,
@@ -53,26 +70,33 @@ export default async function UnitsPage(props: {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-outline-variant/30">
+      <div className="flex flex-col gap-3 border-b border-outline-variant/30 pb-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant/60 bg-surface-container-high text-on-surface-variant">
               <span className="material-symbols-outlined text-[20px]">meeting_room</span>
             </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Units Inventory</h1>
+            <h1 className="text-xl font-bold tracking-tight text-white">Units</h1>
           </div>
-          <p className="text-xs text-on-surface-variant mt-1">
-            Manage unit specifications, floor plans, occupancy status, and tenant assignments
+          <p className="mt-1 text-xs text-on-surface-variant">
+            {activeProperty ? (
+              <>
+                Managing <span className="font-semibold text-on-surface">{activeProperty.property_name}</span>.
+                Switch property from the selector in the top bar.
+              </>
+            ) : (
+              "No properties yet — add a property before creating units."
+            )}
           </p>
         </div>
       </div>
 
-      {/* Interactive Units Client */}
       <UnitsClient
         initialUnits={serialisedUnits}
         properties={properties}
         activePropertyId={activePropertyId}
+        activePropertyName={activeProperty?.property_name ?? null}
+        contextOutOfSync={contextOutOfSync}
       />
     </div>
   );
