@@ -48,6 +48,7 @@ export default function PropertiesClient({
     return acc + occupied;
   }, 0);
   const avgOccupancyRate = totalUnits > 0 ? Math.round((totalOccupied / totalUnits) * 100) : 0;
+  const emptyProperties = initialProperties.filter((p) => (p._count?.units ?? 0) === 0).length;
   const activeDefaultProperty = initialProperties.find((p) => p.property_id === activePropertyId);
 
   // Available unique property types for filter pills
@@ -64,10 +65,14 @@ export default function PropertiesClient({
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
             <span className="text-xs font-medium text-on-surface-variant">
-              Properties
+              Total properties
             </span>
             <div className="text-2xl font-bold text-white mt-1">{totalProperties}</div>
-            <span className="text-[11px] text-on-surface-variant">{totalProperties === 1 ? "1 development" : `${totalProperties} developments`}</span>
+            <span className="text-[11px] text-on-surface-variant">
+              {emptyProperties === 0
+                ? "all have units"
+                : `${emptyProperties} with no units yet`}
+            </span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
             <span className="material-symbols-outlined text-[24px]">domain</span>
