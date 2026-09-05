@@ -52,7 +52,7 @@ export default function PropertyCard({
 
   return (
     <div
-      className={`rounded-2xl p-5 bg-surface-container border transition-all duration-200 flex flex-col justify-between gap-4 group ${
+      className={`min-w-0 rounded-2xl p-5 bg-surface-container border transition-all duration-200 flex flex-col justify-between gap-4 group ${
         isActiveDefault
           ? "border-amber-500/40 bg-surface-container shadow-[0_0_25px_rgba(245,158,11,0.08)]"
           : "border-outline-variant/60 hover:border-outline-variant hover:bg-surface-container-high/40"
@@ -69,12 +69,15 @@ export default function PropertyCard({
               <h3 className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
                 {property.property_name}
               </h3>
-              <div className="flex items-center gap-1.5 text-[11px] text-on-surface-variant font-medium">
-                <span className="px-2 py-0.5 rounded-md bg-surface-container-high border border-outline-variant/40 text-on-surface-variant">
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-on-surface-variant">
+                <span className="shrink-0 rounded-md border border-outline-variant/40 bg-surface-container-high px-2 py-0.5">
                   {property.property_type}
                 </span>
-                <span>•</span>
-                <span>{property.city}, {property.state}</span>
+                {/* truncate, not wrap — a long city name used to stack into a
+                    narrow column and shove the title around on a phone. */}
+                <span className="truncate whitespace-nowrap">
+                  {property.city}, {property.state}
+                </span>
               </div>
             </div>
           </div>
@@ -98,65 +101,65 @@ export default function PropertyCard({
       <div className="grid grid-cols-3 gap-2 py-1">
         {/* Total Units */}
         <div className="p-2.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/30 flex flex-col items-center text-center">
-          <span className="text-[10px] uppercase font-bold text-cyan-400 tracking-wider flex items-center gap-1 mb-0.5">
+          <span className="mb-0.5 flex items-center gap-1 text-[11px] font-medium text-on-surface-variant">
             <span className="material-symbols-outlined text-[13px]">meeting_room</span>
             Units
           </span>
           <span className="text-sm font-bold text-white">{totalUnits}</span>
-          <span className="text-[10px] text-on-surface-variant/70">Registered</span>
+          <span className="text-[10px] text-on-surface-variant/70">on record</span>
         </div>
 
         {/* Occupancy Rate */}
         <div className="p-2.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/30 flex flex-col items-center text-center">
-          <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider flex items-center gap-1 mb-0.5">
+          <span className="mb-0.5 flex items-center gap-1 text-[11px] font-medium text-on-surface-variant">
             <span className="material-symbols-outlined text-[13px]">pie_chart</span>
             Occupancy
           </span>
           <span className="text-sm font-bold text-white">{occupancyRate}%</span>
-          <span className="text-[10px] text-emerald-400/80">{occupiedUnits} Leased</span>
+          <span className="text-[10px] text-emerald-400/80">{occupiedUnits} leased</span>
         </div>
 
         {/* Facilities */}
         <div className="p-2.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/30 flex flex-col items-center text-center">
-          <span className="text-[10px] uppercase font-bold text-violet-400 tracking-wider flex items-center gap-1 mb-0.5">
-            <span className="material-symbols-outlined text-[13px]">apartment</span>
-            Amenities
+          <span className="mb-0.5 flex items-center gap-1 text-[11px] font-medium text-on-surface-variant">
+            <span className="material-symbols-outlined text-[13px]">pool</span>
+            Facilities
           </span>
           <span className="text-sm font-bold text-white">{facilityCount}</span>
-          <span className="text-[10px] text-on-surface-variant/70">Facilities</span>
+          <span className="text-[10px] text-on-surface-variant/70">
+            {facilityCount === 1 ? "bookable" : "bookable"}
+          </span>
         </div>
       </div>
 
       {/* Action Buttons Row */}
-      <div className="flex items-center gap-2 pt-1 border-t border-outline-variant/30">
+      <div className="flex flex-wrap items-center gap-2 border-t border-outline-variant/30 pt-2">
         {/* View Units Primary Action */}
         <Link
           href={`/admin/units?property=${property.property_id}`}
-          className="flex-1 px-3.5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs pressable"
+          className="pressable flex flex-1 basis-28 items-center justify-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-on-primary shadow-xs transition-colors hover:bg-primary/90"
         >
-          <span>View Units</span>
-          <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
+          View units
         </Link>
 
         {/* Edit Button */}
         <button
           type="button"
           onClick={() => onEdit(property)}
-          className="px-3 py-2 rounded-xl bg-surface-container-high hover:bg-surface-variant hover:text-white text-on-surface border border-outline-variant/60 text-xs font-semibold flex items-center justify-center gap-1 transition-all pressable"
-          title="Edit Property Details"
+          className="pressable flex items-center justify-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 transition-colors hover:bg-blue-500/20"
         >
-          <span className="material-symbols-outlined text-[15px] text-on-surface-variant">edit</span>
-          <span className="hidden sm:inline">Edit</span>
+          <span className="material-symbols-outlined text-[15px]">edit</span>
+          Edit
         </button>
 
         {/* Delete Button */}
         <button
           type="button"
           onClick={() => onDelete(property)}
-          className="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center justify-center gap-1 transition-all pressable"
-          title="Delete Property"
+          className="pressable flex items-center justify-center gap-1 rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/25"
         >
-          <span className="material-symbols-outlined text-[15px] text-rose-400">delete</span>
+          <span className="material-symbols-outlined text-[15px]">delete</span>
+          Delete
         </button>
       </div>
     </div>

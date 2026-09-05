@@ -63,11 +63,11 @@ export default function PropertiesClient({
         {/* Total Properties */}
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Total Developments
+            <span className="text-xs font-medium text-on-surface-variant">
+              Properties
             </span>
             <div className="text-2xl font-bold text-white mt-1">{totalProperties}</div>
-            <span className="text-[11px] text-cyan-400 font-medium">In Management</span>
+            <span className="text-[11px] text-on-surface-variant">{totalProperties === 1 ? "1 development" : `${totalProperties} developments`}</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
             <span className="material-symbols-outlined text-[24px]">domain</span>
@@ -77,11 +77,11 @@ export default function PropertiesClient({
         {/* Total Registered Units */}
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Total Units
+            <span className="text-xs font-medium text-on-surface-variant">
+              Units
             </span>
             <div className="text-2xl font-bold text-white mt-1">{totalUnits}</div>
-            <span className="text-[11px] text-violet-400 font-medium">Active Portfolio</span>
+            <span className="text-[11px] text-on-surface-variant">across all properties</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-primary">
             <span className="material-symbols-outlined text-[24px]">meeting_room</span>
@@ -91,11 +91,11 @@ export default function PropertiesClient({
         {/* Occupancy Rate */}
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Occupancy Rate
+            <span className="text-xs font-medium text-on-surface-variant">
+              Occupancy
             </span>
             <div className="text-2xl font-bold text-white mt-1">{avgOccupancyRate}%</div>
-            <span className="text-[11px] text-emerald-400 font-medium">{totalOccupied} Units Leased</span>
+            <span className="text-[11px] text-emerald-400">{totalOccupied} of {totalUnits} leased</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
             <span className="material-symbols-outlined text-[24px]">pie_chart</span>
@@ -105,13 +105,13 @@ export default function PropertiesClient({
         {/* Default Property Scope */}
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div className="min-w-0">
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Active Scope
+            <span className="text-xs font-medium text-on-surface-variant">
+              Working in
             </span>
             <div className="text-sm font-bold text-amber-300 truncate mt-1">
-              {activeDefaultProperty?.property_name || "All Developments"}
+              {activeDefaultProperty?.property_name || "No default set"}
             </div>
-            <span className="text-[11px] text-on-surface-variant/80">Default Property</span>
+            <span className="text-[11px] text-on-surface-variant/80">Default for new sessions</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-300 shrink-0">
             <span className="material-symbols-outlined text-[24px]">star</span>
@@ -130,7 +130,7 @@ export default function PropertiesClient({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by property name, city, state, or address..."
+            placeholder="Search name, city, state or address"
             className="w-full pl-9 pr-4 py-2 rounded-xl bg-surface-container-high border border-outline-variant/60 text-xs text-white placeholder:text-on-surface-variant/50 outline-none focus:border-primary transition-all"
           />
           {searchQuery && (
@@ -204,11 +204,11 @@ export default function PropertiesClient({
               <span className="material-symbols-outlined text-[28px] opacity-40">domain_disabled</span>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">No Properties Found</h4>
+              <h4 className="text-sm font-bold text-white">No properties match</h4>
               <p className="text-xs text-on-surface-variant mt-0.5">
                 {searchQuery || selectedType !== "ALL"
-                  ? "No developments match your search criteria."
-                  : "Get started by adding your first residential strata development."}
+                  ? "Try a different name, city or type."
+                  : "Add your first property to start tracking units."}
               </p>
             </div>
             {(searchQuery || selectedType !== "ALL") && (

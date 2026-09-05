@@ -23,7 +23,7 @@ export default async function PropertiesPage() {
             <h1 className="text-xl font-bold text-white tracking-tight">Properties Portfolio</h1>
           </div>
           <p className="text-xs text-on-surface-variant mt-1">
-            Manage residential strata developments, unit inventories, and default operational scopes
+            Add properties, track their units, and pick which one the rest of the app works in.
           </p>
         </div>
       </div>

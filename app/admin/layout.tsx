@@ -219,7 +219,12 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </nav>
 
       {/* Main Content Canvas */}
-      <div className="flex-1 ml-0 md:ml-[260px] flex flex-col min-h-screen">
+      {/* min-w-0 is load-bearing: as a flex item this defaults to
+          min-width:auto, so it refuses to shrink below its content and the
+          page grew wider than the phone viewport. body{overflow-x:hidden}
+          then clipped the excess instead of letting it scroll, making that
+          content unreachable — 365px of it on /admin/units. */}
+      <div className="flex-1 min-w-0 ml-0 md:ml-[260px] flex flex-col min-h-screen">
         {/* TopNavBar */}
         <header className="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/50 shadow-sm sticky top-0 z-40 w-full">
           <div className="flex items-center md:hidden">
