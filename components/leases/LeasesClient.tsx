@@ -94,11 +94,11 @@ export default function LeasesClient({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Total Agreements
+            <span className="text-xs font-medium text-on-surface-variant">
+              Leases
             </span>
             <div className="text-2xl font-bold text-white mt-1">{totalLeases}</div>
-            <span className="text-[11px] text-violet-400 font-medium">Recorded Leases</span>
+            <span className="text-[11px] text-on-surface-variant">on record</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-primary">
             <span className="material-symbols-outlined text-[24px]">description</span>
@@ -107,11 +107,11 @@ export default function LeasesClient({
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Active Tenancies
+            <span className="text-xs font-medium text-on-surface-variant">
+              Active
             </span>
             <div className="text-2xl font-bold text-white mt-1">{activeLeasesCount}</div>
-            <span className="text-[11px] text-emerald-400 font-medium">Currently Occupied</span>
+            <span className="text-[11px] text-emerald-400">someone living there</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
             <span className="material-symbols-outlined text-[24px]">verified</span>
@@ -120,11 +120,11 @@ export default function LeasesClient({
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Past / Inactive
+            <span className="text-xs font-medium text-on-surface-variant">
+              Ended
             </span>
             <div className="text-2xl font-bold text-white mt-1">{inactiveLeasesCount}</div>
-            <span className="text-[11px] text-on-surface-variant">Archived Agreements</span>
+            <span className="text-[11px] text-on-surface-variant">moved out</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-surface-container-high border border-outline-variant/40 flex items-center justify-center text-on-surface-variant">
             <span className="material-symbols-outlined text-[24px]">history</span>
@@ -133,11 +133,11 @@ export default function LeasesClient({
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
+            <span className="text-xs font-medium text-on-surface-variant">
               Properties
             </span>
             <div className="text-2xl font-bold text-white mt-1">{propertiesCount}</div>
-            <span className="text-[11px] text-cyan-400 font-medium">Covered Sites</span>
+            <span className="text-[11px] text-on-surface-variant">with a lease</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
             <span className="material-symbols-outlined text-[24px]">apartment</span>
@@ -170,7 +170,7 @@ export default function LeasesClient({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by tenant name, unit #, or email..."
+              placeholder="Search tenant, unit or email"
               className="w-full pl-9 pr-4 py-2 rounded-xl bg-surface-container-high border border-outline-variant/60 text-xs text-white placeholder:text-on-surface-variant/50 outline-none focus:border-primary transition-all"
             />
           </div>
@@ -251,7 +251,7 @@ export default function LeasesClient({
                 <div className="p-3 rounded-xl bg-surface-container-high/60 border border-outline-variant/40 space-y-1 text-xs">
                   <div className="flex items-center justify-between">
                     <span className="font-semibold text-white truncate">{lease.tenant.user_name}</span>
-                    <span className="text-[10px] text-primary uppercase font-bold tracking-wider">Tenant</span>
+                    <span className="text-[10px] font-semibold text-primary">Tenant</span>
                   </div>
                   <div className="text-[11px] text-on-surface-variant truncate">
                     {lease.tenant.user_email}
@@ -266,14 +266,14 @@ export default function LeasesClient({
                 {/* Tenancy Dates */}
                 <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-outline-variant/30 text-xs">
                   <div className="space-y-0.5">
-                    <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider flex items-center gap-1">
+                    <span className="text-[10px] font-semibold text-on-surface-variant flex items-center gap-1">
                       <span className="material-symbols-outlined text-[12px] text-emerald-400">login</span>
                       Move-In
                     </span>
                     <span className="font-semibold text-white">{moveInStr}</span>
                   </div>
                   <div className="space-y-0.5">
-                    <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-wider flex items-center gap-1">
+                    <span className="text-[10px] font-semibold text-on-surface-variant flex items-center gap-1">
                       <span className="material-symbols-outlined text-[12px] text-amber-400">logout</span>
                       Move-Out
                     </span>
@@ -312,11 +312,11 @@ export default function LeasesClient({
               <span className="material-symbols-outlined text-[28px] opacity-40">description</span>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">No Tenancy Leases Found</h4>
+              <h4 className="text-sm font-bold text-white">No leases yet</h4>
               <p className="text-xs text-on-surface-variant mt-0.5">
-                {searchQuery || selectedPropertyId !== "ALL"
-                  ? "No leases match your filter criteria."
-                  : "Create your first tenancy agreement to assign residents to units."}
+                {searchQuery
+                  ? "Try a different tenant, unit or email."
+                  : "A lease is what connects a tenant to a unit. Create one to fill a vacant unit."}
               </p>
             </div>
           </div>

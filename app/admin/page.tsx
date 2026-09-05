@@ -18,15 +18,11 @@ export default async function AdminDashboardPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-              Operations Command Center
+              Dashboard
             </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>LIVE PULSE</span>
-            </span>
           </div>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Real-time facility telemetry, tenant actions, and on-site gate security
+            What needs your attention today.
           </p>
         </div>
 
@@ -38,7 +34,7 @@ export default async function AdminDashboardPage() {
             className="px-3.5 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/60 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors pressable"
           >
             <span className="material-symbols-outlined text-[16px] text-primary">analytics</span>
-            <span>Analytics & Audit</span>
+            <span>Reports</span>
           </Link>
         </div>
       </div>
@@ -52,11 +48,10 @@ export default async function AdminDashboardPage() {
                 warning
               </span>
               <h2 className="text-sm font-bold text-white tracking-tight">
-                Critical Attention Required ({stats.urgentActionItems.length})
+                Needs attention ({stats.urgentActionItems.length})
               </h2>
             </div>
             <span className="text-[11px] text-rose-300 font-semibold bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 rounded-md">
-              Action Needed Today
             </span>
           </div>
 
@@ -90,7 +85,7 @@ export default async function AdminDashboardPage() {
                   </p>
                 </div>
                 <div className="mt-2.5 flex items-center justify-end text-[10px] text-primary font-semibold group-hover:translate-x-0.5 transition-transform">
-                  <span>Take action →</span>
+                  <span>Open</span>
                 </div>
               </Link>
             ))}
@@ -106,7 +101,7 @@ export default async function AdminDashboardPage() {
           className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-primary/50 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between pb-2">
-            <span className="text-xs text-on-surface-variant font-medium">Occupancy Pulse</span>
+            <span className="text-xs text-on-surface-variant font-medium">Occupancy</span>
             <span className="material-symbols-outlined text-[18px] text-primary group-hover:scale-110 transition-transform">
               home_work
             </span>
@@ -115,7 +110,7 @@ export default async function AdminDashboardPage() {
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-white font-mono">{stats.occupancyRate}%</span>
               <span className="text-xs text-on-surface-variant font-mono">
-                ({stats.occupiedUnits}/{stats.totalUnits} Units)
+                {stats.occupiedUnits} of {stats.totalUnits} units
               </span>
             </div>
             <div className="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden mt-2">
@@ -143,7 +138,7 @@ export default async function AdminDashboardPage() {
               RM {stats.todayCollectedAmount.toFixed(2)}
             </span>
             <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30 text-on-surface-variant">
-              <span>Total Overdue:</span>
+              <span>Overdue</span>
               <span className="font-mono font-bold text-rose-300">
                 RM {stats.outstandingAmount.toLocaleString()}
               </span>
@@ -157,7 +152,7 @@ export default async function AdminDashboardPage() {
           className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-purple-500/50 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between pb-2">
-            <span className="text-xs text-purple-400 font-medium">Visitors Inside</span>
+            <span className="text-xs text-purple-400 font-medium">Visitors on site</span>
             <span className="material-symbols-outlined text-[18px] text-purple-400 group-hover:scale-110 transition-transform">
               badge
             </span>
@@ -167,13 +162,13 @@ export default async function AdminDashboardPage() {
               <span className="text-2xl font-bold text-purple-300 font-mono">
                 {stats.activeVisitorsCount}
               </span>
-              <span className="text-xs text-purple-400/80">currently on-site</span>
+              <span className="text-xs text-purple-400/80">right now</span>
             </div>
             <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30 text-on-surface-variant">
-              <span>Guardhouse Gate:</span>
+              <span>Guardhouse</span>
               <span className="text-emerald-400 font-semibold flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>Active</span>
+                <span>Open</span>
               </span>
             </div>
           </div>
@@ -185,7 +180,7 @@ export default async function AdminDashboardPage() {
           className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-amber-500/50 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between pb-2">
-            <span className="text-xs text-amber-400 font-medium">Helpdesk Backlog</span>
+            <span className="text-xs text-amber-400 font-medium">Open tickets</span>
             <span className="material-symbols-outlined text-[18px] text-amber-400 group-hover:scale-110 transition-transform">
               build
             </span>
@@ -193,12 +188,12 @@ export default async function AdminDashboardPage() {
           <div>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold text-white font-mono">{stats.openTickets}</span>
-              <span className="text-xs text-on-surface-variant">active tickets</span>
+              <span className="text-xs text-on-surface-variant">unresolved</span>
             </div>
             <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30">
-              <span className="text-on-surface-variant">Urgent / High:</span>
+              <span className="text-on-surface-variant">Urgent or high</span>
               <span className="text-amber-300 font-mono font-bold">
-                {stats.urgentTicketsCount} tickets
+                {stats.urgentTicketsCount}
               </span>
             </div>
           </div>
@@ -207,7 +202,7 @@ export default async function AdminDashboardPage() {
 
       {/* 4. Fast Action Matrix */}
       <div className="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="text-on-surface-variant font-semibold shrink-0">Quick Operations:</span>
+        <span className="text-on-surface-variant font-semibold shrink-0">Quick actions</span>
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/admin/maintenance"
@@ -262,16 +257,16 @@ export default async function AdminDashboardPage() {
           <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
             <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-4">
               <div>
-                <h3 className="text-sm font-bold text-white">Active Maintenance Queue</h3>
+                <h3 className="text-sm font-bold text-white">Work in progress</h3>
                 <p className="text-[11px] text-on-surface-variant">
-                  Open and in-progress work orders across units
+                  Tickets that are open or being worked on.
                 </p>
               </div>
               <Link
                 href="/admin/maintenance"
                 className="text-xs text-primary hover:underline font-semibold"
               >
-                View all tickets →
+                View all tickets
               </Link>
             </div>
 
@@ -285,10 +280,9 @@ export default async function AdminDashboardPage() {
           <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
             <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-4">
               <div>
-                <h3 className="text-sm font-bold text-white">Live Activity Stream</h3>
-                <p className="text-[11px] text-on-surface-variant">Today&apos;s operational events log</p>
+                <h3 className="text-sm font-bold text-white">Recent activity</h3>
+                <p className="text-[11px] text-on-surface-variant">What happened today</p>
               </div>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             </div>
 
             <div className="space-y-3">
@@ -338,7 +332,7 @@ export default async function AdminDashboardPage() {
               ) : (
                 <div className="p-6 text-center text-on-surface-variant/70 text-xs flex flex-col items-center gap-1">
                   <span className="material-symbols-outlined text-[24px] opacity-40">notifications_off</span>
-                  <span>No operational events recorded today yet.</span>
+                  <span>Nothing has happened today yet.</span>
                 </div>
               )}
             </div>

@@ -26,10 +26,10 @@ export default function FinancialTrendChart({ data }: FinancialTrendChartProps) 
         <div>
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[20px]">show_chart</span>
-            <h3 className="text-sm font-bold text-white tracking-tight">Financial Performance Trend</h3>
+            <h3 className="text-sm font-bold text-white tracking-tight">Billed vs collected</h3>
           </div>
           <p className="text-[11px] text-on-surface-variant mt-0.5">
-            Billed maintenance invoices vs actual paid cash collections
+            What you invoiced against what was actually paid.
           </p>
         </div>
 

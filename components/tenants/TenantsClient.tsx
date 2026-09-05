@@ -30,14 +30,16 @@ export interface TenantItem {
 interface TenantsClientProps {
   initialTenants: TenantItem[];
   properties: { property_id: string; property_name: string }[];
+  activePropertyId?: string | null;
 }
 
 export default function TenantsClient({
   initialTenants,
   properties,
+  activePropertyId,
 }: TenantsClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("ALL");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(activePropertyId ?? "ALL");
   const [leaseFilter, setLeaseFilter] = useState<string>("ALL");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<TenantItem | null>(null);
@@ -79,11 +81,11 @@ export default function TenantsClient({
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Total Residents
+            <span className="text-xs font-medium text-on-surface-variant">
+              Tenants
             </span>
             <div className="text-2xl font-bold text-white mt-1">{totalTenants}</div>
-            <span className="text-[11px] text-violet-400 font-medium">Registered Accounts</span>
+            <span className="text-[11px] text-on-surface-variant">with a login</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-primary">
             <span className="material-symbols-outlined text-[24px]">groups</span>
@@ -92,11 +94,11 @@ export default function TenantsClient({
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Active Tenancies
+            <span className="text-xs font-medium text-on-surface-variant">
+              Renting now
             </span>
             <div className="text-2xl font-bold text-white mt-1">{activeLeaseholders}</div>
-            <span className="text-[11px] text-emerald-400 font-medium">With Assigned Units</span>
+            <span className="text-[11px] text-emerald-400">have a unit</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
             <span className="material-symbols-outlined text-[24px]">home_pin</span>
@@ -105,11 +107,11 @@ export default function TenantsClient({
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Unassigned Accounts
+            <span className="text-xs font-medium text-on-surface-variant">
+              No unit yet
             </span>
             <div className="text-2xl font-bold text-white mt-1">{unassignedTenants}</div>
-            <span className="text-[11px] text-cyan-400 font-medium">Awaiting Lease</span>
+            <span className="text-[11px] text-on-surface-variant">needs a lease</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
             <span className="material-symbols-outlined text-[24px]">person_outline</span>
@@ -118,11 +120,11 @@ export default function TenantsClient({
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
-            <span className="text-[11px] font-semibold text-on-surface-variant uppercase tracking-wider">
-              Developments
+            <span className="text-xs font-medium text-on-surface-variant">
+              Properties
             </span>
             <div className="text-2xl font-bold text-white mt-1">{propertiesCovered}</div>
-            <span className="text-[11px] text-amber-400 font-medium">Portfolio Coverage</span>
+            <span className="text-[11px] text-on-surface-variant">they live across</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
             <span className="material-symbols-outlined text-[24px]">apartment</span>
@@ -139,7 +141,7 @@ export default function TenantsClient({
             onChange={(e) => setSelectedPropertyId(e.target.value)}
             className="px-3 py-2 rounded-xl bg-surface-container-high border border-outline-variant/60 text-xs text-white outline-none focus:border-primary shrink-0"
           >
-            <option value="ALL">All Properties ({totalTenants})</option>
+            <option value="ALL">All properties</option>
             {properties.map((p) => (
               <option key={p.property_id} value={p.property_id}>
                 {p.property_name}
@@ -155,7 +157,7 @@ export default function TenantsClient({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, email, or phone..."
+              placeholder="Search name, email or phone"
               className="w-full pl-9 pr-4 py-2 rounded-xl bg-surface-container-high border border-outline-variant/60 text-xs text-white placeholder:text-on-surface-variant/50 outline-none focus:border-primary transition-all"
             />
           </div>
@@ -165,9 +167,9 @@ export default function TenantsClient({
         <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
           <div className="flex items-center gap-1.5 shrink-0 bg-surface-container-high/60 p-1 rounded-xl border border-outline-variant/40">
             {[
-              { id: "ALL", label: "All Residents" },
-              { id: "LEASED", label: "Active Lease" },
-              { id: "UNASSIGNED", label: "Unassigned" },
+              { id: "ALL", label: "All" },
+              { id: "LEASED", label: "Renting" },
+              { id: "UNASSIGNED", label: "No unit" },
             ].map((f) => (
               <button
                 key={f.id}
@@ -216,7 +218,7 @@ export default function TenantsClient({
                       <h3 className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
                         {tenant.user_name}
                       </h3>
-                      <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">
+                      <span className="text-[10px] font-semibold text-on-surface-variant">
                         Resident
                       </span>
                     </div>
@@ -224,11 +226,11 @@ export default function TenantsClient({
 
                   {hasLease ? (
                     <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold shrink-0">
-                      Active Leased
+                      Renting
                     </span>
                   ) : (
                     <span className="px-2.5 py-1 rounded-full bg-surface-container-high border border-outline-variant/60 text-on-surface-variant text-[10px] font-medium shrink-0">
-                      Unassigned
+                      No unit
                     </span>
                   )}
                 </div>
@@ -247,8 +249,8 @@ export default function TenantsClient({
 
                 {/* Assigned Units Pill List */}
                 <div className="pt-3">
-                  <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block mb-1.5">
-                    Assigned Tenancies
+                  <span className="text-[10px] font-semibold text-on-surface-variant block mb-1.5">
+                    Units
                   </span>
                   {hasLease ? (
                     <div className="flex flex-wrap gap-1.5">
@@ -276,27 +278,25 @@ export default function TenantsClient({
                   href={`/admin/leases?tenant=${tenant.user_id}`}
                   className="flex-1 px-3 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs pressable"
                 >
-                  <span>View Leases</span>
-                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  <span>View leases</span>
                 </Link>
 
                 <button
                   type="button"
                   onClick={() => setEditingTenant(tenant)}
-                  className="px-3 py-2 rounded-xl bg-surface-container-high hover:bg-surface-variant hover:text-white text-on-surface border border-outline-variant/60 text-xs font-semibold flex items-center justify-center gap-1 transition-all pressable"
-                  title="Edit Resident Profile"
+                  className="pressable flex items-center justify-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 transition-colors hover:bg-blue-500/20"
                 >
-                  <span className="material-symbols-outlined text-[15px] text-on-surface-variant">edit</span>
-                  <span className="hidden sm:inline">Edit</span>
+                  <span className="material-symbols-outlined text-[15px]">edit</span>
+                  Edit
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setDeletingTenant(tenant)}
-                  className="px-3 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center justify-center gap-1 transition-all pressable"
-                  title="Delete Resident"
+                  className="pressable flex items-center justify-center gap-1 rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/25"
                 >
-                  <span className="material-symbols-outlined text-[15px] text-rose-400">delete</span>
+                  <span className="material-symbols-outlined text-[15px]">delete</span>
+                  Delete
                 </button>
               </div>
             </div>

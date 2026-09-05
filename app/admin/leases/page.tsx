@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getAllLeases } from "@/lib/lease-management";
 import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
 import LeasesClient from "@/components/leases/LeasesClient";
+import SetupFlow from "@/components/layout/SetupFlow";
 import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
@@ -42,6 +43,16 @@ export default async function AdminLeasesPage(props: {
     }),
   ]);
 
+  // Counts for the setup chain. It renders only while this property has no
+  // lease yet, so a new admin can see what is still missing.
+  const activeProperty = properties.find((p) => p.property_id === activePropertyId) ?? null;
+  const setupCounts = {
+    properties: properties.length,
+    units: units.length,
+    tenants: users.length,
+    leases: leases.length,
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -51,15 +62,17 @@ export default async function AdminLeasesPage(props: {
             <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-primary">
               <span className="material-symbols-outlined text-[20px]">description</span>
             </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Tenancy Agreements & Leases</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight">Leases</h1>
           </div>
           <p className="text-xs text-on-surface-variant mt-1">
-            Manage unit tenancies, move-in/move-out schedules, resident allocations, and linked billing ledgers
+            A lease links a tenant to a unit and starts their billing. Create one once the unit and the tenant both exist.
           </p>
         </div>
       </div>
 
       {/* Interactive Leases Workspace */}
+      <SetupFlow counts={setupCounts} propertyName={activeProperty?.property_name ?? null} />
+
       <LeasesClient
         initialLeases={leases as any}
         properties={properties}
