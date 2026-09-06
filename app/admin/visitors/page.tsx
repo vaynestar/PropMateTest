@@ -19,8 +19,14 @@ export default async function AdminVisitorsPage() {
       select: { property_id: true, property_name: true, is_default: true },
       orderBy: { created_at: "asc" },
     }),
+    // Scoped: the host picker offered units from every property while the page
+    // showed one, so a Testing guard could log a visitor against a Desa Harmoni
+    // unit.
     prisma.tenantLease.findMany({
-      where: { status: "Active" },
+      where: {
+        status: "Active",
+        ...(propertyId ? { unit: { property_id: propertyId } } : {}),
+      },
       include: {
         unit: {
           select: {
@@ -41,13 +47,13 @@ export default async function AdminVisitorsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight">Visitors Management</h1>
           <p className="text-on-surface-variant text-sm mt-1">
-            Manage visitor passes, contractors, deliveries, and gate access verification
+            Who is expected, who is in the building, and who has left.
           </p>
         </div>
         <ScanButton />
       </div>
 
-      <ExpandableForm title="Register Walk-in Visitor / Contractor" buttonLabel="New Visitor" defaultOpen={false}>
+      <ExpandableForm title="Register a visitor" buttonLabel="New Visitor" defaultOpen={false}>
         <AdminVisitorForm
           leases={leases}
           properties={properties}

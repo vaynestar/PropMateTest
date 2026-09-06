@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { normaliseVisitorStatus, isStaleOnSite, hoursOnSite } from "@/lib/visitor-status";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import VisitorPassModal from "@/components/visitors/VisitorPassModal";
 import { updateVisitorStatus } from "./actions";
@@ -57,19 +58,35 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
     });
   };
 
-  // KPI Statistics
+  /*
+   * The KPI row was Total Registered / Currently On-Site / Pending Approval /
+   * Today's Visits. "Pending Approval" counted a status nothing ever wrote and
+   * no screen could clear, so it read 0 permanently; "Total Registered" counted
+   * every pass ever issued, which is not a number anyone acts on.
+   *
+   * What a guardhouse actually needs to know: who is expected today, who is in
+   * the building now, and whether any of those check-ins have gone stale.
+   */
   const stats = useMemo(() => {
     const todayStr = new Date().toISOString().split("T")[0];
-    const total = visitors.length;
-    const checkedIn = visitors.filter((v) => v.status === "Checked In").length;
-    const pending = visitors.filter((v) => v.status === "Pending").length;
+    const onSite = visitors.filter(
+      (v) => normaliseVisitorStatus(v.status) === "Checked In"
+    );
+    const stale = onSite.filter((v) => isStaleOnSite(v.status, v.check_in_time));
     const today = visitors.filter((v) => {
       if (!v.visit_date) return false;
-      const d = new Date(v.visit_date).toISOString().split("T")[0];
-      return d === todayStr;
-    }).length;
+      return new Date(v.visit_date).toISOString().split("T")[0] === todayStr;
+    });
+    const expectedToday = today.filter(
+      (v) => normaliseVisitorStatus(v.status) === "Approved"
+    ).length;
 
-    return { total, checkedIn, pending, today };
+    return {
+      onSite: onSite.length,
+      stale: stale.length,
+      today: today.length,
+      expectedToday,
+    };
   }, [visitors]);
 
   // Filtered List
@@ -160,37 +177,47 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
 
   return (
     <div className="space-y-5">
-      {/* 4 KPI SUMMARY CARDS */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="bg-surface-container border border-outline-variant/50 rounded-2xl p-4 flex flex-col gap-1 shadow-sm">
-          <span className="text-[11px] text-on-surface-variant font-medium">Total Registered</span>
+      {/* What the guardhouse needs to know right now. */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="flex flex-col gap-1 rounded-2xl border border-emerald-500/30 bg-surface-container p-4 shadow-sm">
+          <span className="text-[11px] font-medium text-emerald-400">In the building now</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-white tracking-tight">{stats.total}</span>
-            <span className="material-symbols-outlined text-primary text-xl">badge</span>
+            <span className="text-2xl font-bold tracking-tight text-emerald-300">
+              {stats.onSite}
+            </span>
+            <span className="material-symbols-outlined text-xl text-emerald-400">sensors</span>
           </div>
         </div>
 
-        <div className="bg-surface-container border border-emerald-500/30 rounded-2xl p-4 flex flex-col gap-1 shadow-sm">
-          <span className="text-[11px] text-emerald-400 font-medium">Currently On-Site</span>
+        <div className="flex flex-col gap-1 rounded-2xl border border-outline-variant/50 bg-surface-container p-4 shadow-sm">
+          <span className="text-[11px] font-medium text-on-surface-variant">Expected today</span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-emerald-300 tracking-tight">{stats.checkedIn}</span>
-            <span className="material-symbols-outlined text-emerald-400 text-xl">sensors</span>
+            <span className="text-2xl font-bold tracking-tight text-white">
+              {stats.expectedToday}
+            </span>
+            <span className="material-symbols-outlined text-xl text-cyan-400">today</span>
           </div>
         </div>
 
-        <div className="bg-surface-container border border-amber-500/30 rounded-2xl p-4 flex flex-col gap-1 shadow-sm">
-          <span className="text-[11px] text-amber-400 font-medium">Pending Approval</span>
+        <div
+          className={`flex flex-col gap-1 rounded-2xl border bg-surface-container p-4 shadow-sm ${
+            stats.stale > 0 ? "border-rose-500/40" : "border-outline-variant/50"
+          }`}
+        >
+          <span className="text-[11px] font-medium text-on-surface-variant">
+            Never checked out
+          </span>
           <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-amber-300 tracking-tight">{stats.pending}</span>
-            <span className="material-symbols-outlined text-amber-400 text-xl">pending</span>
-          </div>
-        </div>
-
-        <div className="bg-surface-container border border-outline-variant/50 rounded-2xl p-4 flex flex-col gap-1 shadow-sm">
-          <span className="text-[11px] text-on-surface-variant font-medium">Today's Visits</span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold text-white tracking-tight">{stats.today}</span>
-            <span className="material-symbols-outlined text-cyan-400 text-xl">today</span>
+            <span
+              className={`text-2xl font-bold tracking-tight ${
+                stats.stale > 0 ? "text-rose-300" : "text-white"
+              }`}
+            >
+              {stats.stale}
+            </span>
+            <span className="material-symbols-outlined text-xl text-rose-400">
+              running_with_errors
+            </span>
           </div>
         </div>
       </div>
@@ -227,12 +254,12 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
             onChange={(e) => setTypeFilter(e.target.value)}
             className="bg-surface-container-lowest border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs font-medium focus:outline-none focus:border-primary"
           >
-            <option value="ALL">👥 All Classifications</option>
-            <option value="Resident Guest">🏠 Resident Guests</option>
-            <option value="Contractor">🔧 Contractors</option>
-            <option value="Delivery">📦 Deliveries</option>
-            <option value="Official">🏛️ Officials</option>
-            <option value="General">🚶 General</option>
+            <option value="ALL">All visitor types</option>
+            <option value="Resident Guest">Resident guests</option>
+            <option value="Contractor">Contractors</option>
+            <option value="Delivery">Deliveries</option>
+            <option value="Official">Officials</option>
+            <option value="General">Other</option>
           </select>
 
           {/* Status Filter */}
@@ -241,12 +268,11 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
             onChange={(e) => setStatusFilter(e.target.value)}
             className="bg-surface-container-lowest border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs font-medium focus:outline-none focus:border-primary"
           >
-            <option value="ALL">⚡ All Statuses</option>
-            <option value="Checked In">● Checked In (On Site)</option>
-            <option value="Approved">🟢 Approved</option>
-            <option value="Pending">⏳ Pending</option>
-            <option value="Checked Out">🏁 Checked Out</option>
-            <option value="Declined">❌ Declined</option>
+            <option value="ALL">All statuses</option>
+            <option value="Checked In">On site</option>
+            <option value="Approved">Expected</option>
+            <option value="Checked Out">Left</option>
+            <option value="Cancelled">Cancelled</option>
           </select>
 
           {/* Timeframe */}
@@ -255,10 +281,10 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
             onChange={(e) => setTimeframeFilter(e.target.value)}
             className="bg-surface-container-lowest border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs font-medium focus:outline-none focus:border-primary"
           >
-            <option value="ALL">🗓️ All Dates</option>
-            <option value="TODAY">📍 Today Only</option>
-            <option value="UPCOMING">⏩ Upcoming</option>
-            <option value="PAST">⏪ Past</option>
+            <option value="ALL">Any date</option>
+            <option value="TODAY">Today</option>
+            <option value="UPCOMING">Upcoming</option>
+            <option value="PAST">Past</option>
           </select>
 
           {/* View Mode */}
@@ -312,7 +338,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                         {getTypeBadge(v.visitor_type)}
                         {v.property?.property_name && (
                           <span className="text-[10px] text-on-surface-variant truncate max-w-[120px]">
-                            🏢 {v.property.property_name}
+                            {v.property.property_name}
                           </span>
                         )}
                       </div>
@@ -337,7 +363,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                   {/* Destination Tag */}
                   <div className="p-2.5 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-xs flex flex-col gap-1">
                     <div className="flex items-center justify-between text-on-surface-variant">
-                      <span className="text-[10px] font-semibold uppercase tracking-wider">Destination</span>
+                      <span className="text-[10px] font-semibold">Destination</span>
                       {v.lease?.tenant && (
                         <span className="text-[11px] text-primary truncate max-w-[140px]" title={v.lease.tenant.user_name}>
                           Host: {v.lease.tenant.user_name}
@@ -367,7 +393,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                   <div className="flex justify-between">
                     <span>Visit Date:</span>
                     <span className="text-white font-medium">
-                      {v.visit_date ? new Date(v.visit_date).toLocaleDateString("en-GB") : "-"}
+                      {v.visit_date ? new Date(v.visit_date).toLocaleDateString("en-GB", { timeZone: "Asia/Kuala_Lumpur" }) : "-"}
                     </span>
                   </div>
 
@@ -381,11 +407,29 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                   )}
 
                   {v.check_in_time && (
-                    <div className="flex justify-between text-emerald-400 font-mono text-[11px]">
+                    <div className="flex justify-between font-mono text-[11px] text-emerald-400">
                       <span>Check-in:</span>
                       <span>
-                        {new Date(v.check_in_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        {new Date(v.check_in_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })}
                       </span>
+                    </div>
+                  )}
+
+                  {/* A pass still open a day later is a missed scan, not a
+                      visitor. Saying so beats a board that claims six people
+                      are in the building who went home last week. */}
+                  {isStaleOnSite(v.status, v.check_in_time) && (
+                    <div className="flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[11px] font-semibold text-rose-300">
+                      <span className="material-symbols-outlined text-[14px] leading-none">
+                        running_with_errors
+                      </span>
+                      {(() => {
+                        const h = hoursOnSite(v.check_in_time) ?? 0;
+                        const d = Math.floor(h / 24);
+                        return d >= 1
+                          ? `On site for ${d} day${d === 1 ? "" : "s"} — check them out`
+                          : `On site ${h} hours — check them out`;
+                      })()}
                     </div>
                   )}
 
@@ -393,7 +437,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                     <div className="flex justify-between text-on-surface-variant font-mono text-[11px]">
                       <span>Check-out:</span>
                       <span>
-                        {new Date(v.check_out_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        {new Date(v.check_out_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })}
                       </span>
                     </div>
                   )}
@@ -420,7 +464,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleUpdateStatus(v.visitor_id, "Declined")}
+                        onClick={() => handleUpdateStatus(v.visitor_id, "Cancelled")}
                         disabled={isItemUpdating}
                         className="flex-1 bg-rose-500/15 text-rose-300 border border-rose-500/30 hover:bg-rose-500/25 py-2 rounded-xl text-xs font-semibold transition-colors flex items-center justify-center gap-1 pressable"
                       >
@@ -460,7 +504,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                     </button>
                   ) : (
                     <div className="w-full py-2 text-center text-on-surface-variant text-xs font-medium opacity-60">
-                      {v.status === "Checked Out" ? "🏁 Visit Completed" : v.status}
+                      {v.status === "Checked Out" ? "Visit completed" : v.status}
                     </div>
                   )}
                 </div>
@@ -472,7 +516,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
         /* DENSE TABLE VIEW */
         <div className="overflow-x-auto rounded-2xl border border-outline-variant/50 bg-surface-container shadow-sm">
           <table className="w-full text-left text-xs">
-            <thead className="bg-surface-container-lowest border-b border-outline-variant/40 text-on-surface-variant uppercase text-[10px] tracking-wider">
+            <thead className="bg-surface-container-lowest border-b border-outline-variant/40 text-on-surface-variant text-[10px]">
               <tr>
                 <th className="px-4 py-3.5">Visitor & Type</th>
                 <th className="px-4 py-3.5">IC / Contact</th>
@@ -515,11 +559,11 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                   </td>
                   <td className="px-4 py-3.5">
                     <div className="text-white font-medium">
-                      {v.visit_date ? new Date(v.visit_date).toLocaleDateString("en-GB") : "-"}
+                      {v.visit_date ? new Date(v.visit_date).toLocaleDateString("en-GB", { timeZone: "Asia/Kuala_Lumpur" }) : "-"}
                     </div>
                     {v.check_in_time && (
                       <div className="text-[10px] text-emerald-400 font-mono">
-                        In: {new Date(v.check_in_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        In: {new Date(v.check_in_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })}
                       </div>
                     )}
                   </td>
@@ -547,7 +591,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                             Approve
                           </button>
                           <button
-                            onClick={() => handleUpdateStatus(v.visitor_id, "Declined")}
+                            onClick={() => handleUpdateStatus(v.visitor_id, "Cancelled")}
                             className="px-2.5 py-1 rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/30 text-[11px] font-semibold hover:bg-rose-500/25"
                           >
                             Decline

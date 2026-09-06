@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { normaliseVisitorStatus } from "@/lib/visitor-status";
 import { getSessionUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
@@ -37,10 +38,16 @@ export async function scanVisitorQR(rawQrData: string) {
       return { success: false, error: "QR Code not recognized: No visitor record found in database." };
     }
 
+    // Every status test here went through its own spelling of the same four
+    // states - Completed, Cancelled, Declined, Rejected - so a pass written
+    // with one spelling was judged by code checking another. All four now
+    // resolve through lib/visitor-status.ts.
+    const current = normaliseVisitorStatus(visitor.status);
+
     // 1. If already Checked In -> Prompt warning with Check-Out option
-    if (visitor.status === "Checked In") {
+    if (current === "Checked In") {
       const checkInFormatted = visitor.check_in_time
-        ? new Date(visitor.check_in_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        ? new Date(visitor.check_in_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })
         : "earlier today";
 
       return {
@@ -52,9 +59,9 @@ export async function scanVisitorQR(rawQrData: string) {
     }
 
     // 2. If already Checked Out -> Expired single-entry pass
-    if (visitor.status === "Checked Out" || visitor.status === "Completed") {
+    if (current === "Checked Out") {
       const checkOutFormatted = visitor.check_out_time
-        ? new Date(visitor.check_out_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+        ? new Date(visitor.check_out_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })
         : "earlier";
 
       return {
@@ -65,11 +72,11 @@ export async function scanVisitorQR(rawQrData: string) {
       };
     }
 
-    // 3. If Cancelled / Rejected
-    if (visitor.status === "Cancelled" || visitor.status === "Declined" || visitor.status === "Rejected") {
+    // 3. Cancelled passes never admit anyone.
+    if (current === "Cancelled") {
       return {
         success: false,
-        error: `Visitor pass is marked as ${visitor.status}. Entry not permitted.`,
+        error: `This pass was cancelled. ${visitor.visitor_name} cannot be let in on it.`,
         visitor,
       };
     }
@@ -105,6 +112,20 @@ export async function checkOutVisitorById(visitorId: string) {
     const user = await getSessionUser();
     if (!user || user.role !== "Admin") {
       return { success: false, error: "Unauthorized access: Admin login required." };
+    }
+
+    const existing = await prisma.visitor.findUnique({
+      where: { visitor_id: visitorId },
+      select: { status: true, visitor_name: true },
+    });
+    if (!existing) {
+      return { success: false, error: "That visitor pass no longer exists." };
+    }
+    if (normaliseVisitorStatus(existing.status) !== "Checked In") {
+      return {
+        success: false,
+        error: `${existing.visitor_name} is not checked in, so there is nothing to check out.`,
+      };
     }
 
     const updatedVisitor = await prisma.visitor.update({

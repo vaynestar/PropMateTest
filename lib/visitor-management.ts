@@ -35,10 +35,22 @@ export async function getAllVisitors(propertyId?: string) {
         : undefined,
       orderBy: [{ visit_date: "desc" }, { created_at: "desc" }],
       include: {
-        property: true,
+        property: { select: { property_id: true, property_name: true } },
         lease: {
-          include: {
-            unit: { include: { property: true } },
+          select: {
+            lease_id: true,
+            // AGENTS.md Rule 6: `unit: { include: { property: true } }` pulled
+            // the whole Unit across to the client with area_sqft and
+            // monthly_rent still Decimal. The list needs a unit number and a
+            // property name.
+            unit: {
+              select: {
+                unit_id: true,
+                unit_number: true,
+                property_id: true,
+                property: { select: { property_id: true, property_name: true } },
+              },
+            },
             tenant: {
               select: { user_name: true, phone_number: true },
             },

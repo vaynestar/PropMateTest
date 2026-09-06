@@ -45,15 +45,17 @@ export default function AdminVisitorForm({
     (l) => !selectedPropertyId || l.unit.property_id === selectedPropertyId
   );
 
+  // Saved verbatim to Visitor.destination, so these are plain text: an emoji
+  // here would be written into the record, the printed pass and the reports.
   const destinationOptions = [
-    "🏢 Management Office (Ground Floor)",
-    "📦 Main Lobby / Guardhouse Mailroom",
-    "🛗 Lift Motor Room & Service Shaft",
-    "🏊 Recreation Deck & Pool Pump Room",
-    "⚡ TNB Substation & Switch Room",
-    "🗑️ Refuse Chamber & Bin Center",
-    "🚗 Carpark & Loading Bay",
-    "🏠 Vacant Unit (Showroom / Viewing)",
+    "Management Office (Ground Floor)",
+    "Main Lobby / Guardhouse Mailroom",
+    "Lift Motor Room & Service Shaft",
+    "Recreation Deck & Pool Pump Room",
+    "TNB Substation & Switch Room",
+    "Refuse Chamber & Bin Centre",
+    "Carpark & Loading Bay",
+    "Vacant Unit (viewing)",
   ];
 
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function AdminVisitorForm({
       {isSuccess && (
         <div className="mb-5 p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs sm:text-sm flex items-center gap-2.5 animate-in fade-in slide-in-from-top-2 duration-200">
           <span className="material-symbols-outlined text-emerald-400 text-[20px]">check_circle</span>
-          <span className="font-medium">Visitor successfully registered and added to directory.</span>
+          <span className="font-medium">Pass issued. It is in the directory below.</span>
         </div>
       )}
 
@@ -110,8 +112,8 @@ export default function AdminVisitorForm({
 
         {/* 1. VISITOR CATEGORY / TYPE SELECTOR */}
         <div className="space-y-2">
-          <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider block">
-            Visitor Classification
+          <label className="text-xs font-semibold text-on-surface-variant block">
+            Who is visiting
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 bg-surface-container-lowest p-1.5 rounded-xl border border-outline-variant/40">
             {(
@@ -148,35 +150,26 @@ export default function AdminVisitorForm({
 
         {/* 2. TARGET PROPERTY & DESTINATION SECTION */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-          {/* Target Property */}
+          {/* The property comes from the top bar. The unit list is scoped to it
+              server-side, so a picker here could only ever select a property
+              with no units to show. */}
           <div className="space-y-1.5">
-            <label htmlFor="property_id" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Target Property
-            </label>
-            <select
-              id="property_id"
-              name="property_id"
-              value={selectedPropertyId}
-              onChange={(e) => {
-                setSelectedPropertyId(e.target.value);
-                setSelectedLeaseId("");
-              }}
-              required
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3.5 py-2.5 text-white text-xs font-medium focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-            >
-              {properties.map((p) => (
-                <option key={p.property_id} value={p.property_id}>
-                  🏢 {p.property_name}
-                </option>
-              ))}
-            </select>
+            <span className="text-xs font-semibold text-on-surface-variant">Property</span>
+            <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3.5 py-2.5 text-xs">
+              <span className="material-symbols-outlined text-[18px] text-primary">domain</span>
+              <span className="truncate font-bold text-primary">
+                {properties.find((p) => p.property_id === selectedPropertyId)?.property_name ??
+                  "No property selected"}
+              </span>
+            </div>
+            <input type="hidden" name="property_id" value={selectedPropertyId} />
           </div>
 
           {/* Conditional Destination based on Visitor Type */}
           {visitorType === "Resident Guest" ? (
             <div className="space-y-1.5">
-              <label htmlFor="lease_id" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                Visiting Resident / Unit
+              <label htmlFor="lease_id" className="text-xs font-semibold text-on-surface-variant">
+                Which unit are they visiting
               </label>
               <select
                 id="lease_id"
@@ -196,7 +189,7 @@ export default function AdminVisitorForm({
             </div>
           ) : (
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+              <label className="text-xs font-semibold text-on-surface-variant">
                 Destination / Area
               </label>
               <select
@@ -225,7 +218,7 @@ export default function AdminVisitorForm({
           {/* Custom destination input if selected */}
           {visitorType !== "Resident Guest" && isCustomDestination && (
             <div className="space-y-1.5 md:col-span-2">
-              <label htmlFor="custom_dest" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+              <label htmlFor="custom_dest" className="text-xs font-semibold text-on-surface-variant">
                 Specific Location Details
               </label>
               <input
@@ -244,8 +237,8 @@ export default function AdminVisitorForm({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
           {/* Visitor Name */}
           <div className="space-y-1.5">
-            <label htmlFor="visitor_name" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Visitor / Contractor Name <span className="text-rose-400">*</span>
+            <label htmlFor="visitor_name" className="text-xs font-semibold text-on-surface-variant">
+              Name <span className="text-rose-400">*</span>
             </label>
             <input
               type="text"
@@ -259,8 +252,8 @@ export default function AdminVisitorForm({
 
           {/* IC / Passport */}
           <div className="space-y-1.5">
-            <label htmlFor="visitor_ic_no" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              IC / Passport No. <span className="text-rose-400">*</span>
+            <label htmlFor="visitor_ic_no" className="text-xs font-semibold text-on-surface-variant">
+              IC or passport no. <span className="text-rose-400">*</span>
             </label>
             <input
               type="text"
@@ -274,8 +267,8 @@ export default function AdminVisitorForm({
 
           {/* Contact Phone */}
           <div className="space-y-1.5">
-            <label htmlFor="contact_no" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Contact Phone (Optional)
+            <label htmlFor="contact_no" className="text-xs font-semibold text-on-surface-variant">
+              Phone
             </label>
             <input
               type="text"
@@ -288,22 +281,22 @@ export default function AdminVisitorForm({
 
           {/* Vehicle Plate */}
           <div className="space-y-1.5">
-            <label htmlFor="vehicle_plate" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Vehicle Plate (Optional)
+            <label htmlFor="vehicle_plate" className="text-xs font-semibold text-on-surface-variant">
+              Vehicle plate
             </label>
             <input
               type="text"
               id="vehicle_plate"
               name="vehicle_plate"
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3.5 py-2.5 text-white text-xs uppercase font-mono placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary"
+              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3.5 py-2.5 text-white text-xs font-mono placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary"
               placeholder="e.g. WXY 1234"
             />
           </div>
 
           {/* Visit Date */}
           <div className="space-y-1.5">
-            <label htmlFor="visit_date" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Visit Date <span className="text-rose-400">*</span>
+            <label htmlFor="visit_date" className="text-xs font-semibold text-on-surface-variant">
+              Date of visit <span className="text-rose-400">*</span>
             </label>
             <input
               type="date"
@@ -317,8 +310,8 @@ export default function AdminVisitorForm({
 
           {/* Initial Status */}
           <div className="space-y-1.5">
-            <label htmlFor="status" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Initial Check-in Status
+            <label htmlFor="status" className="text-xs font-semibold text-on-surface-variant">
+              Status on arrival
             </label>
             <select
               id="status"
@@ -327,16 +320,15 @@ export default function AdminVisitorForm({
               defaultValue="Approved"
               className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3.5 py-2.5 text-white text-xs font-medium focus:outline-none focus:border-primary"
             >
-              <option value="Approved">🟢 Approved (Pre-authorized)</option>
-              <option value="Checked In">⚡ Checked In Immediately</option>
-              <option value="Pending">⏳ Pending Approval</option>
+              <option value="Approved">Expected — pass issued, not arrived yet</option>
+              <option value="Checked In">Already here — check them in now</option>
             </select>
           </div>
 
           {/* Purpose of Visit */}
           <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
-            <label htmlFor="visit_purpose" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Purpose of Visit / Work Scope <span className="text-rose-400">*</span>
+            <label htmlFor="visit_purpose" className="text-xs font-semibold text-on-surface-variant">
+              Why are they here <span className="text-rose-400">*</span>
             </label>
             <input
               type="text"
