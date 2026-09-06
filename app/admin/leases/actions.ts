@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createLease, updateLease } from "@/lib/lease-management";
-import { getSessionUser } from "@/lib/auth";
+import { createLease, updateLease, deleteLease, reassignLease } from "@/lib/lease-management";
+import { getSessionUser, requireUser } from "@/lib/auth";
 
 export async function adminCreateLease(state: any, formData: FormData) {
   try {
@@ -59,5 +59,46 @@ export async function adminUpdateLease(state: any, formData: FormData) {
     return { success: true };
   } catch (error: any) {
     return { error: error.message };
+  }
+}
+
+
+/** Remove a lease created by mistake. Refuses once anything has been billed. */
+export async function adminDeleteLease(state: any, formData: FormData) {
+  try {
+    await requireUser(["Admin"]);
+    const lease_id = String(formData.get("lease_id") || "");
+    if (!lease_id) throw new Error("Lease ID is required.");
+
+    const { unit_number } = await deleteLease(lease_id);
+
+    revalidatePath("/admin/leases");
+    revalidatePath("/admin/units");
+    revalidatePath("/admin/tenants");
+    return { success: true, message: `Lease deleted. ${unit_number} is vacant again.` };
+  } catch (error: any) {
+    return { error: error.message || "Could not delete the lease" };
+  }
+}
+
+/** Move a lease to a different unit or tenant, before anything is invoiced. */
+export async function adminReassignLease(state: any, formData: FormData) {
+  try {
+    const user = await requireUser(["Admin"]);
+    const lease_id = String(formData.get("lease_id") || "");
+    const unit_id = String(formData.get("unit_id") || "");
+    const user_id = String(formData.get("user_id") || "");
+    if (!lease_id || !unit_id || !user_id) {
+      throw new Error("Lease, unit and tenant are all required.");
+    }
+
+    await reassignLease(lease_id, { unit_id, user_id }, user.userId);
+
+    revalidatePath("/admin/leases");
+    revalidatePath("/admin/units");
+    revalidatePath("/admin/tenants");
+    return { success: true, message: "Lease updated." };
+  } catch (error: any) {
+    return { error: error.message || "Could not update the lease" };
   }
 }

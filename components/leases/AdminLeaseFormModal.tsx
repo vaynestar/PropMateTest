@@ -27,6 +27,10 @@ export default function AdminLeaseFormModal({
 }: AdminLeaseFormModalProps) {
   const [state, formAction, isPending] = useActionState(adminCreateLease, null);
   const [selectedUnitId, setSelectedUnitId] = useState(units[0]?.unit_id || "");
+
+  // Only vacant units can take a new lease — createLease() rejects anything
+  // else, so offering occupied units just produced an error after submitting.
+  const vacantUnits = units.filter((u) => u.status === "Vacant");
   const [selectedUserId, setSelectedUserId] = useState(users[0]?.user_id || "");
 
   useEffect(() => {
@@ -54,8 +58,8 @@ export default function AdminLeaseFormModal({
               <span className="material-symbols-outlined text-[20px]">contract_edit</span>
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Create New Tenancy Lease</h2>
-              <p className="text-xs text-on-surface-variant">Assign a resident to an inventory unit and set move-in schedule</p>
+              <h2 className="text-base font-bold text-white">New lease</h2>
+              <p className="text-xs text-on-surface-variant">Put a tenant in a unit. Billing starts from the move-in date.</p>
             </div>
           </div>
           <button
@@ -79,7 +83,7 @@ export default function AdminLeaseFormModal({
           {state?.success && (
             <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5">
               <span className="material-symbols-outlined text-emerald-400 text-[18px]">check_circle</span>
-              <span>Tenancy agreement created successfully!</span>
+              <span>Lease created. The unit is now marked Occupied — set up its charges next.</span>
             </div>
           )}
 
@@ -87,8 +91,8 @@ export default function AdminLeaseFormModal({
             {/* Target Unit */}
             <div className="space-y-1.5">
               <div className="flex items-baseline justify-between">
-                <label className="text-xs font-semibold text-white">Target Inventory Unit *</label>
-                <span className="text-[11px] text-on-surface-variant">Select unit for occupancy</span>
+                <label className="text-xs font-semibold text-white">Unit</label>
+                <span className="text-[11px] text-on-surface-variant">Vacant units only</span>
               </div>
               <select
                 name="unit_id"
@@ -97,9 +101,13 @@ export default function AdminLeaseFormModal({
                 required
                 className="w-full rounded-xl bg-surface-container-high border border-outline-variant/60 px-3.5 py-2.5 text-xs text-white outline-none focus:border-primary transition-all"
               >
-                {units.map((u) => (
+                {vacantUnits.length === 0 && (
+                  <option value="">No vacant units in this property</option>
+                )}
+                {vacantUnits.map((u) => (
                   <option key={u.unit_id} value={u.unit_id} className="bg-surface-container-high text-white">
-                    {u.unit_number} {u.property ? `(${u.property.property_name})` : ""} — Status: {u.status}
+                    {u.unit_number}
+                    {u.property ? ` (${u.property.property_name})` : ""}
                   </option>
                 ))}
               </select>
@@ -108,8 +116,8 @@ export default function AdminLeaseFormModal({
             {/* Assigned Tenant */}
             <div className="space-y-1.5">
               <div className="flex items-baseline justify-between">
-                <label className="text-xs font-semibold text-white">Assigned Resident / Tenant *</label>
-                <span className="text-[11px] text-on-surface-variant">Registered account</span>
+                <label className="text-xs font-semibold text-white">Tenant</label>
+                <span className="text-[11px] text-on-surface-variant">Add them first if missing</span>
               </div>
               <select
                 name="user_id"
@@ -130,8 +138,8 @@ export default function AdminLeaseFormModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Move-In Date *</label>
-                  <span className="text-[11px] text-on-surface-variant">Tenancy start</span>
+                  <label className="text-xs font-semibold text-white">Move-in</label>
+                  <span className="text-[11px] text-on-surface-variant">Billing starts here</span>
                 </div>
                 <input
                   name="move_in_date"
@@ -144,8 +152,8 @@ export default function AdminLeaseFormModal({
 
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Move-Out Date (Optional)</label>
-                  <span className="text-[11px] text-on-surface-variant">Lease expiry date</span>
+                  <label className="text-xs font-semibold text-white">Move-out</label>
+                  <span className="text-[11px] text-on-surface-variant">Leave blank if open-ended</span>
                 </div>
                 <input
                   name="move_out_date"
@@ -156,7 +164,8 @@ export default function AdminLeaseFormModal({
             </div>
 
             <div className="p-3 rounded-xl bg-surface-container-high/60 border border-outline-variant/40 text-xs text-on-surface-variant">
-              <span className="font-semibold text-white">Automated Sync:</span> Creating an active lease will automatically set the selected unit status to <strong className="text-emerald-300">Occupied</strong> and link billing ledger charges.
+              Saving marks the unit <strong className="text-emerald-300">Occupied</strong>. Rent and other
+              recurring charges are set up afterwards, under Charges &amp; Billing on the lease.
             </div>
           </form>
         </div>

@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useActionState, useEffect } from "react";
+import { adminDeleteLease } from "@/app/admin/leases/actions";
 import Link from "next/link";
 import AdminLeaseFormModal from "./AdminLeaseFormModal";
 import AdminLeaseEditModal from "./AdminLeaseEditModal";
 
 export interface LeaseItem {
+  /** Billing history — decides whether this lease may be deleted or reassigned. */
+  _count?: { invoices: number; lease_charges: number };
   lease_id: string;
   unit_id: string;
   user_id: string;
@@ -54,19 +57,17 @@ export default function LeasesClient({
   users,
   activePropertyId: initialActiveProp,
 }: LeasesClientProps) {
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(initialActiveProp || "ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [includePrevious, setIncludePrevious] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLease, setEditingLease] = useState<LeaseItem | null>(null);
+  const [deletingLease, setDeletingLease] = useState<LeaseItem | null>(null);
 
   // Filtered leases
   const filteredLeases = useMemo(() => {
     return initialLeases.filter((lease) => {
       const matchesProp =
-        selectedPropertyId === "ALL" ||
-        lease.unit.property?.property_id === selectedPropertyId ||
-        lease.unit.property_id === selectedPropertyId;
+        true; // the server already scoped this list to the active property
 
       const matchesStatus = includePrevious || lease.status === "Active";
 
@@ -80,7 +81,7 @@ export default function LeasesClient({
 
       return matchesProp && matchesStatus && matchesSearch;
     });
-  }, [initialLeases, selectedPropertyId, includePrevious, searchQuery]);
+  }, [initialLeases, includePrevious, searchQuery]);
 
   // Aggregate KPIs
   const totalLeases = initialLeases.length;
@@ -149,19 +150,6 @@ export default function LeasesClient({
       <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
         {/* Search & Property Select */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-xl">
-          <select
-            value={selectedPropertyId}
-            onChange={(e) => setSelectedPropertyId(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-surface-container-high border border-outline-variant/60 text-xs text-white outline-none focus:border-primary shrink-0"
-          >
-            <option value="ALL">All Properties ({totalLeases})</option>
-            {properties.map((p) => (
-              <option key={p.property_id} value={p.property_id}>
-                {p.property_name}
-              </option>
-            ))}
-          </select>
-
           <div className="relative flex-1">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
               search
@@ -203,12 +191,23 @@ export default function LeasesClient({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filteredLeases.map((lease) => {
           const isActive = lease.status === "Active";
+          const invoiceCount = lease._count?.invoices ?? 0;
+          const chargeCount = lease._count?.lease_charges ?? 0;
+          // A lease that has billed anything is a financial record: it can be
+          // ended, but never deleted or repointed at a different unit/tenant.
+          const billingLocked = invoiceCount > 0 || chargeCount > 0;
+          const lockReason =
+            invoiceCount > 0
+              ? `${invoiceCount} invoice${invoiceCount === 1 ? "" : "s"} raised — end the lease instead of deleting it`
+              : chargeCount > 0
+              ? `${chargeCount} recurring charge${chargeCount === 1 ? "" : "s"} set up — remove them first`
+              : undefined;
           const moveInStr = lease.move_in_date
             ? new Date(lease.move_in_date).toLocaleDateString()
             : "N/A";
           const moveOutStr = lease.move_out_date
             ? new Date(lease.move_out_date).toLocaleDateString()
-            : "Indefinite";
+            : "—";
 
           return (
             <div
@@ -295,11 +294,21 @@ export default function LeasesClient({
                 <button
                   type="button"
                   onClick={() => setEditingLease(lease)}
-                  className="px-3 py-2 rounded-xl bg-surface-container-high hover:bg-surface-variant hover:text-white text-on-surface border border-outline-variant/60 text-xs font-semibold flex items-center justify-center gap-1 transition-all pressable"
-                  title="Edit Lease Terms"
+                  className="pressable flex items-center justify-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 transition-colors hover:bg-blue-500/20"
                 >
-                  <span className="material-symbols-outlined text-[15px] text-on-surface-variant">edit</span>
-                  <span className="hidden sm:inline">Edit</span>
+                  <span className="material-symbols-outlined text-[15px]">edit</span>
+                  Edit
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDeletingLease(lease)}
+                  disabled={billingLocked}
+                  title={lockReason}
+                  className="pressable flex items-center justify-center gap-1 rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:border-outline-variant/40 disabled:bg-surface-container disabled:text-on-surface-variant/50 disabled:hover:bg-surface-container"
+                >
+                  <span className="material-symbols-outlined text-[15px]">delete</span>
+                  Delete
                 </button>
               </div>
             </div>
@@ -336,6 +345,96 @@ export default function LeasesClient({
         isOpen={!!editingLease}
         onClose={() => setEditingLease(null)}
       />
+
+      <DeleteLeaseDialog lease={deletingLease} onClose={() => setDeletingLease(null)} />
+    </div>
+  );
+}
+
+
+/**
+ * Deleting is only offered for a lease that never billed anything, so this is a
+ * plain confirmation rather than a warning wall. The server re-checks the same
+ * rule — the disabled button is a courtesy, not the guard.
+ */
+function DeleteLeaseDialog({
+  lease,
+  onClose,
+}: {
+  lease: LeaseItem | null;
+  onClose: () => void;
+}) {
+  const [state, formAction, isPending] = useActionState(adminDeleteLease, null);
+
+  useEffect(() => {
+    if (state?.success) onClose();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
+  if (!lease) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl"
+      >
+        <div className="flex items-center gap-3 border-b border-outline-variant/40 px-6 py-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300">
+            <span className="material-symbols-outlined text-[20px]">delete</span>
+          </div>
+          <div>
+            <h2 className="text-base font-bold text-white">Delete this lease?</h2>
+            <p className="text-xs text-on-surface-variant">
+              {lease.unit?.unit_number} — {lease.tenant?.user_name}
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-3 p-6">
+          <p className="text-xs leading-relaxed text-on-surface-variant">
+            Nothing has been billed against this lease, so it can be removed as if it were never
+            created. {lease.unit?.unit_number} goes back to <strong className="text-sky-300">Vacant</strong>.
+          </p>
+          <p className="text-xs leading-relaxed text-on-surface-variant">
+            If the tenant actually lived here, set a move-out date under Edit instead — that keeps
+            the record.
+          </p>
+          {state?.error && (
+            <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+              {state.error}
+            </p>
+          )}
+        </div>
+
+        <form
+          action={formAction}
+          className="flex items-center justify-end gap-3 border-t border-outline-variant/40 bg-surface-container-high/40 px-6 py-4"
+        >
+          <input type="hidden" name="lease_id" value={lease.lease_id} />
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isPending}
+            className="pressable rounded-xl border border-outline-variant/60 bg-surface-container-high px-4 py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-white"
+          >
+            Keep it
+          </button>
+          <button
+            type="submit"
+            disabled={isPending}
+            className="pressable flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/20 px-5 py-2 text-xs font-bold text-rose-200 transition-colors hover:bg-rose-500/30 disabled:opacity-50"
+          >
+            {isPending && (
+              <span className="material-symbols-outlined animate-spin-slow text-[15px]">
+                progress_activity
+              </span>
+            )}
+            Delete lease
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
