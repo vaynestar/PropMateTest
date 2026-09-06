@@ -38,41 +38,29 @@ export async function scanVisitorQR(rawQrData: string) {
       return { success: false, error: "QR Code not recognized: No visitor record found in database." };
     }
 
-    // Every status test here went through its own spelling of the same four
-    // states - Completed, Cancelled, Declined, Rejected - so a pass written
-    // with one spelling was judged by code checking another. All four now
-    // resolve through lib/visitor-status.ts.
+    /*
+     * One scan, the right action.
+     *
+     * The gate pass used to be treated as entry-only: scanning it on the way
+     * out returned an ERROR - "QR Pass Already Used for Check-In" - in red,
+     * with the check-out hidden behind a second button the guard had to notice.
+     * That is why three of fourteen visits in the data were still open, the
+     * oldest nine days old: the exit scan looked like a failure, so nobody
+     * completed it.
+     *
+     * A visitor pass has two halves. The scanner now performs whichever half is
+     * next: an expected visitor is checked in, a visitor on site is checked
+     * out. The guard scans once and reads a green screen either way; only a
+     * genuinely unusable pass is an error.
+     *
+     * Every status test here also used its own spelling of the same four states
+     * - Completed, Cancelled, Declined, Rejected - so a pass written with one
+     * spelling was judged by code checking another. All resolve through
+     * lib/visitor-status.ts now.
+     */
     const current = normaliseVisitorStatus(visitor.status);
 
-    // 1. If already Checked In -> Prompt warning with Check-Out option
-    if (current === "Checked In") {
-      const checkInFormatted = visitor.check_in_time
-        ? new Date(visitor.check_in_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })
-        : "earlier today";
-
-      return {
-        success: false,
-        isAlreadyCheckedIn: true,
-        error: `QR Pass Already Used for Check-In: Visitor "${visitor.visitor_name}" was already checked in at ${checkInFormatted}.`,
-        visitor,
-      };
-    }
-
-    // 2. If already Checked Out -> Expired single-entry pass
-    if (current === "Checked Out") {
-      const checkOutFormatted = visitor.check_out_time
-        ? new Date(visitor.check_out_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })
-        : "earlier";
-
-      return {
-        success: false,
-        isAlreadyCheckedOut: true,
-        error: `Pass Expired / Completed: Visitor "${visitor.visitor_name}" was already checked out at ${checkOutFormatted}. This single-entry pass cannot be reused.`,
-        visitor,
-      };
-    }
-
-    // 3. Cancelled passes never admit anyone.
+    // A cancelled pass never admits anyone.
     if (current === "Cancelled") {
       return {
         success: false,
@@ -81,23 +69,75 @@ export async function scanVisitorQR(rawQrData: string) {
       };
     }
 
-    // 4. Perform Valid Check-In
+    // Single-entry: once the visit is closed the pass is spent.
+    if (current === "Checked Out") {
+      const checkOutFormatted = visitor.check_out_time
+        ? new Date(visitor.check_out_time).toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Asia/Kuala_Lumpur",
+          })
+        : "earlier";
+
+      return {
+        success: false,
+        isAlreadyCheckedOut: true,
+        error: `${visitor.visitor_name} checked out at ${checkOutFormatted}. This pass is spent — issue a new one for another visit.`,
+        visitor,
+      };
+    }
+
+    const includeRelations = {
+      property: true,
+      lease: {
+        include: {
+          unit: { include: { property: true } },
+          tenant: { select: { user_name: true, user_email: true, phone_number: true } },
+        },
+      },
+    } as const;
+
+    if (current === "Checked In") {
+      /*
+       * Guards scan twice by reflex, and a badge held near the reader can fire
+       * more than once. Without this, the second read of an arrival would check
+       * the visitor straight back out again. A minute is long enough to cover a
+       * double-tap and far short of any real visit.
+       */
+      const checkedInAt = visitor.check_in_time ? new Date(visitor.check_in_time).getTime() : 0;
+      if (checkedInAt && Date.now() - checkedInAt < 60_000) {
+        return {
+          success: false,
+          isDuplicateScan: true,
+          error: `${visitor.visitor_name} was just checked in. Scan again when they leave.`,
+          visitor,
+        };
+      }
+
+      const checkedOut = await prisma.visitor.update({
+        where: { visitor_id: visitorId },
+        data: {
+          status: "Checked Out",
+          check_out_time: new Date(),
+          modified_by: user.userId,
+        },
+        include: includeRelations,
+      });
+
+      revalidatePath("/admin/visitors");
+      return { success: true, action: "CHECKED_OUT", visitor: checkedOut };
+    }
+
+    // Expected visitor arriving.
     const updatedVisitor = await prisma.visitor.update({
       where: { visitor_id: visitorId },
       data: {
         status: "Checked In",
         check_in_time: new Date(),
+        check_out_time: null,
         modified_by: user.userId,
       },
-      include: {
-        property: true,
-        lease: {
-          include: {
-            unit: { include: { property: true } },
-            tenant: { select: { user_name: true, user_email: true, phone_number: true } },
-          },
-        },
-      },
+      include: includeRelations,
     });
 
     revalidatePath("/admin/visitors");

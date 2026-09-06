@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { normaliseVisitorStatus, isStaleOnSite, hoursOnSite } from "@/lib/visitor-status";
+import {
+  normaliseVisitorStatus,
+  isStaleOnSite,
+  hoursOnSite,
+  maskIdentityNumber,
+} from "@/lib/visitor-status";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import VisitorPassModal from "@/components/visitors/VisitorPassModal";
 import { updateVisitorStatus } from "./actions";
@@ -380,7 +385,12 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                 <div className="space-y-1.5 text-xs text-on-surface-variant border-t border-outline-variant/30 pt-3">
                   <div className="flex justify-between">
                     <span>IC / Passport:</span>
-                    <span className="text-white font-mono">{v.visitor_ic_no}</span>
+                    <span
+                      className="font-mono text-white"
+                      title="Masked on this screen. The full number is on the visitor pass."
+                    >
+                      {maskIdentityNumber(v.visitor_ic_no)}
+                    </span>
                   </div>
 
                   {v.contact_no && (
@@ -535,7 +545,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                     <div className="mt-0.5">{getTypeBadge(v.visitor_type)}</div>
                   </td>
                   <td className="px-4 py-3.5 font-mono">
-                    <div className="text-white">{v.visitor_ic_no}</div>
+                    <div className="text-white">{maskIdentityNumber(v.visitor_ic_no)}</div>
                     {v.contact_no && <div className="text-[11px] text-on-surface-variant mt-0.5">{v.contact_no}</div>}
                   </td>
                   <td className="px-4 py-3.5">

@@ -136,3 +136,25 @@ export function isStaleOnSite(
   const hours = hoursOnSite(checkInTime);
   return hours !== null && hours >= 24;
 }
+
+/**
+ * Mask an NRIC or passport number for a screen that is read over a counter.
+ *
+ * The visitor directory printed every IC in full on every card. A guardhouse
+ * monitor faces the lobby, so anyone standing at the counter could read the
+ * identity numbers of every visitor that week — personal data under the PDPA
+ * 2010, kept for no reason the list itself needs. The last four digits are
+ * enough to match a person against the card in their hand, which is the only
+ * thing the list is used for.
+ *
+ * The full number stays on the visitor's own pass and on the printed slip:
+ * those are shown to the person it belongs to, or handed to them.
+ *
+ *   781105-08-5431  ->  •••••••••5431
+ */
+export function maskIdentityNumber(value: string | null | undefined): string {
+  if (!value) return "—";
+  const trimmed = value.trim();
+  if (trimmed.length <= 4) return trimmed;
+  return "•".repeat(Math.min(9, trimmed.length - 4)) + trimmed.slice(-4);
+}

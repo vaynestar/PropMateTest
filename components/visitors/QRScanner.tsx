@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import jsQR from "jsqr";
 import Image from "next/image";
-import { scanVisitorQR, checkOutVisitorById } from "@/app/admin/visitors/scan-action";
+import { scanVisitorQR } from "@/app/admin/visitors/scan-action";
 
 type QRScannerProps = {
   onClose: () => void;
@@ -162,7 +162,11 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
   // Verification states
   const [verifiedVisitor, setVerifiedVisitor] = useState<any | null>(null);
-  const [scanResultType, setScanResultType] = useState<"CHECKED_IN" | "ALREADY_CHECKED_IN" | "CHECKED_OUT" | "EXPIRED" | null>(null);
+  // ALREADY_CHECKED_IN is gone: scanning a visitor who is on site now checks
+  // them out, which is a success, not a warning to be worked around.
+  const [scanResultType, setScanResultType] = useState<
+    "CHECKED_IN" | "CHECKED_OUT" | "EXPIRED" | "DUPLICATE" | null
+  >(null);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null);
@@ -219,11 +223,12 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
         if (res.success && res.visitor) {
           setVerifiedVisitor(res.visitor);
-          setScanResultType("CHECKED_IN");
-        } else if (res.isAlreadyCheckedIn && res.visitor) {
+          // The server decides which half of the visit this scan completes.
+          setScanResultType((res as any).action === "CHECKED_OUT" ? "CHECKED_OUT" : "CHECKED_IN");
+        } else if ((res as any).isDuplicateScan && res.visitor) {
           setVerifiedVisitor(res.visitor);
-          setScanResultType("ALREADY_CHECKED_IN");
-          setErrorMessage(res.error || "This QR pass was already used for check-in.");
+          setScanResultType("DUPLICATE");
+          setErrorMessage(res.error || "That pass was just scanned.");
         } else if (res.isAlreadyCheckedOut && res.visitor) {
           setVerifiedVisitor(res.visitor);
           setScanResultType("EXPIRED");
@@ -367,24 +372,6 @@ export default function QRScanner({ onClose }: QRScannerProps) {
   };
 
   // Mark visitor as checked out
-  const handleCheckOutNow = async () => {
-    if (!verifiedVisitor?.visitor_id) return;
-    setIsCheckingOut(true);
-    try {
-      const res = await checkOutVisitorById(verifiedVisitor.visitor_id);
-      if (res.success && res.visitor) {
-        setVerifiedVisitor(res.visitor);
-        setScanResultType("CHECKED_OUT");
-        setErrorMessage(null);
-      } else {
-        setErrorMessage(res.error || "Failed to process check-out.");
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to process check-out.");
-    } finally {
-      setIsCheckingOut(false);
-    }
-  };
 
   // Reset Scanner
   const handleScanNext = () => {
@@ -508,75 +495,62 @@ export default function QRScanner({ onClose }: QRScannerProps) {
             </div>
           )}
 
-          {/* 2. ALREADY CHECKED IN (Warning with Check-Out Option) */}
-          {scanResultType === "ALREADY_CHECKED_IN" && (
-            <div className="p-5 rounded-2xl bg-amber-950/40 border border-amber-500/50 flex flex-col gap-3.5 shadow-xl animate-in shake-1 duration-200">
-              <div className="flex items-start justify-between pb-3 border-b border-amber-500/30 gap-2">
-                <div className="flex items-start gap-2.5">
-                  <span className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="material-symbols-outlined text-[20px]">warning</span>
-                  </span>
-                  <div>
-                    <span className="text-[10px] font-mono font-bold tracking-widest text-amber-400 block uppercase">
-                      ⚠️ QR Pass Already Used
-                    </span>
-                    <h3 className="text-sm font-bold text-white">
-                      Visitor is Currently Inside
-                    </h3>
-                    <p className="text-[11px] text-amber-200/90 mt-0.5">
-                      Checked in at{" "}
-                      {verifiedVisitor.check_in_time
-                        ? new Date(verifiedVisitor.check_in_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                        : "earlier today"}
-                      . This QR pass cannot be used for entry again.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Visitor Details */}
-              <VisitorDetailsCard visitor={verifiedVisitor} />
-
-              {/* Action: Mark as Checked Out */}
-              <div className="pt-2 border-t border-amber-500/20 flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={handleCheckOutNow}
-                  disabled={isCheckingOut}
-                  className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-black font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg transition-colors pressable disabled:opacity-50"
-                >
-                  <span className="material-symbols-outlined text-[18px]">
-                    {isCheckingOut ? "sync" : "logout"}
-                  </span>
-                  <span>{isCheckingOut ? "Processing Check-Out..." : "Check Out Visitor (Grant Exit Clearance)"}</span>
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 3. CHECKED OUT (Exit Complete) */}
+          {/* 2. CHECKED OUT - the second half of the same pass, and a success. */}
           {scanResultType === "CHECKED_OUT" && (
-            <div className="p-5 rounded-2xl bg-blue-950/40 border border-blue-500/40 flex flex-col gap-3 shadow-lg">
-              <div className="flex items-center justify-between pb-3 border-b border-blue-500/30">
+            <div className="flex flex-col gap-3 rounded-2xl border border-sky-500/40 bg-sky-950/40 p-5 shadow-lg">
+              <div className="flex items-center justify-between border-b border-sky-500/30 pb-3">
                 <div className="flex items-center gap-2.5">
-                  <span className="w-9 h-9 rounded-full bg-blue-500/20 text-blue-300 border border-blue-500/40 flex items-center justify-center">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full border border-sky-500/40 bg-sky-500/20 text-sky-300">
                     <span className="material-symbols-outlined text-[20px]">logout</span>
                   </span>
                   <div>
-                    <span className="text-[10px] font-mono font-bold tracking-widest text-blue-400 block uppercase">
-                      Exit Clearance Granted
+                    <span className="block font-mono text-[10px] font-bold tracking-widest text-sky-400">
+                      Visit complete
                     </span>
-                    <span className="text-sm font-bold text-white">
-                      Visitor Checked Out
-                    </span>
+                    <span className="text-sm font-bold text-white">Checked out</span>
                   </div>
                 </div>
-                <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40">
-                  {new Date(verifiedVisitor.check_out_time || Date.now()).toLocaleTimeString([], {
+                <span className="rounded border border-sky-500/40 bg-sky-500/20 px-2.5 py-1 font-mono text-xs font-semibold text-sky-300">
+                  {new Date(verifiedVisitor.check_out_time || Date.now()).toLocaleTimeString("en-GB", {
                     hour: "2-digit",
                     minute: "2-digit",
+                    timeZone: "Asia/Kuala_Lumpur",
                   })}
                 </span>
+              </div>
+
+              {verifiedVisitor.check_in_time && (
+                <p className="text-[11px] text-sky-200/90">
+                  On site since{" "}
+                  {new Date(verifiedVisitor.check_in_time).toLocaleTimeString("en-GB", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    timeZone: "Asia/Kuala_Lumpur",
+                  })}
+                  . The pass is now spent.
+                </p>
+              )}
+
+              <VisitorDetailsCard visitor={verifiedVisitor} />
+            </div>
+          )}
+
+          {/* 2b. Two reads of the same badge at the gate - not a check-out. */}
+          {scanResultType === "DUPLICATE" && (
+            <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/40 bg-amber-950/40 p-5 shadow-lg">
+              <div className="flex items-start gap-2.5 border-b border-amber-500/30 pb-3">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-500/40 bg-amber-500/20 text-amber-300">
+                  <span className="material-symbols-outlined text-[20px]">info</span>
+                </span>
+                <div>
+                  <span className="block font-mono text-[10px] font-bold tracking-widest text-amber-400">
+                    Already scanned
+                  </span>
+                  <h3 className="text-sm font-bold text-white">They are on site</h3>
+                  <p className="mt-0.5 text-[11px] text-amber-200/90">
+                    {errorMessage}
+                  </p>
+                </div>
               </div>
 
               <VisitorDetailsCard visitor={verifiedVisitor} />
