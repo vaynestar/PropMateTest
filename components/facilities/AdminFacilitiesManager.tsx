@@ -941,13 +941,17 @@ export default function AdminFacilitiesManager({
                   type="button"
                   onClick={() => setLoggingFacility(f)}
                   disabled={isPending || isUpdatingThis || isDeletingThis}
-                  title="Record a completed service and set the next due date"
-                  className="pressable flex items-center justify-center gap-1.5 rounded-lg border border-outline-variant/60 bg-surface-container-high py-1.5 text-xs font-semibold text-on-surface transition-colors hover:text-white disabled:opacity-50"
+                  title="Service history, and record a completed service"
+                  className={`pressable flex items-center justify-center gap-1.5 rounded-lg border py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                    daysOverdue(f.next_maintenance_date) > 0
+                      ? "border-rose-500/40 bg-rose-500/10 text-rose-300 hover:bg-rose-500/20"
+                      : "border-outline-variant/60 bg-surface-container-high text-on-surface hover:text-white"
+                  }`}
                 >
                   <span className="material-symbols-outlined text-[16px] leading-none">
                     handyman
                   </span>
-                  Log service
+                  Maintenance
                 </button>
                 <button
                   type="button"
@@ -1045,19 +1049,6 @@ export default function AdminFacilitiesManager({
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-on-surface-variant font-medium">Status</span>
-                    <select
-                      name="facility_status"
-                      defaultValue={ef.facility_status || "Available"}
-                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-sm"
-                    >
-                      <option value="Available">Available</option>
-                      <option value="Maintenance">Closed for maintenance</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
                     <span className="text-on-surface-variant font-medium">
                       Capacity — blank means no limit
                     </span>
@@ -1067,12 +1058,15 @@ export default function AdminFacilitiesManager({
                       min="1"
                       defaultValue={ef.max_capacity ?? ""}
                       placeholder="No limit"
-                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-sm"
+                      className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-1.5 text-sm text-on-surface outline-none focus:border-primary"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-on-surface-variant font-medium">Next maintenance date</span>
+                    <span className="text-on-surface-variant font-medium">Next service due</span>
+                    <p className="text-[11px] text-on-surface-variant/80">
+                      Set the schedule here. Logging a service under Maintenance updates it too.
+                    </p>
                     <input
                       type="date"
                       name="next_maintenance_date"
@@ -1146,62 +1140,6 @@ export default function AdminFacilitiesManager({
 
                 </form>
 
-                  {/* Maintenance history. The schedule field above says what is
-                      NEXT; without this the record of what was actually done
-                      was overwritten every time that date changed. */}
-                  <div className="mt-6 border-t border-outline-variant/40 pt-4">
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <h4 className="flex items-center gap-1.5 text-xs font-bold text-white">
-                        <span className="material-symbols-outlined text-[16px] leading-none text-on-surface-variant">
-                          history
-                        </span>
-                        Maintenance history
-                      </h4>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingFacility(null);
-                          setLoggingFacility(ef);
-                        }}
-                        className="pressable rounded-md border border-outline-variant/60 px-2.5 py-1 text-[11px] font-semibold text-on-surface transition-colors hover:text-white"
-                      >
-                        Log a service
-                      </button>
-                    </div>
-
-                    {(ef.maintenance?.length ?? 0) === 0 ? (
-                      <p className="rounded-lg border border-outline-variant/40 bg-surface-container-high/40 px-3 py-3 text-[11px] text-on-surface-variant">
-                        Nothing logged yet. Once you record a service it appears here, so the
-                        next person can see when this was last looked at.
-                      </p>
-                    ) : (
-                      <ol className="space-y-2">
-                        {ef.maintenance.map((m: any) => (
-                          <li
-                            key={m.maintenance_id}
-                            className="rounded-lg border border-outline-variant/40 bg-surface-container-high/40 px-3 py-2.5"
-                          >
-                            <div className="flex items-baseline justify-between gap-3">
-                              <span className="font-mono text-[11px] font-bold text-on-surface">
-                                {formatDate(m.performed_on)}
-                              </span>
-                              {m.performed_by && (
-                                <span className="truncate text-[11px] text-on-surface-variant">
-                                  {m.performed_by}
-                                </span>
-                              )}
-                            </div>
-                            <p className="mt-1 text-[11px] text-on-surface">{m.description}</p>
-                            {m.logged_by && (
-                              <p className="mt-1 text-[10px] text-on-surface-variant/70">
-                                Logged by {m.logged_by}
-                              </p>
-                            )}
-                          </li>
-                        ))}
-                      </ol>
-                    )}
-                  </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 border-t border-outline-variant/40 bg-surface-container-high/40 px-6 py-4">
@@ -1234,11 +1172,17 @@ export default function AdminFacilitiesManager({
 
       {/* Log a completed service. Writes the visit AND rolls the next due date,
           so an overdue facility has a way to be cleared honestly. */}
+      {/* Maintenance: the history and the form to add to it, in one place.
+          Edit details is configuration - name, type, hours, capacity - and
+          service records are operational, so they do not belong together. */}
       {loggingFacility &&
         (() => {
           const lf = loggingFacility;
           const wasClosed = lf.facility_status === "Maintenance";
           const todayIso = new Date().toISOString().slice(0, 10);
+          const late = daysOverdue(lf.next_maintenance_date);
+          const history = lf.maintenance ?? [];
+          const lastDone = history[0] ?? null;
           return (
             <div
               className="animate-fade-in fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
@@ -1248,11 +1192,11 @@ export default function AdminFacilitiesManager({
                 role="dialog"
                 aria-modal="true"
                 onClick={(e) => e.stopPropagation()}
-                className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl"
+                className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl"
               >
                 <div className="flex items-start justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-high/40 px-6 py-4">
                   <div className="min-w-0">
-                    <h3 className="text-base font-bold text-white">Log a service</h3>
+                    <h3 className="text-base font-bold text-white">Maintenance</h3>
                     <p className="truncate text-xs text-on-surface-variant">{lf.facility_name}</p>
                   </div>
                   <button
@@ -1265,87 +1209,179 @@ export default function AdminFacilitiesManager({
                   </button>
                 </div>
 
-                <form
-                  id="log-maintenance-form"
-                  action={logAction}
-                  className="space-y-4 overflow-y-auto px-6 py-5 text-xs"
-                >
-                  <input type="hidden" name="facility_id" value={lf.facility_id} />
-
-                  {logState?.error && (
-                    <p className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-rose-300">
-                      <span className="material-symbols-outlined text-[16px] leading-none">
-                        error
+                <div className="overflow-y-auto px-6 py-5 text-xs">
+                  {/* Where this facility stands right now. */}
+                  <div
+                    className={`flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl border px-4 py-3 ${
+                      late > 0
+                        ? "border-rose-500/30 bg-rose-500/10"
+                        : "border-outline-variant/40 bg-surface-container-high/40"
+                    }`}
+                  >
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">
+                        Last serviced
                       </span>
-                      {logState.error}
-                    </p>
-                  )}
-
-                  <div className="space-y-1">
-                    <span className="font-semibold text-on-surface-variant">Date done</span>
-                    <input
-                      type="date"
-                      name="performed_on"
-                      required
-                      max={todayIso}
-                      defaultValue={todayIso}
-                      className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 font-mono text-sm text-on-surface outline-none focus:border-primary"
-                    />
+                      <span className="font-mono text-sm font-bold text-on-surface">
+                        {lastDone ? formatDate(lastDone.performed_on) : "Never logged"}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="block text-[11px] text-on-surface-variant">Next due</span>
+                      <span
+                        className={`font-mono text-sm font-bold ${
+                          late > 0 ? "text-rose-300" : "text-on-surface"
+                        }`}
+                      >
+                        {lf.next_maintenance_date
+                          ? formatDate(lf.next_maintenance_date)
+                          : "Not scheduled"}
+                      </span>
+                      {late > 0 && (
+                        <span className="block text-[10px] font-semibold text-rose-300">
+                          {late} day{late === 1 ? "" : "s"} late
+                        </span>
+                      )}
+                    </div>
+                    {wasClosed && (
+                      <span className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-amber-500/40 bg-amber-500/15 px-2 py-1 text-[11px] font-semibold text-amber-300">
+                        <span className="material-symbols-outlined text-[14px] leading-none">
+                          engineering
+                        </span>
+                        Closed for maintenance
+                      </span>
+                    )}
                   </div>
 
-                  <div className="space-y-1">
-                    <span className="font-semibold text-on-surface-variant">What was done</span>
-                    <textarea
-                      name="description"
-                      required
-                      rows={3}
-                      placeholder="e.g. Replaced pump filter and cleared the drain"
-                      className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 text-sm text-on-surface outline-none placeholder:text-on-surface-variant/50 focus:border-primary"
-                    />
-                  </div>
+                  {/* Record a service */}
+                  <form
+                    id="log-maintenance-form"
+                    action={logAction}
+                    className="mt-5 space-y-4 border-t border-outline-variant/40 pt-5"
+                  >
+                    <h4 className="text-xs font-bold text-white">Record a service</h4>
+                    <input type="hidden" name="facility_id" value={lf.facility_id} />
 
-                  <div className="space-y-1">
-                    <span className="font-semibold text-on-surface-variant">
-                      Who did it <span className="font-normal">— optional</span>
-                    </span>
-                    <input
-                      type="text"
-                      name="performed_by"
-                      placeholder="In-house team, or the contractor's name"
-                      className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 text-sm text-on-surface outline-none placeholder:text-on-surface-variant/50 focus:border-primary"
-                    />
-                  </div>
+                    {logState?.error && (
+                      <p className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-rose-300">
+                        <span className="material-symbols-outlined text-[16px] leading-none">
+                          error
+                        </span>
+                        {logState.error}
+                      </p>
+                    )}
 
-                  <div className="space-y-1">
-                    <span className="font-semibold text-on-surface-variant">
-                      Next service due <span className="font-normal">— optional</span>
-                    </span>
-                    <input
-                      type="date"
-                      name="next_due"
-                      className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 font-mono text-sm text-on-surface outline-none focus:border-primary"
-                    />
-                    <p className="text-[11px] text-on-surface-variant">
-                      This replaces the date on the card. Leave it blank if nothing is
-                      scheduled yet.
-                    </p>
-                  </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <span className="font-semibold text-on-surface-variant">Date done</span>
+                        <input
+                          type="date"
+                          name="performed_on"
+                          required
+                          max={todayIso}
+                          defaultValue={todayIso}
+                          className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 font-mono text-sm text-on-surface outline-none focus:border-primary"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="font-semibold text-on-surface-variant">
+                          Next service due
+                        </span>
+                        <input
+                          type="date"
+                          name="next_due"
+                          className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 font-mono text-sm text-on-surface outline-none focus:border-primary"
+                        />
+                      </div>
+                    </div>
 
-                  {wasClosed && (
-                    <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-300">
-                      <input
-                        type="checkbox"
-                        name="reopen"
-                        defaultChecked
-                        className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
+                    <div className="space-y-1">
+                      <span className="font-semibold text-on-surface-variant">What was done</span>
+                      <textarea
+                        name="description"
+                        required
+                        rows={3}
+                        placeholder="e.g. Replaced pump filter and cleared the drain"
+                        className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 text-sm text-on-surface outline-none placeholder:text-on-surface-variant/50 focus:border-primary"
                       />
-                      <span>
-                        Reopen this facility. It is closed for maintenance, and residents
-                        cannot book it until it reopens.
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="font-semibold text-on-surface-variant">
+                        Who did it <span className="font-normal">— optional</span>
                       </span>
-                    </label>
-                  )}
-                </form>
+                      <input
+                        type="text"
+                        name="performed_by"
+                        placeholder="In-house team, or the contractor's name"
+                        className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 text-sm text-on-surface outline-none placeholder:text-on-surface-variant/50 focus:border-primary"
+                      />
+                    </div>
+
+                    {wasClosed && (
+                      <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-emerald-300">
+                        <input
+                          type="checkbox"
+                          name="reopen"
+                          defaultChecked
+                          className="mt-0.5 h-4 w-4 accent-[var(--color-primary)]"
+                        />
+                        <span>
+                          Reopen this facility afterwards. Residents cannot book it while it
+                          is closed.
+                        </span>
+                      </label>
+                    )}
+                  </form>
+
+                  {/* Previous services */}
+                  <div className="mt-6 border-t border-outline-variant/40 pt-5">
+                    <h4 className="mb-2 flex items-center gap-1.5 text-xs font-bold text-white">
+                      <span className="material-symbols-outlined text-[16px] leading-none text-on-surface-variant">
+                        history
+                      </span>
+                      Previous services
+                      {history.length > 0 && (
+                        <span className="font-normal text-on-surface-variant">
+                          ({history.length})
+                        </span>
+                      )}
+                    </h4>
+
+                    {history.length === 0 ? (
+                      <p className="rounded-lg border border-outline-variant/40 bg-surface-container-high/40 px-3 py-3 text-[11px] text-on-surface-variant">
+                        Nothing logged yet. Once you record a service it appears here, so the
+                        next person can see when this was last looked at.
+                      </p>
+                    ) : (
+                      <ol className="space-y-2">
+                        {history.map((m: any) => (
+                          <li
+                            key={m.maintenance_id}
+                            className="rounded-lg border border-outline-variant/40 bg-surface-container-high/40 px-3 py-2.5"
+                          >
+                            <div className="flex items-baseline justify-between gap-3">
+                              <span className="font-mono text-[11px] font-bold text-on-surface">
+                                {formatDate(m.performed_on)}
+                              </span>
+                              {m.performed_by && (
+                                <span className="truncate text-[11px] text-on-surface-variant">
+                                  {m.performed_by}
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 text-[11px] text-on-surface">{m.description}</p>
+                            {m.logged_by && (
+                              <p className="mt-1 text-[10px] text-on-surface-variant/70">
+                                Logged by {m.logged_by}
+                              </p>
+                            )}
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </div>
+                </div>
 
                 <div className="flex items-center justify-end gap-3 border-t border-outline-variant/40 bg-surface-container-high/40 px-6 py-4">
                   <button
@@ -1354,7 +1390,7 @@ export default function AdminFacilitiesManager({
                     disabled={isLogging}
                     className="pressable rounded-xl border border-outline-variant/60 bg-surface-container-high px-4 py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-white"
                   >
-                    Cancel
+                    Close
                   </button>
                   <button
                     type="submit"

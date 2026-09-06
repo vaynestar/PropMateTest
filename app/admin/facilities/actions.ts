@@ -79,7 +79,11 @@ export async function editFacilityAction(formData: FormData) {
       {
         facility_name: facilityName,
         facility_type: String(formData.get("facility_type") || "General"),
-        facility_status: String(formData.get("facility_status")),
+        // facility_status is NOT set here. It has a dedicated control on the
+        // card (Close for maintenance / Reopen) and is cleared when a service
+        // is logged; a second door on the edit form only invited the two to
+        // disagree. Its dropdown also offered "Inactive", a value nothing in
+        // the app read - picking it changed nothing but made the field lie.
         max_capacity: capacityStr === "" ? null : Number(capacityStr),
         operation_days: days.length > 0 ? days.join(",") : "1,2,3,4,5,6,7",
         open_time: String(formData.get("open_time") || "08:00"),
