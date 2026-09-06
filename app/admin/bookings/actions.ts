@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { createBooking } from "@/lib/booking-management";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 
@@ -16,6 +17,8 @@ export async function adminBookFacility(formData: FormData) {
     const booking_date_str = formData.get("booking_date") as string;
     const start_time_str = formData.get("start_time") as string;
     const end_time_str = formData.get("end_time") as string;
+    const purpose = String(formData.get("purpose") || "").trim();
+    const pax_count = Number(formData.get("pax_count") || 1);
 
     if (!facility_id || !lease_id || !booking_date_str || !start_time_str || !end_time_str) {
       throw new Error("Missing required fields");
@@ -30,30 +33,33 @@ export async function adminBookFacility(formData: FormData) {
       throw new Error("Invalid lease selected");
     }
 
-    const booking_date = new Date(booking_date_str);
-    
-    // Construct proper datetimes
-    const start_time = new Date(booking_date);
-    const [sh, sm] = start_time_str.split(":");
-    start_time.setHours(Number(sh), Number(sm));
-
-    const end_time = new Date(booking_date);
-    const [eh, em] = end_time_str.split(":");
-    end_time.setHours(Number(eh), Number(em));
-
-    await prisma.booking.create({
-      data: {
+    /*
+     * Routed through createBooking() rather than prisma.booking.create().
+     *
+     * This action used to write the row directly, which meant it skipped every
+     * guard in booking-management: whether the facility is bookable, whether it
+     * is closed for maintenance, whether the slot is inside opening hours,
+     * whether it overlaps an existing booking, and the maximum duration. The
+     * form checks those in the browser, but a form is not a guard - so the
+     * facilities page's "Close for maintenance" did nothing to admin bookings,
+     * and a double booking was one stale tab away.
+     *
+     * Confirmed, not Pending: an admin making the booking IS the approval.
+     */
+    await createBooking(
+      {
         facility_id,
         user_id: lease.user_id,
         lease_id,
-        booking_date,
-        start_time,
-        end_time,
-        pax_count: 1, // Default
+        booking_date: booking_date_str,
+        start_time: start_time_str,
+        end_time: end_time_str,
+        purpose: purpose || undefined,
+        pax_count,
         booking_status: "Confirmed",
-        created_by: user.userId,
-      }
-    });
+      },
+      user.userId
+    );
 
     revalidatePath("/admin/bookings");
     return { success: true };

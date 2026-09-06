@@ -158,9 +158,9 @@ export default function BookingCalendarDatePicker({
     <div className="space-y-3">
       {/* Header & Mode Switcher */}
       <div className="flex items-center justify-between">
-        <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+        <label className="flex items-center gap-1.5 text-xs font-bold text-on-surface-variant">
           <span className="material-symbols-outlined text-primary text-[18px]">calendar_month</span>
-          Select Booking Date
+          Step 3 — pick the date
         </label>
 
         <div className="flex items-center gap-1 bg-surface-container-high p-1 rounded-xl border border-outline-variant/40">
@@ -255,7 +255,7 @@ export default function BookingCalendarDatePicker({
                   )}
 
                   {item.isClosed && !item.isDisabled && (
-                    <span className="text-[9px] text-rose-400 uppercase font-bold">Closed</span>
+                    <span className="text-[9px] font-bold text-rose-400">Closed</span>
                   )}
                 </button>
               );
@@ -299,7 +299,7 @@ export default function BookingCalendarDatePicker({
                     : "bg-surface-container-high border-outline-variant text-on-surface hover:border-primary/50"
                 }`}
               >
-                <div className="text-[10px] uppercase font-bold text-on-surface-variant">
+                <div className="text-[10px] font-bold text-on-surface-variant">
                   {isToday ? "Today" : d.toLocaleDateString("en-MY", { weekday: "short" })}
                 </div>
                 <div className="text-sm font-bold mt-0.5">{d.getDate()} {d.toLocaleDateString("en-MY", { month: "short" })}</div>

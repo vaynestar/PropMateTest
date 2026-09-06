@@ -39,7 +39,7 @@ export async function bookFacility(state: any, formData: FormData) {
 
     const lease = await prisma.tenantLease.findFirst({
       where: { user_id: user.userId, status: "Active" },
-      select: { unit: { select: { property_id: true } } },
+      select: { lease_id: true, unit: { select: { property_id: true } } },
     });
     if (!lease) {
       throw new Error("You need an active lease to book a facility.");
@@ -61,14 +61,21 @@ export async function bookFacility(state: any, formData: FormData) {
       throw new Error("Someone booked that slot first. Pick another time.");
     }
 
-    await createBooking({
-      facility_id: facilityId,
-      user_id: user.userId,
-      booking_date: bookingDate,
-      start_time: start,
-      end_time: end,
-      purpose: String(formData.get("purpose") ?? ""),
-    });
+    await createBooking(
+      {
+        facility_id: facilityId,
+        user_id: user.userId,
+        lease_id: lease.lease_id,
+        booking_date: bookingDate,
+        start_time: start,
+        end_time: end,
+        purpose: String(formData.get("purpose") ?? "") || undefined,
+        pax_count: Number(formData.get("pax_count") || 1),
+        // Pending: a resident's request goes into the admin's approval queue.
+        booking_status: "Pending",
+      },
+      user.userId
+    );
     
     revalidatePath("/resident/facilities");
     return { success: true, message: "Your slot is reserved. It is under My Bookings." };

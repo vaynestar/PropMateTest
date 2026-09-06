@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import type { BookingStatusKey } from "@/lib/booking-status";
 
 export async function listBookings(facilityId?: string) {
   return prisma.booking.findMany({
@@ -29,6 +30,16 @@ export type BookingInput = {
   start_time: string;
   end_time: string;
   purpose?: string;
+  /** How many people. Was hardcoded to 1 while the list rendered the value. */
+  pax_count?: number;
+  /** Ties the booking to a tenancy. The admin path sets it; residents do not. */
+  lease_id?: string;
+  /**
+   * Residents' bookings start as Pending so they surface in the admin's
+   * "Waiting for approval" queue. An admin booking on a resident's behalf is
+   * already an approval, so that path passes Confirmed.
+   */
+  booking_status?: BookingStatusKey;
 };
 
 function toMinutes(time: string): number {
@@ -86,16 +97,24 @@ export async function createBooking(input: BookingInput, createdBy?: string) {
     );
   }
 
+  if (facility.max_capacity && input.pax_count && input.pax_count > facility.max_capacity) {
+    throw new Error(
+      `${facility.facility_name} holds ${facility.max_capacity} people. You entered ${input.pax_count}.`
+    );
+  }
+
   return prisma.booking.create({
     data: {
       facility_id: input.facility_id,
       user_id: input.user_id,
+      lease_id: input.lease_id,
       booking_date: requestedDate,
       start_time: startDt,
       end_time: endDt,
       purpose: input.purpose,
-      booking_status: "Reserved",
-      pax_count: 1,
+      // Was hardcoded "Reserved", a name no filter or KPI in the app knew.
+      booking_status: input.booking_status ?? "Pending",
+      pax_count: input.pax_count && input.pax_count > 0 ? input.pax_count : 1,
       created_by: createdBy,
     },
   });

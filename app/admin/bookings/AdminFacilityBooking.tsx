@@ -16,6 +16,7 @@ type Facility = {
   open_time: string;
   close_time: string;
   max_booking_hours: number | null;
+  facility_status?: string | null;
 };
 
 type Booking = {
@@ -26,6 +27,24 @@ type Booking = {
   end_time: string | Date;
   booking_status: string;
 };
+
+/** A facility type deserves its own glyph; the picker used a tennis racket for
+ *  everything, so a pool, a gym and a function hall looked identical. */
+function facilityIcon(type: string = ""): string {
+  const t = type.toLowerCase();
+  if (t.includes("pool") || t.includes("swim")) return "pool";
+  if (t.includes("gym") || t.includes("fitness")) return "fitness_center";
+  if (t.includes("tennis")) return "sports_tennis";
+  if (t.includes("badminton") || t.includes("sport") || t.includes("court"))
+    return "sports_handball";
+  if (t.includes("bbq") || t.includes("barbe")) return "outdoor_grill";
+  if (t.includes("hall") || t.includes("function") || t.includes("ballroom"))
+    return "celebration";
+  if (t.includes("work") || t.includes("office") || t.includes("meeting")) return "business_center";
+  if (t.includes("ev") || t.includes("charg")) return "ev_station";
+  if (t.includes("park")) return "local_parking";
+  return "meeting_room";
+}
 
 function jsDayToMonFirst(jsDay: number): number {
   return jsDay === 0 ? 7 : jsDay;
@@ -68,31 +87,48 @@ export default function AdminFacilityBooking({
   const facility = facilities.find((f) => f.facility_id === selectedId) ?? null;
 
   return (
-    <div className="space-y-6 min-w-0 w-full max-w-full">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+    <div className="w-full min-w-0 max-w-full space-y-6">
+      {facilities.length === 0 ? (
+        <p className="rounded-xl border border-outline-variant/40 bg-surface-container-high/40 p-4 text-xs text-on-surface-variant">
+          This property has no bookable facilities yet. Add one under Manage Facilities,
+          or tick &ldquo;Bookable by residents&rdquo; on an existing one.
+        </p>
+      ) : (
+        <p className="text-xs text-on-surface-variant">
+          Step 1 &mdash; pick the facility.
+        </p>
+      )}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
         {facilities.map((f) => {
           const active = f.facility_id === selectedId;
+          // A facility closed for maintenance is refused server-side, so say so
+          // here rather than letting the admin fill the whole form first.
+          const closed = f.facility_status === "Maintenance";
           return (
             <button
               key={f.facility_id}
               type="button"
+              disabled={closed}
+              title={closed ? "Closed for maintenance - reopen it under Manage Facilities" : undefined}
               onClick={() => setSelectedId(f.facility_id)}
-              className={`bg-surface-container rounded-xl p-4 text-left transition-all active:scale-[0.98] ${
-                active
+              className={`rounded-xl bg-surface-container p-4 text-left transition-all active:scale-[0.98] ${
+                closed
+                  ? "cursor-not-allowed border border-[#4a4455] opacity-50"
+                  : active
                   ? "border border-primary bg-primary/5"
                   : "border border-[#4a4455] hover:border-primary/60"
               }`}
             >
               <div className="flex items-center gap-3">
                 <span className="material-symbols-outlined text-primary">
-                  sports_tennis
+                  {facilityIcon(f.facility_type)}
                 </span>
                 <div>
                   <p className="text-white font-medium">
                     {f.facility_name}
                   </p>
                   <p className="text-xs text-on-surface-variant">
-                    {f.facility_type}
+                    {closed ? "Closed for maintenance" : f.facility_type}
                   </p>
                 </div>
               </div>
@@ -113,6 +149,10 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [leaseId, setLeaseId] = useState("");
+  // The list and table both render purpose and pax, but neither was ever
+  // collected: every admin booking was written with pax_count 1 and no purpose.
+  const [purpose, setPurpose] = useState("");
+  const [pax, setPax] = useState("1");
 
   const openDays = useMemo(
     () =>
@@ -205,8 +245,8 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
       setModalConfig({
         isOpen: true,
         type: "error",
-        title: "Tenant / Unit Selection Required",
-        message: "Please select a tenant or unit to create a booking for.",
+        title: "Pick a tenant first",
+        message: "A booking has to be attached to a resident's lease. Choose one under Tenant / Unit.",
         facilityName: facility.facility_name,
       });
       return;
@@ -215,7 +255,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
       setModalConfig({
         isOpen: true,
         type: "error",
-        title: "Duration Limit Exceeded",
+        title: "That booking is too long",
         message: `Maximum booking duration allowed for this facility is ${facility.max_booking_hours} hours.`,
         facilityName: facility.facility_name,
       });
@@ -225,8 +265,30 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
       setModalConfig({
         isOpen: true,
         type: "error",
-        title: "Time Slot Unavailable",
-        message: "This time slot has already been booked. Please select a different time slot.",
+        title: "That slot is taken",
+        message: "Someone already has this facility then. The timeline below shows what is free.",
+        facilityName: facility.facility_name,
+      });
+      return;
+    }
+
+    const paxNum = Number(pax);
+    if (!Number.isFinite(paxNum) || paxNum < 1) {
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Check the number of people",
+        message: "Enter at least one person for this booking.",
+        facilityName: facility.facility_name,
+      });
+      return;
+    }
+    if (facility.max_capacity && paxNum > facility.max_capacity) {
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "More people than the facility holds",
+        message: `${facility.facility_name} holds ${facility.max_capacity} people. You entered ${paxNum}.`,
         facilityName: facility.facility_name,
       });
       return;
@@ -236,7 +298,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
       setModalConfig({
         isOpen: true,
         type: "error",
-        title: "Operating Hours Constraint",
+        title: "Outside opening hours",
         message: `Booking must be within operating hours (${facility.open_time} - ${facility.close_time}).`,
         facilityName: facility.facility_name,
       });
@@ -249,6 +311,8 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
     formData.append("booking_date", date);
     formData.append("start_time", fmt(start));
     formData.append("end_time", fmt(end));
+    formData.append("purpose", purpose);
+    formData.append("pax_count", pax);
 
     startTransition(async () => {
       const res = await adminBookFacility(formData);
@@ -256,7 +320,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
         setModalConfig({
           isOpen: true,
           type: "error",
-          title: "Booking Failed",
+          title: "Could not save the booking",
           message: res.error,
           facilityName: facility.facility_name,
         });
@@ -265,7 +329,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
           isOpen: true,
           type: "success",
           title: "Booking confirmed",
-          message: "The facility has been successfully booked on behalf of the resident.",
+          message: "The slot is reserved. It now appears under Upcoming.",
           facilityName: facility.facility_name,
           date,
           startTime: fmt(start),
@@ -292,7 +356,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
       {success && (
         <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm rounded-lg flex items-center gap-2">
           <span className="material-symbols-outlined">check_circle</span>
-          Booking successfully created!
+          Booking created.
         </div>
       )}
 
@@ -306,19 +370,28 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
       <form onSubmit={handleSubmit} className="space-y-4 pt-2">
         
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-on-surface-variant">Tenant / Unit</span>
-          <select
-            value={leaseId}
-            onChange={(e) => setLeaseId(e.target.value)}
-            className="rounded-lg bg-[#0c1324] border border-[#4a4455] px-3 py-2.5 text-white outline-none focus:border-primary"
-          >
-            <option value="">Select Tenant to book for...</option>
-            {leases.map((l) => (
-              <option key={l.lease_id} value={l.lease_id}>
-                Unit {l.unit.unit_number} - {l.tenant.user_name}
-              </option>
-            ))}
-          </select>
+          <span className="text-xs font-semibold text-on-surface-variant">
+            Step 2 &mdash; who is it for
+          </span>
+          {leases.length === 0 ? (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+              No active leases in this property, so there is nobody to book for. Create a
+              lease first.
+            </p>
+          ) : (
+            <select
+              value={leaseId}
+              onChange={(e) => setLeaseId(e.target.value)}
+              className="rounded-lg border border-[#4a4455] bg-[#0c1324] px-3 py-2.5 text-white outline-none focus:border-primary"
+            >
+              <option value="">Choose a tenant…</option>
+              {leases.map((l) => (
+                <option key={l.lease_id} value={l.lease_id}>
+                  Unit {l.unit?.unit_number ?? "—"} — {l.tenant?.user_name ?? "Unnamed"}
+                </option>
+              ))}
+            </select>
+          )}
         </label>
 
         <BookingCalendarDatePicker
@@ -361,18 +434,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
                 <option value="PM">PM</option>
               </select>
             </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {[1, 1.5, 2, 2.5, 3].map((dur) => (
-                <button
-                  key={dur}
-                  type="button"
-                  onClick={() => handleDuration(dur)}
-                  className="flex-1 py-1 px-2 text-xs font-medium rounded border border-[#4a4455] hover:bg-surface-container transition-colors text-white"
-                >
-                  +{dur}h
-                </button>
-              ))}
-            </div>
+
           </div>
           
           <div className="flex flex-col gap-2 border border-[#4a4455] rounded-lg p-3 md:p-4 bg-[#0c1324] min-w-0">
@@ -408,7 +470,55 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
                 <option value="PM">PM</option>
               </select>
             </div>
+            <div className="mt-2">
+              <span className="mb-1 block text-[11px] text-on-surface-variant">
+                or set the end time by duration
+              </span>
+              <div className="flex flex-wrap gap-2">
+              {[1, 1.5, 2, 2.5, 3].map((dur) => (
+                <button
+                  key={dur}
+                  type="button"
+                  onClick={() => handleDuration(dur)}
+                  className="flex-1 py-1 px-2 text-xs font-medium rounded border border-[#4a4455] hover:bg-surface-container transition-colors text-white"
+                >
+                  +{dur}h
+                </button>
+              ))}
+            </div>
+            </div>
           </div>
+        </div>
+
+        {/* Purpose and headcount: both are rendered on every booking card and
+            table row, and neither was ever asked for. */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <label className="flex flex-col gap-1 sm:col-span-2">
+            <span className="text-xs font-semibold text-on-surface-variant">
+              What is it for <span className="font-normal">— optional</span>
+            </span>
+            <input
+              type="text"
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              placeholder="e.g. Birthday party, badminton practice"
+              className="rounded-lg border border-[#4a4455] bg-[#0c1324] px-3 py-2.5 text-sm text-white outline-none placeholder:text-on-surface-variant/50 focus:border-primary"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-on-surface-variant">
+              People
+              {facility.max_capacity ? ` — max ${facility.max_capacity}` : ""}
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={facility.max_capacity ?? undefined}
+              value={pax}
+              onChange={(e) => setPax(e.target.value)}
+              className="rounded-lg border border-[#4a4455] bg-[#0c1324] px-3 py-2.5 text-sm text-white outline-none focus:border-primary"
+            />
+          </label>
         </div>
 
         {/* Timeline Visualization */}

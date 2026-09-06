@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
+import { normaliseBookingStatus } from "@/lib/booking-status";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { updateBookingStatus } from "./actions";
 
@@ -42,8 +43,10 @@ export default function AdminBookingList({
 
   // Helper to compute effective booking status (Auto-Complete once past end_time)
   const getEffectiveStatus = (b: any): string => {
-    const rawStatus = b.booking_status || "Pending";
-    if (rawStatus === "Cancelled" || rawStatus === "Rejected") {
+    // Normalise first: rows written before lib/booking-status.ts carry
+    // "Reserved", which nothing else in the app recognised.
+    const rawStatus = normaliseBookingStatus(b.booking_status) || "Pending";
+    if (rawStatus === "Cancelled") {
       return rawStatus;
     }
     const endTime = new Date(b.end_time).getTime();
@@ -393,17 +396,17 @@ export default function AdminBookingList({
               onChange={(e) => setFilterStatus(e.target.value)}
               className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container-high border border-outline-variant text-xs text-on-surface focus:border-primary outline-none"
             >
-              <option value="ALL">All Statuses</option>
+              <option value="ALL">All statuses</option>
               {activeTab === "active" ? (
                 <>
+                  <option value="Pending">Waiting for approval</option>
                   <option value="Confirmed">Confirmed</option>
-                  <option value="Pending">Pending</option>
+                  <option value="Cancelled">Cancelled</option>
                 </>
               ) : (
                 <>
-                  <option value="Completed">Completed (Auto)</option>
+                  <option value="Completed">Completed</option>
                   <option value="Cancelled">Cancelled</option>
-                  <option value="Rejected">Rejected</option>
                 </>
               )}
             </select>
@@ -553,22 +556,32 @@ export default function AdminBookingList({
                     >
                       {b.facility?.facility_name}
                     </h3>
-                    <p className="text-xs text-on-surface-variant mt-0.5 truncate">
-                      {b.facility?.property?.property_name || b.lease?.unit?.property?.property_name || "Testing"}
-                    </p>
                   </div>
 
-                  {/* Resident Info Pill */}
-                  <div className="p-2.5 rounded-lg bg-surface-container-high/60 border border-outline-variant/30 text-xs mb-3 flex items-center justify-between">
-                    <div className="flex items-center gap-1.5 truncate">
-                      <span className="material-symbols-outlined text-[16px] text-primary">person</span>
-                      <span className="font-semibold text-on-surface truncate">
-                        {b.lease?.tenant?.user_name || "Resident"}
-                      </span>
-                    </div>
-                    <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-surface-variant font-medium text-on-surface shrink-0">
-                      Unit {b.lease?.unit?.unit_number || "N/A"}
-                    </span>
+                  {/* Who it is for */}
+                  <div className="mb-3 flex items-center justify-between gap-2 rounded-lg border border-outline-variant/30 bg-surface-container-high/60 p-2.5 text-xs">
+                    {b.lease?.tenant?.user_name ? (
+                      <>
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span className="material-symbols-outlined text-[16px] text-primary">
+                            person
+                          </span>
+                          <span className="truncate font-semibold text-on-surface">
+                            {b.lease.tenant.user_name}
+                          </span>
+                        </div>
+                        {b.lease?.unit?.unit_number && (
+                          <span className="shrink-0 rounded bg-surface-variant px-2 py-0.5 font-mono text-[11px] font-medium text-on-surface">
+                            Unit {b.lease.unit.unit_number}
+                          </span>
+                        )}
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-on-surface-variant">
+                        <span className="material-symbols-outlined text-[16px]">person_off</span>
+                        <span>Not linked to a lease</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Booking Details */}
@@ -670,7 +683,6 @@ export default function AdminBookingList({
                 <tr>
                   <th className="px-5 py-3 font-medium">Booking ID</th>
                   <th className="px-5 py-3 font-medium">Facility</th>
-                  <th className="px-5 py-3 font-medium">Property</th>
                   <th className="px-5 py-3 font-medium">Resident & Unit</th>
                   <th className="px-5 py-3 font-medium">Date & Time</th>
                   <th className="px-5 py-3 font-medium">Purpose</th>
@@ -696,16 +708,21 @@ export default function AdminBookingList({
                       <td className="px-5 py-3.5 font-semibold text-on-surface">
                         {b.facility?.facility_name}
                       </td>
-                      <td className="px-5 py-3.5 text-on-surface-variant">
-                        {b.facility?.property?.property_name || b.lease?.unit?.property?.property_name || "Testing"}
-                      </td>
                       <td className="px-5 py-3.5">
-                        <div className="font-medium text-on-surface">
-                          {b.lease?.tenant?.user_name || "Resident"}
-                        </div>
-                        <div className="text-[11px] text-on-surface-variant font-mono">
-                          Unit {b.lease?.unit?.unit_number}
-                        </div>
+                        {b.lease?.tenant?.user_name ? (
+                          <>
+                            <div className="font-medium text-on-surface">
+                              {b.lease.tenant.user_name}
+                            </div>
+                            {b.lease?.unit?.unit_number && (
+                              <div className="font-mono text-[11px] text-on-surface-variant">
+                                Unit {b.lease.unit.unit_number}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-on-surface-variant">Not linked to a lease</span>
+                        )}
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="font-medium text-on-surface font-mono">

@@ -32,14 +32,11 @@ export default async function AdminBookingsPage() {
   // DEV-136 found in LeasesClient. A booking belongs to exactly one property,
   // so the server scopes it and the redundant picker is gone.
   const allBookings = await prisma.booking.findMany({
-    where: propertyId
-      ? {
-          OR: [
-            { facility: { property_id: propertyId } },
-            { lease: { unit: { property_id: propertyId } } },
-          ],
-        }
-      : undefined,
+    // Scoped by the FACILITY's property, not the tenant's. A booking is an
+    // event in a physical space: the manager of the building whose pool is
+    // booked needs to see it, whoever made it. Matching on either side made
+    // the one cross-property booking in the data appear under both.
+    where: propertyId ? { facility: { property_id: propertyId } } : undefined,
     include: {
       facility: {
         include: {
@@ -126,10 +123,16 @@ export default async function AdminBookingsPage() {
     unit: l.unit ? { unit_id: l.unit.unit_id, unit_number: l.unit.unit_number } : null,
   }));
 
+  // AdminFacilityBooking renders facility_type on the picker card and
+  // property.property_name in the booking header. Both were dropped when this
+  // serialisation was narrowed in DEV-143, so the type subtitle went blank and
+  // selecting any facility crashed the page on property_name of undefined.
   const serializedActiveFacilities = activeFacilities.map((f) => ({
     facility_id: f.facility_id,
     facility_name: f.facility_name,
+    facility_type: f.facility_type,
     property_id: f.property_id,
+    property: { property_name: f.property?.property_name ?? "" },
     open_time: f.open_time,
     close_time: f.close_time,
     operation_days: f.operation_days,
