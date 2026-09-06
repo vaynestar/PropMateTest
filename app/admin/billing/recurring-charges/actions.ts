@@ -27,20 +27,20 @@ export async function getRecurringChargesData(propertyId?: string | null) {
     orderBy: { charge_name: "asc" }
   });
 
-  const properties = await prisma.propertyMaster.findMany({
-    orderBy: { property_name: "asc" }
-  });
-
-  return { leases, chargeMasters, properties };
+  // The in-module property picker was removed in DEV-137 (the top bar owns the
+  // property), so the properties query it fed went with it.
+  return { leases, chargeMasters };
 }
 
 export async function saveLeaseChargesAction(leaseId: string, charges: { charge_id: string; quantity: number; amount: number }[]) {
   const user = await requireUser(["Admin"]);
 
   await prisma.$transaction(async (tx) => {
-    // Delete all current active lease charges for this lease
+    // Only the active lines are being replaced. deleteMany with just lease_id
+    // also wiped deactivated historical charges, which the drawer never loaded
+    // and therefore could not put back.
     await tx.leaseCharge.deleteMany({
-      where: { lease_id: leaseId }
+      where: { lease_id: leaseId, is_active: true },
     });
 
     // Re-create them
@@ -57,6 +57,8 @@ export async function saveLeaseChargesAction(leaseId: string, charges: { charge_
     }
   });
 
+  // The billing overview totals read these charges too.
   revalidatePath("/admin/billing/recurring-charges");
+  revalidatePath("/admin/billing");
   return { success: true };
 }

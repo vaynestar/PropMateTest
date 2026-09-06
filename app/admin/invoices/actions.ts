@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth";
+import { requireUser, verifyPassword } from "@/lib/auth";
 import { generateInvoicesForLeases, markInvoicePaid, getEligibleLeasesForInvoicing } from "@/lib/billing";
 import prisma from "@/lib/prisma";
 
@@ -134,8 +134,8 @@ export async function addInvoiceDetailAction(prevState: any, formData: FormData)
     if (targetInvoice.status === "Paid") {
       return { error: "Locked: Paid invoices cannot be edited." };
     }
-    if (targetInvoice.is_printed) {
-      return { error: "Locked: Printed invoices cannot be edited." };
+    if (targetInvoice.issued_at) {
+      return { error: "Locked: this invoice has been issued. Unlock it first." };
     }
     if (targetInvoice.status === "Inactive") {
       return { error: "Locked: Inactive invoices cannot be edited." };
@@ -202,8 +202,8 @@ export async function removeInvoiceDetailAction(formData: FormData) {
     if (targetInvoice.status === "Paid") {
       return { error: "Locked: Paid invoices cannot be edited." };
     }
-    if (targetInvoice.is_printed) {
-      return { error: "Locked: Printed invoices cannot be edited." };
+    if (targetInvoice.issued_at) {
+      return { error: "Locked: this invoice has been issued. Unlock it first." };
     }
     if (targetInvoice.status === "Inactive") {
       return { error: "Locked: Inactive invoices cannot be edited." };
@@ -273,4 +273,67 @@ export async function issueInvoice(invoice_id: string) {
   const fd = new FormData();
   fd.set("invoice_id", invoice_id);
   return issueInvoiceAction(null, fd);
+}
+
+
+/**
+ * Unlock an issued invoice for editing, behind the admin's own password.
+ *
+ * Issuing is meant to be final — that is the whole point of DEV-140. But an
+ * invoice raised with the wrong figure is a real situation, and the only exits
+ * without this were voiding it and reissuing under a new number, or editing the
+ * row in the database. So the door exists, and re-entering the password is what
+ * makes it a deliberate act rather than a stray click: the session is already
+ * authenticated, so this proves the person at the keyboard is the account
+ * holder, not someone who walked up to an unlocked screen.
+ *
+ * Paid and voided invoices stay shut. Those are settled states with their own
+ * reversal (Unpay, Restore); unlocking is not the tool for them.
+ */
+export async function unlockInvoiceAction(state: any, formData: FormData) {
+  try {
+    const user = await requireUser(["Admin"]);
+    const invoice_id = String(formData.get("invoice_id") || "");
+    const password = String(formData.get("password") || "");
+
+    if (!invoice_id) throw new Error("Invoice ID is required.");
+    if (!password) return { error: "Enter your password to unlock this invoice." };
+
+    const account = await prisma.user.findUnique({
+      where: { user_id: user.userId },
+      select: { password_hash: true },
+    });
+    if (!account?.password_hash || !verifyPassword(password, account.password_hash)) {
+      return { error: "That password is not correct." };
+    }
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { invoice_id },
+      select: { issued_at: true, status: true, invoice_no: true },
+    });
+    if (!invoice) throw new Error("That invoice no longer exists.");
+    if (!invoice.issued_at) {
+      return { error: "That invoice is already a draft." };
+    }
+    if (invoice.status === "Paid") {
+      return { error: "This invoice is paid. Mark it unpaid first if it needs changing." };
+    }
+    if (invoice.status === "Inactive") {
+      return { error: "This invoice is voided. Restore it first." };
+    }
+
+    await prisma.invoice.update({
+      where: { invoice_id },
+      data: { issued_at: null, modified_by: user.userId },
+    });
+
+    revalidatePath("/admin/invoices");
+    revalidatePath("/admin/billing");
+    return {
+      success: true,
+      message: `${invoice.invoice_no} is a draft again. Reissue it once the items are right.`,
+    };
+  } catch (error: any) {
+    return { error: error.message || "Could not unlock the invoice" };
+  }
 }

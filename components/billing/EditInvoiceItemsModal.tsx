@@ -2,7 +2,11 @@
 
 import { useState, useActionState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { addInvoiceDetailAction, removeInvoiceDetailAction } from "@/app/admin/invoices/actions";
+import {
+  addInvoiceDetailAction,
+  removeInvoiceDetailAction,
+  unlockInvoiceAction,
+} from "@/app/admin/invoices/actions";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR" }).format(value);
@@ -33,15 +37,41 @@ export default function EditInvoiceItemsModal({
 
   // Locked once the invoice has been issued to the tenant, paid, or voided.
   // It used to lock on is_printed, so opening the PDF preview froze it silently.
-  const isLocked =
-    invoice.status === "Paid" || !!invoice.issued_at || invoice.status === "Inactive";
-  const lockReason = invoice.status === "Paid"
+  // `unlocked` tracks an issued invoice reopened during this session, so the
+  // form comes alive immediately instead of waiting for the refresh to land.
+  const [unlocked, setUnlocked] = useState(false);
+  const [showUnlock, setShowUnlock] = useState(false);
+  const [password, setPassword] = useState("");
+  const [unlockState, unlockFormAction, isUnlocking] = useActionState(
+    unlockInvoiceAction,
+    null
+  );
+
+  const isPaid = invoice.status === "Paid";
+  const isVoided = invoice.status === "Inactive";
+  const isIssued = !!invoice.issued_at && !unlocked;
+  const isLocked = isPaid || isIssued || isVoided;
+  const lockReason = isPaid
     ? "This invoice has been paid"
-    : invoice.issued_at
+    : isIssued
     ? "This invoice has been issued to the tenant"
-    : invoice.status === "Inactive"
+    : isVoided
     ? "This invoice has been voided"
     : "";
+
+  // Only an issued-but-unsettled invoice can be reopened. Paid and voided are
+  // settled states with their own reversal (Unpay, Restore); unlocking is not
+  // the tool for those, and offering it there would only produce a server error.
+  const canUnlock = isIssued && !isPaid && !isVoided;
+
+  useEffect(() => {
+    if (unlockState?.success) {
+      setUnlocked(true);
+      setShowUnlock(false);
+      setPassword("");
+      router.refresh();
+    }
+  }, [unlockState, router]);
 
   const handleChargeSelect = (chargeId: string) => {
     if (isLocked) return;
@@ -128,14 +158,98 @@ export default function EditInvoiceItemsModal({
         <div className="flex-1 overflow-y-auto space-y-6 pr-1">
           {/* Helper / Lock Banner */}
           {isLocked ? (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-center gap-2">
-              <span className="material-symbols-outlined text-[18px]">lock</span>
-              <span><strong>Locked.</strong> {lockReason}, so its line items are fixed. Void it and raise a new one if the amounts are wrong.</span>
+            <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+              <div className="flex items-start gap-2">
+                <span className="material-symbols-outlined text-[18px] leading-none">lock</span>
+                <span className="min-w-0">
+                  <strong>Locked.</strong> {lockReason}, so its line items are fixed.{" "}
+                  {canUnlock
+                    ? "If a figure is wrong, unlock it, correct the items and issue it again."
+                    : "Void it and raise a new one if the amounts are wrong."}
+                </span>
+                {canUnlock && !showUnlock && (
+                  <button
+                    type="button"
+                    onClick={() => setShowUnlock(true)}
+                    className="pressable ml-auto flex shrink-0 items-center gap-1.5 rounded-md border border-rose-400/40 px-2.5 py-1.5 text-[11px] font-semibold leading-none text-rose-200 transition-colors hover:bg-rose-500/20"
+                  >
+                    <span className="material-symbols-outlined text-[15px] leading-none">
+                      lock_open
+                    </span>
+                    Unlock
+                  </button>
+                )}
+              </div>
+
+              {canUnlock && showUnlock && (
+                <form action={unlockFormAction} className="mt-3 border-t border-rose-500/20 pt-3">
+                  <input type="hidden" name="invoice_id" value={invoice.invoice_id} />
+                  <label
+                    htmlFor="unlock-password"
+                    className="block text-[11px] font-semibold text-rose-200"
+                  >
+                    Confirm it is you
+                  </label>
+                  <p className="mt-0.5 text-[11px] text-rose-300/80">
+                    Enter your own admin password. The invoice goes back to draft and has to
+                    be issued again once you are done.
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input
+                      id="unlock-password"
+                      name="password"
+                      type="password"
+                      autoFocus
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Your password"
+                      className="min-w-0 flex-1 rounded-lg border border-rose-500/30 bg-surface-container-high px-3 py-2 text-xs text-white outline-none transition-colors placeholder:text-on-surface-variant/50 focus:border-rose-400"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isUnlocking || !password}
+                      className="pressable flex shrink-0 items-center gap-1.5 rounded-lg bg-rose-500/90 px-3 py-2 text-xs font-bold leading-none text-white transition-colors hover:bg-rose-500 disabled:opacity-40"
+                    >
+                      {isUnlocking && (
+                        <span className="material-symbols-outlined animate-spin-slow text-[15px] leading-none">
+                          progress_activity
+                        </span>
+                      )}
+                      {isUnlocking ? "Checking…" : "Unlock"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowUnlock(false);
+                        setPassword("");
+                      }}
+                      disabled={isUnlocking}
+                      className="pressable shrink-0 rounded-lg px-2.5 py-2 text-xs font-semibold leading-none text-rose-200/80 transition-colors hover:text-white"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  {unlockState?.error && (
+                    <p className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-rose-200">
+                      <span className="material-symbols-outlined text-[14px] leading-none">
+                        error
+                      </span>
+                      {unlockState.error}
+                    </p>
+                  )}
+                </form>
+              )}
             </div>
           ) : (
             <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">info</span>
-              <span><strong>Draft.</strong> Add or change line items freely. Once you issue this invoice to the tenant, the items are locked — only payment status can change after that.</span>
+              <span>
+                <strong>{unlocked ? "Unlocked — back to draft." : "Draft."}</strong>{" "}
+                {unlocked
+                  ? "Correct the items, then issue the invoice again from the list."
+                  : "Add or change line items freely. Once you issue this invoice to the tenant, the items are locked — only payment status can change after that."}
+              </span>
             </div>
           )}
 

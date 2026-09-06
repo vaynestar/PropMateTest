@@ -11,7 +11,7 @@ export const metadata = {
 
 export default async function RecurringChargesPage() {
   const activePropertyId = await getActivePropertyId();
-  const { leases, chargeMasters, properties } = await getRecurringChargesData(activePropertyId);
+  const { leases, chargeMasters } = await getRecurringChargesData(activePropertyId);
 
   const activeProperty = activePropertyId
     ? await prisma.propertyMaster.findUnique({
@@ -41,6 +41,9 @@ export default async function RecurringChargesPage() {
       : null,
     lease_charges: (l.lease_charges ?? []).map((c: any) => ({
       lease_charge_id: c.lease_charge_id,
+      // The drawer sends charge_id back when saving. Dropping it here made
+      // every save fail with "Argument charge_id is missing" (DEV-137).
+      charge_id: c.charge_id,
       amount: Number(c.amount ?? 0),
       quantity: Number(c.quantity ?? 1),
       is_active: c.is_active,
@@ -69,7 +72,6 @@ export default async function RecurringChargesPage() {
       <RecurringChargesClient
         leases={serialisedLeases as any}
         chargeMasters={serialisedChargeMasters as any}
-        properties={properties as any}
         activePropertyName={activeProperty?.property_name ?? null}
       />
     </div>

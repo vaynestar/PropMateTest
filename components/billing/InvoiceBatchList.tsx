@@ -490,8 +490,8 @@ After this its line items can no longer be edited. You can still record payment 
 
                   const lockTooltip = isPaid
                     ? "Paid — items can no longer be changed"
-                    : isPrinted
-                    ? "Issued to the tenant — items can no longer be changed"
+                    : isIssued
+                    ? "Issued to the tenant. Open to view, or unlock with your password to correct it."
                     : isInactive
                     ? "Voided — items can no longer be changed"
                     : "Edit Line Items";

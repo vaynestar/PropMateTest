@@ -11,48 +11,76 @@ function formatCurrency(value: number) {
 export default function RecurringChargesClient({
   leases,
   chargeMasters,
-  properties = [],
 }: {
   leases: any[];
   chargeMasters: any[];
-  properties?: any[];
   activePropertyName?: string | null;
 }) {
   const [search, setSearch] = useState("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedLease, setSelectedLease] = useState<any | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [chargeToAdd, setChargeToAdd] = useState("");
   
   // Drawer State
   const [editingCharges, setEditingCharges] = useState<{ id: string, charge_id: string, quantity: number, amount: number, name: string }[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
-  const filteredLeases = leases.filter(l => {
-    const s = search.toLowerCase();
-    const matchesSearch =
-      l.tenant.user_name.toLowerCase().includes(s) ||
-      l.unit.unit_number.toLowerCase().includes(s);
-    const matchesProp = true; // server already scoped to the active property
-    return matchesSearch && matchesProp;
+  // The server already scopes to the active property, so search is the only
+  // filter left here.
+  const filteredLeases = leases.filter((l) => {
+    const s = search.trim().toLowerCase();
+    if (!s) return true;
+    return (
+      (l.tenant?.user_name ?? "").toLowerCase().includes(s) ||
+      (l.unit?.unit_number ?? "").toLowerCase().includes(s)
+    );
   });
 
+  /**
+   * Split a lease's charges into the rent line and everything else. The table
+   * used to show the extras as a bare count in a circle ("1"), which is the one
+   * thing this page exists to answer and the one thing that number does not
+   * say: RM 2,000 rent against a RM 2,100 total left the extra RM 100 unnamed
+   * until you opened the drawer.
+   */
+  const summarise = (l: any) => {
+    const charges = l.lease_charges ?? [];
+    const rentCharge = charges.find((c: any) => c.charge?.charge_name === "Monthly Rental");
+    const rent = rentCharge ? Number(rentCharge.amount) * Number(rentCharge.quantity) : 0;
+    const extras = charges
+      .filter((c: any) => c !== rentCharge)
+      .map((c: any) => ({
+        name: c.charge?.charge_name ?? "Charge",
+        amount: Number(c.amount) * Number(c.quantity),
+      }));
+    const total = charges.reduce(
+      (sum: number, c: any) => sum + Number(c.amount) * Number(c.quantity),
+      0
+    );
+    return { rentCharge, rent, extras, total };
+  };
+
   // KPIs
-  let totalMonthly = 0;
-  leases.forEach(l => {
-    l.lease_charges.forEach((c: any) => {
-      totalMonthly += Number(c.amount) * Number(c.quantity);
-    });
-  });
+  const totalMonthly = leases.reduce((sum, l) => sum + summarise(l).total, 0);
+  const leasesWithoutRent = leases.filter((l) => !summarise(l).rentCharge).length;
+
+  // Charges already on the lease are dropped from the add picker.
+  const available = chargeMasters.filter(
+    (m) => !editingCharges.some((c) => c.charge_id === m.charge_id)
+  );
 
   const openDrawer = (lease: any) => {
     setSelectedLease(lease);
     const charges = lease.lease_charges.map((c: any) => ({
       id: Math.random().toString(36).substr(2, 9),
-      charge_id: c.charge_id,
+      charge_id: c.charge_id ?? c.charge?.charge_id,
       quantity: Number(c.quantity),
       amount: Number(c.amount),
-      name: c.charge.charge_name
+      name: c.charge?.charge_name ?? "Charge"
     }));
     setEditingCharges(charges);
+    setChargeToAdd("");
     setDrawerOpen(true);
   };
 
@@ -71,7 +99,7 @@ export default function RecurringChargesClient({
 
   const addCharge = (chargeId: string) => {
     if (!chargeId) return;
-    const master = chargeMasters.find(m => m.charge_id === chargeId);
+    const master = chargeMasters.find((m) => m.charge_id === chargeId);
     if (master) {
       setEditingCharges(prev => [
         ...prev,
@@ -90,23 +118,56 @@ export default function RecurringChargesClient({
     if (!selectedLease) return;
     setIsSaving(true);
     try {
-      const payload = editingCharges.map(c => ({
+      const payload = editingCharges.map((c) => ({
         charge_id: c.charge_id,
         quantity: c.quantity,
-        amount: c.amount
+        amount: c.amount,
       }));
+      if (payload.some((c) => !c.charge_id)) {
+        throw new Error(
+          "One of these lines has lost its charge type. Reopen the drawer and try again."
+        );
+      }
+      const tenantName = selectedLease.tenant?.user_name ?? "this lease";
       await saveLeaseChargesAction(selectedLease.lease_id, payload);
-      alert("Charges updated successfully.");
+      setToast({
+        type: "success",
+        text: `Saved. ${tenantName} will be billed ${formatCurrency(
+          editingCharges.reduce((acc, c) => acc + c.amount * c.quantity, 0)
+        )} on the next invoice run. Invoices already raised are unchanged.`,
+      });
       closeDrawer();
     } catch (e: any) {
-      alert(e.message || "Failed to save charges");
+      setToast({ type: "error", text: e.message || "Could not save the charges." });
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="flex flex-col gap-6 relative">
+    <div className="relative flex w-full min-w-0 flex-col gap-6">
+      {toast && (
+        <div
+          className={`animate-slide-in fixed right-6 top-20 z-[110] flex max-w-sm items-start gap-3 rounded-xl border px-4 py-3 text-xs font-semibold shadow-2xl backdrop-blur-md ${
+            toast.type === "success"
+              ? "border-emerald-500/50 bg-emerald-950/90 text-emerald-200"
+              : "border-rose-500/50 bg-rose-950/90 text-rose-200"
+          }`}
+        >
+          <span className="material-symbols-outlined text-[18px] leading-none">
+            {toast.type === "success" ? "check_circle" : "error"}
+          </span>
+          <span className="min-w-0">{toast.text}</span>
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            aria-label="Dismiss"
+            className="ml-1 shrink-0 opacity-70 transition-opacity hover:opacity-100"
+          >
+            <span className="material-symbols-outlined text-[16px] leading-none">close</span>
+          </button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <Link href="/admin/billing" className="font-label-sm text-label-sm text-primary hover:text-primary-container transition-colors">
@@ -117,13 +178,6 @@ export default function RecurringChargesClient({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          {/* Property Filter Dropdown */}
-          <div className="relative min-w-[180px]">
-            <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">
-              expand_more
-            </span>
-          </div>
-
           <div className="flex-1 md:w-64 relative">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
             <input
@@ -147,7 +201,7 @@ export default function RecurringChargesClient({
             <span className="font-display-lg text-display-lg text-on-surface font-bold tracking-tight">{formatCurrency(totalMonthly)}</span>
           </div>
         </div>
-        
+
         <div className="col-span-12 md:col-span-6 glass-card rounded-xl p-6 flex flex-col justify-between border border-outline-variant/30">
           <div className="flex justify-between items-start mb-4">
             <span className="font-label-md text-label-md text-on-surface-variant">Leases billed</span>
@@ -156,6 +210,13 @@ export default function RecurringChargesClient({
           <div className="flex items-baseline gap-2">
             <span className="font-display-lg text-display-lg text-on-surface font-bold tracking-tight">{leases.length}</span>
           </div>
+          {leasesWithoutRent > 0 && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-amber-300">
+              <span className="material-symbols-outlined text-[16px] leading-none">warning</span>
+              {leasesWithoutRent} {leasesWithoutRent === 1 ? "lease has" : "leases have"} no rent
+              line — nothing will be invoiced
+            </p>
+          )}
         </div>
       </div>
 
@@ -169,23 +230,15 @@ export default function RecurringChargesClient({
               <tr>
                 <th className="px-6 py-3 font-label-md font-semibold">Tenant</th>
                 <th className="px-6 py-3 font-label-md font-semibold">Unit</th>
-                <th className="px-6 py-3 font-label-md font-semibold text-right">Base Rent</th>
-                <th className="px-6 py-3 font-label-md font-semibold text-center">Extras</th>
+                <th className="px-6 py-3 font-label-md font-semibold text-right">Base rent</th>
+                <th className="px-6 py-3 font-label-md font-semibold">Extras</th>
                 <th className="px-6 py-3 font-label-md font-semibold text-right">Monthly total</th>
                 <th className="px-6 py-3 font-label-md font-semibold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/30">
               {filteredLeases.map((l: any) => {
-                const rentCharge = l.lease_charges.find((c: any) => c.charge.charge_name === "Monthly Rental");
-                const baseRent = rentCharge ? (Number(rentCharge.amount) * Number(rentCharge.quantity)) : 0;
-                
-                let total = 0;
-                l.lease_charges.forEach((c: any) => {
-                  total += Number(c.amount) * Number(c.quantity);
-                });
-                
-                const addCount = l.lease_charges.length - (rentCharge ? 1 : 0);
+                const { rentCharge, rent: baseRent, extras, total } = summarise(l);
 
                 return (
                   <tr key={l.lease_id} className="hover:bg-surface-container-high/40 transition-colors group">
@@ -204,15 +257,40 @@ export default function RecurringChargesClient({
                         {l.unit.unit_number}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right font-medium text-on-surface">{formatCurrency(baseRent)}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-secondary-container/20 text-secondary-fixed text-xs border border-secondary-container/50">
-                        {addCount}
-                      </span>
+                    <td className="px-6 py-4 text-right font-medium text-on-surface">
+                      {rentCharge ? (
+                        formatCurrency(baseRent)
+                      ) : (
+                        <span
+                          className="text-xs font-semibold text-amber-300"
+                          title="This lease has no Monthly Rental line, so an invoice run will bill nothing for rent."
+                        >
+                          No rent line
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {extras.length === 0 ? (
+                        <span className="text-xs text-on-surface-variant">—</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {extras.map((e: any, i: number) => (
+                            <span
+                              key={i}
+                              className="inline-flex items-center gap-1.5 rounded border border-outline-variant/50 bg-surface-container-highest px-2 py-0.5 text-xs text-on-surface"
+                            >
+                              {e.name}
+                              <span className="font-medium text-on-surface-variant">
+                                {formatCurrency(e.amount)}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right font-semibold text-primary-fixed-dim">{formatCurrency(total)}</td>
                     <td className="px-6 py-4 text-center">
-                      <button 
+                      <button
                         onClick={() => openDrawer(l)}
                         className="bg-primary/20 hover:bg-primary text-primary hover:text-on-primary border border-primary/40 px-3.5 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all shadow-sm"
                       >
@@ -225,19 +303,60 @@ export default function RecurringChargesClient({
               })}
             </tbody>
           </table>
+
+          {filteredLeases.length === 0 && (
+            <div className="flex flex-col items-center gap-2 px-6 py-14 text-center">
+              <span className="material-symbols-outlined text-[28px] text-on-surface-variant/60">
+                {leases.length === 0 ? "receipt_long" : "search_off"}
+              </span>
+              {leases.length === 0 ? (
+                <>
+                  <p className="text-sm font-semibold text-on-surface">
+                    No active leases in this property
+                  </p>
+                  <p className="max-w-sm text-xs text-on-surface-variant">
+                    Recurring charges hang off a lease. Create one and its rent line appears
+                    here, ready to be invoiced each month.
+                  </p>
+                  <Link
+                    href="/admin/leases"
+                    className="pressable mt-2 rounded-lg border border-primary/40 bg-primary/15 px-3.5 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/25"
+                  >
+                    Go to leases
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-semibold text-on-surface">
+                    Nothing matches “{search}”
+                  </p>
+                  <p className="text-xs text-on-surface-variant">
+                    Search looks at the tenant name and the unit number.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="pressable mt-2 rounded-lg border border-outline-variant/60 bg-surface-container-high px-3.5 py-2 text-xs font-semibold text-on-surface transition-colors hover:text-white"
+                  >
+                    Clear search
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Drawer Overlay */}
       {drawerOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-surface/80 backdrop-blur-sm z-[100] transition-opacity"
           onClick={closeDrawer}
         />
       )}
 
       {/* Drawer Panel */}
-      <div 
+      <div
         className={`fixed top-0 right-0 h-screen w-full max-w-lg bg-surface-container-lowest/90 backdrop-blur-xl border-l border-outline-variant/50 z-[101] flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {selectedLease && (
@@ -252,7 +371,7 @@ export default function RecurringChargesClient({
                   Tenant: {selectedLease.tenant.user_name} ({selectedLease.unit.unit_number})
                 </p>
               </div>
-              <button 
+              <button
                 onClick={closeDrawer}
                 className="text-on-surface-variant hover:text-on-surface hover:bg-surface-variant rounded-full p-2 transition-all"
               >
@@ -261,9 +380,13 @@ export default function RecurringChargesClient({
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
-              <div className="mb-4 p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px]">edit</span>
-                <span>You can edit the <strong>Price (RM)</strong> and <strong>Quantity</strong> directly for each line item below.</span>
+              <div className="mb-4 flex items-start gap-2 rounded-lg border border-primary/20 bg-primary/10 p-3 text-xs text-primary">
+                <span className="material-symbols-outlined text-[18px] leading-none">info</span>
+                <span className="min-w-0">
+                  These lines are billed every month. Changes apply to the{" "}
+                  <strong>next invoice run</strong> — invoices already raised keep the
+                  figures they were issued with.
+                </span>
               </div>
               <h4 className="font-label-md text-label-md text-on-surface-variant mb-3">Charged every month</h4>
               <div className="space-y-3">
@@ -274,7 +397,7 @@ export default function RecurringChargesClient({
                         <span className="material-symbols-outlined text-primary/70 text-sm">payments</span>
                         <div className="font-medium text-on-surface text-sm">{c.name}</div>
                       </div>
-                      <button 
+                      <button
                         onClick={() => removeCharge(c.id)}
                         className="text-error/70 hover:text-error transition-colors p-1"
                         title="Remove Charge"
@@ -285,10 +408,10 @@ export default function RecurringChargesClient({
                     <div className="flex gap-4">
                       <div className="w-1/3">
                         <label className="block text-[10px] text-on-surface-variant mb-1 font-semibold">Qty</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min={1}
-                          value={c.quantity} 
+                          value={c.quantity}
                           onChange={(e) => updateCharge(c.id, 'quantity', Number(e.target.value))}
                           className="w-full bg-surface-container-highest border border-outline-variant/50 rounded py-1.5 px-3 text-sm text-on-surface focus:outline-none focus:border-primary font-medium"
                         />
@@ -297,11 +420,11 @@ export default function RecurringChargesClient({
                         <label className="block text-[10px] text-on-surface-variant mb-1 font-semibold">Price (RM)</label>
                         <div className="relative">
                           <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs font-bold">RM</span>
-                          <input 
+                          <input
                             type="number"
                             min={0}
                             step="0.01"
-                            value={c.amount} 
+                            value={c.amount}
                             onChange={(e) => updateCharge(c.id, 'amount', Number(e.target.value))}
                             className="w-full bg-surface-container-highest border border-outline-variant/50 rounded py-1.5 pl-8 pr-2 text-sm text-on-surface focus:outline-none focus:border-primary font-bold text-primary"
                           />
@@ -316,34 +439,45 @@ export default function RecurringChargesClient({
                     </div>
                   </div>
                 ))}
-                
+
                 {editingCharges.length === 0 && (
-                  <p className="text-sm text-on-surface-variant italic">No recurring charges active for this lease.</p>
+                  <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+                    Nothing is billed on this lease yet. Add at least a rent line, or an
+                    invoice run will produce nothing for this tenant.
+                  </p>
                 )}
               </div>
 
               <div className="mt-8 border-t border-outline-variant/50 pt-6">
+                {/* Charges already on this lease are dropped from the picker so
+                    the same line cannot be added twice. */}
                 <h4 className="font-label-md text-label-md text-on-surface-variant mb-3">Add a charge</h4>
-                <div className="flex gap-3 items-end">
-                  <div className="flex-1 relative">
-                    <select 
+                <div className="flex items-end gap-3">
+                  <div className="relative min-w-0 flex-1">
+                    <select
                       id="addChargeSelect"
+                      aria-label="Standard charge to add"
+                      value={chargeToAdd}
+                      onChange={(e) => setChargeToAdd(e.target.value)}
                       className="w-full appearance-none bg-surface-container-highest border border-outline-variant/50 rounded py-2 pl-3 pr-10 text-sm text-on-surface focus:outline-none focus:border-primary cursor-pointer"
                     >
-                      <option disabled selected value="">Select standard charge...</option>
-                      {chargeMasters.filter(m => !editingCharges.find(c => c.charge_id === m.charge_id)).map(m => (
-                        <option key={m.charge_id} value={m.charge_id}>{m.charge_name} - {formatCurrency(Number(m.default_amount))}</option>
+                      <option value="">Select standard charge…</option>
+                      {available.map((m) => (
+                        <option key={m.charge_id} value={m.charge_id}>
+                          {m.charge_name} — {formatCurrency(Number(m.default_amount))}
+                        </option>
                       ))}
                     </select>
                     <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-sm">expand_more</span>
                   </div>
-                  <button 
+                  <button
+                    type="button"
+                    disabled={!chargeToAdd}
                     onClick={() => {
-                      const sel = document.getElementById('addChargeSelect') as HTMLSelectElement;
-                      addCharge(sel.value);
-                      sel.value = "";
+                      addCharge(chargeToAdd);
+                      setChargeToAdd("");
                     }}
-                    className="border border-primary text-primary hover:bg-primary/10 px-4 py-2 rounded font-medium text-sm flex items-center gap-2 transition-colors"
+                    className="pressable flex shrink-0 items-center gap-2 rounded border border-primary px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <span className="material-symbols-outlined text-sm">add</span> Add
                   </button>
@@ -359,13 +493,13 @@ export default function RecurringChargesClient({
                 </div>
               </div>
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={closeDrawer}
                   className="px-4 py-2 rounded text-on-surface-variant hover:bg-surface-variant font-medium text-sm transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={saveChanges}
                   disabled={isSaving}
                   className="bg-primary hover:bg-primary-container text-on-primary px-6 py-2 rounded font-medium text-sm shadow-lg shadow-primary/20 disabled:opacity-50 transition-all"

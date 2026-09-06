@@ -172,6 +172,16 @@ html, body {
     display: inline-block;
 }
 
+/* Toast entrance. Referenced by the invoice and recurring-charge toasts since
+   DEV-139 but never defined, so both appeared with no transition at all. */
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(1rem); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+.animate-slide-in {
+    animation: slideIn 0.22s ease-out;
+}
+
 .hide-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -184,6 +194,7 @@ html, body {
     .pressable { transition: none; }
     .pressable:active:not(:disabled) { transform: none; }
     .animate-spin-slow,
+    .animate-slide-in,
     .animate-laser-sweep,
     .animate-indeterminate-progress,
     .sparkline-path { animation: none; }
