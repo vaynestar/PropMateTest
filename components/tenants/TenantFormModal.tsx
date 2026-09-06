@@ -127,26 +127,9 @@ export default function TenantFormModal({ isOpen, onClose }: TenantFormModalProp
                 />
               </Field>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="NRIC / passport no." hint="Optional">
-                  <input
-                    name="ic_number"
-                    placeholder="e.g. 900101-14-5566"
-                    className={fieldClass}
-                  />
-                </Field>
-
-                <Field label="Owner or tenant">
-                  <select name="resident_type" defaultValue="Tenant" className={fieldClass}>
-                    <option value="Tenant" className="bg-surface-container">
-                      Tenant — renting the unit
-                    </option>
-                    <option value="Owner" className="bg-surface-container">
-                      Owner — owns the unit
-                    </option>
-                  </select>
-                </Field>
-              </div>
+              <Field label="NRIC / passport no." hint="Optional">
+                <input name="ic_number" placeholder="e.g. 900101-14-5566" className={fieldClass} />
+              </Field>
 
               <Field label="Email" hint="This is their login">
                 <input

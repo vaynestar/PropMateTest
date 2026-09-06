@@ -86,11 +86,11 @@ model User {
 
   // Resident details for Malaysian strata management (DEV-134).
   // NRIC/MyKad (or passport for non-citizens) is the identifier used for access
-  // cards and the guardhouse; resident_type separates an owner-occupier from a
-  // renting tenant, which differ on AGM voting and service-charge liability
-  // under the Strata Management Act 2013. All optional so existing rows stand.
+  // cards and the guardhouse. Owner-vs-tenant deliberately lives nowhere here:
+  // it is a fact about a person's relationship to ONE unit, not about the
+  // person, so the lease is the only place it could be expressed correctly.
+  // All optional so existing rows stand.
   ic_number               String? @db.VarChar
-  resident_type           String? @db.VarChar // "Owner" | "Tenant"
   vehicle_plate           String? @db.VarChar
   emergency_contact_name  String? @db.VarChar
   emergency_contact_phone String? @db.VarChar

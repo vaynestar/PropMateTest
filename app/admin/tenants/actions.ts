@@ -34,7 +34,6 @@ export async function addTenant(state: any, formData: FormData) {
         password_hash: hashPassword(tempPassword),
         role: "Resident",
         ic_number: emptyToNull(formData.get("ic_number")),
-        resident_type: emptyToNull(formData.get("resident_type")) ?? "Tenant",
         vehicle_plate: emptyToNull(formData.get("vehicle_plate"))?.toUpperCase() ?? null,
         emergency_contact_name: emptyToNull(formData.get("emergency_contact_name")),
         emergency_contact_phone: emptyToNull(formData.get("emergency_contact_phone")),

@@ -55,11 +55,11 @@ export default function TenantsClient({
         tenant.user_email.toLowerCase().includes(q) ||
         (tenant.phone_number && tenant.phone_number.toLowerCase().includes(q));
 
-      // A tenant with no lease belongs to no property yet, so a property filter
-      // would hide them — including the one you just created. They always show.
+      // Scoped strictly to the chosen property: only residents holding a unit
+      // there. Tenants with no unit belong to no property, so they fall out —
+      // the banner below tells you they exist rather than letting them vanish.
       const matchesProperty =
         selectedPropertyId === "ALL" ||
-        tenant.tenant_leases.length === 0 ||
         tenant.tenant_leases.some((l) => l.unit.property_id === selectedPropertyId);
 
       const hasActiveLease = tenant.tenant_leases.length > 0;
@@ -72,11 +72,31 @@ export default function TenantsClient({
     });
   }, [initialTenants, searchQuery, selectedPropertyId, leaseFilter]);
 
-  // Aggregate KPIs
-  const totalTenants = initialTenants.length;
-  const activeLeaseholders = initialTenants.filter((t) => t.tenant_leases.length > 0).length;
+  // KPIs follow the property filter, so the figures match the list on screen
+  // rather than reporting the whole portfolio while a single property is shown.
+  const scopedTenants = useMemo(
+    () =>
+      selectedPropertyId === "ALL"
+        ? initialTenants
+        : initialTenants.filter((x) =>
+            x.tenant_leases.some((l) => l.unit.property_id === selectedPropertyId)
+          ),
+    [initialTenants, selectedPropertyId]
+  );
+
+  const totalTenants = scopedTenants.length;
+  const activeLeaseholders = scopedTenants.filter((x) => x.tenant_leases.length > 0).length;
   const unassignedTenants = totalTenants - activeLeaseholders;
-  const propertiesCovered = properties.length;
+  const propertiesCovered =
+    selectedPropertyId === "ALL"
+      ? new Set(
+          initialTenants.flatMap((x) => x.tenant_leases.map((l) => l.unit.property_id))
+        ).size
+      : 1;
+
+  // Residents with no unit at all — invisible while a property filter is on.
+  const withoutUnitCount = initialTenants.filter((x) => x.tenant_leases.length === 0).length;
+  const hiddenUnassignedCount = selectedPropertyId === "ALL" ? 0 : withoutUnitCount;
 
   return (
     <div className="space-y-6">
@@ -98,10 +118,10 @@ export default function TenantsClient({
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
           <div>
             <span className="text-xs font-medium text-on-surface-variant">
-              Renting now
+              With a unit
             </span>
             <div className="text-2xl font-bold text-white mt-1">{activeLeaseholders}</div>
-            <span className="text-[11px] text-emerald-400">have a unit</span>
+            <span className="text-[11px] text-emerald-400">in this property</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
             <span className="material-symbols-outlined text-[24px]">home_pin</span>
@@ -113,7 +133,7 @@ export default function TenantsClient({
             <span className="text-xs font-medium text-on-surface-variant">
               No unit yet
             </span>
-            <div className="text-2xl font-bold text-white mt-1">{unassignedTenants}</div>
+            <div className="text-2xl font-bold text-white mt-1">{withoutUnitCount}</div>
             <span className="text-[11px] text-on-surface-variant">needs a lease</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
@@ -127,7 +147,7 @@ export default function TenantsClient({
               Properties
             </span>
             <div className="text-2xl font-bold text-white mt-1">{propertiesCovered}</div>
-            <span className="text-[11px] text-on-surface-variant">they live across</span>
+            <span className="text-[11px] text-on-surface-variant">{selectedPropertyId === "ALL" ? "they live across" : "in view"}</span>
           </div>
           <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
             <span className="material-symbols-outlined text-[24px]">apartment</span>
@@ -171,7 +191,7 @@ export default function TenantsClient({
           <div className="flex items-center gap-1.5 shrink-0 bg-surface-container-high/60 p-1 rounded-xl border border-outline-variant/40">
             {[
               { id: "ALL", label: "All" },
-              { id: "LEASED", label: "Renting" },
+              { id: "LEASED", label: "Has unit" },
               { id: "UNASSIGNED", label: "No unit" },
             ].map((f) => (
               <button
@@ -200,11 +220,43 @@ export default function TenantsClient({
         </div>
       </div>
 
+      {/* A tenant with no unit belongs to no property, so a property filter hides
+          them — including one just created. Say so instead of losing them. */}
+      {hiddenUnassignedCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-outline-variant/60 bg-surface-container px-4 py-3">
+          <p className="text-xs text-on-surface-variant">
+            <span className="font-semibold text-white">
+              {hiddenUnassignedCount} tenant{hiddenUnassignedCount === 1 ? "" : "s"}
+            </span>{" "}
+            {hiddenUnassignedCount === 1 ? "has" : "have"} no unit yet, so{" "}
+            {hiddenUnassignedCount === 1 ? "it is" : "they are"} not shown while a property is
+            selected.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedPropertyId("ALL");
+              setLeaseFilter("UNASSIGNED");
+            }}
+            className="pressable shrink-0 rounded-lg border border-outline-variant/60 bg-surface-container-high px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:text-white"
+          >
+            Show them
+          </button>
+        </div>
+      )}
+
       {/* Tenants Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {filteredTenants.map((tenant) => {
           const hasLease = tenant.tenant_leases.length > 0;
           const leaseCount = tenant.tenant_leases.length;
+          // Show only the units that belong to the property being viewed.
+          const visibleLeases =
+            selectedPropertyId === "ALL"
+              ? tenant.tenant_leases
+              : tenant.tenant_leases.filter(
+                  (l) => l.unit.property_id === selectedPropertyId
+                );
 
           return (
             <div
@@ -230,7 +282,7 @@ export default function TenantsClient({
 
                   {hasLease ? (
                     <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold shrink-0">
-                      Renting
+                      Has unit
                     </span>
                   ) : (
                     <span className="px-2.5 py-1 rounded-full bg-surface-container-high border border-outline-variant/60 text-on-surface-variant text-[10px] font-medium shrink-0">
@@ -258,7 +310,7 @@ export default function TenantsClient({
                   </span>
                   {hasLease ? (
                     <div className="flex flex-wrap gap-1.5">
-                      {tenant.tenant_leases.map((l) => (
+                      {visibleLeases.map((l) => (
                         <Link
                           key={l.lease_id}
                           href={`/admin/leases?tenant=${tenant.user_id}`}
@@ -266,7 +318,11 @@ export default function TenantsClient({
                         >
                           <span className="material-symbols-outlined text-[13px] text-cyan-400">meeting_room</span>
                           <span>{l.unit.unit_number}</span>
-                          <span className="text-[10px] text-on-surface-variant">({l.unit.property.property_name})</span>
+                          {selectedPropertyId === "ALL" && (
+                            <span className="text-[10px] text-on-surface-variant">
+                              ({l.unit.property.property_name})
+                            </span>
+                          )}
                         </Link>
                       ))}
                     </div>
