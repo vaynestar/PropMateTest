@@ -259,7 +259,7 @@ export default function InvoiceBatchList({
 
                 {/* Quick Presets Chips */}
                 <div className="mb-4">
-                  <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider block mb-2">
+                  <label className="text-[11px] font-bold text-on-surface-variant block mb-2">
                     ⚡ Quick Range Shortcuts
                   </label>
                   <div className="flex flex-wrap gap-1.5">
@@ -289,7 +289,7 @@ export default function InvoiceBatchList({
                 {/* Custom From & To Pickers */}
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                    <label className="text-[11px] font-semibold text-on-surface-variant">
                       From Date
                     </label>
                     <input
@@ -303,7 +303,7 @@ export default function InvoiceBatchList({
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                    <label className="text-[11px] font-semibold text-on-surface-variant">
                       To Date
                     </label>
                     <input
@@ -344,7 +344,7 @@ export default function InvoiceBatchList({
             <button
               onClick={clearDateFilter}
               className="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1.5 rounded-lg"
-              title="Reset date filter to monthly batches"
+              title="Clear the date range and go back to monthly batches"
             >
               <span className="material-symbols-outlined text-[14px]">cancel</span>
               Clear Date Range
@@ -545,9 +545,11 @@ export default function InvoiceBatchList({
                                   type="button"
                                   onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Paid")}
                                   className="text-emerald-400 hover:text-emerald-300 p-1 rounded hover:bg-surface-container-highest transition-colors"
-                                  title="Mark Status as Paid"
+                                  title="Mark this invoice as paid"
+                                  aria-label="Mark this invoice as paid"
                                 >
                                   <span className="material-symbols-outlined text-[18px]">check_circle</span>
+                                  <span className="hidden lg:inline">Paid</span>
                                 </button>
                               )}
 
@@ -566,9 +568,11 @@ export default function InvoiceBatchList({
                                   type="button"
                                   onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Inactive")}
                                   className="text-rose-400 hover:text-rose-300 p-1 rounded hover:bg-surface-container-highest transition-colors"
-                                  title="Disable / Deactivate Invoice"
+                                  title="Void this invoice — it stops counting towards what is owed"
+                                  aria-label="Void this invoice"
                                 >
                                   <span className="material-symbols-outlined text-[18px]">block</span>
+                                  <span className="hidden lg:inline">Void</span>
                                 </button>
                               )}
                             </div>

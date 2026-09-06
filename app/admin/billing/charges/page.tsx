@@ -26,10 +26,10 @@ export default async function ChargesPage() {
         </Link>
         <div>
           <h1 className="font-headline-lg text-headline-lg text-on-surface">
-            Charge Masterfile
+            Charge types
           </h1>
           <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-            Manage standard recurring and one-off charges.
+            The things you can bill for — rent, maintenance, parking, deposits.
           </p>
         </div>
       </div>

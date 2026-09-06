@@ -16,9 +16,9 @@ export default function RecurringChargesClient({
   leases: any[];
   chargeMasters: any[];
   properties?: any[];
+  activePropertyName?: string | null;
 }) {
   const [search, setSearch] = useState("");
-  const [selectedProperty, setSelectedProperty] = useState("ALL");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedLease, setSelectedLease] = useState<any | null>(null);
   
@@ -31,7 +31,7 @@ export default function RecurringChargesClient({
     const matchesSearch =
       l.tenant.user_name.toLowerCase().includes(s) ||
       l.unit.unit_number.toLowerCase().includes(s);
-    const matchesProp = selectedProperty === "ALL" || l.unit.property_id === selectedProperty;
+    const matchesProp = true; // server already scoped to the active property
     return matchesSearch && matchesProp;
   });
 
@@ -112,28 +112,13 @@ export default function RecurringChargesClient({
           <Link href="/admin/billing" className="font-label-sm text-label-sm text-primary hover:text-primary-container transition-colors">
             ← Back to Billing
           </Link>
-          <h1 className="font-headline-lg text-headline-lg text-on-surface mt-2 tracking-tight">Recurring Lease Charges</h1>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-1">Manage standard and custom billing lines for active leases.</p>
+          <h1 className="font-headline-lg text-headline-lg text-on-surface mt-2 tracking-tight">Recurring charges</h1>
+          <p className="font-body-md text-body-md text-on-surface-variant mt-1">Rent and any extras billed to each tenant every month.</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           {/* Property Filter Dropdown */}
           <div className="relative min-w-[180px]">
-            <select
-              value={selectedProperty}
-              onChange={(e) => setSelectedProperty(e.target.value)}
-              className="w-full appearance-none bg-surface-container border border-outline-variant/60 rounded-lg py-2 pl-3 pr-8 text-sm text-on-surface font-semibold focus:border-primary outline-none cursor-pointer"
-            >
-              <option value="ALL">🏢 All Properties ({leases.length})</option>
-              {properties.map((p) => {
-                const count = leases.filter(l => l.unit.property_id === p.property_id).length;
-                return (
-                  <option key={p.property_id} value={p.property_id}>
-                    {p.property_name} ({count})
-                  </option>
-                );
-              })}
-            </select>
             <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[18px]">
               expand_more
             </span>
@@ -155,7 +140,7 @@ export default function RecurringChargesClient({
       <div className="grid grid-cols-12 gap-6 mb-2">
         <div className="col-span-12 md:col-span-6 glass-card rounded-xl p-6 flex flex-col justify-between border border-outline-variant/30">
           <div className="flex justify-between items-start mb-4">
-            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Total Monthly Recurring</span>
+            <span className="font-label-md text-label-md text-on-surface-variant">Billed each month</span>
             <span className="material-symbols-outlined text-primary/70">account_balance_wallet</span>
           </div>
           <div className="flex items-baseline gap-2">
@@ -165,7 +150,7 @@ export default function RecurringChargesClient({
         
         <div className="col-span-12 md:col-span-6 glass-card rounded-xl p-6 flex flex-col justify-between border border-outline-variant/30">
           <div className="flex justify-between items-start mb-4">
-            <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Active Leases</span>
+            <span className="font-label-md text-label-md text-on-surface-variant">Leases billed</span>
             <span className="material-symbols-outlined text-primary/70">description</span>
           </div>
           <div className="flex items-baseline gap-2">
@@ -176,18 +161,18 @@ export default function RecurringChargesClient({
 
       <div className="glass-card rounded-xl overflow-hidden flex flex-col border border-outline-variant/30">
         <div className="px-6 py-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
-          <h3 className="font-title-lg text-title-lg text-on-surface">Active Tenant Leases</h3>
+          <h3 className="font-title-lg text-title-lg text-on-surface">Active leases</h3>
         </div>
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
             <thead className="bg-surface-container-highest/30 border-b border-outline-variant/50 text-on-surface-variant">
               <tr>
-                <th className="px-6 py-3 font-label-md uppercase tracking-wider font-semibold">Tenant</th>
-                <th className="px-6 py-3 font-label-md uppercase tracking-wider font-semibold">Unit</th>
-                <th className="px-6 py-3 font-label-md uppercase tracking-wider font-semibold text-right">Base Rent</th>
-                <th className="px-6 py-3 font-label-md uppercase tracking-wider font-semibold text-center">Add. Charges</th>
-                <th className="px-6 py-3 font-label-md uppercase tracking-wider font-semibold text-right">Total Billed</th>
-                <th className="px-6 py-3 font-label-md uppercase tracking-wider font-semibold text-center">Actions</th>
+                <th className="px-6 py-3 font-label-md font-semibold">Tenant</th>
+                <th className="px-6 py-3 font-label-md font-semibold">Unit</th>
+                <th className="px-6 py-3 font-label-md font-semibold text-right">Base Rent</th>
+                <th className="px-6 py-3 font-label-md font-semibold text-center">Extras</th>
+                <th className="px-6 py-3 font-label-md font-semibold text-right">Monthly total</th>
+                <th className="px-6 py-3 font-label-md font-semibold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/30">
@@ -232,7 +217,7 @@ export default function RecurringChargesClient({
                         className="bg-primary/20 hover:bg-primary text-primary hover:text-on-primary border border-primary/40 px-3.5 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition-all shadow-sm"
                       >
                         <span className="material-symbols-outlined text-[16px]">edit_note</span>
-                        Edit Charges / Prices
+                        Edit charges
                       </button>
                     </td>
                   </tr>
@@ -280,7 +265,7 @@ export default function RecurringChargesClient({
                 <span className="material-symbols-outlined text-[18px]">edit</span>
                 <span>You can edit the <strong>Price (RM)</strong> and <strong>Quantity</strong> directly for each line item below.</span>
               </div>
-              <h4 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-3">Current Recurring Charges</h4>
+              <h4 className="font-label-md text-label-md text-on-surface-variant mb-3">Charged every month</h4>
               <div className="space-y-3">
                 {editingCharges.map(c => (
                   <div key={c.id} className="bg-surface-container rounded-lg border border-outline-variant/50 p-4 group relative">
@@ -299,7 +284,7 @@ export default function RecurringChargesClient({
                     </div>
                     <div className="flex gap-4">
                       <div className="w-1/3">
-                        <label className="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider font-semibold">Qty</label>
+                        <label className="block text-[10px] text-on-surface-variant mb-1 font-semibold">Qty</label>
                         <input 
                           type="number" 
                           min={1}
@@ -309,7 +294,7 @@ export default function RecurringChargesClient({
                         />
                       </div>
                       <div className="w-1/3">
-                        <label className="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider font-semibold">Price (RM)</label>
+                        <label className="block text-[10px] text-on-surface-variant mb-1 font-semibold">Price (RM)</label>
                         <div className="relative">
                           <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-xs font-bold">RM</span>
                           <input 
@@ -323,7 +308,7 @@ export default function RecurringChargesClient({
                         </div>
                       </div>
                       <div className="w-1/3 flex flex-col justify-end">
-                        <label className="block text-[10px] text-on-surface-variant mb-1 uppercase tracking-wider text-right font-semibold">Subtotal</label>
+                        <label className="block text-[10px] text-on-surface-variant mb-1 text-right font-semibold">Subtotal</label>
                         <div className="text-right font-bold text-on-surface py-1.5 text-sm">
                           {formatCurrency(c.amount * c.quantity)}
                         </div>
@@ -338,7 +323,7 @@ export default function RecurringChargesClient({
               </div>
 
               <div className="mt-8 border-t border-outline-variant/50 pt-6">
-                <h4 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider mb-3">Add New Line Item</h4>
+                <h4 className="font-label-md text-label-md text-on-surface-variant mb-3">Add a charge</h4>
                 <div className="flex gap-3 items-end">
                   <div className="flex-1 relative">
                     <select 
@@ -368,7 +353,7 @@ export default function RecurringChargesClient({
 
             <div className="p-6 border-t border-outline-variant/50 bg-surface-container/50 flex justify-between items-center">
               <div>
-                <div className="text-[11px] text-on-surface-variant uppercase tracking-wider">New Monthly Total</div>
+                <div className="text-[11px] text-on-surface-variant">New monthly total</div>
                 <div className="font-headline-md text-headline-md text-primary-fixed-dim">
                   {formatCurrency(editingCharges.reduce((acc, c) => acc + (c.amount * c.quantity), 0))}
                 </div>

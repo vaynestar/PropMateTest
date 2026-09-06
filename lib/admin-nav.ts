@@ -33,8 +33,8 @@ export const adminNav: NavItem[] = [
     icon: "payments",
     children: [
       { label: "Billing Overview", href: "/admin/billing" },
-      { label: "Billing Details", href: "/admin/invoices" },
-      { label: "Charge Masterfile", href: "/admin/billing/charges" },
+      { label: "Invoices", href: "/admin/invoices" },
+      { label: "Charge types", href: "/admin/billing/charges" },
       { label: "Recurring Charges", href: "/admin/billing/recurring-charges" },
     ],
   },

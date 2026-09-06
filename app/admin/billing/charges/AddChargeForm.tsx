@@ -34,7 +34,7 @@ export default function AddChargeForm() {
 
       <form action={formAction} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <label className="font-label-md text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
+          <label className="font-label-md text-on-surface-variant text-xs font-semibold">
             Charge Name <span className="text-rose-400">*</span>
           </label>
           <input
@@ -48,7 +48,7 @@ export default function AddChargeForm() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="font-label-md text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
+          <label className="font-label-md text-on-surface-variant text-xs font-semibold">
             Charge Type
           </label>
           <select
@@ -64,7 +64,7 @@ export default function AddChargeForm() {
 
         <div className="flex gap-4">
           <div className="flex flex-col gap-1 w-1/2">
-            <label className="font-label-md text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
+            <label className="font-label-md text-on-surface-variant text-xs font-semibold">
               Default Amt (RM)
             </label>
             <input
@@ -78,8 +78,8 @@ export default function AddChargeForm() {
             />
           </div>
           <div className="flex flex-col gap-1 w-1/2">
-            <label className="font-label-md text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
-              UOM
+            <label className="font-label-md text-on-surface-variant text-xs font-semibold">
+              Billed per
             </label>
             <input
               type="text"
@@ -94,7 +94,7 @@ export default function AddChargeForm() {
         </div>
 
         <div className="flex flex-col gap-1">
-          <label className="font-label-md text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
+          <label className="font-label-md text-on-surface-variant text-xs font-semibold">
             Description
           </label>
           <textarea

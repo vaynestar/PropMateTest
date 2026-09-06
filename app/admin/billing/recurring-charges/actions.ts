@@ -3,10 +3,15 @@ import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-export async function getRecurringChargesData() {
+export async function getRecurringChargesData(propertyId?: string | null) {
   await requireUser(["Admin"]);
+  // Scoped to the property chosen in the top bar. Without this the page listed
+  // every active lease in the portfolio while the header said one property.
   const leases = await prisma.tenantLease.findMany({
-    where: { status: "Active" },
+    where: {
+      status: "Active",
+      ...(propertyId ? { unit: { property_id: propertyId } } : {}),
+    },
     include: {
       tenant: true,
       unit: { include: { property: true } },

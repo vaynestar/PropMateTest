@@ -70,7 +70,7 @@ export default async function BillingPage() {
             Billing
           </h1>
           <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-            Generate monthly rental invoices from occupied units.
+            Raise this month’s invoices and see what has been collected.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -91,7 +91,7 @@ export default async function BillingPage() {
             <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
               settings
             </span>
-            Charge Masterfile
+            Charge types
           </Link>
           <GenerateInvoicesButton />
         </div>
@@ -116,7 +116,7 @@ export default async function BillingPage() {
         </div>
         <div className="glass-card rounded-xl p-5">
           <p className="font-label-sm text-label-sm text-on-surface-variant">
-            Paid / Total
+            Invoices paid
           </p>
           <p className="font-headline-md text-headline-md text-emerald-300 mt-1">
             {paidCount} / {invoices.length}
@@ -129,13 +129,13 @@ export default async function BillingPage() {
       <div className="glass-card rounded-xl p-0 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30">
           <h2 className="font-title-lg text-title-lg text-on-surface">
-            Invoice Batches Overview
+            Monthly batches
           </h2>
           <Link
             href="/admin/invoices"
             className="font-label-md text-label-md text-primary hover:text-primary-container transition-colors"
           >
-            View all details
+            View all
           </Link>
         </div>
 
@@ -195,7 +195,7 @@ export default async function BillingPage() {
                         href="/admin/invoices"
                         className="font-label-sm text-label-sm text-primary hover:underline"
                       >
-                        View Details →
+                        View
                       </Link>
                     </td>
                   </tr>

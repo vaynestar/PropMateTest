@@ -27,21 +27,21 @@ export default function ChargeTable({ charges }: { charges: any[] }) {
         <div className="px-6 py-4 border-b border-outline-variant/30 bg-surface-container-low flex items-center justify-between">
           <div>
             <h2 className="font-title-md text-title-md text-on-surface">
-              Existing Charges ({charges.length})
+              Charges ({charges.length})
             </h2>
             <p className="text-xs text-on-surface-variant">
-              Click status to quick toggle Active/Inactive, or edit to modify rates.
+              Click a status to switch a charge on or off. Inactive charges stop appearing on new invoices.
             </p>
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant text-xs uppercase tracking-wider">
+            <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant text-xs">
               <tr>
                 <th className="px-6 py-3 font-semibold">Name</th>
                 <th className="px-6 py-3 font-semibold">Type</th>
-                <th className="px-6 py-3 font-semibold">UOM</th>
+                <th className="px-6 py-3 font-semibold">Billed per</th>
                 <th className="px-6 py-3 font-semibold text-right">Default Amt</th>
                 <th className="px-6 py-3 font-semibold text-center">Status</th>
                 <th className="px-6 py-3 font-semibold text-right">Actions</th>

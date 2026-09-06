@@ -136,12 +136,12 @@ export default function EditInvoiceItemsModal({
 
           {/* Current Invoice Line Items Table */}
           <div>
-            <h4 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+            <h4 className="text-xs font-bold text-on-surface-variant mb-2">
               Current Line Items ({details.length})
             </h4>
             <div className="border border-outline-variant/40 rounded-xl overflow-hidden bg-surface-container-low">
               <table className="w-full text-left text-xs whitespace-nowrap">
-                <thead className="bg-surface-container/60 border-b border-outline-variant/40 text-on-surface-variant uppercase font-semibold">
+                <thead className="bg-surface-container/60 border-b border-outline-variant/40 text-on-surface-variant font-semibold">
                   <tr>
                     <th className="px-4 py-2.5">Item Description</th>
                     <th className="px-4 py-2.5 text-center">Qty</th>
@@ -220,7 +220,7 @@ export default function EditInvoiceItemsModal({
           {/* Add 1-by-1 Item Form */}
           {!isLocked && (
             <div className="border border-outline-variant/60 rounded-xl p-4 bg-surface-container-high/40">
-              <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <h4 className="text-xs font-bold text-on-surface mb-3 flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-primary text-[16px]">add_circle</span>
                 Add 1-by-1 Item To This Invoice
               </h4>
@@ -239,7 +239,7 @@ export default function EditInvoiceItemsModal({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                    <label className="text-[11px] font-semibold text-on-surface-variant">
                       Template Charge (Optional)
                     </label>
                     <select
@@ -258,7 +258,7 @@ export default function EditInvoiceItemsModal({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                    <label className="text-[11px] font-semibold text-on-surface-variant">
                       Item Description <span className="text-rose-400">*</span>
                     </label>
                     <input
@@ -276,7 +276,7 @@ export default function EditInvoiceItemsModal({
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 items-end">
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                    <label className="text-[11px] font-semibold text-on-surface-variant">
                       Unit Price (RM) <span className="text-rose-400">*</span>
                     </label>
                     <input
@@ -293,7 +293,7 @@ export default function EditInvoiceItemsModal({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-on-surface-variant uppercase">
+                    <label className="text-[11px] font-semibold text-on-surface-variant">
                       Quantity
                     </label>
                     <input

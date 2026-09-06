@@ -72,10 +72,10 @@ export default function BillingMonthlyBarChart({ invoices }: { invoices: any[] }
         <div>
           <h2 className="font-title-lg text-title-lg text-on-surface font-bold flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[22px]">bar_chart</span>
-            Monthly Billing Collection Analysis
+            Collected vs outstanding
           </h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Paid vs Unpaid distribution per billing cycle. Hover over bars for exact breakdowns.
+            Each month’s invoices, split by what has actually been paid.
           </p>
         </div>
 

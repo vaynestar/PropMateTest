@@ -52,7 +52,7 @@ export default function EditChargeModal({
           <input type="hidden" name="is_active" value={isActive ? "true" : "false"} />
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+            <label className="text-xs font-semibold text-on-surface-variant">
               Charge Name <span className="text-rose-400">*</span>
             </label>
             <input
@@ -66,7 +66,7 @@ export default function EditChargeModal({
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+            <label className="text-xs font-semibold text-on-surface-variant">
               Charge Type
             </label>
             <select
@@ -83,7 +83,7 @@ export default function EditChargeModal({
 
           <div className="flex gap-4">
             <div className="flex flex-col gap-1 w-1/2">
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+              <label className="text-xs font-semibold text-on-surface-variant">
                 Default Amt (RM)
               </label>
               <input
@@ -97,8 +97,8 @@ export default function EditChargeModal({
               />
             </div>
             <div className="flex flex-col gap-1 w-1/2">
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                UOM
+              <label className="text-xs font-semibold text-on-surface-variant">
+                Billed per
               </label>
               <input
                 type="text"
@@ -112,7 +112,7 @@ export default function EditChargeModal({
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+            <label className="text-xs font-semibold text-on-surface-variant">
               Description
             </label>
             <textarea
