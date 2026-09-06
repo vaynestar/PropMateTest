@@ -4,11 +4,6 @@ import { useState, useTransition, useMemo } from "react";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { updateBookingStatus } from "./actions";
 
-type PropertyItem = {
-  property_id: string;
-  property_name: string;
-};
-
 type FacilityItem = {
   facility_id: string;
   facility_name: string;
@@ -17,16 +12,12 @@ type FacilityItem = {
 
 type AdminBookingListProps = {
   bookings: any[];
-  properties?: PropertyItem[];
   facilities?: FacilityItem[];
-  defaultPropertyId?: string;
 };
 
 export default function AdminBookingList({
   bookings,
-  properties = [],
   facilities = [],
-  defaultPropertyId = "",
 }: AdminBookingListProps) {
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -36,11 +27,6 @@ export default function AdminBookingList({
 
   // Filter States
   const [search, setSearch] = useState("");
-  const [filterProperty, setFilterProperty] = useState(
-    defaultPropertyId && properties.some((p) => p.property_id === defaultPropertyId)
-      ? defaultPropertyId
-      : "ALL"
-  );
   const [filterFacility, setFilterFacility] = useState("ALL");
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
@@ -49,10 +35,8 @@ export default function AdminBookingList({
   const [pastDateFrom, setPastDateFrom] = useState("");
   const [pastDateTo, setPastDateTo] = useState("");
 
-  // Available facilities scoped to selected property
-  const availableFacilities = facilities.filter((f) =>
-    filterProperty === "ALL" || !filterProperty ? true : f.property_id === filterProperty
-  );
+  // The server already scopes to the active property.
+  const availableFacilities = facilities;
 
   const now = new Date();
 
@@ -86,19 +70,11 @@ export default function AdminBookingList({
     let propTotal = 0;
 
     bookings.forEach((b) => {
-      const matchesProperty =
-        filterProperty === "ALL" || !filterProperty
-          ? true
-          : b.facility?.property_id === filterProperty ||
-            b.lease?.unit?.property_id === filterProperty;
-
-      if (matchesProperty) {
-        propTotal++;
-        if (isBookingActive(b)) {
-          active.push(b);
-        } else {
-          past.push(b);
-        }
+      propTotal++;
+      if (isBookingActive(b)) {
+        active.push(b);
+      } else {
+        past.push(b);
       }
     });
 
@@ -107,7 +83,7 @@ export default function AdminBookingList({
       pastBookingsList: past,
       propertyScopedTotal: propTotal,
     };
-  }, [bookings, filterProperty]);
+  }, [bookings]);
 
   // Current tab source list
   const currentTabList = activeTab === "active" ? activeBookingsList : pastBookingsList;
@@ -209,66 +185,78 @@ export default function AdminBookingList({
     }).format(new Date(isoString));
   };
 
-  // Scoped KPIs (Aligned with Property Filter)
-  const activeCount = activeBookingsList.length;
-  const pendingCount = activeBookingsList.filter((b) => (b.booking_status || "").toLowerCase() === "pending").length;
-  const confirmedCount = activeBookingsList.filter((b) => (b.booking_status || "").toLowerCase() === "confirmed").length;
-  const pastCount = pastBookingsList.length;
+  /*
+   * The KPI row used to be four cards: Active, Pending approval, Confirmed
+   * active, Past archives. Active is Pending + Confirmed, so three of the four
+   * restated each other, and the tab strip immediately below already shows the
+   * active and past totals. None of them answered what an admin opens this page
+   * to find out: what needs approving, and what is happening today.
+   */
+  const pendingCount = activeBookingsList.filter(
+    (b) => (b.booking_status || "").toLowerCase() === "pending"
+  ).length;
 
-  const currentPropertyName =
-    filterProperty === "ALL"
-      ? "All Properties"
-      : properties.find((p) => p.property_id === filterProperty)?.property_name || "Active Property";
+  const isSameDay = (iso: string, day: Date) => {
+    const d = new Date(iso);
+    return (
+      d.getFullYear() === day.getFullYear() &&
+      d.getMonth() === day.getMonth() &&
+      d.getDate() === day.getDate()
+    );
+  };
+
+  const today = new Date();
+  const todayCount = activeBookingsList.filter((b) =>
+    isSameDay(b.booking_date, today)
+  ).length;
+
+  const weekAhead = new Date(today);
+  weekAhead.setDate(weekAhead.getDate() + 7);
+  const next7Count = activeBookingsList.filter((b) => {
+    const d = new Date(b.booking_date);
+    return d > today && d <= weekAhead;
+  }).length;
+
 
   return (
     <div className="space-y-6">
-      {/* 4 Top KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="glass-card rounded-xl p-3.5 flex items-center gap-3 border border-outline-variant/30">
-          <div className="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[22px]">bolt</span>
-          </div>
-          <div>
-            <span className="text-[11px] font-medium text-on-surface-variant block uppercase tracking-wider">
-              Active Bookings
-            </span>
-            <span className="text-xl font-bold text-emerald-400">{activeCount}</span>
-          </div>
-        </div>
-
-        <div className="glass-card rounded-xl p-3.5 flex items-center gap-3 border border-outline-variant/30">
-          <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+      {/* Three questions an admin actually has on this page. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div
+          className={`glass-card flex items-center gap-3 rounded-xl border p-3.5 ${
+            pendingCount > 0 ? "border-amber-500/40" : "border-outline-variant/30"
+          }`}
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400">
             <span className="material-symbols-outlined text-[22px]">hourglass_top</span>
           </div>
-          <div>
-            <span className="text-[11px] font-medium text-on-surface-variant block uppercase tracking-wider">
-              Pending Approval
+          <div className="min-w-0">
+            <span className="block text-[11px] font-medium text-on-surface-variant">
+              Waiting for approval
             </span>
             <span className="text-xl font-bold text-amber-400">{pendingCount}</span>
           </div>
         </div>
 
-        <div className="glass-card rounded-xl p-3.5 flex items-center gap-3 border border-outline-variant/30">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 text-primary flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[22px]">verified</span>
+        <div className="glass-card flex items-center gap-3 rounded-xl border border-outline-variant/30 p-3.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
+            <span className="material-symbols-outlined text-[22px]">today</span>
           </div>
-          <div>
-            <span className="text-[11px] font-medium text-on-surface-variant block uppercase tracking-wider">
-              Confirmed Active
-            </span>
-            <span className="text-xl font-bold text-on-surface">{confirmedCount}</span>
+          <div className="min-w-0">
+            <span className="block text-[11px] font-medium text-on-surface-variant">Today</span>
+            <span className="text-xl font-bold text-emerald-400">{todayCount}</span>
           </div>
         </div>
 
-        <div className="glass-card rounded-xl p-3.5 flex items-center gap-3 border border-outline-variant/30">
-          <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[22px]">history</span>
+        <div className="glass-card flex items-center gap-3 rounded-xl border border-outline-variant/30 p-3.5">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
+            <span className="material-symbols-outlined text-[22px]">date_range</span>
           </div>
-          <div>
-            <span className="text-[11px] font-medium text-on-surface-variant block uppercase tracking-wider">
-              Past Archives
+          <div className="min-w-0">
+            <span className="block text-[11px] font-medium text-on-surface-variant">
+              Next 7 days
             </span>
-            <span className="text-xl font-bold text-blue-300">{pastCount}</span>
+            <span className="text-xl font-bold text-on-surface">{next7Count}</span>
           </div>
         </div>
       </div>
@@ -289,7 +277,7 @@ export default function AdminBookingList({
             }`}
           >
             <span className="material-symbols-outlined text-[18px]">event_available</span>
-            <span>Active Bookings</span>
+            <span>Upcoming</span>
             <span
               className={`text-xs px-2 py-0.5 rounded-full font-mono font-bold ${
                 activeTab === "active"
@@ -314,7 +302,7 @@ export default function AdminBookingList({
             }`}
           >
             <span className="material-symbols-outlined text-[18px]">history</span>
-            <span>Past Bookings</span>
+            <span>Past</span>
             <span
               className={`text-xs px-2 py-0.5 rounded-full font-mono font-bold ${
                 activeTab === "past"
@@ -375,32 +363,10 @@ export default function AdminBookingList({
         </div>
 
         {/* Dropdowns Filter Row */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 pt-2 border-t border-outline-variant/20">
+        <div className="grid grid-cols-1 gap-2 border-t border-outline-variant/20 pt-2 md:grid-cols-2">
           {/* Property Filter */}
           <div className="space-y-1">
-            <label className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider block">
-              Property
-            </label>
-            <select
-              value={filterProperty}
-              onChange={(e) => {
-                setFilterProperty(e.target.value);
-                setFilterFacility("ALL");
-              }}
-              className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container-high border border-outline-variant text-xs text-on-surface focus:border-primary outline-none font-medium"
-            >
-              <option value="ALL">📋 All Properties</option>
-              {properties.map((p) => (
-                <option key={p.property_id} value={p.property_id}>
-                  🏢 {p.property_name} {p.property_id === defaultPropertyId ? " (Active)" : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Facility Filter */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider block">
+            <label className="block text-[11px] font-medium text-on-surface-variant">
               Facility
             </label>
             <select
@@ -408,7 +374,7 @@ export default function AdminBookingList({
               onChange={(e) => setFilterFacility(e.target.value)}
               className="w-full px-2.5 py-1.5 rounded-lg bg-surface-container-high border border-outline-variant text-xs text-on-surface focus:border-primary outline-none"
             >
-              <option value="ALL">🏊 All Facilities</option>
+              <option value="ALL">All facilities</option>
               {availableFacilities.map((f) => (
                 <option key={f.facility_id} value={f.facility_id}>
                   {f.facility_name}
@@ -419,7 +385,7 @@ export default function AdminBookingList({
 
           {/* Status Filter */}
           <div className="space-y-1">
-            <label className="text-[10px] font-medium text-on-surface-variant uppercase tracking-wider block">
+            <label className="block text-[11px] font-medium text-on-surface-variant">
               Status
             </label>
             <select
@@ -514,8 +480,7 @@ export default function AdminBookingList({
       <div className="flex items-center justify-between px-1">
         <span className="text-xs text-on-surface-variant">
           Showing <span className="font-semibold text-on-surface">{filteredBookings.length}</span> of {currentTabList.length}{" "}
-          {activeTab === "active" ? "active" : "past"} bookings{" "}
-          <span className="text-on-surface-variant/70 font-mono">({currentPropertyName})</span>
+          {activeTab === "active" ? "upcoming" : "past"} bookings in this property
         </span>
         {(search || filterFacility !== "ALL" || filterStatus !== "ALL" || pastDateFrom || pastDateTo) && (
           <button
@@ -541,10 +506,18 @@ export default function AdminBookingList({
           <span className="material-symbols-outlined text-4xl text-on-surface-variant/60 mb-2 block">
             {activeTab === "active" ? "event_available" : "history"}
           </span>
-          <p className="font-medium text-sm text-on-surface">
-            No {activeTab === "active" ? "active" : "past"} bookings found matching your filters.
+          <p className="text-sm font-medium text-on-surface">
+            {activeTab === "active"
+              ? "Nothing booked from today onwards"
+              : "No past bookings match these filters"}
           </p>
-          <p className="text-xs text-on-surface-variant mt-1">Try selecting a different property, facility, or date range.</p>
+          <p className="mt-1 text-xs text-on-surface-variant">
+            {activeTab === "active"
+              ? pastBookingsList.length > 0
+                ? `Every booking for this property has already been and gone — ${pastBookingsList.length} of them are under Past.`
+                : "Use New Booking above to reserve a facility for a resident."
+              : "Try a different property, facility or status."}
+          </p>
         </div>
       )}
 
@@ -581,7 +554,7 @@ export default function AdminBookingList({
                       {b.facility?.facility_name}
                     </h3>
                     <p className="text-xs text-on-surface-variant mt-0.5 truncate">
-                      🏢 {b.facility?.property?.property_name || b.lease?.unit?.property?.property_name || "Testing"}
+                      {b.facility?.property?.property_name || b.lease?.unit?.property?.property_name || "Testing"}
                     </p>
                   </div>
 
@@ -613,7 +586,7 @@ export default function AdminBookingList({
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-1.5">
                         <span className="material-symbols-outlined text-[15px] text-primary">schedule</span>
-                        <span>Time Slot</span>
+                        <span>Time</span>
                       </div>
                       <span className="font-semibold text-on-surface font-mono">
                         {formatTime(b.start_time)} – {formatTime(b.end_time)}
@@ -624,7 +597,7 @@ export default function AdminBookingList({
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-1.5">
                           <span className="material-symbols-outlined text-[15px] text-on-surface-variant">group</span>
-                          <span>Pax Count</span>
+                          <span>People</span>
                         </div>
                         <span className="font-medium text-on-surface">{b.pax_count} pax</span>
                       </div>
@@ -678,7 +651,7 @@ export default function AdminBookingList({
                 {/* Past Bookings Footer Notice */}
                 {activeTab === "past" && (
                   <div className="mt-4 pt-3 border-t border-outline-variant/20 text-center text-on-surface-variant text-[11px]">
-                    {isCompleted && <span className="text-blue-300/80">✨ Session completed</span>}
+                    {isCompleted && <span className="text-on-surface-variant">Took place as booked</span>}
                     {isCancelled && <span className="text-rose-300/80">🚫 Booking cancelled</span>}
                   </div>
                 )}

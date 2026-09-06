@@ -61,7 +61,7 @@ export default function BookingResultModal({
         {/* Modal Title */}
         <div className="space-y-1">
           <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold">
-            {title || (isSuccess ? "Booking Confirmed!" : "Booking Could Not Be Completed")}
+            {title || (isSuccess ? "Booking confirmed" : "Could not book that slot")}
           </h3>
           <p className="text-xs text-on-surface-variant max-w-xs mx-auto">
             {message}
@@ -106,7 +106,7 @@ export default function BookingResultModal({
               : "bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-600 hover:text-white"
           }`}
         >
-          {isSuccess ? "Awesome! Got It" : "Close & Try Again"}
+          {isSuccess ? "Done" : "Back"}
         </button>
       </div>
     </div>

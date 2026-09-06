@@ -264,7 +264,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
         setModalConfig({
           isOpen: true,
           type: "success",
-          title: "Facility Booking Confirmed!",
+          title: "Booking confirmed",
           message: "The facility has been successfully booked on behalf of the resident.",
           facilityName: facility.facility_name,
           date,
@@ -306,7 +306,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
       <form onSubmit={handleSubmit} className="space-y-4 pt-2">
         
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Tenant / Unit</span>
+          <span className="text-xs font-semibold text-on-surface-variant">Tenant / Unit</span>
           <select
             value={leaseId}
             onChange={(e) => setLeaseId(e.target.value)}
@@ -329,7 +329,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">
           <div className="flex flex-col gap-2 border border-[#4a4455] rounded-lg p-3 md:p-4 bg-[#0c1324] min-w-0">
-            <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+            <span className="text-xs font-semibold text-on-surface-variant">
               Start time
             </span>
             <div className="flex flex-wrap sm:flex-nowrap gap-2">
@@ -376,7 +376,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
           </div>
           
           <div className="flex flex-col gap-2 border border-[#4a4455] rounded-lg p-3 md:p-4 bg-[#0c1324] min-w-0">
-            <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+            <span className="text-xs font-semibold text-on-surface-variant">
               End time
             </span>
             <div className="flex flex-wrap sm:flex-nowrap gap-2">
@@ -413,7 +413,7 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
 
         {/* Timeline Visualization */}
         <div className="pt-2 min-w-0 w-full max-w-full">
-          <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Availability Timeline</p>
+          <p className="text-xs font-semibold text-on-surface-variant mb-2">Who else has this facility that day</p>
           <BookingTimeline 
             dayStart={DAY_START} 
             dayEnd={DAY_END} 

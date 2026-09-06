@@ -208,8 +208,8 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
       setModalConfig({
         isOpen: true,
         type: "success",
-        title: "Facility Reserved Successfully!",
-        message: state.message || "Your booking has been recorded. Enjoy your time!",
+        title: "Slot reserved",
+        message: state.message || "Your slot is reserved. It is under My Bookings.",
         facilityName: facility.facility_name,
         date,
         startTime: fmt(start),
@@ -332,7 +332,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">
         <div className="flex flex-col gap-2 border border-outline-variant/30 rounded-lg p-3 md:p-4 bg-surface-container/50 min-w-0">
-          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+          <span className="text-xs font-semibold text-on-surface-variant">
             Start time
           </span>
           <div className="flex flex-wrap sm:flex-nowrap gap-2">
@@ -379,7 +379,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
         </div>
         
         <div className="flex flex-col gap-2 border border-outline-variant/30 rounded-lg p-3 md:p-4 bg-surface-container/50 min-w-0">
-          <span className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+          <span className="text-xs font-semibold text-on-surface-variant">
             End time
           </span>
           <div className="flex flex-wrap sm:flex-nowrap gap-2">
@@ -416,7 +416,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
 
       {/* Timeline Visualization */}
       <div className="pt-2 min-w-0 w-full max-w-full">
-        <p className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2">Availability Timeline</p>
+        <p className="text-xs font-semibold text-on-surface-variant mb-2">Availability Timeline</p>
         <BookingTimeline 
           dayStart={DAY_START} 
           dayEnd={DAY_END} 

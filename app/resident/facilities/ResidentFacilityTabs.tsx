@@ -94,8 +94,8 @@ export default function ResidentFacilityTabs({
           {facilities.length === 0 ? (
             <div className="glass-card rounded-2xl p-8 text-center text-on-surface-variant space-y-2">
               <span className="material-symbols-outlined text-[48px] text-on-surface-variant/40">meeting_room</span>
-              <p className="font-body-lg text-body-lg font-semibold">No Bookable Facilities Available</p>
-              <p className="text-xs">There are no facilities available for booking at this moment.</p>
+              <p className="font-body-lg text-body-lg font-semibold">Nothing to book yet</p>
+              <p className="text-xs">Your building manager has not opened any facilities for booking.</p>
             </div>
           ) : (
             <FacilityBooking facilities={facilities} bookings={myBookings} />
@@ -109,10 +109,10 @@ export default function ResidentFacilityTabs({
           <div className="flex items-center justify-between">
             <h2 className="font-title-lg text-title-lg text-on-surface font-bold flex items-center gap-2">
               <span className="material-symbols-outlined text-primary text-[22px]">calendar_month</span>
-              My Bookings & Reservations
+              My bookings
             </h2>
             <span className="text-xs text-on-surface-variant bg-surface-container-high px-3 py-1 rounded-full font-medium">
-              Total {myBookings.length} bookings
+              {myBookings.length} in total
             </span>
           </div>
 

@@ -14,8 +14,13 @@ export default async function FacilitiesPage() {
   let allProperties: any[] = [];
 
   try {
+    // Scoped to the property chosen in the top bar. listFacilities() already
+    // took a propertyId; it simply was not being passed, so the header said
+    // "Testing" while the page listed all 17 facilities across all four
+    // properties and offered its own picker. Same fault DEV-137 found in
+    // recurring charges; DEV-129's sweep missed this module.
     const [facs, props] = await Promise.all([
-      listFacilities(),
+      listFacilities(propertyId ?? undefined),
       listProperties(),
     ]);
     facilities = facs || [];
@@ -40,7 +45,8 @@ export default async function FacilitiesPage() {
           Facilities
         </h1>
         <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-          Manage shared facilities, maintenance schedules, and resident booking rules.
+          Shared spaces in this property, when residents may book them, and what is
+          currently closed for maintenance.
         </p>
       </div>
 

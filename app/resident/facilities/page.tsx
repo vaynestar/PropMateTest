@@ -47,10 +47,10 @@ export default async function ResidentFacilitiesPage() {
     <div className="space-y-6">
       <section className="flex flex-col gap-1 w-full min-w-0">
         <h1 className="font-headline-lg-mobile md:font-headline-lg text-on-surface mb-1">
-          Reserve Facilities
+          Book a facility
         </h1>
         <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
-          Pick a facility, choose your preferred date & slot, and reserve it instantly.
+          Shared facilities in your building. Pick a date and time, and the slot is yours.
         </p>
       </section>
 

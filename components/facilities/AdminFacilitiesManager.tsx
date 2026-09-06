@@ -10,41 +10,27 @@ import {
   toggleMaintenanceAction,
 } from "@/app/admin/facilities/actions";
 
-const TYPE_ACCENT: Record<string, string> = {
-  "Swimming Pool": "bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]",
-  Gym: "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]",
-  "Function Hall": "bg-primary shadow-[0_0_10px_rgba(208,188,255,0.5)]",
-  "Badminton Court": "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]",
-  "BBQ Area": "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]",
-  "Multi-purpose Hall": "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]",
-  Other: "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]",
-};
+/*
+ * The accent rail used to be a colour hashed from the facility TYPE (DEV-86),
+ * with a glow shadow - decoration carrying no information, on a page where the
+ * question is which facilities are open. It could also land on violet, the
+ * brand primary reserved for actions. The rail now carries status, matching
+ * how the Units module uses it.
+ */
 
-const DYNAMIC_PALETTE = [
-  "bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]",
-  "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]",
-  "bg-primary shadow-[0_0_10px_rgba(208,188,255,0.5)]",
-  "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]",
-  "bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.5)]",
-  "bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]",
-  "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]",
-  "bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]",
-  "bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.5)]",
-  "bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]",
-  "bg-lime-500 shadow-[0_0_10px_rgba(132,204,22,0.5)]",
-];
-
-function getFacilityAccentColor(type: string = ""): string {
-  const trimmed = type.trim();
-  if (TYPE_ACCENT[trimmed]) return TYPE_ACCENT[trimmed];
-  if (!trimmed) return TYPE_ACCENT.Other;
-
-  let hash = 0;
-  for (let i = 0; i < trimmed.length; i++) {
-    hash = trimmed.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % DYNAMIC_PALETTE.length;
-  return DYNAMIC_PALETTE[index];
+/**
+ * "Mon Tue Wed Thu Fri Sat Sun" is 27 characters against a label on a card
+ * four to a row - it wrapped under "Days" and collided with it. A consecutive
+ * run collapses to a range, and the full week says so in two words.
+ */
+function formatOpenDays(days: string[]): string {
+  const nums = days.map(Number).filter((n) => n >= 1 && n <= 7).sort((a, b) => a - b);
+  if (nums.length === 0) return "—";
+  if (nums.length === 7) return "Every day";
+  const label = (n: number) => WEEKDAYS.find((w) => w.value === n)?.label ?? "";
+  const isRun = nums.every((n, i) => i === 0 || n === nums[i - 1] + 1);
+  if (isRun && nums.length > 2) return label(nums[0]) + "–" + label(nums[nums.length - 1]);
+  return nums.map(label).join(" ");
 }
 
 const WEEKDAYS: { value: number; label: string }[] = [
@@ -94,7 +80,6 @@ export default function AdminFacilitiesManager({
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState("");
-  const [propertyFilter, setPropertyFilter] = useState("ALL");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [bookableFilter, setBookableFilter] = useState("ALL");
@@ -209,11 +194,6 @@ export default function AdminFacilitiesManager({
         if (!matchName && !matchType && !matchProp) return false;
       }
 
-      // 2. Property Filter
-      if (propertyFilter !== "ALL" && f.property_id !== propertyFilter) {
-        return false;
-      }
-
       // 3. Facility Type Filter
       if (typeFilter !== "ALL" && f.facility_type !== typeFilter) {
         return false;
@@ -271,11 +251,10 @@ export default function AdminFacilitiesManager({
 
       return true;
     });
-  }, [facilities, searchQuery, propertyFilter, typeFilter, statusFilter, bookableFilter, dateFilterShortcut, customStartDate, customEndDate]);
+  }, [facilities, searchQuery, typeFilter, statusFilter, bookableFilter, dateFilterShortcut, customStartDate, customEndDate]);
 
   const isFilterActive =
     searchQuery.trim() !== "" ||
-    propertyFilter !== "ALL" ||
     typeFilter !== "ALL" ||
     statusFilter !== "ALL" ||
     bookableFilter !== "ALL" ||
@@ -283,7 +262,6 @@ export default function AdminFacilitiesManager({
 
   const resetFilters = () => {
     setSearchQuery("");
-    setPropertyFilter("ALL");
     setTypeFilter("ALL");
     setStatusFilter("ALL");
     setBookableFilter("ALL");
@@ -295,15 +273,15 @@ export default function AdminFacilitiesManager({
   const getDateFilterLabel = () => {
     switch (dateFilterShortcut) {
       case "30":
-        return "⚡ Next 30 Days";
+        return "Next 30 days";
       case "60":
-        return "⚡ Next 60 Days";
+        return "Next 60 days";
       case "90":
-        return "⚡ Next 90 Days";
+        return "Next 90 days";
       case "CUSTOM":
         return customStartDate || customEndDate
-          ? `📅 ${customStartDate || "Start"} to ${customEndDate || "End"}`
-          : "📅 Custom Range";
+          ? `${customStartDate || "Start"} to ${customEndDate || "End"}`
+          : "Custom range";
       default:
         return "Maintenance Date: All";
     }
@@ -362,14 +340,14 @@ export default function AdminFacilitiesManager({
             >
               {allProperties.map((p) => (
                 <option key={p.property_id} value={p.property_id}>
-                  🏢 {p.property_name}
+                  {p.property_name}
                 </option>
               ))}
             </select>
           )}
 
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-on-surface-variant uppercase">
+            <label className="text-[11px] font-bold text-on-surface-variant">
               Facility Name <span className="text-rose-400">*</span>
             </label>
             <input
@@ -381,7 +359,7 @@ export default function AdminFacilitiesManager({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-on-surface-variant uppercase">
+            <label className="text-[11px] font-bold text-on-surface-variant">
               Facility Type (Type or Select) <span className="text-rose-400">*</span>
             </label>
             <FacilityTypeCombobox
@@ -393,20 +371,20 @@ export default function AdminFacilitiesManager({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-on-surface-variant uppercase">
-              Max Capacity (Optional / Leave blank for Unlimited)
+            <label className="text-[11px] font-bold text-on-surface-variant">
+              Capacity <span className="font-normal text-on-surface-variant">— leave blank for no limit</span>
             </label>
             <input
               name="max_capacity"
               type="number"
               min="1"
-              placeholder="Unlimited (Optional)"
+              placeholder="e.g. 20 pax"
               className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary text-sm"
             />
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-on-surface-variant uppercase">
+            <label className="text-[11px] font-bold text-on-surface-variant">
               Max Booking Hours (Optional)
             </label>
             <input
@@ -433,7 +411,7 @@ export default function AdminFacilitiesManager({
             </label>
 
             <div className="space-y-1">
-              <label className="text-[11px] font-bold text-on-surface-variant uppercase block">
+              <label className="text-[11px] font-bold text-on-surface-variant block">
                 Next Maintenance Date (Optional)
               </label>
               <input
@@ -523,7 +501,7 @@ export default function AdminFacilitiesManager({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h3 className="font-title-md text-title-md text-on-surface font-bold flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[20px]">filter_list</span>
-            Facility Filters & Maintenance Schedule
+            Filters
           </h3>
 
           {isFilterActive && (
@@ -533,12 +511,12 @@ export default function AdminFacilitiesManager({
               className="text-xs text-rose-300 hover:text-rose-200 flex items-center gap-1 font-semibold transition-colors"
             >
               <span className="material-symbols-outlined text-[16px]">restart_alt</span>
-              Reset Filters
+              Clear filters
             </button>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {/* Keyword Search */}
           <div className="relative">
             <span className="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant text-[18px]">
@@ -553,27 +531,13 @@ export default function AdminFacilitiesManager({
             />
           </div>
 
-          {/* Property Filter */}
-          <select
-            value={propertyFilter}
-            onChange={(e) => setPropertyFilter(e.target.value)}
-            className="w-full rounded-xl bg-surface-container-high border border-outline-variant px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
-          >
-            <option value="ALL">🏢 All Properties</option>
-            {allProperties.map((p) => (
-              <option key={p.property_id} value={p.property_id}>
-                {p.property_name}
-              </option>
-            ))}
-          </select>
-
           {/* Type Filter */}
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             className="w-full rounded-xl bg-surface-container-high border border-outline-variant px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
           >
-            <option value="ALL">🏷️ All Types</option>
+            <option value="ALL">All types</option>
             {existingTypes.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -587,9 +551,9 @@ export default function AdminFacilitiesManager({
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full rounded-xl bg-surface-container-high border border-outline-variant px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
           >
-            <option value="ALL">📌 All Statuses</option>
-            <option value="AVAILABLE">✅ Available Only</option>
-            <option value="MAINTENANCE">🛠️ Under Maintenance Only</option>
+            <option value="ALL">Open and closed</option>
+            <option value="AVAILABLE">Open only</option>
+            <option value="MAINTENANCE">Closed for maintenance</option>
           </select>
 
           {/* Bookable Rule Filter */}
@@ -598,17 +562,17 @@ export default function AdminFacilitiesManager({
             onChange={(e) => setBookableFilter(e.target.value)}
             className="w-full rounded-xl bg-surface-container-high border border-outline-variant px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
           >
-            <option value="ALL">📋 All Booking Rules</option>
-            <option value="BOOKABLE">📅 Bookable Facilities</option>
-            <option value="NON_BOOKABLE">🔒 Non-Bookable (Lifts, Corridors)</option>
+            <option value="ALL">Bookable and not</option>
+            <option value="BOOKABLE">Residents can book</option>
+            <option value="NON_BOOKABLE">Not bookable (lifts, corridors)</option>
           </select>
         </div>
 
-        {/* ⚡ Next Maintenance Date Range Filter (Pop-over picker) */}
+        {/* Next-maintenance-due range filter */}
         <div ref={popoverRef} className="relative border-t border-outline-variant/30 pt-3 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs text-on-surface-variant font-medium">
-              Maintenance Date Filter:
+              Next maintenance due:
             </span>
             <button
               type="button"
@@ -629,16 +593,16 @@ export default function AdminFacilitiesManager({
 
           {/* Active Results Counter */}
           <div className="text-xs text-on-surface-variant">
-            Showing <strong className="text-primary font-bold">{filteredFacilities.length}</strong> of {facilities.length} facilities
+            Showing <strong className="text-primary font-bold">{filteredFacilities.length}</strong> of {facilities.length} facilities in this property
           </div>
 
           {/* Date Filter Popover Panel */}
           {isDatePopoverOpen && (
             <div className="absolute left-0 top-full mt-2 w-80 rounded-2xl bg-surface-container-high border border-outline-variant/80 shadow-2xl z-[120] p-4 space-y-4 backdrop-blur-md">
               <div className="flex items-center justify-between border-b border-outline-variant/30 pb-2">
-                <h4 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+                <h4 className="flex items-center gap-1.5 text-xs font-bold text-on-surface">
                   <span className="material-symbols-outlined text-amber-400 text-[18px]">build</span>
-                  Next Maintenance Date
+                  Next maintenance due
                 </h4>
                 <button
                   type="button"
@@ -651,13 +615,13 @@ export default function AdminFacilitiesManager({
 
               {/* Quick Shortcuts */}
               <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-on-surface-variant uppercase">Quick Range Shortcuts</span>
+                <span className="text-[11px] font-bold text-on-surface-variant">Quick ranges</span>
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
                     { id: "ALL", label: "All Dates" },
-                    { id: "30", label: "⚡ Next 30 Days" },
-                    { id: "60", label: "⚡ Next 60 Days" },
-                    { id: "90", label: "⚡ Next 90 Days" },
+                    { id: "30", label: "Next 30 days" },
+                    { id: "60", label: "Next 60 days" },
+                    { id: "90", label: "Next 90 days" },
                   ].map((s) => (
                     <button
                       key={s.id}
@@ -689,13 +653,13 @@ export default function AdminFacilitiesManager({
                       : "bg-surface-container-highest text-on-surface hover:bg-primary/20"
                   }`}
                 >
-                  📅 Custom Period
+                  Custom period
                 </button>
 
                 {dateFilterShortcut === "CUSTOM" && (
                   <div className="space-y-2 pt-1">
                     <div className="space-y-1">
-                      <span className="text-[10px] text-on-surface-variant uppercase">Start Date</span>
+                      <span className="text-[10px] text-on-surface-variant">Start Date</span>
                       <input
                         type="date"
                         value={customStartDate}
@@ -704,7 +668,7 @@ export default function AdminFacilitiesManager({
                       />
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] text-on-surface-variant uppercase">End Date</span>
+                      <span className="text-[10px] text-on-surface-variant">End Date</span>
                       <input
                         type="date"
                         value={customEndDate}
@@ -754,14 +718,20 @@ export default function AdminFacilitiesManager({
               }`}
             >
               <div
-                className={`absolute top-0 left-0 w-1 h-full ${getFacilityAccentColor(f.facility_type)}`}
+                className={`absolute left-0 top-0 h-full w-1 ${
+                  isMaintenance
+                    ? "bg-amber-500"
+                    : f.is_bookable
+                    ? "bg-emerald-500"
+                    : "bg-outline-variant"
+                }`}
               />
 
               {/* Maintenance Banner */}
               {isMaintenance && (
-                <div className="mb-3 px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[16px]">engineering</span>
-                  <span>UNDER MAINTENANCE</span>
+                <div className="mb-3 flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-300">
+                  <span className="material-symbols-outlined text-[16px] leading-none">engineering</span>
+                  <span>Closed for maintenance</span>
                 </div>
               )}
 
@@ -775,70 +745,84 @@ export default function AdminFacilitiesManager({
                       ? "text-amber-400"
                       : f.is_bookable
                       ? "text-emerald-400"
-                      : "text-rose-400"
+                      : "text-on-surface-variant"
                   }`}
-                  title={isMaintenance ? "Under Maintenance" : f.is_bookable ? "Bookable" : "Locked"}
+                  title={
+                    isMaintenance
+                      ? "Closed for maintenance"
+                      : f.is_bookable
+                      ? "Residents can book this"
+                      : "Not bookable - shared space, listed for maintenance tracking"
+                  }
                 >
                   {isMaintenance ? "engineering" : f.is_bookable ? "event_available" : "lock"}
                 </span>
               </div>
 
               <div className="space-y-2.5 mb-6 flex-1 text-xs">
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between gap-3">
                   <span className="text-on-surface-variant">Property</span>
                   <span className="font-semibold text-on-surface">{propertyName}</span>
                 </div>
 
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between gap-3">
                   <span className="text-on-surface-variant">Type</span>
                   <span className="font-semibold text-primary">{f.facility_type || "General"}</span>
                 </div>
 
-                <div className="flex justify-between items-center">
-                  <span className="text-on-surface-variant">Max Capacity</span>
-                  <span className="font-semibold text-on-surface">
-                    {f.max_capacity ? `${f.max_capacity} pax` : "Unlimited"}
-                  </span>
-                </div>
+                {f.is_bookable ? (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-on-surface-variant">Capacity</span>
+                      <span className="font-semibold text-on-surface">
+                        {f.max_capacity ? `${f.max_capacity} pax` : "No limit"}
+                      </span>
+                    </div>
 
-                <div className="flex justify-between items-center">
-                  <span className="text-on-surface-variant">Max Booking</span>
-                  <span className="font-semibold text-on-surface">
-                    {f.max_booking_hours ? `${f.max_booking_hours} hrs` : "Unlimited"}
-                  </span>
-                </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-on-surface-variant">Longest booking</span>
+                      <span className="font-semibold text-on-surface">
+                        {f.max_booking_hours ? `${f.max_booking_hours} hrs` : "No limit"}
+                      </span>
+                    </div>
 
-                <div className="flex justify-between items-center">
-                  <span className="text-on-surface-variant">Operating Hours</span>
-                  <span className="font-semibold text-on-surface">
-                    {f.open_time || "08:00"}–{f.close_time || "22:00"}
-                  </span>
-                </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-on-surface-variant">Open</span>
+                      <span className="font-semibold text-on-surface">
+                        {f.open_time || "08:00"}–{f.close_time || "22:00"}
+                      </span>
+                    </div>
 
-                <div className="flex justify-between items-center">
-                  <span className="text-on-surface-variant">Open Days</span>
-                  <span className="font-semibold text-on-surface">
-                    {opDaysList
-                      .map((d: string) => WEEKDAYS.find((w) => String(w.value) === d)?.label)
-                      .filter(Boolean)
-                      .join(" ")}
-                  </span>
-                </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-on-surface-variant">Days</span>
+                      <span className="text-right font-semibold text-on-surface">
+                        {formatOpenDays(opDaysList)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-outline-variant/40 bg-surface-container-high/40 px-3 py-2 text-[11px] text-on-surface-variant">
+                    Residents cannot book this. It is listed so its maintenance can be
+                    scheduled and tracked.
+                  </div>
+                )}
 
                 {f.next_maintenance_date && (
                   <div className="flex justify-between items-center pt-2 border-t border-outline-variant/30 text-amber-300">
                     <span className="flex items-center gap-1 font-semibold">
                       <span className="material-symbols-outlined text-[14px]">build</span>
-                      Next Maint:
+                      Next maintenance
                     </span>
                     <span className="font-mono font-bold">{formatDate(f.next_maintenance_date)}</span>
                   </div>
                 )}
 
-                <div className="flex justify-between items-center">
-                  <span className="text-on-surface-variant">Total Bookings</span>
-                  <span className="font-semibold text-on-surface">{totalBookingsCount}</span>
-                </div>
+                {f.is_bookable && (
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-on-surface-variant">Bookings so far</span>
+                    <span className="font-semibold text-on-surface">{totalBookingsCount}</span>
+                  </div>
+                )}
               </div>
 
               {/* Maintenance Toggle Button */}
@@ -846,6 +830,13 @@ export default function AdminFacilitiesManager({
                 type="button"
                 onClick={() => handleToggleMaintenance(f.facility_id, f.facility_status || "Available")}
                 disabled={isPending || isUpdatingThis || isDeletingThis}
+                title={
+                  isMaintenance
+                    ? "Put this facility back in service so residents can book it again."
+                    : f.is_bookable
+                    ? "Residents will not be able to book this until you reopen it."
+                    : "Mark this space as closed while work is carried out."
+                }
                 className={`w-full mb-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all pressable border disabled:opacity-50 ${
                   isMaintenance
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30"
@@ -857,17 +848,17 @@ export default function AdminFacilitiesManager({
                 </span>
                 <span>
                   {isUpdatingThis
-                    ? "Updating Status..."
+                    ? "Saving…"
                     : isMaintenance
-                    ? "Set Status: Available"
-                    : "Set Status: Under Maintenance"}
+                    ? "Reopen"
+                    : "Close for maintenance"}
                 </span>
               </button>
 
               {/* Edit Details Accordion */}
               <details className="mb-3 rounded-lg border border-outline-variant/40 px-3 py-2 text-xs">
                 <summary className="cursor-pointer font-semibold text-primary hover:underline">
-                  Edit facility details
+                  Edit details
                 </summary>
                 <form onSubmit={handleEditSubmit} className="grid gap-3 mt-3">
                   <input type="hidden" name="facility_id" value={f.facility_id} />
@@ -908,7 +899,7 @@ export default function AdminFacilitiesManager({
 
                   <div className="space-y-1">
                     <span className="text-on-surface-variant font-medium">
-                      Max Capacity (Empty = Unlimited)
+                      Capacity — blank means no limit
                     </span>
                     <input
                       type="number"

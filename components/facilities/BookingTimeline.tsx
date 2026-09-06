@@ -114,10 +114,10 @@ export default function BookingTimeline({
                 left: `${getPercent(selectedStart)}%`,
                 width: `${getPercent(selectedEnd) - getPercent(selectedStart)}%`,
               }}
-              title={hasClash ? "Clash detected!" : "Your Selection"}
+              title={hasClash ? "Overlaps an existing booking" : "Your selection"}
             >
               <span className="text-[10px] font-bold text-white px-1 truncate">
-                {hasClash ? "Clash!" : "Selected"}
+                {hasClash ? "Clash" : "Selected"}
               </span>
             </div>
           )}
