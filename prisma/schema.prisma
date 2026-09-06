@@ -144,6 +144,7 @@ model User {
   modified_bookings      Booking[] @relation("BookingModifiedBy")
   created_facilities     Facility[] @relation("FacilityCreatedBy")
   modified_facilities    Facility[] @relation("FacilityModifiedBy")
+  logged_maintenance     FacilityMaintenance[] @relation("FacilityMaintenanceCreatedBy")
   created_lease_charges  LeaseCharge[] @relation("LeaseChargeCreatedBy")
   modified_lease_charges LeaseCharge[] @relation("LeaseChargeModifiedBy")
   created_announcements  Announcement[] @relation("AnnouncementCreatedBy")
@@ -513,9 +514,42 @@ model Facility {
   // Relations
   property     PropertyMaster @relation(fields: [property_id], references: [property_id])
   bookings     Booking[]
+  maintenance  FacilityMaintenance[]
 
   @@map("facilities")
 }
+
+/// Completed maintenance visits.
+///
+/// next_maintenance_date on Facility is a single overwritable field: setting a
+/// new date destroys the old one, so the system could flag a facility as
+/// overdue but never record that the work was actually done, nor answer "when
+/// was this last serviced" — the question that matters for a lift or a pool
+/// pump. Logging a visit writes a row here AND rolls next_maintenance_date
+/// forward, so the overdue indicator has a way to be cleared.
+model FacilityMaintenance {
+  maintenance_id String   @id @default(uuid()) @db.Uuid
+  facility_id    String   @db.Uuid
+  /// The day the work was carried out.
+  performed_on   DateTime @db.Date
+  /// What was done, in plain words.
+  description    String   @db.Text
+  /// In-house team or the contractor's name. Free text: a strata office deals
+  /// with whoever turns up, and a vendor table is more than this needs.
+  performed_by   String?  @db.VarChar
+  /// The next due date this visit set, kept so the schedule has a paper trail.
+  next_due       DateTime? @db.Date
+
+  created_at   DateTime @default(now())
+  created_by   String?  @db.Uuid
+  creator      User?    @relation("FacilityMaintenanceCreatedBy", fields: [created_by], references: [user_id])
+
+  facility     Facility @relation(fields: [facility_id], references: [facility_id], onDelete: Cascade)
+
+  @@index([facility_id, performed_on])
+  @@map("facility_maintenance")
+}
+
 
 // ==========================================
 // DOMAIN 7: COMMUNICATION

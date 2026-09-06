@@ -19,7 +19,17 @@ export async function listFacilities(propertyId?: string) {
   return prisma.facility.findMany({
     where: propertyId ? { property_id: propertyId } : undefined,
     orderBy: { facility_name: "asc" },
-    include: { property: true, _count: { select: { bookings: true } } },
+    include: {
+      property: true,
+      _count: { select: { bookings: true } },
+      // Newest first, capped: the card only needs the last visit and the edit
+      // modal shows a recent history, not an archive.
+      maintenance: {
+        orderBy: { performed_on: "desc" },
+        take: 12,
+        include: { creator: { select: { user_name: true } } },
+      },
+    },
   });
 }
 

@@ -38,6 +38,20 @@ export default async function FacilitiesPage() {
     new Set(facilities.map((f) => f.facility_type).filter(Boolean))
   );
 
+  // Dates cannot cross into a Client Component as Date objects without being
+  // serialised; the maintenance log is rendered client-side.
+  const facilitiesForClient = facilities.map((f: any) => ({
+    ...f,
+    maintenance: (f.maintenance ?? []).map((m: any) => ({
+      maintenance_id: m.maintenance_id,
+      performed_on: m.performed_on ? new Date(m.performed_on).toISOString() : null,
+      description: m.description,
+      performed_by: m.performed_by,
+      next_due: m.next_due ? new Date(m.next_due).toISOString() : null,
+      logged_by: m.creator?.user_name ?? null,
+    })),
+  }));
+
   return (
     <div className="flex flex-col gap-stack-lg">
       <div>
@@ -51,7 +65,7 @@ export default async function FacilitiesPage() {
       </div>
 
       <AdminFacilitiesManager
-        facilities={facilities}
+        facilities={facilitiesForClient}
         allProperties={allProperties}
         activeProperty={activeProperty}
         existingTypes={existingTypes}
