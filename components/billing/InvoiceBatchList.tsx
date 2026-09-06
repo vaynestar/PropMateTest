@@ -127,7 +127,18 @@ export default function InvoiceBatchList({
       inv.lease?.unit?.unit_number?.toLowerCase().includes(s) ||
       inv.lease?.tenant?.user_name?.toLowerCase().includes(s);
       
-    const matchesStatus = filterStatus === "All" || inv.status === filterStatus;
+    const isOverdue = (() => {
+      if (inv.status === "Paid" || inv.status === "Inactive") return false;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return new Date(inv.due_date) < today;
+    })();
+    const matchesStatus =
+      filterStatus === "All"
+        ? true
+        : filterStatus === "Overdue"
+        ? isOverdue
+        : inv.status === filterStatus;
 
     const invDateStr = new Date(inv.invoice_date).toISOString().split("T")[0];
     const matchesFromDate = !fromDate || invDateStr >= fromDate;
@@ -150,17 +161,12 @@ export default function InvoiceBatchList({
     return dateB - dateA;
   });
 
-  // Derive the active batch to show if date filter is NOT active
-  let currentBatch = selectedBatch;
-  if (!currentBatch || (!batchKeys.includes(currentBatch) && currentBatch !== "ALL")) {
-    const lastMonthDate = new Date();
-    const lastMonthKey = getMonthYear(lastMonthDate);
-
-    if (batchKeys.includes(lastMonthKey)) {
-      currentBatch = lastMonthKey;
-    } else {
-      currentBatch = batchKeys[0] || "";
-    }
+  // Default to every invoice. Opening on the newest month hid 7 of 8 invoices
+  // here, including all the overdue ones, on a page whose whole job is chasing
+  // them. The month selector is still there for anyone who wants one batch.
+  let currentBatch = selectedBatch || "ALL";
+  if (currentBatch !== "ALL" && !batchKeys.includes(currentBatch)) {
+    currentBatch = "ALL";
   }
 
   // Active list to render: if date filter is active OR currentBatch is "ALL", show all filteredInvoices across batches!
@@ -196,10 +202,10 @@ export default function InvoiceBatchList({
               onChange={(e) => setSelectedBatch(e.target.value)}
               className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-sm focus:border-primary outline-none cursor-pointer"
             >
-              <option value="ALL">📋 All Invoices ({filteredInvoices.length})</option>
+              <option value="ALL">All invoices ({filteredInvoices.length})</option>
               {batchKeys.map((bk) => (
                 <option key={bk} value={bk}>
-                  📅 {bk} ({batches[bk].length})
+                  {bk} ({batches[bk].length})
                 </option>
               ))}
             </select>
@@ -211,10 +217,11 @@ export default function InvoiceBatchList({
             onChange={(e) => setFilterStatus(e.target.value)}
             className="px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none cursor-pointer"
           >
-            <option value="All">All Statuses</option>
+            <option value="All">All statuses</option>
+            <option value="Overdue">Overdue</option>
             <option value="Unpaid">Unpaid</option>
             <option value="Paid">Paid</option>
-            <option value="Inactive">Inactive / Disabled</option>
+            <option value="Inactive">Voided</option>
           </select>
 
           {/* User-Friendly Prominent Date Range Button */}
@@ -404,7 +411,7 @@ export default function InvoiceBatchList({
               {hasDateFilter
                 ? "Filtered Date Range Invoices"
                 : currentBatch === "ALL"
-                ? "All Invoices Overview"
+                ? "All invoices"
                 : currentBatch}
             </h3>
             <span className="font-label-sm text-label-sm px-2.5 py-1 bg-surface-container-high rounded-md text-on-surface-variant font-semibold">
@@ -421,7 +428,7 @@ export default function InvoiceBatchList({
                   <th className="px-6 py-3 font-medium">Invoice Date</th>
                   <th className="px-6 py-3 font-medium">Due Date</th>
                   <th className="px-6 py-3 font-medium">Amount</th>
-                  <th className="px-6 py-3 font-medium">Status & Print</th>
+                  <th className="px-6 py-3 font-medium">Status</th>
                   <th className="px-6 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
@@ -473,8 +480,28 @@ export default function InvoiceBatchList({
                         {formatDate(inv.invoice_date)}
                       </td>
 
-                      <td className="px-6 py-4 text-on-surface-variant font-mono text-xs">
-                        {formatDate(inv.due_date)}
+                      <td className="px-6 py-4 font-mono text-xs">
+                        {(() => {
+                          const due = new Date(inv.due_date);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const daysLate = Math.floor(
+                            (today.getTime() - due.getTime()) / 86_400_000
+                          );
+                          const isLate = inv.status !== "Paid" && daysLate > 0;
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              <span className={isLate ? "text-rose-300" : "text-on-surface-variant"}>
+                                {formatDate(inv.due_date)}
+                              </span>
+                              {isLate && (
+                                <span className="font-sans text-[10px] font-semibold text-rose-300">
+                                  {daysLate} day{daysLate === 1 ? "" : "s"} late
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       <td className="px-6 py-4 font-mono font-bold text-on-surface">
@@ -549,7 +576,7 @@ export default function InvoiceBatchList({
                                   aria-label="Mark this invoice as paid"
                                 >
                                   <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                                  <span className="hidden lg:inline">Paid</span>
+                                  <span className="hidden lg:inline">Mark paid</span>
                                 </button>
                               )}
 

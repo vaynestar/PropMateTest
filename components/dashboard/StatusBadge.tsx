@@ -20,6 +20,8 @@ const ticketStyles: Record<string, string> = {
 };
 
 const invoiceStyles: Record<string, string> = {
+  // "Void" is what the action is called, so it is what the badge says.
+  Inactive: "bg-surface-container-highest text-on-surface-variant border-outline-variant",
   Paid: "bg-emerald-400/20 text-emerald-300 border-emerald-400/40",
   Unpaid: "bg-rose-400/20 text-rose-300 border-rose-400/40",
   Overdue: "bg-rose-500/30 text-rose-200 border-rose-500/50",
@@ -71,7 +73,12 @@ export default function StatusBadge({ status, variant }: StatusBadgeProps) {
 
   const map = variant === "invoice" ? invoiceStyles : variant === "unit" ? unitStyles : ticketStyles;
   const cls = map[status] ?? "bg-surface-container-highest text-on-surface-variant border-outline-variant";
-  const label = variant === "unit" ? unitStatus(status).label : status;
+  const label =
+    variant === "unit"
+      ? unitStatus(status).label
+      : variant === "invoice" && status === "Inactive"
+      ? "Voided"
+      : status;
 
   return (
     <span className={`px-2.5 py-1 rounded-md text-xs border font-medium ${cls}`}>
