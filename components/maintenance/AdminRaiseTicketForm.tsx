@@ -12,9 +12,8 @@ type UnitItem = {
   unit_id: string;
   unit_number: string;
   property_id: string;
-  property: {
-    property_name: string;
-  };
+  /** Shown beside the number so a vacant unit is obvious when picking one. */
+  status?: string | null;
 };
 
 type CategoryItem = {
@@ -60,6 +59,8 @@ export default function AdminRaiseTicketForm({
       ? defaultPropertyId
       : (properties[0]?.property_id ?? "ALL")
   );
+  const activePropertyName =
+    properties.find((p) => p.property_id === defaultPropertyId)?.property_name ?? "this property";
   const [locationType, setLocationType] = useState<"Unit" | "Common Area">("Unit");
   const [commonAreaPreset, setCommonAreaPreset] = useState("Hallway / Corridor");
   const [locationDetail, setLocationDetail] = useState("Hallway / Corridor");
@@ -68,10 +69,8 @@ export default function AdminRaiseTicketForm({
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // Filter occupied units based on selected property in ticket form
-  const filteredUnits = selectedPropertyId === "ALL"
-    ? occupiedUnits
-    : occupiedUnits.filter((u) => u.property_id === selectedPropertyId);
+  // The page already scopes these to the active property.
+  const filteredUnits = occupiedUnits;
 
   const activeCategories = categories.filter((c) => c.is_active);
 
@@ -133,30 +132,23 @@ export default function AdminRaiseTicketForm({
         </div>
       )}
 
-      {/* Property Selector */}
-      <div className="space-y-1">
-        <label className="text-xs font-medium text-on-surface-variant">
-          Property <span className="text-rose-400">*</span>
-        </label>
-        <select
-          name="property_id"
-          value={selectedPropertyId}
-          onChange={(e) => setSelectedPropertyId(e.target.value)}
-          className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface outline-none focus:border-primary text-sm font-medium"
-        >
-          {properties.map((p) => (
-            <option key={p.property_id} value={p.property_id}>
-              {p.property_name}
-              {p.property_id === defaultPropertyId ? " — current" : ""}
-            </option>
-          ))}
-        </select>
+      {/* The property comes from the top bar; this form only ever raises a
+          ticket for the property currently in view. */}
+      <div className="flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/10 p-3">
+        <span className="flex items-center gap-2 text-xs text-on-surface">
+          <span className="material-symbols-outlined text-[20px] text-primary">domain</span>
+          Raising this for <strong className="font-bold text-primary">{activePropertyName}</strong>
+        </span>
+        <span className="rounded bg-surface-container-high px-2 py-0.5 text-[11px] font-medium text-on-surface-variant">
+          Change it in the top bar
+        </span>
       </div>
+      <input type="hidden" name="property_id" value={defaultPropertyId} />
 
       {/* Location Type Selector Toggle */}
       <div className="space-y-1">
         <label className="text-xs font-medium text-on-surface-variant block">
-          Issue Location Scope <span className="text-rose-400">*</span>
+          Where is it? <span className="text-rose-400">*</span>
         </label>
         <input type="hidden" name="location_type" value={locationType} />
         <div className="grid grid-cols-2 gap-1.5 bg-surface-container-high p-1 rounded-lg border border-outline-variant">
@@ -191,7 +183,7 @@ export default function AdminRaiseTicketForm({
       {locationType === "Unit" && (
         <div className="space-y-1 md:col-span-2">
           <label className="text-xs font-medium text-on-surface-variant">
-            Occupied Unit <span className="text-rose-400">*</span>
+            Unit <span className="text-rose-400">*</span>
           </label>
           <select
             name="unit_id"
@@ -201,12 +193,13 @@ export default function AdminRaiseTicketForm({
           >
             <option value="">
               {filteredUnits.length === 0
-                ? "No occupied units under selected property"
-                : "Select occupied unit..."}
+                ? "This property has no units yet"
+                : "Choose a unit…"}
             </option>
             {filteredUnits.map((u) => (
               <option key={u.unit_id} value={u.unit_id}>
-                Unit {u.unit_number} ({u.property.property_name})
+                Unit {u.unit_number}
+                {u.status && u.status !== "Occupied" ? ` — ${u.status}` : ""}
               </option>
             ))}
           </select>

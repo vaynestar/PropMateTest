@@ -174,7 +174,7 @@ export default async function MaintenancePage() {
       <ExpandableForm title="Raise New Ticket" buttonLabel="New Ticket">
         <AdminRaiseTicketForm
           properties={properties}
-          occupiedUnits={unitsForClient as any}
+          occupiedUnits={unitsForClient}
           categories={categories}
           defaultPropertyId={activePropId}
         />
@@ -182,7 +182,7 @@ export default async function MaintenancePage() {
 
       {/* Helpdesk Tickets Master Table */}
       <AdminTicketTable
-        tickets={ticketsForClient as any}
+        tickets={ticketsForClient}
         admins={admins}
         properties={properties}
         defaultPropertyId={activePropId}
