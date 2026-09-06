@@ -52,7 +52,7 @@ export async function addFacilityAction(formData: FormData) {
     );
 
     revalidatePath("/admin/facilities");
-    return { success: true, message: `Facility "${facilityName}" added successfully!` };
+    return { success: true, message: `"${facilityName}" added. Residents can book it if you marked it bookable.` };
   } catch (error: any) {
     console.error("addFacilityAction error:", error);
     return { error: error?.message || "Failed to add facility. Please check your inputs." };
@@ -92,7 +92,7 @@ export async function editFacilityAction(formData: FormData) {
     );
 
     revalidatePath("/admin/facilities");
-    return { success: true, message: `Facility "${facilityName}" updated successfully!` };
+    return { success: true, message: `"${facilityName}" saved.` };
   } catch (error: any) {
     console.error("editFacilityAction error:", error);
     return { error: error?.message || "Failed to update facility details." };
@@ -107,7 +107,7 @@ export async function deleteFacilityAction(facilityId: string) {
 
     await deleteFacility(id);
     revalidatePath("/admin/facilities");
-    return { success: true, message: "Facility deleted successfully." };
+    return { success: true, message: "Facility removed." };
   } catch (error: any) {
     console.error("deleteFacilityAction error:", error);
     return { error: error?.message || "Failed to delete facility." };

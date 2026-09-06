@@ -1,16 +1,37 @@
 import { listFacilities } from "@/lib/facility-management";
 import { listUserBookings } from "@/lib/booking-management";
 import { requireUser } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 import ResidentFacilityTabs from "./ResidentFacilityTabs";
 
 export const dynamic = "force-dynamic";
 
 export default async function ResidentFacilitiesPage() {
   const user = await requireUser(["Resident"]);
-  const all = await listFacilities();
+
+  /*
+   * Two things this page was not doing.
+   *
+   * 1. listFacilities() was unscoped, so a resident of Desa Harmoni was shown
+   *    - and could book - the Olympic Swimming Pool over in Testing. Scoped to
+   *    the property of their own active lease.
+   *
+   * 2. facility_status was never checked, so a facility an admin had closed for
+   *    maintenance still appeared bookable. The admin button's own tooltip says
+   *    "Residents will not be able to book this until you reopen it", which was
+   *    simply untrue - the same class of false promise DEV-142 found on the
+   *    charge-type toggle.
+   */
+  const lease = await prisma.tenantLease.findFirst({
+    where: { user_id: user.userId, status: "Active" },
+    select: { unit: { select: { property_id: true } } },
+  });
+  const propertyId = lease?.unit?.property_id;
+
+  const all = propertyId ? await listFacilities(propertyId) : [];
 
   const facilities = all
-    .filter((f) => f.is_bookable)
+    .filter((f) => f.is_bookable && f.facility_status !== "Maintenance")
     .map((f) => ({
       facility_id: f.facility_id,
       facility_name: f.facility_name,

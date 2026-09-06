@@ -24,6 +24,30 @@ export async function bookFacility(state: any, formData: FormData) {
       throw new Error("End time must be after start time.");
     }
 
+    /*
+     * createBooking() already refuses a non-bookable facility and one closed
+     * for maintenance. What nothing checked is WHOSE property it is: this
+     * action takes a facility_id straight from the form, so a resident of one
+     * property could book another property's pool. The page now lists only
+     * their own property's facilities, but a list is a courtesy, not a guard.
+     */
+    const facility = await prisma.facility.findUnique({
+      where: { facility_id: facilityId },
+      select: { property_id: true },
+    });
+    if (!facility) throw new Error("That facility no longer exists.");
+
+    const lease = await prisma.tenantLease.findFirst({
+      where: { user_id: user.userId, status: "Active" },
+      select: { unit: { select: { property_id: true } } },
+    });
+    if (!lease) {
+      throw new Error("You need an active lease to book a facility.");
+    }
+    if (lease.unit?.property_id !== facility.property_id) {
+      throw new Error("You can only book facilities in your own property.");
+    }
+
     const existing = await getBookingsByFacilityAndDate(facilityId, bookingDate);
     const clash = existing.find((b) => {
       const bStartDate = new Date(b.start_time);
@@ -34,7 +58,7 @@ export async function bookFacility(state: any, formData: FormData) {
     });
 
     if (clash) {
-      throw new Error("This time slot has been booked by others. Please try again.");
+      throw new Error("Someone booked that slot first. Pick another time.");
     }
 
     await createBooking({
@@ -47,7 +71,7 @@ export async function bookFacility(state: any, formData: FormData) {
     });
     
     revalidatePath("/resident/facilities");
-    return { success: true, message: "Booking confirmed successfully!" };
+    return { success: true, message: "Your slot is reserved. It is under My Bookings." };
   } catch (error: any) {
     return { error: error.message || "Failed to book facility." };
   }

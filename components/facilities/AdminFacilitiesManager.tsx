@@ -84,8 +84,14 @@ export default function AdminFacilitiesManager({
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [bookableFilter, setBookableFilter] = useState("ALL");
 
+  // The edit form used to be a <details> accordion INSIDE the card. Opening it
+  // grew that one card, and because the cards sit in a grid row, every card
+  // beside it stretched to match. Editing one facility resized the whole row.
+  // It is a modal now, so the grid never moves.
+  const [editingFacility, setEditingFacility] = useState<any | null>(null);
+
   // Maintenance Date Filter States (Similar to Billing date filter)
-  const [dateFilterShortcut, setDateFilterShortcut] = useState<"ALL" | "30" | "60" | "90" | "CUSTOM">("ALL");
+  const [dateFilterShortcut, setDateFilterShortcut] = useState<"ALL" | "OVERDUE" | "30" | "60" | "90" | "CUSTOM">("ALL");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customEndDate, setCustomEndDate] = useState("");
   const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
@@ -138,6 +144,7 @@ export default function AdminFacilitiesManager({
           showToast(res.error, "error");
         } else if (res?.success) {
           showToast(res.message, "success");
+          setEditingFacility(null);
         }
       } finally {
         setUpdatingId(null);
@@ -223,7 +230,9 @@ export default function AdminFacilitiesManager({
         if (isNaN(maintDate.getTime())) return false;
         maintDate.setHours(0, 0, 0, 0);
 
-        if (dateFilterShortcut === "30") {
+        if (dateFilterShortcut === "OVERDUE") {
+          if (maintDate >= today) return false;
+        } else if (dateFilterShortcut === "30") {
           const maxDate = new Date(today);
           maxDate.setDate(maxDate.getDate() + 30);
           if (maintDate < today || maintDate > maxDate) return false;
@@ -270,8 +279,24 @@ export default function AdminFacilitiesManager({
     setCustomEndDate("");
   };
 
+  /** Days a scheduled maintenance date is past due, or 0 if it is not. */
+  const daysOverdue = (value: any): number => {
+    if (!value) return 0;
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return 0;
+    d.setHours(0, 0, 0, 0);
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    const diff = Math.floor((t.getTime() - d.getTime()) / 86_400_000);
+    return diff > 0 ? diff : 0;
+  };
+
+  const overdueCount = facilities.filter((f) => daysOverdue(f.next_maintenance_date) > 0).length;
+
   const getDateFilterLabel = () => {
     switch (dateFilterShortcut) {
+      case "OVERDUE":
+        return "Overdue";
       case "30":
         return "Next 30 days";
       case "60":
@@ -562,7 +587,7 @@ export default function AdminFacilitiesManager({
             onChange={(e) => setBookableFilter(e.target.value)}
             className="w-full rounded-xl bg-surface-container-high border border-outline-variant px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
           >
-            <option value="ALL">Bookable and not</option>
+            <option value="ALL">All Booking Rules</option>
             <option value="BOOKABLE">Residents can book</option>
             <option value="NON_BOOKABLE">Not bookable (lifts, corridors)</option>
           </select>
@@ -594,6 +619,18 @@ export default function AdminFacilitiesManager({
           {/* Active Results Counter */}
           <div className="text-xs text-on-surface-variant">
             Showing <strong className="text-primary font-bold">{filteredFacilities.length}</strong> of {facilities.length} facilities in this property
+            {overdueCount > 0 && (
+              <>
+                {" · "}
+                <button
+                  type="button"
+                  onClick={() => setDateFilterShortcut("OVERDUE")}
+                  className="font-semibold text-rose-300 underline-offset-2 hover:underline"
+                >
+                  {overdueCount} overdue
+                </button>
+              </>
+            )}
           </div>
 
           {/* Date Filter Popover Panel */}
@@ -619,6 +656,7 @@ export default function AdminFacilitiesManager({
                 <div className="grid grid-cols-2 gap-1.5">
                   {[
                     { id: "ALL", label: "All Dates" },
+                    { id: "OVERDUE", label: "Overdue" },
                     { id: "30", label: "Next 30 days" },
                     { id: "60", label: "Next 60 days" },
                     { id: "90", label: "Next 90 days" },
@@ -807,15 +845,34 @@ export default function AdminFacilitiesManager({
                   </div>
                 )}
 
-                {f.next_maintenance_date && (
-                  <div className="flex justify-between items-center pt-2 border-t border-outline-variant/30 text-amber-300">
-                    <span className="flex items-center gap-1 font-semibold">
-                      <span className="material-symbols-outlined text-[14px]">build</span>
-                      Next maintenance
-                    </span>
-                    <span className="font-mono font-bold">{formatDate(f.next_maintenance_date)}</span>
-                  </div>
-                )}
+                {f.next_maintenance_date &&
+                  (() => {
+                    const late = daysOverdue(f.next_maintenance_date);
+                    return (
+                      <div
+                        className={`flex items-center justify-between gap-3 border-t border-outline-variant/30 pt-2 ${
+                          late > 0 ? "text-rose-300" : "text-amber-300"
+                        }`}
+                      >
+                        <span className="flex items-center gap-1 font-semibold">
+                          <span className="material-symbols-outlined text-[14px] leading-none">
+                            {late > 0 ? "error" : "build"}
+                          </span>
+                          {late > 0 ? "Maintenance overdue" : "Next maintenance"}
+                        </span>
+                        <span className="text-right">
+                          <span className="block font-mono font-bold">
+                            {formatDate(f.next_maintenance_date)}
+                          </span>
+                          {late > 0 && (
+                            <span className="block text-[10px] font-semibold">
+                              {late} day{late === 1 ? "" : "s"} late
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                    );
+                  })()}
 
                 {f.is_bookable && (
                   <div className="flex items-center justify-between gap-3">
@@ -856,143 +913,15 @@ export default function AdminFacilitiesManager({
               </button>
 
               {/* Edit Details Accordion */}
-              <details className="mb-3 rounded-lg border border-outline-variant/40 px-3 py-2 text-xs">
-                <summary className="cursor-pointer font-semibold text-primary hover:underline">
-                  Edit details
-                </summary>
-                <form onSubmit={handleEditSubmit} className="grid gap-3 mt-3">
-                  <input type="hidden" name="facility_id" value={f.facility_id} />
-
-                  <div className="space-y-1">
-                    <span className="text-on-surface-variant font-medium">Facility Name</span>
-                    <input
-                      type="text"
-                      name="facility_name"
-                      defaultValue={f.facility_name}
-                      required
-                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-xs"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-on-surface-variant font-medium">Facility Type</span>
-                    <FacilityTypeCombobox
-                      name="facility_type"
-                      defaultValue={f.facility_type}
-                      existingTypes={existingTypes}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-on-surface-variant font-medium">Status</span>
-                    <select
-                      name="facility_status"
-                      defaultValue={f.facility_status || "Available"}
-                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-xs"
-                    >
-                      <option value="Available">Available</option>
-                      <option value="Maintenance">Under Maintenance</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-on-surface-variant font-medium">
-                      Capacity — blank means no limit
-                    </span>
-                    <input
-                      type="number"
-                      name="max_capacity"
-                      min="1"
-                      defaultValue={f.max_capacity ?? ""}
-                      placeholder="Unlimited"
-                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-xs"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-on-surface-variant font-medium">Next Maintenance Date</span>
-                    <input
-                      type="date"
-                      name="next_maintenance_date"
-                      defaultValue={
-                        f.next_maintenance_date
-                          ? new Date(f.next_maintenance_date).toISOString().split("T")[0]
-                          : ""
-                      }
-                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-xs font-mono"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {WEEKDAYS.map((d) => (
-                      <label
-                        key={d.value}
-                        className="flex items-center gap-1 text-on-surface cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          name="operation_days"
-                          value={d.value}
-                          defaultChecked={opDaysList.includes(String(d.value))}
-                          className="w-3.5 h-3.5 accent-[var(--color-primary)]"
-                        />
-                        <span className="text-[11px]">{d.label}</span>
-                      </label>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="time"
-                      name="open_time"
-                      defaultValue={f.open_time || "08:00"}
-                      step={300}
-                      className={timeInputClass}
-                    />
-                    <input
-                      type="time"
-                      name="close_time"
-                      defaultValue={f.close_time || "22:00"}
-                      step={300}
-                      className={timeInputClass}
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <span className="text-on-surface-variant font-medium">
-                      Max booking hours (empty = unlimited)
-                    </span>
-                    <input
-                      type="number"
-                      name="max_booking_hours"
-                      min="1"
-                      defaultValue={f.max_booking_hours ?? ""}
-                      placeholder="Unlimited"
-                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-xs"
-                    />
-                  </div>
-
-                  <label className="flex items-center gap-2 text-on-surface cursor-pointer">
-                    <input
-                      type="checkbox"
-                      name="is_bookable"
-                      defaultChecked={f.is_bookable}
-                      className="w-4 h-4 accent-[var(--color-primary)]"
-                    />
-                    <span>Bookable by residents</span>
-                  </label>
-
-                  <button
-                    type="submit"
-                    disabled={isPending || isUpdatingThis}
-                    className="btn-primary px-4 py-1.5 text-xs font-semibold transition-all active:scale-95 disabled:opacity-50"
-                  >
-                    {isUpdatingThis ? "Saving..." : "Save Changes"}
-                  </button>
-                </form>
-              </details>
+              <button
+                type="button"
+                onClick={() => setEditingFacility(f)}
+                disabled={isPending || isUpdatingThis || isDeletingThis}
+                className="pressable mb-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[16px] leading-none">edit</span>
+                Edit details
+              </button>
 
               {/* Requirement 1: Restored Previous Delete Button Design */}
               <form
@@ -1019,6 +948,195 @@ export default function AdminFacilitiesManager({
           );
         })}
       </div>
+
+      {/* Edit facility - modal, not an in-card accordion (see state above). */}
+      {editingFacility &&
+        (() => {
+          const ef = editingFacility;
+          const editOpDays = (ef.operation_days || "1,2,3,4,5,6,7").split(",");
+          const isSavingEdit = updatingId === ef.facility_id;
+          return (
+            <div
+              className="animate-fade-in fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+              onClick={() => !isSavingEdit && setEditingFacility(null)}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                onClick={(e) => e.stopPropagation()}
+                className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl"
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-high/40 px-6 py-4">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-base font-bold text-white">Edit facility</h3>
+                    <p className="truncate text-xs text-on-surface-variant">{ef.facility_name}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setEditingFacility(null)}
+                    disabled={isSavingEdit}
+                    aria-label="Close"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-variant hover:text-white"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto px-6 py-5 text-xs">
+<form onSubmit={handleEditSubmit} id="edit-facility-form" className="grid gap-4">
+                  <input type="hidden" name="facility_id" value={ef.facility_id} />
+
+                  <div className="space-y-1">
+                    <span className="text-on-surface-variant font-medium">Facility name</span>
+                    <input
+                      type="text"
+                      name="facility_name"
+                      defaultValue={ef.facility_name}
+                      required
+                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-on-surface-variant font-medium">Facility type</span>
+                    <FacilityTypeCombobox
+                      name="facility_type"
+                      defaultValue={ef.facility_type}
+                      existingTypes={existingTypes}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-on-surface-variant font-medium">Status</span>
+                    <select
+                      name="facility_status"
+                      defaultValue={ef.facility_status || "Available"}
+                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-sm"
+                    >
+                      <option value="Available">Available</option>
+                      <option value="Maintenance">Closed for maintenance</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-on-surface-variant font-medium">
+                      Capacity — blank means no limit
+                    </span>
+                    <input
+                      type="number"
+                      name="max_capacity"
+                      min="1"
+                      defaultValue={ef.max_capacity ?? ""}
+                      placeholder="No limit"
+                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-on-surface-variant font-medium">Next maintenance date</span>
+                    <input
+                      type="date"
+                      name="next_maintenance_date"
+                      defaultValue={
+                        ef.next_maintenance_date
+                          ? new Date(ef.next_maintenance_date).toISOString().split("T")[0]
+                          : ""
+                      }
+                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-xs font-mono"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {WEEKDAYS.map((d) => (
+                      <label
+                        key={d.value}
+                        className="flex items-center gap-1 text-on-surface cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          name="operation_days"
+                          value={d.value}
+                          defaultChecked={editOpDays.includes(String(d.value))}
+                          className="w-3.5 h-3.5 accent-[var(--color-primary)]"
+                        />
+                        <span className="text-[11px]">{d.label}</span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="time"
+                      name="open_time"
+                      defaultValue={ef.open_time || "08:00"}
+                      step={300}
+                      className={timeInputClass}
+                    />
+                    <input
+                      type="time"
+                      name="close_time"
+                      defaultValue={ef.close_time || "22:00"}
+                      step={300}
+                      className={timeInputClass}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-on-surface-variant font-medium">
+                      Longest booking — blank means no limit
+                    </span>
+                    <input
+                      type="number"
+                      name="max_booking_hours"
+                      min="1"
+                      defaultValue={ef.max_booking_hours ?? ""}
+                      placeholder="No limit"
+                      className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-sm"
+                    />
+                  </div>
+
+                  <label className="flex items-center gap-2 text-on-surface cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="is_bookable"
+                      defaultChecked={ef.is_bookable}
+                      className="w-4 h-4 accent-[var(--color-primary)]"
+                    />
+                    <span>Bookable by residents</span>
+                  </label>
+
+                </form>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 border-t border-outline-variant/40 bg-surface-container-high/40 px-6 py-4">
+                  <button
+                    type="button"
+                    onClick={() => setEditingFacility(null)}
+                    disabled={isSavingEdit}
+                    className="pressable rounded-xl border border-outline-variant/60 bg-surface-container-high px-4 py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-white"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    form="edit-facility-form"
+                    disabled={isPending || isSavingEdit}
+                    className="pressable flex items-center gap-2 rounded-xl bg-primary px-5 py-2 text-xs font-bold text-on-primary shadow-md transition-colors hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {isSavingEdit && (
+                      <span className="material-symbols-outlined animate-spin-slow text-[16px] leading-none">
+                        progress_activity
+                      </span>
+                    )}
+                    {isSavingEdit ? "Saving…" : "Save changes"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
     </div>
   );
 }
