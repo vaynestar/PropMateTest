@@ -133,6 +133,20 @@ export async function updateVisitorStatus(visitorId: string, status: string) {
       data: dataToUpdate,
     });
 
+    // The directory's own buttons are a gate crossing too, so they belong in
+    // the movement log alongside the scans.
+    if (dataToUpdate.check_in_time || dataToUpdate.check_out_time) {
+      await prisma.visitorMovement.create({
+        data: {
+          visitor_id: visitorId,
+          direction: dataToUpdate.check_in_time ? "In" : "Out",
+          occurred_at: dataToUpdate.check_in_time ?? dataToUpdate.check_out_time,
+          method: "Manual",
+          recorded_by: user.userId,
+        },
+      });
+    }
+
     revalidatePath("/admin/visitors");
     return { success: true };
   } catch (error: any) {

@@ -145,6 +145,7 @@ model User {
   created_facilities     Facility[] @relation("FacilityCreatedBy")
   modified_facilities    Facility[] @relation("FacilityModifiedBy")
   logged_maintenance     FacilityMaintenance[] @relation("FacilityMaintenanceCreatedBy")
+  recorded_movements     VisitorMovement[] @relation("VisitorMovementRecordedBy")
   created_lease_charges  LeaseCharge[] @relation("LeaseChargeCreatedBy")
   modified_lease_charges LeaseCharge[] @relation("LeaseChargeModifiedBy")
   created_announcements  Announcement[] @relation("AnnouncementCreatedBy")
@@ -454,9 +455,42 @@ model Visitor {
   // Relations
   property       PropertyMaster? @relation(fields: [property_id], references: [property_id])
   lease          TenantLease?    @relation(fields: [lease_id], references: [lease_id])
+  movements      VisitorMovement[]
 
   @@map("visitors")
 }
+
+/// Every gate crossing, appended and never rewritten.
+///
+/// check_in_time and check_out_time on Visitor are a single pair of columns:
+/// they hold the current state and nothing else. They cannot say WHO admitted
+/// someone, whether it was a QR scan or a guard tapping a button, or what
+/// happened before a correction — re-checking a visitor in clears the previous
+/// check-out and the earlier movement is simply gone.
+///
+/// A guardhouse record is exactly the thing that has to survive corrections, so
+/// each crossing is written here as its own row. The columns on Visitor stay as
+/// the fast "where are they now" answer; this is the history behind it.
+model VisitorMovement {
+  movement_id String   @id @default(uuid()) @db.Uuid
+  visitor_id  String   @db.Uuid
+  /// "In" or "Out".
+  direction   String   @db.VarChar
+  occurred_at DateTime @default(now())
+  /// "Scan" when the QR pass was read, "Manual" when a guard used the button.
+  method      String   @default("Manual") @db.VarChar
+  /// Free note, e.g. why a visit was closed by hand days later.
+  note        String?  @db.VarChar
+
+  recorded_by String?  @db.Uuid
+  recorder    User?    @relation("VisitorMovementRecordedBy", fields: [recorded_by], references: [user_id])
+
+  visitor     Visitor  @relation(fields: [visitor_id], references: [visitor_id], onDelete: Cascade)
+
+  @@index([visitor_id, occurred_at])
+  @@map("visitor_movements")
+}
+
 
 model Booking {
   booking_id          String   @id @default(uuid()) @db.Uuid

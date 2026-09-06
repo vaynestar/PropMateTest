@@ -5,7 +5,7 @@ import { maskIdentityNumber } from "@/lib/visitor-status";
 import { Html5Qrcode } from "html5-qrcode";
 import jsQR from "jsqr";
 import Image from "next/image";
-import { scanVisitorQR } from "@/app/admin/visitors/scan-action";
+import { scanVisitorQR, checkOutVisitorById } from "@/app/admin/visitors/scan-action";
 
 type QRScannerProps = {
   onClose: () => void;
@@ -163,11 +163,14 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
   // Verification states
   const [verifiedVisitor, setVerifiedVisitor] = useState<any | null>(null);
-  // ALREADY_CHECKED_IN is gone: scanning a visitor who is on site now checks
-  // them out, which is a success, not a warning to be worked around.
+  // CONFIRM_CHECK_OUT is the second scan: the visitor is on site and the guard
+  // is being asked to confirm, not told about an error and not acted on
+  // automatically.
   const [scanResultType, setScanResultType] = useState<
-    "CHECKED_IN" | "CHECKED_OUT" | "EXPIRED" | "DUPLICATE" | null
+    "CHECKED_IN" | "CONFIRM_CHECK_OUT" | "CHECKED_OUT" | "EXPIRED" | null
   >(null);
+  const [onSiteMinutes, setOnSiteMinutes] = useState<number | null>(null);
+  const [justArrived, setJustArrived] = useState(false);
 
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploadedPreview, setUploadedPreview] = useState<string | null>(null);
@@ -224,12 +227,12 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 
         if (res.success && res.visitor) {
           setVerifiedVisitor(res.visitor);
-          // The server decides which half of the visit this scan completes.
-          setScanResultType((res as any).action === "CHECKED_OUT" ? "CHECKED_OUT" : "CHECKED_IN");
-        } else if ((res as any).isDuplicateScan && res.visitor) {
+          setScanResultType("CHECKED_IN");
+        } else if ((res as any).awaitingCheckOut && res.visitor) {
           setVerifiedVisitor(res.visitor);
-          setScanResultType("DUPLICATE");
-          setErrorMessage(res.error || "That pass was just scanned.");
+          setOnSiteMinutes((res as any).minutesOnSite ?? null);
+          setJustArrived(Boolean((res as any).justArrived));
+          setScanResultType("CONFIRM_CHECK_OUT");
         } else if (res.isAlreadyCheckedOut && res.visitor) {
           setVerifiedVisitor(res.visitor);
           setScanResultType("EXPIRED");
@@ -378,6 +381,8 @@ export default function QRScanner({ onClose }: QRScannerProps) {
   const handleScanNext = () => {
     setVerifiedVisitor(null);
     setScanResultType(null);
+    setOnSiteMinutes(null);
+    setJustArrived(false);
     setErrorMessage(null);
     setUploadedPreview(null);
     isHandlingScanRef.current = false;
@@ -497,7 +502,66 @@ export default function QRScanner({ onClose }: QRScannerProps) {
             </div>
           )}
 
-          {/* 2. CHECKED OUT - the second half of the same pass, and a success. */}
+          {/* 2. Second scan: they are on site. Confirm before anything changes. */}
+          {scanResultType === "CONFIRM_CHECK_OUT" && (
+            <div className="flex flex-col gap-3.5 rounded-2xl border border-sky-500/40 bg-sky-950/40 p-5 shadow-lg">
+              <div className="flex items-start justify-between gap-2 border-b border-sky-500/30 pb-3">
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-sky-500/40 bg-sky-500/20 text-sky-300">
+                    <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
+                  </span>
+                  <div>
+                    <span className="block font-mono text-[10px] font-bold tracking-widest text-sky-400">
+                      Pass valid
+                    </span>
+                    <h3 className="text-sm font-bold text-white">This visitor is on site</h3>
+                    <p className="mt-0.5 text-[11px] text-sky-200/90">
+                      {onSiteMinutes === null
+                        ? "Check them out if they are leaving."
+                        : onSiteMinutes < 60
+                        ? `On site for ${onSiteMinutes} minute${onSiteMinutes === 1 ? "" : "s"}.`
+                        : onSiteMinutes < 1440
+                        ? `On site for ${Math.floor(onSiteMinutes / 60)} hour${Math.floor(onSiteMinutes / 60) === 1 ? "" : "s"}.`
+                        : `On site for ${Math.floor(onSiteMinutes / 1440)} day${Math.floor(onSiteMinutes / 1440) === 1 ? "" : "s"}.`}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {justArrived && (
+                <p className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-2.5 text-[11px] font-semibold text-amber-300">
+                  <span className="material-symbols-outlined text-[16px] leading-none">warning</span>
+                  They were checked in seconds ago. This is probably the reader firing twice —
+                  only check them out if they are actually leaving.
+                </p>
+              )}
+
+              <VisitorDetailsCard visitor={verifiedVisitor} />
+
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!verifiedVisitor?.visitor_id || isCheckingOut) return;
+                  setIsCheckingOut(true);
+                  const res = await checkOutVisitorById(verifiedVisitor.visitor_id, "Scan");
+                  setIsCheckingOut(false);
+                  if (res.success && (res as any).visitor) {
+                    setVerifiedVisitor((res as any).visitor);
+                    setScanResultType("CHECKED_OUT");
+                  } else {
+                    setErrorMessage(res.error || "Could not check this visitor out.");
+                  }
+                }}
+                disabled={isCheckingOut}
+                className="pressable flex w-full items-center justify-center gap-2 rounded-xl bg-sky-500 py-3 text-sm font-bold text-white transition-colors hover:bg-sky-400 disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[20px] leading-none">logout</span>
+                {isCheckingOut ? "Checking out\u2026" : `Check out ${verifiedVisitor.visitor_name}`}
+              </button>
+            </div>
+          )}
+
+          {/* 3. Checked out - the visit is closed. */}
           {scanResultType === "CHECKED_OUT" && (
             <div className="flex flex-col gap-3 rounded-2xl border border-sky-500/40 bg-sky-950/40 p-5 shadow-lg">
               <div className="flex items-center justify-between border-b border-sky-500/30 pb-3">
@@ -532,28 +596,6 @@ export default function QRScanner({ onClose }: QRScannerProps) {
                   . The pass is now spent.
                 </p>
               )}
-
-              <VisitorDetailsCard visitor={verifiedVisitor} />
-            </div>
-          )}
-
-          {/* 2b. Two reads of the same badge at the gate - not a check-out. */}
-          {scanResultType === "DUPLICATE" && (
-            <div className="flex flex-col gap-3 rounded-2xl border border-amber-500/40 bg-amber-950/40 p-5 shadow-lg">
-              <div className="flex items-start gap-2.5 border-b border-amber-500/30 pb-3">
-                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-amber-500/40 bg-amber-500/20 text-amber-300">
-                  <span className="material-symbols-outlined text-[20px]">info</span>
-                </span>
-                <div>
-                  <span className="block font-mono text-[10px] font-bold tracking-widest text-amber-400">
-                    Already scanned
-                  </span>
-                  <h3 className="text-sm font-bold text-white">They are on site</h3>
-                  <p className="mt-0.5 text-[11px] text-amber-200/90">
-                    {errorMessage}
-                  </p>
-                </div>
-              </div>
 
               <VisitorDetailsCard visitor={verifiedVisitor} />
             </div>

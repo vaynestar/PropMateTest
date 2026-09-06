@@ -36,6 +36,19 @@ export async function getAllVisitors(propertyId?: string) {
       orderBy: [{ visit_date: "desc" }, { created_at: "desc" }],
       include: {
         property: { select: { property_id: true, property_name: true } },
+        // The gate log. The columns on Visitor say where someone is now; this
+        // says what happened and who recorded it, and survives corrections.
+        movements: {
+          orderBy: { occurred_at: "desc" },
+          take: 10,
+          select: {
+            movement_id: true,
+            direction: true,
+            occurred_at: true,
+            method: true,
+            recorder: { select: { user_name: true } },
+          },
+        },
         lease: {
           select: {
             lease_id: true,

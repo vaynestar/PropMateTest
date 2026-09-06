@@ -99,46 +99,60 @@ export async function scanVisitorQR(rawQrData: string) {
 
     if (current === "Checked In") {
       /*
-       * Guards scan twice by reflex, and a badge held near the reader can fire
-       * more than once. Without this, the second read of an arrival would check
-       * the visitor straight back out again. A minute is long enough to cover a
-       * double-tap and far short of any real visit.
+       * The second scan does NOT check the visitor out by itself.
+       *
+       * Auto check-out is the obvious reading of "scan on the way out", but it
+       * makes a mis-scan silently wrong in the direction that matters: read the
+       * wrong pass, or catch a pass in someone's pocket as they walk past, and
+       * the board says a person has left while they are still in the building.
+       * That is the exact failure this module exists to prevent.
+       *
+       * The old code went too far the other way and returned an ERROR, which is
+       * why check-outs were being skipped. So: a success-coloured screen that
+       * names the visitor and says how long they have been on site, with one
+       * button. The guard sees who it is before the record changes.
        */
-      const checkedInAt = visitor.check_in_time ? new Date(visitor.check_in_time).getTime() : 0;
-      if (checkedInAt && Date.now() - checkedInAt < 60_000) {
-        return {
-          success: false,
-          isDuplicateScan: true,
-          error: `${visitor.visitor_name} was just checked in. Scan again when they leave.`,
-          visitor,
-        };
-      }
+      const checkedInAt = visitor.check_in_time ? new Date(visitor.check_in_time) : null;
+      const minutesOnSite = checkedInAt
+        ? Math.floor((Date.now() - checkedInAt.getTime()) / 60_000)
+        : null;
 
-      const checkedOut = await prisma.visitor.update({
-        where: { visitor_id: visitorId },
-        data: {
-          status: "Checked Out",
-          check_out_time: new Date(),
-          modified_by: user.userId,
-        },
-        include: includeRelations,
-      });
-
-      revalidatePath("/admin/visitors");
-      return { success: true, action: "CHECKED_OUT", visitor: checkedOut };
+      return {
+        success: false,
+        awaitingCheckOut: true,
+        minutesOnSite,
+        // Under a minute is almost always the reader firing twice on arrival,
+        // not somebody leaving. Say so; do not decide for the guard.
+        justArrived: minutesOnSite !== null && minutesOnSite < 1,
+        visitor,
+      };
     }
 
     // Expected visitor arriving.
-    const updatedVisitor = await prisma.visitor.update({
-      where: { visitor_id: visitorId },
-      data: {
-        status: "Checked In",
-        check_in_time: new Date(),
-        check_out_time: null,
-        modified_by: user.userId,
-      },
-      include: includeRelations,
-    });
+    const now = new Date();
+    const [updatedVisitor] = await prisma.$transaction([
+      prisma.visitor.update({
+        where: { visitor_id: visitorId },
+        data: {
+          status: "Checked In",
+          check_in_time: now,
+          check_out_time: null,
+          modified_by: user.userId,
+        },
+        include: includeRelations,
+      }),
+      // Appended, never rewritten: the columns above hold the current state,
+      // this holds what actually happened and who recorded it.
+      prisma.visitorMovement.create({
+        data: {
+          visitor_id: visitorId,
+          direction: "In",
+          occurred_at: now,
+          method: "Scan",
+          recorded_by: user.userId,
+        },
+      }),
+    ]);
 
     revalidatePath("/admin/visitors");
     return { success: true, action: "CHECKED_IN", visitor: updatedVisitor };
@@ -147,7 +161,11 @@ export async function scanVisitorQR(rawQrData: string) {
   }
 }
 
-export async function checkOutVisitorById(visitorId: string) {
+/** `method` records how the exit was captured: a scan, or a guard's button. */
+export async function checkOutVisitorById(
+  visitorId: string,
+  method: "Scan" | "Manual" = "Manual"
+) {
   try {
     const user = await getSessionUser();
     if (!user || user.role !== "Admin") {
@@ -168,11 +186,22 @@ export async function checkOutVisitorById(visitorId: string) {
       };
     }
 
+    const outAt = new Date();
+    await prisma.visitorMovement.create({
+      data: {
+        visitor_id: visitorId,
+        direction: "Out",
+        occurred_at: outAt,
+        method,
+        recorded_by: user.userId,
+      },
+    });
+
     const updatedVisitor = await prisma.visitor.update({
       where: { visitor_id: visitorId },
       data: {
         status: "Checked Out",
-        check_out_time: new Date(),
+        check_out_time: outAt,
         modified_by: user.userId,
       },
       include: {

@@ -26,6 +26,14 @@ interface VisitorRecord {
   check_in_time?: Date | string | null;
   check_out_time?: Date | string | null;
   status?: string | null;
+  /** Gate crossings, newest first. */
+  movements?: {
+    movement_id: string;
+    direction: string;
+    occurred_at: Date | string;
+    method: string;
+    recorder?: { user_name: string } | null;
+  }[];
   property?: {
     property_name: string;
   } | null;
@@ -423,6 +431,46 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                         {new Date(v.check_in_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })}
                       </span>
                     </div>
+                  )}
+
+                  {/* The gate log. Two columns can only ever hold the current
+                      state; this is the record of the crossings themselves,
+                      with who took them and whether it was a scan. */}
+                  {(v.movements?.length ?? 0) > 0 && (
+                    <details className="rounded-md border border-outline-variant/40 bg-surface-container-high/30 px-2 py-1.5">
+                      <summary className="cursor-pointer text-[11px] font-semibold text-on-surface-variant hover:text-on-surface">
+                        Gate log ({v.movements!.length})
+                      </summary>
+                      <ol className="mt-1.5 space-y-1">
+                        {v.movements!.map((m) => (
+                          <li
+                            key={m.movement_id}
+                            className="flex items-baseline justify-between gap-2 text-[10px]"
+                          >
+                            <span
+                              className={`font-semibold ${
+                                m.direction === "In" ? "text-emerald-300" : "text-sky-300"
+                              }`}
+                            >
+                              {m.direction === "In" ? "In" : "Out"}
+                            </span>
+                            <span className="font-mono text-on-surface-variant">
+                              {new Date(m.occurred_at).toLocaleString("en-GB", {
+                                day: "2-digit",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                timeZone: "Asia/Kuala_Lumpur",
+                              })}
+                            </span>
+                            <span className="truncate text-on-surface-variant/70">
+                              {m.method === "Scan" ? "scan" : "by hand"}
+                              {m.recorder?.user_name ? ` · ${m.recorder.user_name}` : ""}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    </details>
                   )}
 
                   {/* A pass still open a day later is a missed scan, not a
