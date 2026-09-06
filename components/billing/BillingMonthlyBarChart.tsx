@@ -81,12 +81,12 @@ export default function BillingMonthlyBarChart({ invoices }: { invoices: any[] }
 
         <div className="flex items-center gap-4 text-xs font-semibold">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-sky-500 inline-block shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
-            <span className="text-on-surface">Paid (Collected)</span>
+            <span className="w-3 h-3 rounded bg-emerald-500 inline-block" />
+            <span className="text-on-surface">Paid</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded bg-rose-500 inline-block shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
-            <span className="text-on-surface">Unpaid (Outstanding)</span>
+            <span className="w-3 h-3 rounded bg-rose-500 inline-block" />
+            <span className="text-on-surface">Outstanding</span>
           </div>
         </div>
       </div>
@@ -118,7 +118,7 @@ export default function BillingMonthlyBarChart({ invoices }: { invoices: any[] }
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-sky-400 font-medium">
                       <span className="flex items-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-sky-500" />
+                        <span className="w-2 h-2 rounded-full bg-emerald-500" />
                         Paid:
                       </span>
                       <span className="font-mono font-bold">{formatCurrency(m.paid)} ({m.paidCount})</span>
@@ -163,7 +163,7 @@ export default function BillingMonthlyBarChart({ invoices }: { invoices: any[] }
                 {m.paid > 0 && (
                   <div
                     style={{ height: `${paidRatio}%` }}
-                    className="w-full bg-sky-500 hover:bg-sky-400 transition-colors relative flex items-center justify-center group/paid"
+                    className="w-full bg-emerald-500 hover:bg-emerald-400 transition-colors relative flex items-center justify-center group/paid"
                     title={`Paid: ${formatCurrency(m.paid)}`}
                   >
                     {paidRatio > 18 && (
