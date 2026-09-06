@@ -120,6 +120,13 @@
     .text-body-md { font-size: 14px; line-height: 20px; font-weight: 400; }
 }
 
+html {
+  /* Reserve the scrollbar track even when the page is short enough not to
+     need one. Without this, filtering a list down to nothing removes the
+     scrollbar and every control on the page slides ~8px to the right. */
+  scrollbar-gutter: stable;
+}
+
 html, body {
   font-family: var(--font-inter);
   background-color: var(--color-background);

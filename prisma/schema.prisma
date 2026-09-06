@@ -199,6 +199,11 @@ model Invoice {
   total_amount Decimal  @db.Decimal(10, 2)
   status       String   @default("Unpaid") @db.VarChar
   is_printed   Boolean  @default(false)
+  // When the invoice was issued to the tenant. Null means it is still a draft
+  // and its line items can be edited. Editing used to lock on is_printed, so
+  // simply opening the PDF preview froze the invoice with no warning — a side
+  // effect, not a decision. Issuing is now an explicit act (DEV-140).
+  issued_at    DateTime?
 
   // Audit Trail
   created_at   DateTime @default(now())

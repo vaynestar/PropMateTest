@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StatusBadge from "@/components/dashboard/StatusBadge";
-import { updateInvoiceStatusAction } from "@/app/admin/invoices/actions";
+import { updateInvoiceStatusAction, issueInvoice } from "@/app/admin/invoices/actions";
 import EditInvoiceItemsModal from "./EditInvoiceItemsModal";
 import InvoicePdfPreviewModal from "./InvoicePdfPreviewModal";
 
@@ -58,6 +58,33 @@ export default function InvoiceBatchList({
   const showToast = (text: string, type: "success" | "info" | "error" = "success") => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleIssue = (invoiceId: string, invoiceNo: string) => {
+    if (
+      !window.confirm(
+        `Issue ${invoiceNo} to the tenant?
+
+After this its line items can no longer be edited. You can still record payment or void it.`
+      )
+    )
+      return;
+    setUpdatingStatusId(invoiceId);
+    startTransition(async () => {
+      try {
+        const res = await issueInvoice(invoiceId);
+        if (res.success) {
+          showToast(res.message, "success");
+          router.refresh();
+        } else if (res.error) {
+          showToast(res.error, "error");
+        }
+      } catch (e: any) {
+        showToast(e.message || "Failed to issue invoice", "error");
+      } finally {
+        setUpdatingStatusId(null);
+      }
+    });
   };
 
   const handleStatusChange = (invoiceId: string, currentInvoiceNo: string, newStatus: string) => {
@@ -161,11 +188,28 @@ export default function InvoiceBatchList({
     return dateB - dateA;
   });
 
+  // The month dropdown lists EVERY month that has invoices, not just the
+  // months surviving the current status/search filter. Deriving its options
+  // from filteredInvoices made the whole control vanish the moment a filter
+  // returned nothing (pick "Voided" with no voided invoices and the toolbar
+  // collapsed, sliding the status and date controls left). The option list is
+  // fixed furniture; only the counts beside each month react to the filter.
+  const allMonths = invoices.reduce((acc, inv) => {
+    const key = getMonthYear(inv.invoice_date);
+    (acc[key] ||= []).push(inv);
+    return acc;
+  }, {} as Record<string, any[]>);
+  const allBatchKeys = Object.keys(allMonths).sort((a, b) => {
+    const dateA = new Date(allMonths[a][0].invoice_date).getTime();
+    const dateB = new Date(allMonths[b][0].invoice_date).getTime();
+    return dateB - dateA;
+  });
+
   // Default to every invoice. Opening on the newest month hid 7 of 8 invoices
   // here, including all the overdue ones, on a page whose whole job is chasing
   // them. The month selector is still there for anyone who wants one batch.
   let currentBatch = selectedBatch || "ALL";
-  if (currentBatch !== "ALL" && !batchKeys.includes(currentBatch)) {
+  if (currentBatch !== "ALL" && !allBatchKeys.includes(currentBatch)) {
     currentBatch = "ALL";
   }
 
@@ -173,7 +217,7 @@ export default function InvoiceBatchList({
   const displayedInvoices = hasDateFilter || currentBatch === "ALL" ? filteredInvoices : (batches[currentBatch] || []);
 
   return (
-    <div className="flex flex-col gap-6 relative">
+    <div className="relative flex w-full min-w-0 flex-col gap-6">
       {/* Toast Notification Banner */}
       {toastMessage && (
         <div
@@ -196,16 +240,18 @@ export default function InvoiceBatchList({
       <div className="glass-card rounded-xl p-4 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
         <div className="flex flex-wrap items-center gap-3">
           {/* Month Batch Selector (only active when custom date filter is off) */}
-          {!hasDateFilter && batchKeys.length > 0 && (
+          {allBatchKeys.length > 0 && (
             <select
               value={currentBatch}
               onChange={(e) => setSelectedBatch(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-sm focus:border-primary outline-none cursor-pointer"
+              disabled={hasDateFilter}
+              title={hasDateFilter ? "Clear the date range to pick a month" : undefined}
+              className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-sm focus:border-primary outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
             >
               <option value="ALL">All invoices ({filteredInvoices.length})</option>
-              {batchKeys.map((bk) => (
+              {allBatchKeys.map((bk) => (
                 <option key={bk} value={bk}>
-                  {bk} ({batches[bk].length})
+                  {bk} ({(batches[bk] ?? []).length})
                 </option>
               ))}
             </select>
@@ -437,15 +483,17 @@ export default function InvoiceBatchList({
                   const isPrinted = inv.is_printed;
                   const isPaid = inv.status === "Paid";
                   const isInactive = inv.status === "Inactive";
-                  const isLocked = isPaid || isPrinted || isInactive;
+                  const isIssued = !!inv.issued_at;
+                  const isDraft = !isIssued && !isPaid && !isInactive;
+                  const isLocked = isPaid || isIssued || isInactive;
                   const isUpdating = updatingStatusId === inv.invoice_id;
 
                   const lockTooltip = isPaid
-                    ? "Locked: Paid invoice cannot be edited"
+                    ? "Paid — items can no longer be changed"
                     : isPrinted
-                    ? "Locked: Printed invoice cannot be edited"
+                    ? "Issued to the tenant — items can no longer be changed"
                     : isInactive
-                    ? "Locked: Inactive invoice cannot be edited"
+                    ? "Voided — items can no longer be changed"
                     : "Edit Line Items";
 
                   return (
@@ -495,7 +543,15 @@ export default function InvoiceBatchList({
                                 {formatDate(inv.due_date)}
                               </span>
                               {isLate && (
-                                <span className="font-sans text-[10px] font-semibold text-rose-300">
+                                <span
+                                  className={`w-fit rounded font-sans text-[10px] font-semibold ${
+                                    daysLate > 90
+                                      ? "bg-rose-500/20 px-1.5 py-0.5 text-rose-200"
+                                      : daysLate > 30
+                                      ? "text-rose-300"
+                                      : "text-amber-300"
+                                  }`}
+                                >
                                   {daysLate} day{daysLate === 1 ? "" : "s"} late
                                 </span>
                               )}
@@ -510,7 +566,13 @@ export default function InvoiceBatchList({
 
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <StatusBadge status={inv.status} variant="invoice" />
+                          {isDraft ? (
+                            <span className="rounded-md border border-outline-variant/60 bg-surface-container-high px-2.5 py-1 text-xs font-medium text-on-surface-variant">
+                              Draft
+                            </span>
+                          ) : (
+                            <StatusBadge status={inv.status} variant="invoice" />
+                          )}
                         </div>
                       </td>
 
@@ -526,6 +588,21 @@ export default function InvoiceBatchList({
                             <span className="material-symbols-outlined text-[16px] text-primary">picture_as_pdf</span>
                             <span>PDF Preview</span>
                           </button>
+
+                          {isDraft && (
+                            <button
+                              type="button"
+                              onClick={() => handleIssue(inv.invoice_id, inv.invoice_no)}
+                              disabled={isUpdating}
+                              title="Send this invoice to the tenant. Items lock afterwards."
+                              className="pressable flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+                            >
+                              <span className="material-symbols-outlined text-[15px] leading-none">
+                                outgoing_mail
+                              </span>
+                              Issue
+                            </button>
+                          )}
 
                           {/* Edit Items Button (Disabled if Locked) */}
                           {isLocked ? (
@@ -562,21 +639,21 @@ export default function InvoiceBatchList({
                                 <button
                                   type="button"
                                   onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Unpaid")}
-                                  className="text-amber-400 hover:text-amber-300 p-1 rounded hover:bg-surface-container-highest transition-colors"
-                                  title="Revert Status to Unpaid"
+                                  className="pressable flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-none transition-colors text-amber-300 hover:bg-amber-500/15"
+                                  title="Move this invoice back to unpaid"
                                 >
-                                  <span className="material-symbols-outlined text-[18px]">undo</span>
+                                  <span className="material-symbols-outlined text-[16px] leading-none">undo</span>
+                                  <span className="hidden xl:inline">Unpay</span>
                                 </button>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Paid")}
-                                  className="text-emerald-400 hover:text-emerald-300 p-1 rounded hover:bg-surface-container-highest transition-colors"
+                                  className="pressable flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-none transition-colors text-emerald-300 hover:bg-emerald-500/15"
                                   title="Mark this invoice as paid"
-                                  aria-label="Mark this invoice as paid"
                                 >
-                                  <span className="material-symbols-outlined text-[18px]">check_circle</span>
-                                  <span className="hidden lg:inline">Mark paid</span>
+                                  <span className="material-symbols-outlined text-[16px] leading-none">check_circle</span>
+                                  <span className="hidden xl:inline">Mark paid</span>
                                 </button>
                               )}
 
@@ -585,21 +662,21 @@ export default function InvoiceBatchList({
                                 <button
                                   type="button"
                                   onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Unpaid")}
-                                  className="text-sky-400 hover:text-sky-300 p-1 rounded hover:bg-surface-container-highest transition-colors"
-                                  title="Re-activate Invoice"
+                                  className="pressable flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-none transition-colors text-sky-300 hover:bg-sky-500/15"
+                                  title="Bring this invoice back into the books"
                                 >
-                                  <span className="material-symbols-outlined text-[18px]">power_settings_new</span>
+                                  <span className="material-symbols-outlined text-[16px] leading-none">restart_alt</span>
+                                  <span className="hidden xl:inline">Restore</span>
                                 </button>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Inactive")}
-                                  className="text-rose-400 hover:text-rose-300 p-1 rounded hover:bg-surface-container-highest transition-colors"
+                                  className="pressable flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-none transition-colors text-rose-300 hover:bg-rose-500/15"
                                   title="Void this invoice — it stops counting towards what is owed"
-                                  aria-label="Void this invoice"
                                 >
-                                  <span className="material-symbols-outlined text-[18px]">block</span>
-                                  <span className="hidden lg:inline">Void</span>
+                                  <span className="material-symbols-outlined text-[16px] leading-none">block</span>
+                                  <span className="hidden xl:inline">Void</span>
                                 </button>
                               )}
                             </div>

@@ -31,13 +31,16 @@ export default function EditInvoiceItemsModal({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const isLocked = invoice.status === "Paid" || invoice.is_printed || invoice.status === "Inactive";
+  // Locked once the invoice has been issued to the tenant, paid, or voided.
+  // It used to lock on is_printed, so opening the PDF preview froze it silently.
+  const isLocked =
+    invoice.status === "Paid" || !!invoice.issued_at || invoice.status === "Inactive";
   const lockReason = invoice.status === "Paid"
-    ? "This invoice is Paid"
-    : invoice.is_printed
-    ? "This invoice has been Printed / Exported"
+    ? "This invoice has been paid"
+    : invoice.issued_at
+    ? "This invoice has been issued to the tenant"
     : invoice.status === "Inactive"
-    ? "This invoice is Inactive / Disabled"
+    ? "This invoice has been voided"
     : "";
 
   const handleChargeSelect = (chargeId: string) => {
@@ -92,6 +95,8 @@ export default function EditInvoiceItemsModal({
     });
   };
 
+  const isDraft = !isLocked;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
       <div className="bg-surface-container border border-outline-variant/80 rounded-2xl w-full max-w-2xl p-6 shadow-2xl relative max-h-[90vh] flex flex-col">
@@ -125,12 +130,12 @@ export default function EditInvoiceItemsModal({
           {isLocked ? (
             <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">lock</span>
-              <span><strong>Locked:</strong> {lockReason} and cannot be modified. To make changes, revert invoice status or create a new invoice.</span>
+              <span><strong>Locked.</strong> {lockReason}, so its line items are fixed. Void it and raise a new one if the amounts are wrong.</span>
             </div>
           ) : (
             <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary flex items-center gap-2">
               <span className="material-symbols-outlined text-[18px]">info</span>
-              <span>Add one-off items (e.g. Access Card, Water Excess) or edit existing line items for <strong>this specific invoice only</strong>.</span>
+              <span><strong>Draft.</strong> Add or change line items freely. Once you issue this invoice to the tenant, the items are locked — only payment status can change after that.</span>
             </div>
           )}
 

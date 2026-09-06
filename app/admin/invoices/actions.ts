@@ -228,3 +228,49 @@ export async function removeInvoiceDetailAction(formData: FormData) {
     return { error: error.message || "Failed to remove invoice item." };
   }
 }
+
+/**
+ * Issue an invoice to the tenant.
+ *
+ * This is the point of no return for editing. Before DEV-140 the lock fired on
+ * `is_printed`, so merely opening the PDF preview froze the invoice for good —
+ * a side effect rather than a decision, and nothing warned you. Issuing is now
+ * deliberate: a draft can be edited freely, an issued invoice is a document of
+ * record and only its payment status can change.
+ */
+export async function issueInvoiceAction(state: any, formData: FormData) {
+  try {
+    const user = await requireUser(["Admin"]);
+    const invoice_id = String(formData.get("invoice_id") || "");
+    if (!invoice_id) throw new Error("Invoice ID is required.");
+
+    const invoice = await prisma.invoice.findUnique({
+      where: { invoice_id },
+      select: { issued_at: true, status: true, invoice_no: true },
+    });
+    if (!invoice) throw new Error("That invoice no longer exists.");
+    if (invoice.issued_at) throw new Error("That invoice has already been issued.");
+    if (invoice.status === "Inactive") {
+      throw new Error("This invoice is voided. Restore it before issuing.");
+    }
+
+    await prisma.invoice.update({
+      where: { invoice_id },
+      data: { issued_at: new Date(), modified_by: user.userId },
+    });
+
+    revalidatePath("/admin/invoices");
+    revalidatePath("/admin/billing");
+    return { success: true, message: `${invoice.invoice_no} issued. Its items are now locked.` };
+  } catch (error: any) {
+    return { error: error.message || "Could not issue the invoice" };
+  }
+}
+
+
+/** Plain-call variant, matching updateInvoiceStatusAction's shape. */
+export async function issueInvoice(invoice_id: string) {
+  const fd = new FormData();
+  fd.set("invoice_id", invoice_id);
+  return issueInvoiceAction(null, fd);
+}
