@@ -102,7 +102,7 @@ export default function BookingTimeline({
             );
           })}
 
-          {/* Selected Slot (Pending) */}
+          {/* Selected slot */}
           {selectedStart !== undefined && selectedEnd !== undefined && selectedEnd > selectedStart && (
             <div
               className={`absolute top-1 bottom-1 rounded-sm flex items-center justify-center z-10 ${

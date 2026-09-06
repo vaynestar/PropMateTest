@@ -2,25 +2,25 @@
  * Booking status — single source of truth.
  *
  * `Booking.booking_status` is an unconstrained string and six different values
- * were in play: the database held Pending, Confirmed, Reserved, Cancelled and
- * Completed, while the code also referenced Rejected. Nothing agreed:
+ * were once in play: the database held Pending, Confirmed, Reserved, Cancelled
+ * and Completed, while the code also referenced Rejected. Nothing agreed —
+ * `createBooking()` wrote "Reserved", which the status filter did not offer and
+ * the KPI cards did not count, so a resident's new booking fell through every
+ * bucket.
  *
- *   - `createBooking()` wrote **"Reserved"** for every resident booking, but the
- *     status filter only offered Confirmed and Pending and the KPI cards count
- *     Pending. A resident's new booking therefore fell through every bucket —
- *     it never showed as waiting for approval, and never as confirmed;
- *   - the admin path wrote "Confirmed" for the same act, so the two halves of
- *     the app named one state two ways;
- *   - Rejected appeared in filter code and had never been written.
+ * There are now **two stored states**. Booking a facility confirms it: the slot
+ * is free or it is not, and the overlap check already decides that. An approval
+ * step was tried and removed (user decision, 2026-09-06) — it added a queue,
+ * a status, a KPI card and an Approve button to a system whose only real
+ * question is whether the slot is taken. Simpler is the point.
  *
- * Three states are stored. **Completed is derived, not stored** — a confirmed
- * booking whose end time has passed is complete, and `getEffectiveStatus()` in
- * AdminBookingList already computes that. Storing it as well would let the two
- * disagree, so new code must not write it (rows that already carry it still
- * render).
+ * **Completed is derived, not stored** — a booking whose end time has passed is
+ * complete, and `getEffectiveStatus()` in AdminBookingList computes that.
+ * Storing it as well would let the two disagree, so new code must not write it
+ * (rows that already carry it still render).
  */
 
-export type BookingStatusKey = "Pending" | "Confirmed" | "Cancelled";
+export type BookingStatusKey = "Confirmed" | "Cancelled";
 
 export type BookingStatusMeta = {
   value: BookingStatusKey | "Completed";
@@ -33,13 +33,6 @@ export type BookingStatusMeta = {
 };
 
 export const BOOKING_STATUSES: Record<string, BookingStatusMeta> = {
-  Pending: {
-    value: "Pending",
-    label: "Waiting for approval",
-    icon: "hourglass_top",
-    chip: "bg-amber-500/15 text-amber-300 border-amber-500/40",
-    text: "text-amber-300",
-  },
   Confirmed: {
     value: "Confirmed",
     label: "Confirmed",
@@ -64,19 +57,19 @@ export const BOOKING_STATUSES: Record<string, BookingStatusMeta> = {
   },
 };
 
-/** Order used by the status filter. Completed is appended by the past view. */
-export const BOOKING_STATUS_ORDER: BookingStatusKey[] = [
-  "Pending",
-  "Confirmed",
-  "Cancelled",
-];
+/** Order used by the status filter. Completed is offered by the past view. */
+export const BOOKING_STATUS_ORDER: BookingStatusKey[] = ["Confirmed", "Cancelled"];
 
-/** Legacy spellings that were writable before this module existed. */
+/**
+ * Legacy spellings. "Pending" is here because the approval step existed
+ * briefly and rows may carry it; a booking that was awaiting approval is now
+ * simply confirmed.
+ */
 const ALIASES: Record<string, BookingStatusKey> = {
   reserved: "Confirmed",
   approved: "Confirmed",
   confirmed: "Confirmed",
-  pending: "Pending",
+  pending: "Confirmed",
   rejected: "Cancelled",
   cancelled: "Cancelled",
   canceled: "Cancelled",
@@ -93,7 +86,7 @@ export function normaliseBookingStatus(
 }
 
 const FALLBACK: BookingStatusMeta = {
-  value: "Pending",
+  value: "Confirmed",
   label: "Unknown",
   icon: "help",
   chip: "bg-surface-container-highest text-on-surface-variant border-outline-variant/60",

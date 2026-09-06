@@ -71,8 +71,6 @@ export async function bookFacility(state: any, formData: FormData) {
         end_time: end,
         purpose: String(formData.get("purpose") ?? "") || undefined,
         pax_count: Number(formData.get("pax_count") || 1),
-        // Pending: a resident's request goes into the admin's approval queue.
-        booking_status: "Pending",
       },
       user.userId
     );

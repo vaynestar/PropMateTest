@@ -43,8 +43,6 @@ export async function adminBookFacility(formData: FormData) {
      * form checks those in the browser, but a form is not a guard - so the
      * facilities page's "Close for maintenance" did nothing to admin bookings,
      * and a double booking was one stale tab away.
-     *
-     * Confirmed, not Pending: an admin making the booking IS the approval.
      */
     await createBooking(
       {
@@ -56,7 +54,6 @@ export async function adminBookFacility(formData: FormData) {
         end_time: end_time_str,
         purpose: purpose || undefined,
         pax_count,
-        booking_status: "Confirmed",
       },
       user.userId
     );

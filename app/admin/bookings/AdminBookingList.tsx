@@ -45,7 +45,7 @@ export default function AdminBookingList({
   const getEffectiveStatus = (b: any): string => {
     // Normalise first: rows written before lib/booking-status.ts carry
     // "Reserved", which nothing else in the app recognised.
-    const rawStatus = normaliseBookingStatus(b.booking_status) || "Pending";
+    const rawStatus = normaliseBookingStatus(b.booking_status) || "Confirmed";
     if (rawStatus === "Cancelled") {
       return rawStatus;
     }
@@ -138,7 +138,7 @@ export default function AdminBookingList({
     return matchesFacility && matchesStatus && matchesDateRange && matchesSearch;
   });
 
-  // Action: Update status (Approve or Cancel)
+  // Action: cancel a booking
   const handleUpdateStatus = (bookingId: string, status: string) => {
     setUpdatingId(bookingId);
     startTransition(async () => {
@@ -191,14 +191,10 @@ export default function AdminBookingList({
   /*
    * The KPI row used to be four cards: Active, Pending approval, Confirmed
    * active, Past archives. Active is Pending + Confirmed, so three of the four
-   * restated each other, and the tab strip immediately below already shows the
-   * active and past totals. None of them answered what an admin opens this page
-   * to find out: what needs approving, and what is happening today.
+   * restated each other, and the tab strip directly below already shows the
+   * active and past totals. With approval gone there are two questions left
+   * worth a card: what is happening today, and what is coming this week.
    */
-  const pendingCount = activeBookingsList.filter(
-    (b) => (b.booking_status || "").toLowerCase() === "pending"
-  ).length;
-
   const isSameDay = (iso: string, day: Date) => {
     const d = new Date(iso);
     return (
@@ -223,24 +219,8 @@ export default function AdminBookingList({
 
   return (
     <div className="space-y-6">
-      {/* Three questions an admin actually has on this page. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div
-          className={`glass-card flex items-center gap-3 rounded-xl border p-3.5 ${
-            pendingCount > 0 ? "border-amber-500/40" : "border-outline-variant/30"
-          }`}
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-400">
-            <span className="material-symbols-outlined text-[22px]">hourglass_top</span>
-          </div>
-          <div className="min-w-0">
-            <span className="block text-[11px] font-medium text-on-surface-variant">
-              Waiting for approval
-            </span>
-            <span className="text-xl font-bold text-amber-400">{pendingCount}</span>
-          </div>
-        </div>
-
+      {/* What is happening now and next. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="glass-card flex items-center gap-3 rounded-xl border border-outline-variant/30 p-3.5">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
             <span className="material-symbols-outlined text-[22px]">today</span>
@@ -399,7 +379,6 @@ export default function AdminBookingList({
               <option value="ALL">All statuses</option>
               {activeTab === "active" ? (
                 <>
-                  <option value="Pending">Waiting for approval</option>
                   <option value="Confirmed">Confirmed</option>
                   <option value="Cancelled">Cancelled</option>
                 </>
@@ -530,7 +509,6 @@ export default function AdminBookingList({
           {filteredBookings.map((b) => {
             const isThisUpdating = updatingId === b.booking_id && isPending;
             const effectiveStatus = getEffectiveStatus(b);
-            const isPendingStatus = effectiveStatus.toLowerCase() === "pending";
             const isCancelled = effectiveStatus.toLowerCase() === "cancelled";
             const isCompleted = effectiveStatus.toLowerCase() === "completed";
 
@@ -633,29 +611,15 @@ export default function AdminBookingList({
                 {/* Card Action Buttons (Active Bookings Only) */}
                 {activeTab === "active" && (
                   <div className="mt-4 pt-3 border-t border-outline-variant/20 flex gap-2">
-                    {isPendingStatus && (
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateStatus(b.booking_id, "Confirmed")}
-                        disabled={isPending}
-                        className="flex-1 btn-primary py-1.5 rounded-lg text-xs font-bold text-white shadow-sm flex items-center justify-center gap-1 transition-all pressable disabled:opacity-50"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">check</span>
-                        <span>{isThisUpdating ? "Updating..." : "Approve"}</span>
-                      </button>
-                    )}
-
                     {!isCancelled && !isCompleted && (
                       <button
                         type="button"
                         onClick={() => handleUpdateStatus(b.booking_id, "Cancelled")}
                         disabled={isPending}
-                        className={`py-1.5 rounded-lg bg-rose-500/10 text-rose-300 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-semibold transition-all pressable disabled:opacity-50 flex items-center justify-center gap-1 ${
-                          isPendingStatus ? "px-3" : "w-full"
-                        }`}
+                        className="pressable flex w-full items-center justify-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 py-1.5 text-xs font-semibold text-rose-300 transition-all hover:bg-rose-500/20 disabled:opacity-50"
                       >
                         <span className="material-symbols-outlined text-[15px]">cancel</span>
-                        <span>Cancel Booking</span>
+                        <span>{isThisUpdating ? "Cancelling…" : "Cancel booking"}</span>
                       </button>
                     )}
                   </div>
@@ -696,8 +660,7 @@ export default function AdminBookingList({
                 {filteredBookings.map((b) => {
                   const isThisUpdating = updatingId === b.booking_id && isPending;
                   const effectiveStatus = getEffectiveStatus(b);
-                  const isPendingStatus = effectiveStatus.toLowerCase() === "pending";
-                  const isCancelled = effectiveStatus.toLowerCase() === "cancelled";
+                        const isCancelled = effectiveStatus.toLowerCase() === "cancelled";
                   const isCompleted = effectiveStatus.toLowerCase() === "completed";
 
                   return (
@@ -741,16 +704,6 @@ export default function AdminBookingList({
                       {activeTab === "active" && (
                         <td className="px-5 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            {isPendingStatus && (
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateStatus(b.booking_id, "Confirmed")}
-                                disabled={isPending}
-                                className="px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/20 text-xs font-semibold pressable disabled:opacity-50"
-                              >
-                                {isThisUpdating ? "..." : "Approve"}
-                              </button>
-                            )}
                             {!isCancelled && !isCompleted && (
                               <button
                                 type="button"
@@ -758,7 +711,7 @@ export default function AdminBookingList({
                                 disabled={isPending}
                                 className="px-2.5 py-1 rounded bg-rose-500/10 text-rose-300 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-medium pressable disabled:opacity-50"
                               >
-                                Cancel
+                                {isThisUpdating ? "…" : "Cancel"}
                               </button>
                             )}
                           </div>

@@ -35,9 +35,9 @@ export type BookingInput = {
   /** Ties the booking to a tenancy. The admin path sets it; residents do not. */
   lease_id?: string;
   /**
-   * Residents' bookings start as Pending so they surface in the admin's
-   * "Waiting for approval" queue. An admin booking on a resident's behalf is
-   * already an approval, so that path passes Confirmed.
+   * Defaults to Confirmed. There is no approval step: booking a facility
+   * confirms it, and the overlap check above is what decides whether the slot
+   * was available.
    */
   booking_status?: BookingStatusKey;
 };
@@ -113,7 +113,7 @@ export async function createBooking(input: BookingInput, createdBy?: string) {
       end_time: endDt,
       purpose: input.purpose,
       // Was hardcoded "Reserved", a name no filter or KPI in the app knew.
-      booking_status: input.booking_status ?? "Pending",
+      booking_status: input.booking_status ?? "Confirmed",
       pax_count: input.pax_count && input.pax_count > 0 ? input.pax_count : 1,
       created_by: createdBy,
     },
