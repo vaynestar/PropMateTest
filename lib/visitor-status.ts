@@ -158,3 +158,22 @@ export function maskIdentityNumber(value: string | null | undefined): string {
   if (trimmed.length <= 4) return trimmed;
   return "•".repeat(Math.min(9, trimmed.length - 4)) + trimmed.slice(-4);
 }
+
+/**
+ * Mask a phone number the same way and for the same reason as the IC.
+ *
+ * A guard needs to reach a visitor or their host occasionally, not to have
+ * fourteen contact numbers legible from the counter. The last three digits are
+ * enough to confirm you are dialling the right person once the number is
+ * revealed.
+ *
+ *   019-2233445  ->  019-••••445
+ */
+export function maskPhoneNumber(value: string | null | undefined): string {
+  if (!value) return "—";
+  const trimmed = value.trim();
+  if (trimmed.length <= 6) return trimmed;
+  const head = trimmed.slice(0, 3);
+  const tail = trimmed.slice(-3);
+  return `${head}${"•".repeat(Math.min(4, trimmed.length - 6))}${tail}`;
+}

@@ -6,6 +6,7 @@ import {
   isStaleOnSite,
   hoursOnSite,
   maskIdentityNumber,
+  maskPhoneNumber,
 } from "@/lib/visitor-status";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import VisitorPassModal from "@/components/visitors/VisitorPassModal";
@@ -404,7 +405,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                   {v.contact_no && (
                     <div className="flex justify-between">
                       <span>Contact:</span>
-                      <span className="text-white">{v.contact_no}</span>
+                      <span className="text-white">{maskPhoneNumber(v.contact_no)}</span>
                     </div>
                   )}
 
@@ -594,7 +595,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                   </td>
                   <td className="px-4 py-3.5 font-mono">
                     <div className="text-white">{maskIdentityNumber(v.visitor_ic_no)}</div>
-                    {v.contact_no && <div className="text-[11px] text-on-surface-variant mt-0.5">{v.contact_no}</div>}
+                    {v.contact_no && <div className="text-[11px] text-on-surface-variant mt-0.5">{maskPhoneNumber(v.contact_no)}</div>}
                   </td>
                   <td className="px-4 py-3.5">
                     <div className="font-semibold text-white">

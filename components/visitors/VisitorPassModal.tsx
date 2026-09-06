@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { maskIdentityNumber, maskPhoneNumber } from "@/lib/visitor-status";
 import { QRCodeCanvas } from "qrcode.react";
 
 interface VisitorPassProps {
@@ -29,6 +30,13 @@ interface VisitorPassProps {
 
 export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps) {
   const [copied, setCopied] = useState(false);
+  /*
+   * This pass is opened from the directory on the guardhouse screen, not on the
+   * visitor's own phone — so it faces the lobby like everything else here. The
+   * identity number is hidden until someone asks for it: needed when printing
+   * the slip or checking the pass against a card, not the rest of the time.
+   */
+  const [showIdentity, setShowIdentity] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const formattedDate = visitor.visit_date
@@ -117,10 +125,35 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
             <span className="text-on-surface-variant text-[11px]">Destination:</span>
             <span className="font-bold text-white">{destinationText}</span>
           </div>
-          <div className="flex justify-between">
-            <span className="text-on-surface-variant text-[11px]">IC / Passport:</span>
-            <span className="font-mono text-white font-medium">{visitor.visitor_ic_no}</span>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-on-surface-variant">IC / Passport:</span>
+            <span className="flex items-center gap-1.5">
+              <span className="font-mono font-medium text-white">
+                {showIdentity
+                  ? visitor.visitor_ic_no
+                  : maskIdentityNumber(visitor.visitor_ic_no)}
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowIdentity((v) => !v)}
+                aria-label={showIdentity ? "Hide identity number" : "Show identity number"}
+                className="pressable rounded p-0.5 text-on-surface-variant transition-colors hover:text-white"
+              >
+                <span className="material-symbols-outlined text-[16px] leading-none">
+                  {showIdentity ? "visibility_off" : "visibility"}
+                </span>
+              </button>
+            </span>
           </div>
+
+          {visitor.contact_no && (
+            <div className="flex justify-between">
+              <span className="text-[11px] text-on-surface-variant">Contact:</span>
+              <span className="font-mono font-medium text-white">
+                {showIdentity ? visitor.contact_no : maskPhoneNumber(visitor.contact_no)}
+              </span>
+            </div>
+          )}
           {visitor.vehicle_plate && (
             <div className="flex justify-between items-center">
               <span className="text-on-surface-variant text-[11px]">Vehicle Plate:</span>

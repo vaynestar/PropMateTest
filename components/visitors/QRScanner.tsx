@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { maskIdentityNumber } from "@/lib/visitor-status";
+import { maskIdentityNumber, maskPhoneNumber } from "@/lib/visitor-status";
 import { Html5Qrcode } from "html5-qrcode";
 import jsQR from "jsqr";
 import Image from "next/image";
@@ -824,7 +824,7 @@ function VisitorDetailsCard({
         </span>
         {visitor.contact_no && (
           <span className="text-[11px] text-on-surface-variant block">
-            {visitor.contact_no}
+            {showIdentity ? visitor.contact_no : maskPhoneNumber(visitor.contact_no)}
           </span>
         )}
       </div>
