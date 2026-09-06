@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { maskIdentityNumber } from "@/lib/visitor-status";
 import { Html5Qrcode } from "html5-qrcode";
 import jsQR from "jsqr";
 import Image from "next/image";
@@ -474,7 +475,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
                     <span className="material-symbols-outlined text-[20px]">verified</span>
                   </span>
                   <div>
-                    <span className="text-[10px] font-mono font-bold tracking-widest text-emerald-400 block uppercase">
+                    <span className="text-[10px] font-mono font-bold tracking-widest text-emerald-400 block">
                       Access Granted
                     </span>
                     <span className="text-sm font-bold text-white">
@@ -490,8 +491,9 @@ export default function QRScanner({ onClose }: QRScannerProps) {
                 </span>
               </div>
 
-              {/* Details */}
-              <VisitorDetailsCard visitor={verifiedVisitor} />
+              {/* Arrival is the moment the guard checks the person against
+                  the pass, so the identity number is shown in full here. */}
+              <VisitorDetailsCard visitor={verifiedVisitor} showIdentity />
             </div>
           )}
 
@@ -565,7 +567,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
                   <span className="material-symbols-outlined text-[20px]">block</span>
                 </span>
                 <div>
-                  <span className="text-[10px] font-mono font-bold tracking-widest text-rose-400 block uppercase">
+                  <span className="text-[10px] font-mono font-bold tracking-widest text-rose-400 block">
                     Pass Expired / Completed
                   </span>
                   <span className="text-sm font-bold text-white">
@@ -741,12 +743,28 @@ export default function QRScanner({ onClose }: QRScannerProps) {
 }
 
 // Subcomponent: Visitor Details Grid
-function VisitorDetailsCard({ visitor }: { visitor: any }) {
+/**
+ * `showIdentity` follows the purpose the screen serves.
+ *
+ * At CHECK-IN the guard is matching the person in front of them against the
+ * pass, so the IC number is the whole point and is shown in full. On the way
+ * out nothing is being verified — the pass was already matched on entry — so
+ * the number is masked, along with the duplicate and spent-pass screens. Same
+ * reasoning as the directory list: show personal data where it does a job, not
+ * on every screen that happens to have room for it.
+ */
+function VisitorDetailsCard({
+  visitor,
+  showIdentity = false,
+}: {
+  visitor: any;
+  showIdentity?: boolean;
+}) {
   return (
     <div className="grid grid-cols-2 gap-3 text-xs pt-1">
       <div>
-        <span className="text-[10px] text-on-surface-variant uppercase tracking-wider block font-medium">
-          Visitor & Type
+        <span className="text-[10px] text-on-surface-variant block font-medium">
+          Visitor
         </span>
         <span className="text-sm font-bold text-white">
           {visitor.visitor_name}
@@ -756,19 +774,22 @@ function VisitorDetailsCard({ visitor }: { visitor: any }) {
             {visitor.visitor_type || "Resident Guest"}
           </span>
         </div>
-        <span className="text-[11px] text-on-surface-variant font-mono block mt-0.5">
-          IC: {visitor.visitor_ic_no || "N/A"}
+        <span className="mt-0.5 block font-mono text-[11px] text-on-surface-variant">
+          IC:{" "}
+          {showIdentity
+            ? visitor.visitor_ic_no || "N/A"
+            : maskIdentityNumber(visitor.visitor_ic_no)}
         </span>
         {visitor.contact_no && (
           <span className="text-[11px] text-on-surface-variant block">
-            📞 {visitor.contact_no}
+            {visitor.contact_no}
           </span>
         )}
       </div>
 
       <div>
-        <span className="text-[10px] text-on-surface-variant uppercase tracking-wider block font-medium">
-          Destination / Area
+        <span className="text-[10px] text-on-surface-variant block font-medium">
+          Where they are going
         </span>
         <span className="text-sm font-bold text-white">
           {visitor.destination || (visitor.lease?.unit ? `Unit ${visitor.lease.unit.unit_number}` : "General Property")}
@@ -785,7 +806,7 @@ function VisitorDetailsCard({ visitor }: { visitor: any }) {
 
       {visitor.vehicle_plate && (
         <div>
-          <span className="text-[10px] text-on-surface-variant uppercase tracking-wider block font-medium">
+          <span className="text-[10px] text-on-surface-variant block font-medium">
             Vehicle Plate
           </span>
           <span className="font-mono font-bold text-amber-300 px-2 py-0.5 rounded bg-surface-container-high border border-outline-variant/40 inline-block">
