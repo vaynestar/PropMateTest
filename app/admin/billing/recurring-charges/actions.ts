@@ -22,8 +22,11 @@ export async function getRecurringChargesData(propertyId?: string | null) {
     }
   });
 
+  // is_active was not filtered here, so a charge switched off on the Charge
+  // types page still appeared in this picker — the one place recurring charges
+  // are actually set up. The invoices and lease-charge pickers both filtered it.
   const chargeMasters = await prisma.chargeMaster.findMany({
-    where: { charge_type: "Recurring" },
+    where: { charge_type: "Recurring", is_active: true },
     orderBy: { charge_name: "asc" }
   });
 

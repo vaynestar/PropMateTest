@@ -2,6 +2,13 @@
 
 import { useState, useActionState, useEffect } from "react";
 import { updateChargeAction } from "./actions";
+import {
+  CHARGE_TYPES,
+  CHARGE_TYPE_ORDER,
+  chargeType,
+  RENT_CHARGE_NAME,
+  type ChargeTypeKey,
+} from "@/lib/charge-type";
 
 export default function EditChargeModal({
   charge,
@@ -12,6 +19,13 @@ export default function EditChargeModal({
 }) {
   const [state, formAction, isPending] = useActionState(updateChargeAction, null);
   const [isActive, setIsActive] = useState(charge.is_active);
+
+  // The stored value may be a legacy spelling ("One-Off", "Penalty"), which
+  // matched no <option>, so the select silently showed the FIRST one —
+  // "Recurring" — and saving converted a one-off fee into a monthly charge on
+  // every tenant. Normalise before seeding the control.
+  const [type, setType] = useState<ChargeTypeKey>(chargeType(charge.charge_type).value);
+  const isRentCharge = charge.charge_name === RENT_CHARGE_NAME;
 
   useEffect(() => {
     if (state?.success) {
@@ -28,7 +42,7 @@ export default function EditChargeModal({
               edit_note
             </span>
             <h3 className="font-title-md text-title-md text-on-surface font-bold">
-              Edit Master Charge
+              Edit charge
             </h3>
           </div>
           <button
@@ -47,6 +61,16 @@ export default function EditChargeModal({
           </div>
         )}
 
+        {isRentCharge && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+            <span className="material-symbols-outlined text-[18px] leading-none">info</span>
+            <span className="min-w-0">
+              Invoice generation looks this charge up by name, so its name, type and
+              on/off state are fixed. The amount and description can still change.
+            </span>
+          </div>
+        )}
+
         <form action={formAction} className="flex flex-col gap-4">
           <input type="hidden" name="charge_id" value={charge.charge_id} />
           <input type="hidden" name="is_active" value={isActive ? "true" : "false"} />
@@ -60,6 +84,7 @@ export default function EditChargeModal({
               name="charge_name"
               defaultValue={charge.charge_name}
               required
+              readOnly={isRentCharge}
               disabled={isPending}
               className="px-4 py-2.5 rounded-lg bg-surface-container-high border border-outline-variant text-on-surface focus:border-primary outline-none text-sm"
             />
@@ -71,20 +96,24 @@ export default function EditChargeModal({
             </label>
             <select
               name="charge_type"
-              defaultValue={charge.charge_type}
-              disabled={isPending}
-              className="px-4 py-2.5 rounded-lg bg-surface-container-high border border-outline-variant text-on-surface focus:border-primary outline-none text-sm"
+              value={type}
+              onChange={(e) => setType(e.target.value as ChargeTypeKey)}
+              disabled={isPending || isRentCharge}
+              className="px-4 py-2.5 rounded-lg bg-surface-container-high border border-outline-variant text-on-surface focus:border-primary outline-none text-sm disabled:opacity-60"
             >
-              <option value="Recurring">Recurring (Monthly)</option>
-              <option value="One-Off">One-Off</option>
-              <option value="Penalty">Penalty</option>
+              {CHARGE_TYPE_ORDER.map((k) => (
+                <option key={k} value={k}>
+                  {CHARGE_TYPES[k].label}
+                </option>
+              ))}
             </select>
+            <p className="text-[11px] text-on-surface-variant">{CHARGE_TYPES[type].hint}</p>
           </div>
 
           <div className="flex gap-4">
             <div className="flex flex-col gap-1 w-1/2">
               <label className="text-xs font-semibold text-on-surface-variant">
-                Default Amt (RM)
+                Default amount (RM)
               </label>
               <input
                 type="number"

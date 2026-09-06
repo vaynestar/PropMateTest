@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { saveLeaseChargesAction } from "@/app/admin/billing/recurring-charges/actions";
+import { RENT_CHARGE_NAME } from "@/lib/charge-type";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR" }).format(value);
@@ -46,7 +47,7 @@ export default function RecurringChargesClient({
    */
   const summarise = (l: any) => {
     const charges = l.lease_charges ?? [];
-    const rentCharge = charges.find((c: any) => c.charge?.charge_name === "Monthly Rental");
+    const rentCharge = charges.find((c: any) => c.charge?.charge_name === RENT_CHARGE_NAME);
     const rent = rentCharge ? Number(rentCharge.amount) * Number(rentCharge.quantity) : 0;
     const extras = charges
       .filter((c: any) => c !== rentCharge)

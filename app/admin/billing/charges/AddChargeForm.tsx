@@ -2,10 +2,12 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { createChargeAction } from "./actions";
+import { CHARGE_TYPES, CHARGE_TYPE_ORDER, type ChargeTypeKey } from "@/lib/charge-type";
 
 export default function AddChargeForm() {
   const [state, formAction, isPending] = useActionState(createChargeAction, null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [type, setType] = useState<ChargeTypeKey>("Recurring");
 
   useEffect(() => {
     if (state?.success) {
@@ -16,12 +18,16 @@ export default function AddChargeForm() {
 
   return (
     <div className="glass-card rounded-xl p-6 self-start relative overflow-hidden">
-      <h2 className="font-title-md text-title-md text-on-surface mb-4">Add New Charge</h2>
+      <h2 className="font-title-md text-title-md text-on-surface">Add a charge</h2>
+      <p className="mb-4 mt-1 text-xs text-on-surface-variant">
+        A charge is a line that can appear on an invoice. Adding it here does not bill
+        anyone — it becomes available to put on a lease or an invoice.
+      </p>
 
       {isSuccess && (
         <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2 animate-slide-in">
           <span className="material-symbols-outlined text-[18px]">check_circle</span>
-          New charge master created!
+          Charge created. It is now available on leases and invoices.
         </div>
       )}
 
@@ -53,19 +59,24 @@ export default function AddChargeForm() {
           </label>
           <select
             name="charge_type"
+            value={type}
+            onChange={(e) => setType(e.target.value as ChargeTypeKey)}
             disabled={isPending}
             className="px-4 py-2.5 rounded-lg bg-surface-container-high border border-outline-variant text-on-surface focus:border-primary outline-none text-sm transition-colors"
           >
-            <option value="Recurring">Recurring (Monthly)</option>
-            <option value="One-Off">One-Off</option>
-            <option value="Penalty">Penalty</option>
+            {CHARGE_TYPE_ORDER.map((k) => (
+              <option key={k} value={k}>
+                {CHARGE_TYPES[k].label}
+              </option>
+            ))}
           </select>
+          <p className="text-[11px] text-on-surface-variant">{CHARGE_TYPES[type].hint}</p>
         </div>
 
         <div className="flex gap-4">
           <div className="flex flex-col gap-1 w-1/2">
             <label className="font-label-md text-on-surface-variant text-xs font-semibold">
-              Default Amt (RM)
+              Default amount (RM)
             </label>
             <input
               type="number"
@@ -85,9 +96,9 @@ export default function AddChargeForm() {
               type="text"
               name="uom"
               required
-              defaultValue="Month"
+              defaultValue="month"
               disabled={isPending}
-              placeholder="e.g. Month / Unit"
+              placeholder="e.g. month / unit / piece"
               className="px-4 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-on-surface focus:border-primary outline-none text-sm font-medium"
             />
           </div>
@@ -118,7 +129,7 @@ export default function AddChargeForm() {
           ) : (
             <span className="material-symbols-outlined text-[18px]">add</span>
           )}
-          {isPending ? "Creating Charge..." : "Create Charge"}
+          {isPending ? "Creating…" : "Create charge"}
         </button>
       </form>
     </div>

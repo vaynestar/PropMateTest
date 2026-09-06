@@ -9,9 +9,21 @@ export const dynamic = "force-dynamic";
 export default async function ChargesPage() {
   await requireUser(["Admin"]);
 
-  const charges = await prisma.chargeMaster.findMany({
+  const rows = await prisma.chargeMaster.findMany({
     orderBy: { charge_name: "asc" },
   });
+
+  // Prisma Decimal cannot cross into a Client Component — AGENTS.md Rule 6.
+  // default_amount was reaching ChargeTable raw, logging 15 console errors.
+  const charges = rows.map((c) => ({
+    charge_id: c.charge_id,
+    charge_name: c.charge_name,
+    charge_type: c.charge_type,
+    uom: c.uom,
+    default_amount: Number(c.default_amount ?? 0),
+    description: c.description,
+    is_active: c.is_active,
+  }));
 
   return (
     <div className="flex flex-col gap-stack-lg animate-fade-in">

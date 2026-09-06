@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { RENT_CHARGE_NAME } from "@/lib/charge-type";
 
 import prisma from "@/lib/prisma";
 
@@ -119,7 +120,7 @@ export async function generateInvoicesForLeases(leaseIds: string[], createdBy?: 
   }
 
   const rentalCharge = await prisma.chargeMaster.findFirst({
-    where: { charge_name: "Monthly Rental" },
+    where: { charge_name: RENT_CHARGE_NAME },
   });
 
   const { y, m } = currentMonthKey(targetDate);
