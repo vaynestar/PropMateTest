@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { getResidentPortalData, getResidentTickets } from "@/lib/resident";
 import { listTicketCategories, raiseTicket } from "@/lib/maintenance";
@@ -41,10 +42,31 @@ export default async function ResidentMaintenancePage() {
 
     if (!title.trim()) return { error: "Please enter an issue title." };
 
+    /*
+     * unit_id and property_id arrive straight from the form, so without this a
+     * resident could raise a ticket against a unit they do not occupy simply by
+     * posting a different id. The page fills the form from their own lease, but
+     * a form is not a guard - the same hole that was open on facility bookings
+     * until DEV-144.
+     */
+    const ownLease = await prisma.tenantLease.findFirst({
+      where: { user_id: sessionUser.userId, status: "Active" },
+      select: { unit: { select: { unit_id: true, property_id: true } } },
+    });
+    if (!ownLease?.unit) {
+      return { error: "You need an active lease before you can report an issue." };
+    }
+    if (locationType === "Unit" && unitId && unitId !== ownLease.unit.unit_id) {
+      return { error: "You can only report issues for your own unit." };
+    }
+    if (propertyId && propertyId !== ownLease.unit.property_id) {
+      return { error: "You can only report issues in your own property." };
+    }
+
     try {
       await raiseTicket({
-        property_id: propertyId || undefined,
-        unit_id: locationType === "Unit" ? unitId : undefined,
+        property_id: ownLease.unit.property_id,
+        unit_id: locationType === "Unit" ? ownLease.unit.unit_id : undefined,
         location_type: locationType,
         location_detail: locationDetail,
         requester_id: sessionUser.userId,

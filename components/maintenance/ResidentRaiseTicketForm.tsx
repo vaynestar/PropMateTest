@@ -76,7 +76,7 @@ export default function ResidentRaiseTicketForm({
       if (res?.error) {
         setToast({ message: res.error, type: "error" });
       } else {
-        setToast({ message: "Helpdesk request submitted successfully!", type: "success" });
+        setToast({ message: "Reported. You can follow it under My Requests.", type: "success" });
         formEl.reset();
         setLocationType("Unit");
         setCommonAreaPreset("Hallway / Corridor");

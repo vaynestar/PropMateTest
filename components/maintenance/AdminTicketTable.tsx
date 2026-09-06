@@ -23,11 +23,7 @@ export default function AdminTicketTable({
   defaultPropertyId = "",
 }: AdminTicketTableProps) {
   const [search, setSearch] = useState("");
-  const [filterProperty, setFilterProperty] = useState(
-    defaultPropertyId && properties.some((p) => p.property_id === defaultPropertyId)
-      ? defaultPropertyId
-      : "ALL"
-  );
+
   const [filterLocationType, setFilterLocationType] = useState("ALL");
   const [filterPriority, setFilterPriority] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -38,7 +34,7 @@ export default function AdminTicketTable({
   const filteredTickets = tickets.filter((t) => {
     const propId = t.property_id || t.lease?.unit?.property_id || t.unit?.property_id;
     const matchesProperty =
-      filterProperty === "ALL" || !filterProperty ? true : propId === filterProperty;
+      true;
 
     const isCommonArea = t.location_type === "Common Area";
     const matchesLocationType =
@@ -80,7 +76,7 @@ export default function AdminTicketTable({
       if (res?.error) {
         setToast({ message: res.error, type: "error" });
       } else {
-        setToast({ message: "Ticket updated successfully!", type: "success" });
+        setToast({ message: "Ticket updated.", type: "success" });
         setTimeout(() => {
           setEditingTicket(null);
           setToast(null);
@@ -106,32 +102,16 @@ export default function AdminTicketTable({
               className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none transition-colors placeholder:text-on-surface-variant/60"
             />
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 w-full lg:w-auto gap-2">
-            {/* Property Filter */}
-            {properties.length > 0 && (
-              <select
-                value={filterProperty}
-                onChange={(e) => setFilterProperty(e.target.value)}
-                className="px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-xs text-on-surface focus:border-primary outline-none font-medium"
-              >
-                <option value="ALL">📋 All Properties</option>
-                {properties.map((p) => (
-                  <option key={p.property_id} value={p.property_id}>
-                    🏢 {p.property_name} {p.property_id === defaultPropertyId ? " (Active)" : ""}
-                  </option>
-                ))}
-              </select>
-            )}
-
+          <div className="grid w-full grid-cols-2 gap-2 md:grid-cols-3 lg:w-auto">
             {/* Location Type Filter */}
             <select
               value={filterLocationType}
               onChange={(e) => setFilterLocationType(e.target.value)}
               className="px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-xs text-on-surface focus:border-primary outline-none font-medium"
             >
-              <option value="ALL">📍 All Locations</option>
-              <option value="UNIT">🏠 Units Only</option>
-              <option value="COMMON">🏢 Common Areas Only</option>
+              <option value="ALL">Units and common areas</option>
+              <option value="UNIT">Inside a unit</option>
+              <option value="COMMON">Common areas</option>
             </select>
 
             {/* Priority Filter */}
@@ -167,14 +147,13 @@ export default function AdminTicketTable({
         {/* Results count & reset */}
         <div className="px-5 py-2 bg-surface-container/30 border-b border-outline-variant/20 flex items-center justify-between text-xs text-on-surface-variant">
           <span>
-            Showing <span className="font-semibold text-on-surface">{filteredTickets.length}</span> of {tickets.length} tickets
+            Showing <span className="font-semibold text-on-surface">{filteredTickets.length}</span> of {tickets.length} tickets in this property
           </span>
-          {(search || filterProperty !== "ALL" || filterLocationType !== "ALL" || filterPriority || filterStatus) && (
+          {(search || filterLocationType !== "ALL" || filterPriority || filterStatus) && (
             <button
               type="button"
               onClick={() => {
                 setSearch("");
-                setFilterProperty("ALL");
                 setFilterLocationType("ALL");
                 setFilterPriority("");
                 setFilterStatus("");
@@ -182,7 +161,7 @@ export default function AdminTicketTable({
               className="text-primary hover:underline font-medium flex items-center gap-1"
             >
               <span className="material-symbols-outlined text-[14px]">close</span>
-              Reset Filters
+              Clear filters
             </button>
           )}
         </div>
@@ -231,7 +210,7 @@ export default function AdminTicketTable({
                               <span>{t.location_detail || "Common Area"}</span>
                             </div>
                             <div className="text-[11px] text-on-surface-variant mt-0.5">
-                              🏢 {propertyName}
+                              {propertyName}
                             </div>
                           </div>
                         ) : (
@@ -241,7 +220,7 @@ export default function AdminTicketTable({
                               <span>Unit {unitNum || "N/A"}</span>
                             </div>
                             <div className="text-[11px] text-on-surface-variant mt-0.5">
-                              🏢 {propertyName}
+                              {propertyName}
                             </div>
                           </div>
                         )}
@@ -365,7 +344,7 @@ export default function AdminTicketTable({
 
               {/* Status Dropdown with KIV Option */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-on-surface-variant">Ticket Status</label>
+                <label className="text-xs font-medium text-on-surface-variant">Status</label>
                 <select
                   name="status"
                   defaultValue={editingTicket.status}
@@ -382,7 +361,7 @@ export default function AdminTicketTable({
 
               {/* Assignee */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-on-surface-variant">Assignee (Staff / Admin)</label>
+                <label className="text-xs font-medium text-on-surface-variant">Assigned to</label>
                 <select
                   name="assigned_to"
                   defaultValue={editingTicket.assigned_to || ""}
@@ -391,7 +370,7 @@ export default function AdminTicketTable({
                   <option value="">Unassigned</option>
                   {admins?.map((admin) => (
                     <option key={admin.user_id} value={admin.user_id}>
-                      👤 {admin.user_name}
+                      {admin.user_name}
                     </option>
                   ))}
                 </select>
@@ -399,7 +378,9 @@ export default function AdminTicketTable({
 
               {/* Maintenance Cost */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-on-surface-variant">Maintenance Cost (RM)</label>
+                <label className="text-xs font-medium text-on-surface-variant">
+                  What it cost (RM)
+                </label>
                 <input
                   type="number"
                   name="cost"
@@ -414,7 +395,7 @@ export default function AdminTicketTable({
               {/* Optional Remark / Admin Notes */}
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-on-surface-variant flex items-center justify-between">
-                  <span>Remark / Admin Notes</span>
+                  <span>What was done</span>
                   <span className="text-[10px] text-on-surface-variant font-normal">(Optional)</span>
                 </label>
                 <textarea

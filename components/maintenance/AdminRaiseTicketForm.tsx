@@ -146,7 +146,8 @@ export default function AdminRaiseTicketForm({
         >
           {properties.map((p) => (
             <option key={p.property_id} value={p.property_id}>
-              🏢 {p.property_name} {p.property_id === defaultPropertyId ? " (Active)" : ""}
+              {p.property_name}
+              {p.property_id === defaultPropertyId ? " — current" : ""}
             </option>
           ))}
         </select>

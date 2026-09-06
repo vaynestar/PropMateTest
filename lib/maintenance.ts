@@ -27,6 +27,15 @@ export async function listTicketCategories() {
 
 export async function createTicketCategory(categoryName: string, description?: string) {
   const name = requireText(categoryName, "Category name");
+
+  const clash = await prisma.ticketCategoryMaster.findFirst({
+    where: { category_name: { equals: name, mode: "insensitive" } },
+    select: { category_name: true },
+  });
+  if (clash) {
+    throw new Error(`"${clash.category_name}" already exists.`);
+  }
+
   return prisma.ticketCategoryMaster.create({
     data: {
       category_name: name,
@@ -42,7 +51,30 @@ export async function toggleTicketCategory(categoryId: string, isActive: boolean
   });
 }
 
+/**
+ * Tickets store the category NAME, not the id - there is no foreign key - so
+ * deleting a category in use does not fail. It leaves every one of those
+ * tickets pointing at a category that no longer exists, and the reports keep
+ * grouping by a name the masterfile has forgotten. Switching a category off
+ * hides it from the forms without touching history, which is what "retire this
+ * category" actually means.
+ */
 export async function deleteTicketCategory(categoryId: string) {
+  const category = await prisma.ticketCategoryMaster.findUnique({
+    where: { category_id: categoryId },
+    select: { category_name: true },
+  });
+  if (!category) throw new Error("That category no longer exists.");
+
+  const inUse = await prisma.ticket.count({
+    where: { ticket_category: category.category_name },
+  });
+  if (inUse > 0) {
+    throw new Error(
+      `${inUse} ticket${inUse === 1 ? "" : "s"} use "${category.category_name}". Switch it off instead — deleting it would leave those tickets with a category that no longer exists.`
+    );
+  }
+
   return prisma.ticketCategoryMaster.delete({
     where: { category_id: categoryId },
   });
@@ -167,11 +199,11 @@ export async function updateTicketStatus(
 
   const data: { 
     status: string; 
-    resolved_at?: Date; 
+    resolved_at?: Date | null; 
     modified_by?: string;
     cost?: number;
-    assigned_to?: string;
-    remark?: string;
+    assigned_to?: string | null;
+    remark?: string | null;
   } = {
     status,
     modified_by: modifiedBy,
@@ -181,16 +213,36 @@ export async function updateTicketStatus(
     data.cost = cost;
   }
 
+  // `undefined` tells Prisma "leave this field alone", so clearing the field
+  // in the form kept the old value: picking "Unassigned" did nothing, and a
+  // remark could never be removed once written. `null` is what clears a column.
   if (assignedTo !== undefined) {
-    data.assigned_to = assignedTo.trim() === "" ? undefined : assignedTo;
+    data.assigned_to = assignedTo.trim() === "" ? null : assignedTo;
   }
 
   if (remark !== undefined) {
-    data.remark = remark.trim() === "" ? undefined : remark.trim();
+    data.remark = remark.trim() === "" ? null : remark.trim();
   }
 
-  if (status === "Resolved" || status === "Closed") {
+  const existing = await prisma.ticket.findUnique({
+    where: { ticket_id: trimmedId },
+    select: { status: true, resolved_at: true },
+  });
+  if (!existing) throw new Error("That ticket no longer exists.");
+
+  const isDone = (v: string) => v === "Resolved" || v === "Closed";
+
+  /*
+   * resolved_at used to be stamped on every save while the status was Resolved
+   * or Closed, so editing the remark on a ticket resolved last month reset its
+   * resolution date to today - quietly destroying the record and any
+   * time-to-resolve figure built on it. And reopening a ticket left the old
+   * date in place, so a ticket could be Open and resolved at the same time.
+   */
+  if (isDone(status) && !isDone(existing.status)) {
     data.resolved_at = new Date();
+  } else if (!isDone(status) && isDone(existing.status)) {
+    data.resolved_at = null;
   }
 
   return prisma.ticket.update({

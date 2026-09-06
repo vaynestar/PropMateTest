@@ -162,7 +162,7 @@ export default function CategoryMasterManager({
                       {c.category_name}
                     </span>
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
                         c.is_active
                           ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
                           : "bg-surface-variant text-on-surface-variant border border-outline-variant"

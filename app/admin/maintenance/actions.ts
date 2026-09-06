@@ -16,7 +16,7 @@ export async function updateTicketAction(formData: FormData) {
   try {
     await updateTicketStatus(ticketId, status, user.userId, cost, assignedTo, remark);
     revalidatePath("/admin/maintenance");
-    return { success: true, message: "Ticket updated successfully!" };
+    return { success: true, message: "Ticket updated." };
   } catch (err: any) {
     return { error: err?.message || "Failed to update ticket." };
   }
@@ -57,7 +57,7 @@ export async function raiseTicketAction(formData: FormData) {
       createdBy: user.userId,
     });
     revalidatePath("/admin/maintenance");
-    return { success: true, message: "Ticket raised successfully!" };
+    return { success: true, message: `Ticket raised: "${title}".` };
   } catch (err: any) {
     return { error: err?.message || "Failed to raise ticket." };
   }
@@ -74,7 +74,7 @@ export async function addCategoryAction(formData: FormData) {
   try {
     await createTicketCategory(name, description);
     revalidatePath("/admin/maintenance");
-    return { success: true, message: `Category "${name}" created!` };
+    return { success: true, message: `"${name}" added. It is now offered on both ticket forms.` };
   } catch (err: any) {
     return { error: err?.message || "Failed to create category." };
   }
@@ -86,9 +86,9 @@ export async function toggleCategoryAction(categoryId: string, isActive: boolean
   try {
     await toggleTicketCategory(categoryId, isActive);
     revalidatePath("/admin/maintenance");
-    return { success: true, message: "Category status updated." };
+    return { success: true, message: "Saved." };
   } catch (err: any) {
-    return { error: "Failed to update category." };
+    return { error: err?.message || "Could not update the category." };
   }
 }
 
@@ -100,6 +100,7 @@ export async function deleteCategoryAction(categoryId: string) {
     revalidatePath("/admin/maintenance");
     return { success: true, message: "Category deleted." };
   } catch (err: any) {
-    return { error: "Failed to delete category." };
+    // The guard in deleteTicketCategory explains why, so pass it through.
+    return { error: err?.message || "Could not delete the category." };
   }
 }
