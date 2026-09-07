@@ -25,37 +25,37 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
       {/* 4 Helpdesk KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-on-surface-variant font-medium block">Total Tickets Logged</span>
+          <span className="text-xs text-on-surface-variant font-medium block">Tickets raised</span>
           <span className="text-2xl font-bold text-white mt-1 block">
             {maintenance.totalTickets}
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1 block">Maintenance requests received</span>
+          <span className="text-[11px] text-on-surface-variant mt-1 block">In this period</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-emerald-400 font-medium block">Resolved Tickets</span>
+          <span className="text-xs text-emerald-400 font-medium block">Resolved</span>
           <span className="text-2xl font-bold text-emerald-300 mt-1 block">
             {maintenance.resolvedCount}
           </span>
           <span className="text-[11px] text-emerald-500/80 mt-1 block">
-            {maintenance.resolutionRate}% resolution rate
+            {maintenance.resolutionRate}% of tickets raised
           </span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-amber-400 font-medium block">In Progress / Pending</span>
+          <span className="text-xs text-amber-400 font-medium block">Still open</span>
           <span className="text-2xl font-bold text-amber-300 mt-1 block">
             {maintenance.inProgressCount + maintenance.openCount}
           </span>
-          <span className="text-[11px] text-amber-500/80 mt-1 block">Active work in queue</span>
+          <span className="text-[11px] text-amber-500/80 mt-1 block">Someone still has work to do</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-on-surface-variant font-medium block">Average Turnaround (MTTR)</span>
+          <span className="text-xs text-on-surface-variant font-medium block">Average time to resolve</span>
           <span className="text-2xl font-mono font-bold text-primary mt-1 block">
             {maintenance.avgResolutionHours}h
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1 block">Mean time to resolve</span>
+          <span className="text-[11px] text-on-surface-variant mt-1 block">From raised to resolved</span>
         </div>
       </div>
 
@@ -64,8 +64,8 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
         {/* Ticket Volume by Category (2 Cols) */}
         <div className="lg:col-span-2 p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">
-            <h3 className="text-sm font-bold text-white">Incident Volume by Category</h3>
-            <p className="text-[11px] text-on-surface-variant">Classification of reported defects and maintenance requests</p>
+            <h3 className="text-sm font-bold text-white">What residents report</h3>
+            <p className="text-[11px] text-on-surface-variant">Tickets by category</p>
           </div>
 
           <div className="w-full pt-4 min-h-[300px]">
@@ -170,7 +170,7 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-surface-container-lowest text-on-surface-variant uppercase text-[10px] tracking-wider border-b border-outline-variant/60">
+            <thead className="bg-surface-container-lowest text-on-surface-variant text-[10px] tracking-wider border-b border-outline-variant/60">
               <tr>
                 <th className="px-4 py-2.5">Title</th>
                 <th className="px-4 py-2.5">Category</th>
@@ -190,7 +190,7 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
                       {t.location_detail || (t.unit ? `Unit ${t.unit.unit_number}` : "Common Area")}
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                         t.priority === "Urgent" ? "bg-rose-500/20 text-rose-300 border border-rose-500/30" : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
                       }`}>
                         {t.priority}

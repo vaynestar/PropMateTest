@@ -25,35 +25,35 @@ export default function FacilitiesReportView({ data }: FacilitiesReportViewProps
       {/* 4 Facility KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-on-surface-variant font-medium block">Total Reservations</span>
+          <span className="text-xs text-on-surface-variant font-medium block">Bookings</span>
           <span className="text-2xl font-bold text-white mt-1 block">
             {facilities.totalBookings}
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1 block">Resident amenity bookings</span>
+          <span className="text-[11px] text-on-surface-variant mt-1 block">Made by residents</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-emerald-400 font-medium block">Cumulative Hours Reserved</span>
+          <span className="text-xs text-emerald-400 font-medium block">Hours booked</span>
           <span className="text-2xl font-mono font-bold text-emerald-300 mt-1 block">
             {facilities.totalHours} hrs
           </span>
-          <span className="text-[11px] text-emerald-500/80 mt-1 block">Total booked facility duration</span>
+          <span className="text-[11px] text-emerald-500/80 mt-1 block">Across every facility</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-primary font-medium block">Confirmed Bookings</span>
+          <span className="text-xs text-primary font-medium block">Confirmed</span>
           <span className="text-2xl font-bold text-primary mt-1 block">
             {facilities.confirmedCount}
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1 block">Approved & completed sessions</span>
+          <span className="text-[11px] text-on-surface-variant mt-1 block">Not cancelled</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-on-surface-variant font-medium block">Active Amenities</span>
+          <span className="text-xs text-on-surface-variant font-medium block">Facilities in use</span>
           <span className="text-2xl font-bold text-white mt-1 block">
             {amenityUsage?.length || 0}
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1 block">Bookable facility types</span>
+          <span className="text-[11px] text-on-surface-variant mt-1 block">Booked at least once</span>
         </div>
       </div>
 
@@ -62,8 +62,8 @@ export default function FacilitiesReportView({ data }: FacilitiesReportViewProps
         {/* Hours Booked by Facility (2 Cols) */}
         <div className="lg:col-span-2 p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">
-            <h3 className="text-sm font-bold text-white">Facility Utilization by Hours</h3>
-            <p className="text-[11px] text-on-surface-variant">Cumulative hours reserved per amenity</p>
+            <h3 className="text-sm font-bold text-white">Which facilities get used</h3>
+            <p className="text-[11px] text-on-surface-variant">Hours booked, per facility</p>
           </div>
 
           <div className="w-full pt-4 min-h-[300px]">
@@ -155,7 +155,7 @@ export default function FacilitiesReportView({ data }: FacilitiesReportViewProps
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-surface-container-lowest text-on-surface-variant uppercase text-[10px] tracking-wider border-b border-outline-variant/60">
+            <thead className="bg-surface-container-lowest text-on-surface-variant text-[10px] tracking-wider border-b border-outline-variant/60">
               <tr>
                 <th className="px-4 py-2.5">Amenity Name</th>
                 <th className="px-4 py-2.5">Total Bookings</th>

@@ -35,7 +35,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-on-surface-variant">
-              Collection Rate
+              Collected
             </span>
             <span className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">payments</span>
@@ -56,7 +56,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-on-surface-variant">
-              Unit Occupancy
+              Occupancy
             </span>
             <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary border border-primary/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">apartment</span>
@@ -77,7 +77,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-on-surface-variant">
-              Helpdesk Resolution
+              Tickets resolved
             </span>
             <span className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">build</span>
@@ -89,7 +89,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
             </span>
             <div className="flex items-center justify-between text-[11px] text-on-surface-variant mt-1">
               <span>Resolved: {overview.resolvedTicketsCount}/{overview.totalTickets}</span>
-              <span>MTTR: ~{overview.avgResolutionHours}h</span>
+              <span>Avg {overview.avgResolutionHours}h to resolve</span>
             </div>
           </div>
         </div>
@@ -98,7 +98,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-on-surface-variant">
-              Visitors On-Site
+              Visitors in the building
             </span>
             <span className="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center">
               <span className="material-symbols-outlined text-[18px]">badge</span>
@@ -122,8 +122,8 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
         <div className="lg:col-span-2 p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
             <div>
-              <h3 className="text-sm font-bold text-white">Monthly Cashflow & Collections</h3>
-              <p className="text-[11px] text-on-surface-variant">Invoiced billed amounts vs total paid collections</p>
+              <h3 className="text-sm font-bold text-white">Billed against collected</h3>
+              <p className="text-[11px] text-on-surface-variant">What went out, and what came back</p>
             </div>
             <div className="flex items-center gap-3 text-[11px]">
               <span className="flex items-center gap-1.5 text-on-surface-variant">
@@ -180,8 +180,8 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
         {/* Occupancy Donut (1 Col) */}
         <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">
-            <h3 className="text-sm font-bold text-white">Unit Occupancy Breakdown</h3>
-            <p className="text-[11px] text-on-surface-variant">Inventory status across units</p>
+            <h3 className="text-sm font-bold text-white">Units</h3>
+            <p className="text-[11px] text-on-surface-variant">Occupied, vacant, or under repair</p>
           </div>
 
           <div className="h-44 w-full relative flex items-center justify-center my-auto">
@@ -219,7 +219,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
             )}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span className="text-xl font-extrabold text-white">{overview.occupancyRate}%</span>
-              <span className="text-[10px] text-on-surface-variant uppercase font-medium">Occupied</span>
+              <span className="text-[10px] text-on-surface-variant font-medium">Occupied</span>
             </div>
           </div>
 
@@ -246,8 +246,8 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
         <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
           <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
             <div>
-              <h3 className="text-sm font-bold text-white">High-Priority Helpdesk Backlog</h3>
-              <p className="text-[11px] text-on-surface-variant">Open issues requiring prompt resolution</p>
+              <h3 className="text-sm font-bold text-white">Urgent work still open</h3>
+              <p className="text-[11px] text-on-surface-variant">High and urgent tickets nobody has closed</p>
             </div>
             <span className="text-xs px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
               {maintenance.unresolvedUrgentTickets.length} pending
@@ -267,7 +267,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
                       {t.ticket_category} • {t.location_detail || (t.unit ? `Unit ${t.unit.unit_number}` : "Common Area")}
                     </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0 bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 bg-rose-500/20 text-rose-300 border border-rose-500/30">
                     {t.priority}
                   </span>
                 </div>
@@ -284,8 +284,8 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
         <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
           <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
             <div>
-              <h3 className="text-sm font-bold text-white">Outstanding Arrears</h3>
-              <p className="text-[11px] text-on-surface-variant">Units with overdue balances</p>
+              <h3 className="text-sm font-bold text-white">Who owes money</h3>
+              <p className="text-[11px] text-on-surface-variant">Oldest debt first</p>
             </div>
             <span className="text-xs px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
               RM {overview.totalOverdueAmount.toLocaleString()} total

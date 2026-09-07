@@ -161,8 +161,10 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
       if (!defaultersMap[unitKey]) {
         defaultersMap[unitKey] = {
           unitNumber: inv.lease?.unit?.unit_number || "N/A",
-          propertyName: inv.lease?.unit?.property?.property_name || "Testing Condominium",
-          tenantName: inv.lease?.tenant?.user_name || "Resident",
+        // "Testing Condominium" was a seed property name hardcoded as a UI
+        // fallback, and "Resident" invented a tenant who does not exist.
+        propertyName: inv.lease?.unit?.property?.property_name || "—",
+        tenantName: inv.lease?.tenant?.user_name || "No tenant on the lease",
           overdueAmount: 0,
           unpaidInvoicesCount: 0,
           maxDaysOverdue: 0,
@@ -288,9 +290,37 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
     value,
   }));
 
+  /*
+   * AGENTS.md Rule 6, eleventh occurrence. These three lists were handed to
+   * the client as whole Prisma rows, so Ticket.cost and the nested
+   * unit.area_sqft / monthly_rent crossed the boundary as Decimal - 60 console
+   * errors per load. Each view reads a handful of fields; it gets those.
+   */
   const unresolvedUrgentTickets = tickets
-    .filter((t) => (t.priority === "Urgent" || t.priority === "High") && t.status !== "Resolved" && t.status !== "Closed")
-    .slice(0, 5);
+    .filter(
+      (t) =>
+        (t.priority === "Urgent" || t.priority === "High") &&
+        t.status !== "Resolved" &&
+        t.status !== "Closed"
+    )
+    .slice(0, 5)
+    .map((t: any) => ({
+      ticket_id: t.ticket_id,
+      title: t.title,
+      ticket_category: t.ticket_category,
+      priority: t.priority,
+      status: t.status,
+      location_type: t.location_type,
+      location_detail: t.location_detail,
+      created_at: t.created_at,
+      resolved_at: t.resolved_at,
+      cost: t.cost === null || t.cost === undefined ? null : Number(t.cost),
+      reporter: t.reporter ? { user_name: t.reporter.user_name } : null,
+      unit: t.unit ? { unit_number: t.unit.unit_number } : null,
+      lease: t.lease?.unit
+        ? { unit: { unit_number: t.lease.unit.unit_number } }
+        : null,
+    }));
 
   // -------------------------------------------------------------
   // 4. FACILITIES & BOOKINGS DATA
@@ -408,7 +438,26 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
 
   const activeVisitorsList = visitors
     .filter((v) => v.check_in_time && !v.check_out_time)
-    .slice(0, 10);
+    .slice(0, 10)
+    .map((v: any) => ({
+      visitor_id: v.visitor_id,
+      visitor_name: v.visitor_name,
+      visitor_type: v.visitor_type,
+      visitor_ic_no: v.visitor_ic_no,
+      vehicle_plate: v.vehicle_plate,
+      destination: v.destination,
+      visit_purpose: v.visit_purpose,
+      visit_date: v.visit_date,
+      check_in_time: v.check_in_time,
+      check_out_time: v.check_out_time,
+      status: v.status,
+      lease: v.lease?.unit
+        ? {
+            unit: { unit_number: v.lease.unit.unit_number },
+            tenant: v.lease.tenant ? { user_name: v.lease.tenant.user_name } : null,
+          }
+        : null,
+    }));
 
   return {
     dateRange,
@@ -466,7 +515,30 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
       totalHours: Math.round(totalBookingHours),
       amenityUsage,
       timeSlotDistribution,
-      bookingsList: bookings.slice(0, 10),
+      bookingsList: bookings.slice(0, 10).map((b: any) => ({
+        booking_id: b.booking_id,
+        booking_date: b.booking_date,
+        start_time: b.start_time,
+        end_time: b.end_time,
+        booking_status: b.booking_status,
+        purpose: b.purpose,
+        pax_count: b.pax_count,
+        facility: b.facility
+          ? {
+              facility_name: b.facility.facility_name,
+              facility_type: b.facility.facility_type,
+              property: b.facility.property
+                ? { property_name: b.facility.property.property_name }
+                : null,
+            }
+          : null,
+        lease: b.lease
+          ? {
+              tenant: b.lease.tenant ? { user_name: b.lease.tenant.user_name } : null,
+              unit: b.lease.unit ? { unit_number: b.lease.unit.unit_number } : null,
+            }
+          : null,
+      })),
     },
     visitors: {
       totalVisitors,

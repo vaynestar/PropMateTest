@@ -49,8 +49,18 @@ export default function AdminReportsClient({
   };
 
   // CSV Export Utility
+  /*
+   * A value beginning with = + - or @ is executed as a formula when the file is
+   * opened in Excel or Sheets, and these rows carry names and unit numbers that
+   * a person typed. Prefixing with an apostrophe keeps them as text.
+   */
+  const csvSafe = (value: unknown) => {
+    const text = String(value ?? "");
+    return /^[=+@-]/.test(text) ? "'" + text : text;
+  };
+
   const handleExportCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,";
+    let csvContent = "";
     const timestamp = new Date().toISOString().split("T")[0];
     let filename = `PropMate_Report_${activeTab}_${timestamp}.csv`;
 
@@ -99,17 +109,25 @@ export default function AdminReportsClient({
       csvContent += `Total Collected (RM),${data.overview.totalCollectedAmount}\n`;
       csvContent += `Total Overdue (RM),${data.overview.totalOverdueAmount}\n`;
       csvContent += `Maintenance Resolution Rate,${data.overview.resolutionRate}%\n`;
-      csvContent += `Average MTTR (Hours),${data.overview.avgResolutionHours}\n`;
+      csvContent += `Average Hours To Resolve A Ticket,${data.overview.avgResolutionHours}\n`;
       csvContent += `Active Visitors Inside,${data.overview.activeCheckedInCount}\n`;
     }
 
-    const encodedUri = encodeURI(csvContent);
+    /*
+     * Was a data: URI, which browsers cap at a couple of megabytes and some
+     * block for downloads outright - a long arrears table would have been
+     * silently truncated. A Blob has no such limit. The BOM makes Excel read
+     * it as UTF-8, so Malaysian names with accents survive.
+     */
+    const blob = new Blob(["﻿" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", filename);
+    link.href = url;
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -118,10 +136,11 @@ export default function AdminReportsClient({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-outline-variant/40">
         <div>
           <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-            Reports & Operations Analytics
+            Reports
           </h1>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Operational scorecard, financial reconciliations, and facility utilization
+            How the property is doing — money in, work outstanding, and who has been
+            through the gate.
           </p>
         </div>
 

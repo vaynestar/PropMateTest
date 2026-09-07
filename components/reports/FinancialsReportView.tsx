@@ -34,37 +34,37 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
       {/* 4 Financial KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-on-surface-variant font-medium block">Total Billed</span>
+          <span className="text-xs text-on-surface-variant font-medium block">Billed</span>
           <span className="text-2xl font-mono font-bold text-white mt-1 block">
             RM {financial.totalInvoiced.toLocaleString()}
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1 block">Gross invoiced amount</span>
+          <span className="text-[11px] text-on-surface-variant mt-1 block">Everything invoiced in this period</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-emerald-400 font-medium block">Total Collected</span>
+          <span className="text-xs text-emerald-400 font-medium block">Collected</span>
           <span className="text-2xl font-mono font-bold text-emerald-300 mt-1 block">
             RM {financial.totalCollected.toLocaleString()}
           </span>
           <span className="text-[11px] text-emerald-500/80 mt-1 block">
-            {financial.collectionRate}% collection efficiency
+            {financial.collectionRate}% of what was billed
           </span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-rose-400 font-medium block">Total Overdue</span>
+          <span className="text-xs text-rose-400 font-medium block">Overdue</span>
           <span className="text-2xl font-mono font-bold text-rose-300 mt-1 block">
             RM {financial.totalOverdue.toLocaleString()}
           </span>
-          <span className="text-[11px] text-rose-400/80 mt-1 block">Uncollected balance past due</span>
+          <span className="text-[11px] text-rose-400/80 mt-1 block">Past its due date and unpaid</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-on-surface-variant font-medium block">Severe Arrears (90d+)</span>
+          <span className="text-xs text-on-surface-variant font-medium block">More than 90 days late</span>
           <span className="text-2xl font-mono font-bold text-amber-300 mt-1 block">
             RM {agingReceivables.days90Plus.toLocaleString()}
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1 block">Accounts requiring legal notice</span>
+          <span className="text-[11px] text-on-surface-variant mt-1 block">The hardest to recover</span>
         </div>
       </div>
 
@@ -73,8 +73,8 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
         {/* Aging Receivables Bar */}
         <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">
-            <h3 className="text-sm font-bold text-white">Aged Receivables Breakdown</h3>
-            <p className="text-[11px] text-on-surface-variant">Outstanding balances categorized by delay bracket</p>
+            <h3 className="text-sm font-bold text-white">How late the money is</h3>
+            <p className="text-[11px] text-on-surface-variant">Overdue amounts, by how far past due</p>
           </div>
 
           <div className="h-56 w-full pt-4">
@@ -107,8 +107,8 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
         {/* Charge Category Breakdown */}
         <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">
-            <h3 className="text-sm font-bold text-white">Revenue by Charge Type</h3>
-            <p className="text-[11px] text-on-surface-variant">Distribution across maintenance, sinking fund, water & facilities</p>
+            <h3 className="text-sm font-bold text-white">What the money is for</h3>
+            <p className="text-[11px] text-on-surface-variant">Rent, maintenance and the rest, side by side</p>
           </div>
 
           <div className="h-56 w-full relative flex items-center justify-center">
@@ -167,7 +167,7 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-surface-container-lowest text-on-surface-variant uppercase text-[10px] tracking-wider border-b border-outline-variant/60">
+            <thead className="bg-surface-container-lowest text-on-surface-variant text-[10px] tracking-wider border-b border-outline-variant/60">
               <tr>
                 <th className="px-4 py-2.5">Unit</th>
                 <th className="px-4 py-2.5">Resident</th>

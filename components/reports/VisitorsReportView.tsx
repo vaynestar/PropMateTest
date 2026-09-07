@@ -27,35 +27,35 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
       {/* 4 Visitor KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-on-surface-variant font-medium block">Total Visitor Passes</span>
+          <span className="text-xs text-on-surface-variant font-medium block">Passes issued</span>
           <span className="text-2xl font-bold text-white mt-1 block">
             {visitors.totalVisitors}
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1 block">Passes created & processed</span>
+          <span className="text-[11px] text-on-surface-variant mt-1 block">In this period</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-purple-400 font-medium block">Currently Inside (Active)</span>
+          <span className="text-xs text-purple-400 font-medium block">In the building now</span>
           <span className="text-2xl font-bold text-purple-300 mt-1 block">
             {visitors.activeInside}
           </span>
-          <span className="text-[11px] text-purple-400/80 mt-1 block">Checked-in on property</span>
+          <span className="text-[11px] text-purple-400/80 mt-1 block">Checked in, not yet out</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-emerald-400 font-medium block">Completed Checkouts</span>
+          <span className="text-xs text-emerald-400 font-medium block">Been and gone</span>
           <span className="text-2xl font-bold text-emerald-300 mt-1 block">
             {visitors.totalVisitors - visitors.activeInside}
           </span>
-          <span className="text-[11px] text-emerald-500/80 mt-1 block">Exit clearance granted</span>
+          <span className="text-[11px] text-emerald-500/80 mt-1 block">Checked out</span>
         </div>
 
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
-          <span className="text-xs text-on-surface-variant font-medium block">Active Visitor Types</span>
+          <span className="text-xs text-on-surface-variant font-medium block">Kinds of visitor</span>
           <span className="text-2xl font-bold text-white mt-1 block">
             {typeDistribution?.length || 0}
           </span>
-          <span className="text-[11px] text-on-surface-variant mt-1 block">Guest, delivery, contractor</span>
+          <span className="text-[11px] text-on-surface-variant mt-1 block">Guests, deliveries, contractors</span>
         </div>
       </div>
 
@@ -64,8 +64,8 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
         {/* Daily Traffic Area Chart (2 Cols) */}
         <div className="lg:col-span-2 p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">
-            <h3 className="text-sm font-bold text-white">Daily Guardhouse Entry Traffic</h3>
-            <p className="text-[11px] text-on-surface-variant">Visitor registration and entry volume over time</p>
+            <h3 className="text-sm font-bold text-white">Arrivals by day</h3>
+            <p className="text-[11px] text-on-surface-variant">How many passes were used each day</p>
           </div>
 
           <div className="h-64 w-full pt-4">
@@ -106,8 +106,8 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
         {/* Visitor Type Pie Chart (1 Col) */}
         <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">
-            <h3 className="text-sm font-bold text-white">Visitor Classification</h3>
-            <p className="text-[11px] text-on-surface-variant">Breakdown by visitor entry purpose</p>
+            <h3 className="text-sm font-bold text-white">Who is visiting</h3>
+            <p className="text-[11px] text-on-surface-variant">Passes by type of visitor</p>
           </div>
 
           <div className="h-44 w-full relative flex items-center justify-center my-auto">
@@ -171,7 +171,7 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-surface-container-lowest text-on-surface-variant uppercase text-[10px] tracking-wider border-b border-outline-variant/60">
+            <thead className="bg-surface-container-lowest text-on-surface-variant text-[10px] tracking-wider border-b border-outline-variant/60">
               <tr>
                 <th className="px-4 py-2.5">Visitor Name</th>
                 <th className="px-4 py-2.5">Type</th>
