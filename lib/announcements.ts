@@ -32,7 +32,11 @@ export async function getAllAnnouncements(filters?: AnnouncementFilters) {
 
     if (filters.status === "Active") {
       where.status = "Published";
+      where.publish_date = { lte: today };
       where.expiry_date = { gte: today };
+    } else if (filters.status === "Scheduled") {
+      where.status = "Published";
+      where.publish_date = { gt: today };
     } else if (filters.status === "Expired") {
       where.status = "Published";
       where.expiry_date = { lt: today };
@@ -62,6 +66,10 @@ export async function getAllAnnouncements(filters?: AnnouncementFilters) {
       author: { select: { user_id: true, user_name: true, user_email: true, role: true } },
     },
     orderBy: [
+      // Pinned first among equals, but expiry decides the top of the list:
+      // sorting on is_pinned alone floated a notice that expired last week
+      // above everything still on the board.
+      { expiry_date: "desc" },
       { is_pinned: "desc" },
       { publish_date: "desc" },
       { created_at: "desc" },
@@ -80,6 +88,11 @@ export async function getResidentAnnouncements(propertyId: string) {
         { property_id: null },
       ],
       status: "Published",
+      // publish_date was not checked, so a notice dated to go up in two weeks
+      // appeared on the resident board the moment it was saved. Writing a
+      // notice ahead of time is the ordinary way to prepare one, and the field
+      // that exists to allow it did the opposite of what it says.
+      publish_date: { lte: today },
       expiry_date: { gte: today },
     },
     include: {

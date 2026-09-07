@@ -1,6 +1,10 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import {
+  announcementState,
+  daysUntilExpiry,
+} from "@/lib/announcement-status";
 import Image from "next/image";
 import AdminAnnouncementForm from "./AdminAnnouncementForm";
 import {
@@ -83,14 +87,23 @@ export default function AdminAnnouncementList({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const total = announcements.length;
-    const active = announcements.filter(
-      (a) => a.status === "Published" && new Date(a.expiry_date) >= today
+    /*
+     * "Total notices / all broadcasts logged" counted every notice ever
+     * written, which nobody acts on, and "Live & active" was computed from
+     * expiry alone - so a notice scheduled for next month counted as already
+     * on the board.
+     */
+    const live = announcements.filter((a) => announcementState(a).value === "Live");
+    const scheduled = announcements.filter(
+      (a) => announcementState(a).value === "Scheduled"
     ).length;
-    const urgent = announcements.filter((a) => a.priority === "Urgent" && a.status === "Published").length;
-    const pinned = announcements.filter((a) => a.is_pinned).length;
+    const urgent = live.filter((a) => a.priority === "Urgent").length;
+    const endingSoon = announcements.filter((a) => {
+      const d = daysUntilExpiry(a);
+      return d !== null && d <= 3;
+    }).length;
 
-    return { total, active, urgent, pinned };
+    return { live: live.length, scheduled, urgent, endingSoon };
   }, [announcements]);
 
   // Filtered Announcements
@@ -116,11 +129,11 @@ export default function AdminAnnouncementList({
 
       // Status Filter
       if (statusFilter !== "ALL") {
-        const isExpired = new Date(a.expiry_date) < today;
-        if (statusFilter === "Active" && (a.status !== "Published" || isExpired)) return false;
-        if (statusFilter === "Expired" && (a.status !== "Published" || !isExpired)) return false;
-        if (statusFilter === "Draft" && a.status !== "Draft") return false;
-        if (statusFilter === "Archived" && a.status !== "Archived") return false;
+        // One rule for what state a notice is in, shared with the badge, the
+        // KPI row and the resident query.
+        if (statusFilter !== "ALL" && announcementState(a).value !== statusFilter) {
+          return false;
+        }
       }
 
       // Search Query
@@ -171,7 +184,7 @@ export default function AdminAnnouncementList({
   const getPriorityBadge = (priority: string) => {
     if (priority === "Urgent") {
       return (
-        <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-extrabold uppercase tracking-wider flex items-center gap-1 shadow-sm">
+        <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-extrabold flex items-center gap-1 shadow-sm">
           <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
           Urgent Alert
         </span>
@@ -179,7 +192,7 @@ export default function AdminAnnouncementList({
     }
     if (priority === "High") {
       return (
-        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-bold uppercase tracking-wider">
+        <span className="px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-bold">
           High Priority
         </span>
       );
@@ -193,69 +206,57 @@ export default function AdminAnnouncementList({
 
   return (
     <div className="space-y-6">
-      {/* 4 KPI METRIC CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Announcements */}
-        <div className="bg-surface-container border border-outline-variant/60 rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-lg">
+      {/* What residents can see, what is queued, and what is about to drop off. */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="flex items-center justify-between rounded-2xl border border-outline-variant/60 bg-surface-container p-4 shadow-lg sm:p-5">
           <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-              Total Notices
-            </span>
-            <span className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
-              {stats.total}
-            </span>
-            <span className="text-[11px] text-on-surface-variant mt-0.5">All broadcasts logged</span>
+            <span className="text-[11px] font-medium text-on-surface-variant">On the board now</span>
+            <span className="text-2xl font-bold text-emerald-300">{stats.live}</span>
+            <span className="mt-0.5 text-[11px] text-on-surface-variant">Residents see these</span>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-400 border border-blue-500/20 flex items-center justify-center">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-300">
             <span className="material-symbols-outlined text-[24px]">campaign</span>
           </div>
         </div>
 
-        {/* Live Active */}
-        <div className="bg-surface-container border border-outline-variant/60 rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-lg">
+        <div className="flex items-center justify-between rounded-2xl border border-outline-variant/60 bg-surface-container p-4 shadow-lg sm:p-5">
           <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-              Live & Active
-            </span>
-            <span className="text-2xl sm:text-3xl font-extrabold text-emerald-400 mt-1">
-              {stats.active}
-            </span>
-            <span className="text-[11px] text-on-surface-variant mt-0.5">Visible to residents</span>
+            <span className="text-[11px] font-medium text-on-surface-variant">Queued to go up</span>
+            <span className="text-2xl font-bold text-sky-300">{stats.scheduled}</span>
+            <span className="mt-0.5 text-[11px] text-on-surface-variant">Publish date ahead</span>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[24px]">check_circle</span>
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-sky-500/20 bg-sky-500/10 text-sky-300">
+            <span className="material-symbols-outlined text-[24px]">schedule</span>
           </div>
         </div>
 
-        {/* Urgent Alerts */}
-        <div className="bg-surface-container border border-outline-variant/60 rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-lg">
+        <div
+          className={`flex items-center justify-between rounded-2xl border bg-surface-container p-4 shadow-lg sm:p-5 ${
+            stats.urgent > 0 ? "border-rose-500/40" : "border-outline-variant/60"
+          }`}
+        >
           <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-              Urgent Alerts
-            </span>
-            <span className="text-2xl sm:text-3xl font-extrabold text-rose-400 mt-1">
-              {stats.urgent}
-            </span>
-            <span className="text-[11px] text-on-surface-variant mt-0.5">Disruptions & critical</span>
+            <span className="text-[11px] font-medium text-on-surface-variant">Urgent, live</span>
+            <span className="text-2xl font-bold text-rose-300">{stats.urgent}</span>
+            <span className="mt-0.5 text-[11px] text-on-surface-variant">Needs attention</span>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-300">
             <span className="material-symbols-outlined text-[24px]">warning</span>
           </div>
         </div>
 
-        {/* Pinned Notices */}
-        <div className="bg-surface-container border border-outline-variant/60 rounded-2xl p-4 sm:p-5 flex items-center justify-between shadow-lg">
+        <div
+          className={`flex items-center justify-between rounded-2xl border bg-surface-container p-4 shadow-lg sm:p-5 ${
+            stats.endingSoon > 0 ? "border-amber-500/40" : "border-outline-variant/60"
+          }`}
+        >
           <div className="flex flex-col">
-            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-              Pinned Top
-            </span>
-            <span className="text-2xl sm:text-3xl font-extrabold text-amber-300 mt-1">
-              {stats.pinned}
-            </span>
-            <span className="text-[11px] text-on-surface-variant mt-0.5">Top-priority feed</span>
+            <span className="text-[11px] font-medium text-on-surface-variant">Down within 3 days</span>
+            <span className="text-2xl font-bold text-amber-300">{stats.endingSoon}</span>
+            <span className="mt-0.5 text-[11px] text-on-surface-variant">Renew or let lapse</span>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[24px]">push_pin</span>
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-amber-500/20 bg-amber-500/10 text-amber-300">
+            <span className="material-symbols-outlined text-[24px]">hourglass_bottom</span>
           </div>
         </div>
       </div>
@@ -330,13 +331,13 @@ export default function AdminAnnouncementList({
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="bg-surface-container-lowest border border-outline-variant/60 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-primary"
             >
-              <option value="ALL">📁 All Categories</option>
-              <option value="Notice">📢 General Notice</option>
-              <option value="Maintenance">🔧 Maintenance</option>
-              <option value="Emergency">🚨 Emergency Alert</option>
-              <option value="Security">🛡️ Security Advisory</option>
-              <option value="Event">🎉 Community Event</option>
-              <option value="Billing">💳 Billing & Admin</option>
+              <option value="ALL">All categories</option>
+              <option value="Notice">General notice</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Emergency">Emergency alert</option>
+              <option value="Security">Security advisory</option>
+              <option value="Event">Community event</option>
+              <option value="Billing">Billing &amp; admin</option>
             </select>
 
             {/* Priority Filter */}
@@ -345,9 +346,9 @@ export default function AdminAnnouncementList({
               onChange={(e) => setPriorityFilter(e.target.value)}
               className="bg-surface-container-lowest border border-outline-variant/60 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-primary"
             >
-              <option value="ALL">⚡ All Priorities</option>
-              <option value="Urgent">🚨 Urgent</option>
-              <option value="High">⚠️ High Priority</option>
+              <option value="ALL">All priorities</option>
+              <option value="Urgent">Urgent</option>
+              <option value="High">High</option>
               <option value="Normal">Normal</option>
             </select>
 
@@ -357,11 +358,12 @@ export default function AdminAnnouncementList({
               onChange={(e) => setStatusFilter(e.target.value)}
               className="bg-surface-container-lowest border border-outline-variant/60 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-primary"
             >
-              <option value="ALL">Status: All</option>
-              <option value="Active">🟢 Live / Active</option>
-              <option value="Draft">📝 Drafts</option>
-              <option value="Expired">⌛ Expired</option>
-              <option value="Archived">📦 Archived</option>
+              <option value="ALL">Any state</option>
+              <option value="Live">On the board</option>
+              <option value="Scheduled">Queued</option>
+              <option value="Expired">Come down</option>
+              <option value="Draft">Draft</option>
+              <option value="Archived">Archived</option>
             </select>
 
             {/* Property Filter */}
@@ -370,7 +372,7 @@ export default function AdminAnnouncementList({
               onChange={(e) => setPropertyFilter(e.target.value)}
               className="bg-surface-container-lowest border border-outline-variant/60 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-primary"
             >
-              <option value="ALL">🏢 All Target Properties</option>
+              <option value="ALL">All properties</option>
               {properties.map((p) => (
                 <option key={p.property_id} value={p.property_id}>
                   {p.property_name}
@@ -420,8 +422,7 @@ export default function AdminAnnouncementList({
             const isItemUpdating = isPending && updatingId === a.announcement_id;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            const isExpired = new Date(a.expiry_date) < today;
-
+    
             return (
               <div
                 key={a.announcement_id}
@@ -457,24 +458,18 @@ export default function AdminAnnouncementList({
 
                     {/* Status Badge */}
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
-                        a.status === "Published"
-                          ? isExpired
-                            ? "bg-gray-700/50 text-gray-400 border-gray-600"
-                            : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                          : a.status === "Draft"
-                          ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                          : "bg-gray-700/50 text-gray-400 border-gray-600"
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                        announcementState(a).chip
                       }`}
                     >
-                      {a.status === "Published" ? (isExpired ? "Expired" : "Live") : a.status}
+                      {announcementState(a).label}
                     </span>
                   </div>
 
                   {/* Title & Property Tag */}
                   <div>
                     <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mb-1 font-medium">
-                      <span>{a.property ? `🏢 ${a.property.property_name}` : "🌐 Universal Broadcast"}</span>
+                      <span>{a.property ? a.property.property_name : "All properties"}</span>
                       <span>•</span>
                       <span>Audience: {a.target_audience}</span>
                     </div>
@@ -523,7 +518,7 @@ export default function AdminAnnouncementList({
                     </span>
                     {a.author && (
                       <span className="truncate max-w-[120px]" title={a.author.user_name}>
-                        ✍️ {a.author.user_name}
+                        {a.author.user_name}
                       </span>
                     )}
                   </div>
@@ -634,7 +629,7 @@ export default function AdminAnnouncementList({
         /* TABLE VIEW */
         <div className="bg-surface-container border border-outline-variant/60 rounded-2xl overflow-hidden shadow-lg overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-surface-container-lowest text-on-surface-variant uppercase text-[10px] tracking-wider border-b border-outline-variant/60">
+            <thead className="bg-surface-container-lowest text-on-surface-variant text-[10px] tracking-wider border-b border-outline-variant/60">
               <tr>
                 <th className="px-4 py-3">Announcement</th>
                 <th className="px-4 py-3">Category & Scope</th>
@@ -650,8 +645,7 @@ export default function AdminAnnouncementList({
                 const isItemUpdating = isPending && updatingId === a.announcement_id;
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
-                const isExpired = new Date(a.expiry_date) < today;
-
+        
                 return (
                   <tr
                     key={a.announcement_id}
@@ -701,16 +695,12 @@ export default function AdminAnnouncementList({
 
                     <td className="px-4 py-3.5">
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase ${
-                          a.status === "Published"
-                            ? isExpired
-                              ? "bg-gray-700/50 text-gray-400 border-gray-600"
-                              : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                            : "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                        }`}
-                      >
-                        {a.status === "Published" ? (isExpired ? "Expired" : "Live") : a.status}
-                      </span>
+                      className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                        announcementState(a).chip
+                      }`}
+                    >
+                      {announcementState(a).label}
+                    </span>
                     </td>
 
                     <td className="px-4 py-3.5 text-right">

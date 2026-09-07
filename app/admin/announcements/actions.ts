@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { normaliseAnnouncementStatus } from "@/lib/announcement-status";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 
@@ -15,7 +16,8 @@ export async function createAnnouncement(prevState: any, formData: FormData) {
     const content = (formData.get("content") as string)?.trim();
     const category = (formData.get("category") as string)?.trim() || "Notice";
     const priority = (formData.get("priority") as string)?.trim() || "Normal";
-    const status = (formData.get("status") as string)?.trim() || "Published";
+    const status =
+      normaliseAnnouncementStatus((formData.get("status") as string)?.trim()) || "Published";
     const target_audience = (formData.get("target_audience") as string)?.trim() || "All";
     const is_pinned = formData.get("is_pinned") === "true" || formData.get("is_pinned") === "on";
 
@@ -29,7 +31,7 @@ export async function createAnnouncement(prevState: any, formData: FormData) {
     const expiry_date_raw = formData.get("expiry_date") as string;
 
     if (!title || !content) {
-      return { success: false, error: "Please provide both an announcement title and content body." };
+      return { success: false, error: "Give the notice a title and something to say." };
     }
 
     const publish_date = publish_date_raw ? new Date(publish_date_raw) : new Date();
@@ -41,6 +43,19 @@ export async function createAnnouncement(prevState: any, formData: FormData) {
     } else {
       expiry_date = new Date(publish_date);
       expiry_date.setDate(expiry_date.getDate() + 30);
+    }
+
+    // Nothing checked the dates, so a notice could be given an expiry before
+    // its publish date and simply never appear - the resident query filters on
+    // both, so it would be invisible with no explanation anywhere.
+    if (isNaN(publish_date.getTime()) || isNaN(expiry_date.getTime())) {
+      return { success: false, error: "One of those dates is not valid." };
+    }
+    if (expiry_date < publish_date) {
+      return {
+        success: false,
+        error: "The notice cannot come down before it goes up. Check the dates.",
+      };
     }
 
     const newAnnouncement = await prisma.announcement.create({
@@ -81,7 +96,8 @@ export async function updateAnnouncement(announcementId: string, formData: FormD
     const content = (formData.get("content") as string)?.trim();
     const category = (formData.get("category") as string)?.trim() || "Notice";
     const priority = (formData.get("priority") as string)?.trim() || "Normal";
-    const status = (formData.get("status") as string)?.trim() || "Published";
+    const status =
+      normaliseAnnouncementStatus((formData.get("status") as string)?.trim()) || "Published";
     const target_audience = (formData.get("target_audience") as string)?.trim() || "All";
     const is_pinned = formData.get("is_pinned") === "true" || formData.get("is_pinned") === "on";
 
@@ -95,7 +111,7 @@ export async function updateAnnouncement(announcementId: string, formData: FormD
     const expiry_date_raw = formData.get("expiry_date") as string;
 
     if (!title || !content) {
-      return { success: false, error: "Please provide both an announcement title and content body." };
+      return { success: false, error: "Give the notice a title and something to say." };
     }
 
     const publish_date = publish_date_raw ? new Date(publish_date_raw) : new Date();
@@ -105,6 +121,19 @@ export async function updateAnnouncement(announcementId: string, formData: FormD
     } else {
       expiry_date = new Date(publish_date);
       expiry_date.setDate(expiry_date.getDate() + 30);
+    }
+
+    // Nothing checked the dates, so a notice could be given an expiry before
+    // its publish date and simply never appear - the resident query filters on
+    // both, so it would be invisible with no explanation anywhere.
+    if (isNaN(publish_date.getTime()) || isNaN(expiry_date.getTime())) {
+      return { success: false, error: "One of those dates is not valid." };
+    }
+    if (expiry_date < publish_date) {
+      return {
+        success: false,
+        error: "The notice cannot come down before it goes up. Check the dates.",
+      };
     }
 
     const updated = await prisma.announcement.update({
@@ -166,10 +195,17 @@ export async function updateAnnouncementStatus(announcementId: string, status: s
       return { success: false, error: "Unauthorized: Admin privileges required." };
     }
 
+    // This wrote whatever string it was handed, so a typo or a crafted post
+    // could put an announcement into a state nothing else in the app knows.
+    const next = normaliseAnnouncementStatus(status);
+    if (!next) {
+      return { success: false, error: `"${status}" is not an announcement status.` };
+    }
+
     const updated = await prisma.announcement.update({
       where: { announcement_id: announcementId },
       data: {
-        status,
+        status: next,
         modified_by: user.userId,
       },
     });

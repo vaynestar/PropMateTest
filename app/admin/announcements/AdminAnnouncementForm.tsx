@@ -192,15 +192,21 @@ export default function AdminAnnouncementForm({
         </h2>
 
         <div className="flex items-center gap-2">
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="bg-surface-container border border-outline-variant/60 rounded-lg px-2.5 py-1 text-xs text-white focus:outline-none focus:border-primary cursor-pointer"
-          >
-            <option value="Published">Published</option>
-            <option value="Draft">Draft</option>
-            <option value="Archived">Archived</option>
-          </select>
+          {/* This was a bare dropdown with no label, which is why nothing had
+              ever been saved as a draft: the choice was there but read as
+              decoration. */}
+          <label className="flex items-center gap-1.5 text-[11px] text-on-surface-variant">
+            Save as
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="cursor-pointer rounded-lg border border-outline-variant/60 bg-surface-container px-2.5 py-1 text-xs text-white focus:border-primary focus:outline-none"
+            >
+              <option value="Published">Published — goes up on its publish date</option>
+              <option value="Draft">Draft — not visible to residents</option>
+              <option value="Archived">Archived — taken off the board</option>
+            </select>
+          </label>
 
           {onCancel && (
             <button

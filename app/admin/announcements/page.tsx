@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getAllAnnouncements } from "@/lib/announcements";
 import AdminAnnouncementList, { AnnouncementRecord } from "./AdminAnnouncementList";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,11 +22,17 @@ export default async function AdminAnnouncementsPage({
     orderBy: { property_name: "asc" },
   });
 
-  // Resolve default property
-  const defaultProp = properties.find((p) => p.is_default) || properties[0];
-  const activePropertyId = queryPropertyId && queryPropertyId !== "ALL"
-    ? queryPropertyId
-    : defaultProp?.property_id;
+  /*
+   * This page never asked which property was selected. It resolved is_default
+   * first and never read the cookie at all, so the top bar had no effect here
+   * whatsoever - the same DEV-128 fault found in Helpdesk (DEV-149), and the
+   * third module to carry it. getActivePropertyId() applies the agreed
+   * precedence (?property= -> cookie -> is_default -> first).
+   */
+  const activePropertyId =
+    queryPropertyId && queryPropertyId !== "ALL"
+      ? queryPropertyId
+      : (await getActivePropertyId()) ?? properties[0]?.property_id;
 
   // Fetch all announcements (universal + scoped to active property if selected)
   const announcements = await getAllAnnouncements({
@@ -39,10 +46,11 @@ export default async function AdminAnnouncementsPage({
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
             <span className="material-symbols-outlined text-primary text-[28px]">campaign</span>
-            <span>Announcements & Circulars</span>
+            <span>Announcements</span>
           </h1>
           <p className="text-on-surface-variant text-sm mt-1">
-            Broadcast emergency alerts, maintenance disruption advisories, and community news
+            Notices on the resident board — what is up now, what is queued, and what has
+            come down.
           </p>
         </div>
       </div>
