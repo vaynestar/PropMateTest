@@ -124,7 +124,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-margin-mobile md:p-margin-desktop pb-24 md:pb-12 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto p-margin-mobile pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-margin-desktop md:pb-12">
           <div className="max-w-container-max mx-auto">{children}</div>
         </main>
       </div>

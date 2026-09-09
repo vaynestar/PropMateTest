@@ -55,7 +55,7 @@ export default async function AdminDashboardPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {stats.urgentActionItems.map((item) => (
               <Link
                 key={item.id}
@@ -94,11 +94,11 @@ export default async function AdminDashboardPage() {
       )}
 
       {/* 3. Four Core Live Pulse Scorecards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {/* Scorecard 1: Occupancy Rate */}
         <Link
           href="/admin/units"
-          className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-primary/50 transition-all group flex flex-col justify-between"
+          className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4 hover:border-primary/50 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between pb-2">
             <span className="text-xs text-on-surface-variant font-medium">Occupancy</span>
@@ -108,7 +108,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-white font-mono">{stats.occupancyRate}%</span>
+              <span className="text-xl font-bold sm:text-2xl text-white font-mono">{stats.occupancyRate}%</span>
               <span className="text-xs text-on-surface-variant font-mono">
                 {stats.occupiedUnits} of {stats.totalUnits} units
               </span>
@@ -125,7 +125,7 @@ export default async function AdminDashboardPage() {
         {/* Scorecard 2: Cash Collected Today */}
         <Link
           href="/admin/invoices"
-          className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-emerald-500/50 transition-all group flex flex-col justify-between"
+          className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4 hover:border-emerald-500/50 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between pb-2">
             <span className="text-xs text-emerald-400 font-medium">Today&apos;s Collections</span>
@@ -134,7 +134,7 @@ export default async function AdminDashboardPage() {
             </span>
           </div>
           <div>
-            <span className="text-2xl font-bold text-emerald-300 font-mono">
+            <span className="text-xl font-bold sm:text-2xl text-emerald-300 font-mono">
               RM {stats.todayCollectedAmount.toFixed(2)}
             </span>
             <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30 text-on-surface-variant">
@@ -149,7 +149,7 @@ export default async function AdminDashboardPage() {
         {/* Scorecard 3: Active Visitors On-Site */}
         <Link
           href="/admin/visitors"
-          className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-purple-500/50 transition-all group flex flex-col justify-between"
+          className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4 hover:border-purple-500/50 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between pb-2">
             <span className="text-xs text-purple-400 font-medium">Visitors on site</span>
@@ -159,7 +159,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-purple-300 font-mono">
+              <span className="text-xl font-bold sm:text-2xl text-purple-300 font-mono">
                 {stats.activeVisitorsCount}
               </span>
               <span className="text-xs text-purple-400/80">right now</span>
@@ -177,7 +177,7 @@ export default async function AdminDashboardPage() {
         {/* Scorecard 4: Open Helpdesk Backlog */}
         <Link
           href="/admin/maintenance"
-          className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-amber-500/50 transition-all group flex flex-col justify-between"
+          className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4 hover:border-amber-500/50 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between pb-2">
             <span className="text-xs text-amber-400 font-medium">Open tickets</span>
@@ -187,7 +187,7 @@ export default async function AdminDashboardPage() {
           </div>
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-white font-mono">{stats.openTickets}</span>
+              <span className="text-xl font-bold sm:text-2xl text-white font-mono">{stats.openTickets}</span>
               <span className="text-xs text-on-surface-variant">unresolved</span>
             </div>
             <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30">

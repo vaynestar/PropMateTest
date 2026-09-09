@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminNav } from "@/lib/admin-nav";
@@ -29,6 +30,19 @@ const MORE = [
 export function AdminMenuButton() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  // The body must not scroll behind an open drawer.
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
 
   const isActive = (href: string) =>
     href === "/admin" ? pathname === href : pathname.startsWith(href);
@@ -44,17 +58,15 @@ export function AdminMenuButton() {
         <span className="material-symbols-outlined">menu</span>
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-[60]"
-          role="dialog"
-          aria-modal="true"
-        >
+      {open &&
+        mounted &&
+        createPortal(
+          <div className="fixed inset-0 z-[60]" role="dialog" aria-modal="true">
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <nav className="absolute left-0 top-0 h-full w-[280px] max-w-[85%] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-stack-lg animate-slide-in">
+          <nav className="absolute left-0 top-0 h-[100dvh] w-[280px] max-w-[85%] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-stack-lg animate-slide-in">
             <div className="px-6 mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded bg-primary flex items-center justify-center font-bold text-on-primary">
@@ -135,8 +147,9 @@ export function AdminMenuButton() {
               </button>
             </form>
           </nav>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 }

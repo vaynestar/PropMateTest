@@ -217,6 +217,19 @@ html, body {
     animation: slideIn 0.22s ease-out;
 }
 
+/*
+ * Safe area for the fixed bottom nav. `pb-safe` was already used on it and had
+ * never been defined, so on an iPhone the bar sat under the home indicator and
+ * Safari's own toolbar. viewportFit is "cover" in app/layout.tsx, which is what
+ * makes these insets non-zero.
+ */
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.h-safe-bottom {
+    height: env(safe-area-inset-bottom, 0px);
+}
+
 .hide-scrollbar {
     scrollbar-width: none;
     -ms-overflow-style: none;
