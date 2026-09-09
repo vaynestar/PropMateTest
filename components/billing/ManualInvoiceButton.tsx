@@ -49,7 +49,7 @@ export default function ManualInvoiceButton() {
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="bg-surface-container rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-slide-up">
+          <div className="bg-surface-container rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-slide-up max-h-[90dvh] overflow-y-auto">
             <div className="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
               <h2 className="text-xl font-bold text-on-surface">Manual Invoice</h2>
               <button onClick={() => setModalOpen(false)} className="text-on-surface-variant hover:text-on-surface p-1">

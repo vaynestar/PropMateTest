@@ -55,7 +55,7 @@ export default function AdminLeaseEditForm({ lease }: { lease: Lease }) {
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => !pending && setIsOpen(false)}
           />
-          <div className="glass-card relative w-full max-w-lg rounded-xl overflow-hidden animate-slide-in">
+          <div className="glass-card relative w-full max-w-lg rounded-xl overflow-hidden animate-slide-in max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-outline-variant/30">
               <div>
                 <h2 className="font-title-lg text-title-lg text-on-surface">Edit Lease Details</h2>

@@ -97,7 +97,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="bg-surface text-on-surface font-body-md h-screen w-full flex overflow-hidden">
+    <div className="bg-surface text-on-surface font-body-md min-h-[100dvh] w-full flex overflow-x-hidden">
       {/* Left Panel */}
       <div className="hidden lg:flex lg:w-1/2 relative bg-surface-container-lowest overflow-hidden items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-br from-surface via-surface to-primary-container/20 z-10 mix-blend-overlay" />

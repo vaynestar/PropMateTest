@@ -56,7 +56,7 @@ export default function NotificationCenter({ initialNotifications }: Notificatio
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 top-12 z-50 w-80 sm:w-96 rounded-2xl bg-surface-container border border-outline-variant/80 shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+          <div className="absolute right-0 top-12 z-50 max-h-[70dvh] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl bg-surface-container border border-outline-variant/80 shadow-2xl sm:w-96 animate-in fade-in slide-in-from-top-2">
             {/* Popover Header */}
             <div className="p-4 border-b border-outline-variant/40 flex items-center justify-between bg-surface-container-high/50">
               <div className="flex items-center gap-2">

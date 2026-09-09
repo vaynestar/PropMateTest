@@ -80,7 +80,7 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl w-full max-w-sm p-5 sm:p-6 shadow-2xl relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
+      <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl w-full max-w-sm p-5 sm:p-6 shadow-2xl relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
         {/* Close Button */}
         <button
           type="button"

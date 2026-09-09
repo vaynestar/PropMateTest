@@ -32,7 +32,7 @@ export default function UnitDeleteModal({ unit, isOpen, onClose }: UnitDeleteMod
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
       <div
-        className="w-full max-w-md bg-surface-container border border-rose-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+        className="w-full max-w-md bg-surface-container border border-rose-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90dvh] overflow-y-auto"
         role="dialog"
         aria-modal="true"
       >

@@ -35,7 +35,7 @@ export default function EditChargeModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
-      <div className="bg-surface-container border border-outline-variant/80 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+      <div className="bg-surface-container border border-outline-variant/80 rounded-2xl w-full max-w-md p-6 shadow-2xl relative max-h-[90dvh] overflow-y-auto">
         <div className="flex items-center justify-between pb-4 border-b border-outline-variant/40 mb-4">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[20px]">

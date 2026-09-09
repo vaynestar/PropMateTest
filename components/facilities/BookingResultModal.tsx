@@ -30,7 +30,7 @@ export default function BookingResultModal({
   return (
     <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div
-        className={`glass-card rounded-3xl max-w-md w-full p-6 text-center space-y-5 border shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden ${
+        className={`glass-card rounded-3xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-6 text-center space-y-5 border shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden ${
           isSuccess
             ? "border-emerald-500/40 bg-surface-container-high/95"
             : "border-rose-500/40 bg-surface-container-high/95"

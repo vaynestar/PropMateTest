@@ -358,7 +358,7 @@ export default function RecurringChargesClient({
 
       {/* Drawer Panel */}
       <div
-        className={`fixed top-0 right-0 h-screen w-full max-w-lg bg-surface-container-lowest/90 backdrop-blur-xl border-l border-outline-variant/50 z-[101] flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-[100dvh] w-full max-w-lg bg-surface-container-lowest/90 backdrop-blur-xl border-l border-outline-variant/50 z-[101] flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${drawerOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {selectedLease && (
           <>

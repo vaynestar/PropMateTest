@@ -223,7 +223,7 @@ export default function InvoicePdfPreviewModal({
               </div>
 
               {/* Line Items Table */}
-              <div className="mb-8 overflow-hidden rounded-xl border border-slate-200">
+              <div className="mb-8 overflow-x-auto rounded-xl border border-slate-200">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="bg-slate-100 border-b border-slate-200 text-slate-700 text-xs font-bold uppercase">

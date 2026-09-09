@@ -378,7 +378,7 @@ function DeleteLeaseDialog({
       <div
         role="dialog"
         aria-modal="true"
-        className="w-full max-w-md overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl"
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl max-h-[90dvh] overflow-y-auto"
       >
         <div className="flex items-center gap-3 border-b border-outline-variant/40 px-6 py-4">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300">
