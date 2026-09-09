@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { updateTicketStatus } from "@/lib/maintenance";
 
@@ -102,5 +103,66 @@ export async function deleteCategoryAction(categoryId: string) {
   } catch (err: any) {
     // The guard in deleteTicketCategory explains why, so pass it through.
     return { error: err?.message || "Could not delete the category." };
+  }
+}
+
+/**
+ * One ticket, read-only, for the detail modal.
+ *
+ * Selected field by field rather than returned whole: `cost` is a Prisma
+ * Decimal and this crosses into a Client Component (AGENTS.md Rule 6).
+ */
+export async function ticketDetailAction(ticketId: string) {
+  try {
+    await requireUser(["Admin"]);
+    const id = String(ticketId || "").trim();
+    if (!id) return { error: "Ticket ID is missing." };
+
+    const t = await prisma.ticket.findUnique({
+      where: { ticket_id: id },
+      select: {
+        ticket_id: true,
+        title: true,
+        description: true,
+        ticket_category: true,
+        priority: true,
+        status: true,
+        location_type: true,
+        location_detail: true,
+        remark: true,
+        cost: true,
+        created_at: true,
+        resolved_at: true,
+        unit: { select: { unit_number: true, property: { select: { property_name: true } } } },
+        lease: { select: { unit: { select: { unit_number: true } } } },
+        property: { select: { property_name: true } },
+        reporter: { select: { user_name: true } },
+        assignee: { select: { user_name: true } },
+      },
+    });
+    if (!t) return { error: "That ticket no longer exists." };
+
+    return {
+      ticket: {
+        ticket_id: t.ticket_id,
+        title: t.title,
+        description: t.description,
+        ticket_category: t.ticket_category,
+        priority: t.priority,
+        status: t.status,
+        location_type: t.location_type,
+        location_detail: t.location_detail,
+        remark: t.remark,
+        cost: t.cost === null || t.cost === undefined ? null : Number(t.cost),
+        created_at: t.created_at ? t.created_at.toISOString() : null,
+        resolved_at: t.resolved_at ? t.resolved_at.toISOString() : null,
+        unitNumber: t.unit?.unit_number ?? t.lease?.unit?.unit_number ?? null,
+        propertyName: t.property?.property_name ?? t.unit?.property?.property_name ?? null,
+        reporterName: t.reporter?.user_name ?? null,
+        assigneeName: t.assignee?.user_name ?? null,
+      },
+    };
+  } catch (err: any) {
+    return { error: err?.message || "Could not load that ticket." };
   }
 }

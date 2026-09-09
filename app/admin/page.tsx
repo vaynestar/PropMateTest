@@ -1,4 +1,5 @@
 import Link from "next/link";
+import UrgentActionList from "@/components/dashboard/UrgentActionList";
 import { getDashboardStats } from "@/lib/dashboard";
 import ScanButton from "@/components/visitors/ScanButton";
 import FilterableTicketQueue from "@/components/dashboard/FilterableTicketQueue";
@@ -55,41 +56,7 @@ export default async function AdminDashboardPage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {stats.urgentActionItems.map((item) => (
-              <Link
-                key={item.id}
-                href={item.href}
-                className="p-3 rounded-xl bg-surface-container-low border border-outline-variant/60 hover:border-rose-500/60 transition-all flex flex-col justify-between group"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-1 mb-1">
-                    <span
-                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
-                        item.urgency === "CRITICAL"
-                          ? "bg-rose-500/20 text-rose-300 border border-rose-500/30"
-                          : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                      }`}
-                    >
-                      {item.type}
-                    </span>
-                    <span className="text-[10px] text-on-surface-variant font-mono">
-                      {new Date(item.timestamp).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <h4 className="text-xs font-semibold text-white group-hover:text-primary transition-colors line-clamp-1">
-                    {item.title}
-                  </h4>
-                  <p className="text-[11px] text-on-surface-variant line-clamp-1 mt-0.5">
-                    {item.subtitle}
-                  </p>
-                </div>
-                <div className="mt-2.5 flex items-center justify-end text-[10px] text-primary font-semibold group-hover:translate-x-0.5 transition-transform">
-                  <span>Open</span>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <UrgentActionList items={stats.urgentActionItems as any} />
         </div>
       )}
 
@@ -200,52 +167,6 @@ export default async function AdminDashboardPage() {
         </Link>
       </div>
 
-      {/* 4. Fast Action Matrix */}
-      <div className="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="text-on-surface-variant font-semibold shrink-0">Quick actions</span>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/admin/maintenance"
-            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[15px] text-amber-400">add_task</span>
-            <span>Raise Ticket</span>
-          </Link>
-
-          <Link
-            href="/admin/invoices"
-            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[15px] text-emerald-400">receipt_long</span>
-            <span>Issue Invoice</span>
-          </Link>
-
-          <Link
-            href="/admin/announcements"
-            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[15px] text-purple-400">campaign</span>
-            <span>Post Notice</span>
-          </Link>
-
-          <Link
-            href="/admin/facilities"
-            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[15px] text-cyan-400">calendar_month</span>
-            <span>Facility Schedule</span>
-          </Link>
-
-          <Link
-            href="/admin/settings"
-            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[15px] text-on-surface-variant">settings</span>
-            <span>Settings</span>
-          </Link>
-        </div>
-      </div>
-
       {/* 5. Two-Column Real-Time Operational Workspace */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column (2 Cols): Financial Performance Trend Chart & Active Ticket Queue */}
@@ -337,6 +258,110 @@ export default async function AdminDashboardPage() {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+
+      {/* Facilities due for service. Overdue first — an overdue service is the
+          one that needs a decision, and the counter above excludes it. */}
+      {stats.upcomingMaintenanceList.length > 0 && (
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-4 sm:p-5">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[20px] text-amber-400">build</span>
+              <h2 className="text-sm font-bold text-white">Maintenance due</h2>
+            </div>
+            <Link
+              href="/admin/facilities"
+              className="text-xs font-semibold text-primary hover:underline"
+            >
+              Facilities
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {stats.upcomingMaintenanceList.map((f) => (
+              <Link
+                key={f.facility_id}
+                href="/admin/facilities"
+                className={`pressable rounded-xl border p-3 transition-colors ${
+                  f.isOverdue
+                    ? "border-rose-500/40 bg-rose-500/10 hover:border-rose-500/60"
+                    : "border-outline-variant/50 bg-surface-container-high/40 hover:border-amber-500/50"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <span className="truncate text-xs font-semibold text-white">
+                    {f.facility_name}
+                  </span>
+                  {f.isClosed && (
+                    <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
+                      Closed
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-[11px] text-on-surface-variant">{f.facility_type}</p>
+                <p
+                  className={`mt-1.5 font-mono text-[11px] font-bold ${
+                    f.isOverdue ? "text-rose-300" : "text-amber-300"
+                  }`}
+                >
+                  {f.isOverdue
+                    ? `${Math.abs(f.daysAway)} day${Math.abs(f.daysAway) === 1 ? "" : "s"} overdue`
+                    : f.daysAway === 0
+                    ? "Due today"
+                    : `In ${f.daysAway} day${f.daysAway === 1 ? "" : "s"}`}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+
+      {/* 4. Fast Action Matrix */}
+      <div className="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <span className="text-on-surface-variant font-semibold shrink-0">Quick actions</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/admin/maintenance"
+            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[15px] text-amber-400">add_task</span>
+            <span>Raise Ticket</span>
+          </Link>
+
+          <Link
+            href="/admin/invoices"
+            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[15px] text-emerald-400">receipt_long</span>
+            <span>Issue Invoice</span>
+          </Link>
+
+          <Link
+            href="/admin/announcements"
+            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[15px] text-purple-400">campaign</span>
+            <span>Post Notice</span>
+          </Link>
+
+          <Link
+            href="/admin/facilities"
+            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[15px] text-cyan-400">calendar_month</span>
+            <span>Facility Schedule</span>
+          </Link>
+
+          <Link
+            href="/admin/settings"
+            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
+          >
+            <span className="material-symbols-outlined text-[15px] text-on-surface-variant">settings</span>
+            <span>Settings</span>
+          </Link>
         </div>
       </div>
     </div>

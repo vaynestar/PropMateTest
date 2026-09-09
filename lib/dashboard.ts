@@ -4,6 +4,16 @@ export type DashboardStats = {
   totalProperties: number;
   totalFacilities: number;
   upcomingMaintenance: number;
+  /** Facilities due for service soon, or already past due. */
+  upcomingMaintenanceList: {
+    facility_id: string;
+    facility_name: string;
+    facility_type: string;
+    next_maintenance_date: string;
+    daysAway: number;
+    isOverdue: boolean;
+    isClosed: boolean;
+  }[];
   totalUnits: number;
   occupiedUnits: number;
   vacantUnits: number;
@@ -77,6 +87,7 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
     totalProperties,
     totalFacilities,
     upcomingMaintenance,
+    upcomingMaintenanceRows,
     totalUnits,
     occupiedUnits,
     vacantUnits,
@@ -110,6 +121,21 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
           gte: now,
         },
       },
+    }),
+    prisma.facility.findMany({
+      where: {
+        ...facilityWhere,
+        next_maintenance_date: { lte: next30Days },
+      },
+      select: {
+        facility_id: true,
+        facility_name: true,
+        facility_type: true,
+        facility_status: true,
+        next_maintenance_date: true,
+      },
+      orderBy: { next_maintenance_date: "asc" },
+      take: 6,
     }),
     prisma.unit.count({ where: unitWhere }),
     prisma.unit.count({ where: { ...unitWhere, status: "Occupied" } }),
@@ -364,6 +390,23 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
     });
   });
 
+  const maintToday = new Date();
+  maintToday.setHours(0, 0, 0, 0);
+  const upcomingMaintenanceList = (upcomingMaintenanceRows as any[]).map((f) => {
+    const due = new Date(f.next_maintenance_date);
+    due.setHours(0, 0, 0, 0);
+    const daysAway = Math.round((due.getTime() - maintToday.getTime()) / 86_400_000);
+    return {
+      facility_id: f.facility_id,
+      facility_name: f.facility_name,
+      facility_type: f.facility_type,
+      next_maintenance_date: due.toISOString(),
+      daysAway,
+      isOverdue: daysAway < 0,
+      isClosed: f.facility_status === "Maintenance",
+    };
+  });
+
   // Sort activity feed newest first
   activityFeed.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
@@ -371,6 +414,7 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
     totalProperties,
     totalFacilities,
     upcomingMaintenance,
+    upcomingMaintenanceList,
     totalUnits,
     occupiedUnits,
     vacantUnits,

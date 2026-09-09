@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import TicketDetailModal from "@/components/maintenance/TicketDetailModal";
+import ScrollHint from "@/components/ui/ScrollHint";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { updateTicketAction } from "@/app/admin/maintenance/actions";
 
@@ -28,6 +30,10 @@ export default function AdminTicketTable({
   const [filterPriority, setFilterPriority] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [editingTicket, setEditingTicket] = useState<any>(null);
+  // Reading a ticket used to mean opening the Manage form, which is an edit
+  // screen — so you could not look at one without being able to change it. And
+  // the table truncates the description to nothing on a narrow screen.
+  const [detailTicketId, setDetailTicketId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -166,7 +172,7 @@ export default function AdminTicketTable({
           )}
         </div>
 
-        <div className="overflow-x-auto w-full">
+        <ScrollHint className="w-full">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant">
               <tr>
@@ -198,7 +204,11 @@ export default function AdminTicketTable({
                     "—";
 
                   return (
-                    <tr key={t.ticket_id} className="hover:bg-surface-container-low/50 transition-colors">
+                    <tr
+                      key={t.ticket_id}
+                      onClick={() => setDetailTicketId(t.ticket_id)}
+                      className="cursor-pointer transition-colors hover:bg-surface-container-low/50"
+                    >
                       <td className="px-5 py-3.5 font-mono text-xs text-on-surface-variant font-semibold">
                         #{t.ticket_id.split("-")[0].toUpperCase()}
                       </td>
@@ -262,7 +272,7 @@ export default function AdminTicketTable({
                       <td className="px-5 py-3.5 text-right">
                         <button
                           type="button"
-                          onClick={() => setEditingTicket(t)}
+                          onClick={(e) => { e.stopPropagation(); setEditingTicket(t); }}
                           className="px-3 py-1 rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors text-xs pressable"
                         >
                           Manage
@@ -274,10 +284,17 @@ export default function AdminTicketTable({
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollHint>
       </div>
 
       {/* Manage / Update Ticket Modal */}
+      {detailTicketId && (
+        <TicketDetailModal
+          ticketId={detailTicketId}
+          onClose={() => setDetailTicketId(null)}
+        />
+      )}
+
       {editingTicket && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="glass-card rounded-2xl w-full max-w-lg overflow-hidden border border-outline-variant shadow-2xl flex flex-col animate-in fade-in zoom-in duration-200">

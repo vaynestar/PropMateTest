@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StatusBadge from "@/components/dashboard/StatusBadge";
@@ -465,7 +466,7 @@ After this its line items can no longer be edited. You can still record payment 
             </span>
           </div>
 
-          <div className="overflow-x-auto w-full">
+          <ScrollHint className="w-full">
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant">
                 <tr>
@@ -688,7 +689,7 @@ After this its line items can no longer be edited. You can still record payment 
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollHint>
         </div>
       )}
 
