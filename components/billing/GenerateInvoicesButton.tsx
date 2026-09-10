@@ -25,7 +25,12 @@ export default function GenerateInvoicesButton() {
       const d = new Date(year, month - 1, 1);
       const data = await getEligibleLeasesAction(d.toISOString());
       setLeases(data);
-      setSelectedLeaseIds(new Set(data.map((l: any) => l.lease_id)));
+      // Only the leases that would actually produce an invoice. Selecting one
+      // with nothing to bill used to look like billing it: the lease was
+      // skipped and still counted in the confirmation.
+      setSelectedLeaseIds(
+        new Set(data.filter((l: any) => l.billable).map((l: any) => l.lease_id))
+      );
     } catch (e) {
       alert("Failed to fetch eligible leases.");
     } finally {
@@ -43,6 +48,9 @@ export default function GenerateInvoicesButton() {
     setTargetMonth(newMonth);
     fetchLeases(newMonth);
   };
+
+  const billableLeases = leases.filter((l: any) => l.billable);
+  const blockedLeases = leases.filter((l: any) => !l.billable);
 
   const toggleLease = (id: string) => {
     const next = new Set(selectedLeaseIds);
@@ -130,40 +138,95 @@ export default function GenerateInvoicesButton() {
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center mb-2 px-2">
                     <span className="text-sm font-bold text-on-surface">
-                      Selected: {selectedLeaseIds.size} / {leases.length}
+                      Selected: {selectedLeaseIds.size} / {billableLeases.length}
+                      {blockedLeases.length > 0 && (
+                        <span className="ml-2 font-medium text-amber-300">
+                          &middot; {blockedLeases.length} cannot be billed yet
+                        </span>
+                      )}
                     </span>
                     <button
-                      onClick={() => setSelectedLeaseIds(selectedLeaseIds.size === leases.length ? new Set() : new Set(leases.map((l: any) => l.lease_id)))}
+                      onClick={() =>
+                        setSelectedLeaseIds(
+                          selectedLeaseIds.size === billableLeases.length
+                            ? new Set()
+                            : new Set(billableLeases.map((l: any) => l.lease_id))
+                        )
+                      }
                       className="text-sm text-primary hover:underline"
                     >
-                      {selectedLeaseIds.size === leases.length ? "Deselect All" : "Select All"}
+                      {selectedLeaseIds.size === billableLeases.length
+                        ? "Deselect all"
+                        : "Select all billable"}
                     </button>
                   </div>
-                  {leases.map(l => (
-                    <label key={l.lease_id} className="flex items-center gap-4 p-3 rounded-xl hover:bg-surface-container-high transition-colors cursor-pointer border border-transparent hover:border-outline-variant/30">
+                  {leases.map((l: any) => (
+                    <label
+                      key={l.lease_id}
+                      className={`flex items-center gap-4 rounded-xl border p-3 transition-colors ${
+                        l.billable
+                          ? "cursor-pointer border-transparent hover:border-outline-variant/30 hover:bg-surface-container-high"
+                          : "cursor-not-allowed border-amber-500/30 bg-amber-500/[0.06]"
+                      }`}
+                    >
                       <input
                         type="checkbox"
                         checked={selectedLeaseIds.has(l.lease_id)}
                         onChange={() => toggleLease(l.lease_id)}
-                        className="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary bg-surface-container-high"
+                        disabled={!l.billable}
+                        className="h-5 w-5 rounded border-outline-variant bg-surface-container-high text-primary focus:ring-primary disabled:opacity-40"
                       />
-                      <div className="flex-1">
-                        <div className="font-medium text-on-surface">{l.tenant.user_name}</div>
-                        <div className="text-xs text-on-surface-variant">Unit {l.unit.unit_number}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-on-surface">
+                          {l.tenant?.user_name ?? "No tenant on the lease"}
+                        </div>
+                        <div className="text-xs text-on-surface-variant">
+                          Unit {l.unit.unit_number}
+                        </div>
                       </div>
-                      <div className="text-right">
-                        {l.lease_charges?.length > 0 ? (
-                          <span className="text-sm font-medium text-emerald-400">
-                            {l.lease_charges.length} item(s)
-                          </span>
+                      <div className="shrink-0 text-right">
+                        {l.billable ? (
+                          <>
+                            <div className="text-sm font-semibold text-on-surface">
+                              RM {l.billableAmount.toFixed(2)}
+                            </div>
+                            <div className="text-[11px] text-on-surface-variant">
+                              {l.chargeCount > 0
+                                ? `${l.chargeCount} charge${l.chargeCount > 1 ? "s" : ""}`
+                                : "Unit rent"}
+                            </div>
+                          </>
                         ) : (
-                          <span className="text-sm text-on-surface-variant">
-                            Default RM {Number(l.unit.monthly_rent)}
-                          </span>
+                          <div className="text-[11px] font-medium leading-tight text-amber-300">
+                            Nothing to bill
+                            <span className="mt-0.5 block font-normal text-amber-300/75">
+                              No charges, no unit rent
+                            </span>
+                          </div>
                         )}
                       </div>
                     </label>
                   ))}
+
+                  {blockedLeases.length > 0 && (
+                    <p className="mt-1 flex items-start gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3 text-xs leading-relaxed text-amber-200/90">
+                      <span className="material-symbols-outlined text-[16px] leading-none">
+                        info
+                      </span>
+                      <span>
+                        {blockedLeases.length} lease
+                        {blockedLeases.length > 1 ? "s" : ""} cannot be invoiced: no recurring
+                        charges are set up and the unit has no monthly rent.{" "}
+                        <a
+                          href="/admin/billing/recurring-charges"
+                          className="font-semibold underline"
+                        >
+                          Set up their charges
+                        </a>{" "}
+                        first.
+                      </span>
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -175,7 +238,7 @@ export default function GenerateInvoicesButton() {
               >
                 Cancel
               </button>
-              {leases.length > 0 && (
+              {billableLeases.length > 0 && (
                 <button
                   onClick={handleGenerate}
                   disabled={loading || selectedLeaseIds.size === 0}
