@@ -25,34 +25,34 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
   return (
     <div className="space-y-6">
       {/* 4 Visitor KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-on-surface-variant font-medium block">Passes issued</span>
-          <span className="text-2xl font-bold text-white mt-1 block">
+          <span className="text-lg font-bold sm:text-2xl text-white mt-1 block">
             {visitors.totalVisitors}
           </span>
           <span className="text-[11px] text-on-surface-variant mt-1 block">In this period</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-purple-400 font-medium block">In the building now</span>
-          <span className="text-2xl font-bold text-purple-300 mt-1 block">
+          <span className="text-lg font-bold sm:text-2xl text-purple-300 mt-1 block">
             {visitors.activeInside}
           </span>
           <span className="text-[11px] text-purple-400/80 mt-1 block">Checked in, not yet out</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-emerald-400 font-medium block">Been and gone</span>
-          <span className="text-2xl font-bold text-emerald-300 mt-1 block">
+          <span className="text-lg font-bold sm:text-2xl text-emerald-300 mt-1 block">
             {visitors.totalVisitors - visitors.activeInside}
           </span>
           <span className="text-[11px] text-emerald-500/80 mt-1 block">Checked out</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-on-surface-variant font-medium block">Kinds of visitor</span>
-          <span className="text-2xl font-bold text-white mt-1 block">
+          <span className="text-lg font-bold sm:text-2xl text-white mt-1 block">
             {typeDistribution?.length || 0}
           </span>
           <span className="text-[11px] text-on-surface-variant mt-1 block">Guests, deliveries, contractors</span>
@@ -60,7 +60,7 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
       </div>
 
       {/* 2 Visualizations: Daily Traffic Trend & Visitor Type Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5">
         {/* Daily Traffic Area Chart (2 Cols) */}
         <div className="lg:col-span-2 p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">

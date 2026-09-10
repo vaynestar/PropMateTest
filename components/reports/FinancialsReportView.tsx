@@ -32,18 +32,18 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
   return (
     <div className="space-y-6">
       {/* 4 Financial KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-on-surface-variant font-medium block">Billed</span>
-          <span className="text-2xl font-mono font-bold text-white mt-1 block">
+          <span className="text-lg font-mono font-bold sm:text-2xl text-white mt-1 block">
             RM {financial.totalInvoiced.toLocaleString()}
           </span>
           <span className="text-[11px] text-on-surface-variant mt-1 block">Everything invoiced in this period</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-emerald-400 font-medium block">Collected</span>
-          <span className="text-2xl font-mono font-bold text-emerald-300 mt-1 block">
+          <span className="text-lg font-mono font-bold sm:text-2xl text-emerald-300 mt-1 block">
             RM {financial.totalCollected.toLocaleString()}
           </span>
           <span className="text-[11px] text-emerald-500/80 mt-1 block">
@@ -51,17 +51,17 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-rose-400 font-medium block">Overdue</span>
-          <span className="text-2xl font-mono font-bold text-rose-300 mt-1 block">
+          <span className="text-lg font-mono font-bold sm:text-2xl text-rose-300 mt-1 block">
             RM {financial.totalOverdue.toLocaleString()}
           </span>
           <span className="text-[11px] text-rose-400/80 mt-1 block">Past its due date and unpaid</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-on-surface-variant font-medium block">More than 90 days late</span>
-          <span className="text-2xl font-mono font-bold text-amber-300 mt-1 block">
+          <span className="text-lg font-mono font-bold sm:text-2xl text-amber-300 mt-1 block">
             RM {agingReceivables.days90Plus.toLocaleString()}
           </span>
           <span className="text-[11px] text-on-surface-variant mt-1 block">The hardest to recover</span>
@@ -69,7 +69,7 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
       </div>
 
       {/* 2 Visualizations: Aging Receivables vs Charge Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5">
         {/* Aging Receivables Bar */}
         <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">

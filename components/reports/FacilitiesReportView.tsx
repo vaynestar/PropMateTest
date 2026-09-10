@@ -23,34 +23,34 @@ export default function FacilitiesReportView({ data }: FacilitiesReportViewProps
   return (
     <div className="space-y-6">
       {/* 4 Facility KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-on-surface-variant font-medium block">Bookings</span>
-          <span className="text-2xl font-bold text-white mt-1 block">
+          <span className="text-lg font-bold sm:text-2xl text-white mt-1 block">
             {facilities.totalBookings}
           </span>
           <span className="text-[11px] text-on-surface-variant mt-1 block">Made by residents</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-emerald-400 font-medium block">Hours booked</span>
-          <span className="text-2xl font-mono font-bold text-emerald-300 mt-1 block">
+          <span className="text-lg font-mono font-bold sm:text-2xl text-emerald-300 mt-1 block">
             {facilities.totalHours} hrs
           </span>
           <span className="text-[11px] text-emerald-500/80 mt-1 block">Across every facility</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-primary font-medium block">Confirmed</span>
-          <span className="text-2xl font-bold text-primary mt-1 block">
+          <span className="text-lg font-bold sm:text-2xl text-primary mt-1 block">
             {facilities.confirmedCount}
           </span>
           <span className="text-[11px] text-on-surface-variant mt-1 block">Not cancelled</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-on-surface-variant font-medium block">Facilities in use</span>
-          <span className="text-2xl font-bold text-white mt-1 block">
+          <span className="text-lg font-bold sm:text-2xl text-white mt-1 block">
             {amenityUsage?.length || 0}
           </span>
           <span className="text-[11px] text-on-surface-variant mt-1 block">Booked at least once</span>
@@ -58,7 +58,7 @@ export default function FacilitiesReportView({ data }: FacilitiesReportViewProps
       </div>
 
       {/* 2 Visualizations: Amenity Hours Bar Chart & Time Slot Heatmap */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5">
         {/* Hours Booked by Facility (2 Cols) */}
         <div className="lg:col-span-2 p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">

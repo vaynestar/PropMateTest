@@ -30,7 +30,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
   return (
     <div className="space-y-6">
       {/* 4 Core Scorecard Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {/* Metric 1: Financial Collection */}
         <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -42,7 +42,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
             </span>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-white tracking-tight">
+            <span className="text-lg font-bold sm:text-2xl text-white tracking-tight">
               {overview.collectionRate}%
             </span>
             <div className="flex items-center justify-between text-[11px] text-on-surface-variant mt-1">
@@ -63,7 +63,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
             </span>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-white tracking-tight">
+            <span className="text-lg font-bold sm:text-2xl text-white tracking-tight">
               {overview.occupancyRate}%
             </span>
             <div className="flex items-center justify-between text-[11px] text-on-surface-variant mt-1">
@@ -84,7 +84,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
             </span>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-white tracking-tight">
+            <span className="text-lg font-bold sm:text-2xl text-white tracking-tight">
               {overview.resolutionRate}%
             </span>
             <div className="flex items-center justify-between text-[11px] text-on-surface-variant mt-1">
@@ -105,7 +105,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
             </span>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold text-white tracking-tight">
+            <span className="text-lg font-bold sm:text-2xl text-white tracking-tight">
               {overview.activeCheckedInCount}
             </span>
             <div className="flex items-center justify-between text-[11px] text-on-surface-variant mt-1">
@@ -117,7 +117,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
       </div>
 
       {/* Two Analytical Cards: Financial Cashflow vs Occupancy Donut */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5">
         {/* Cashflow Chart (2 Cols) */}
         <div className="lg:col-span-2 p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
@@ -241,7 +241,7 @@ export default function OverviewReportView({ data }: OverviewReportViewProps) {
       </div>
 
       {/* Dual Tables: Urgent Attention Tickets & Top Defaulters */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-5">
         {/* Urgent Tickets */}
         <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
           <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">

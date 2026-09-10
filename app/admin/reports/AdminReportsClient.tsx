@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import { useRouter, useSearchParams } from "next/navigation";
 import OverviewReportView from "@/components/reports/OverviewReportView";
 import FinancialsReportView from "@/components/reports/FinancialsReportView";
@@ -166,7 +167,7 @@ export default function AdminReportsClient({
       </div>
 
       {/* Filter Bar */}
-      <div className="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant/60 bg-surface-container p-2.5 text-xs sm:gap-3 sm:p-3.5">
         {/* Left: Property Selector */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <span className="text-on-surface-variant font-medium shrink-0">Property:</span>
@@ -217,7 +218,8 @@ export default function AdminReportsClient({
       )}
 
       {/* Tab Navigation */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b border-outline-variant/30 hide-scrollbar">
+      <ScrollHint className="border-b border-outline-variant/30 pb-1" label="More tabs">
+        <div className="flex items-center gap-1">
         {TABS.map((t) => (
           <button
             type="button"
@@ -233,7 +235,8 @@ export default function AdminReportsClient({
             <span>{t.label}</span>
           </button>
         ))}
-      </div>
+        </div>
+      </ScrollHint>
 
       {/* Render Active Tab View */}
       <div>

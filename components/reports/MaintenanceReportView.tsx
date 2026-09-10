@@ -23,18 +23,18 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
   return (
     <div className="space-y-6">
       {/* 4 Helpdesk KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-on-surface-variant font-medium block">Tickets raised</span>
-          <span className="text-2xl font-bold text-white mt-1 block">
+          <span className="text-lg font-bold sm:text-2xl text-white mt-1 block">
             {maintenance.totalTickets}
           </span>
           <span className="text-[11px] text-on-surface-variant mt-1 block">In this period</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-emerald-400 font-medium block">Resolved</span>
-          <span className="text-2xl font-bold text-emerald-300 mt-1 block">
+          <span className="text-lg font-bold sm:text-2xl text-emerald-300 mt-1 block">
             {maintenance.resolvedCount}
           </span>
           <span className="text-[11px] text-emerald-500/80 mt-1 block">
@@ -42,17 +42,17 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-amber-400 font-medium block">Still open</span>
-          <span className="text-2xl font-bold text-amber-300 mt-1 block">
+          <span className="text-lg font-bold sm:text-2xl text-amber-300 mt-1 block">
             {maintenance.inProgressCount + maintenance.openCount}
           </span>
           <span className="text-[11px] text-amber-500/80 mt-1 block">Someone still has work to do</span>
         </div>
 
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60">
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
           <span className="text-xs text-on-surface-variant font-medium block">Average time to resolve</span>
-          <span className="text-2xl font-mono font-bold text-primary mt-1 block">
+          <span className="text-lg font-mono font-bold sm:text-2xl text-primary mt-1 block">
             {maintenance.avgResolutionHours}h
           </span>
           <span className="text-[11px] text-on-surface-variant mt-1 block">From raised to resolved</span>
@@ -60,7 +60,7 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
       </div>
 
       {/* 2 Visualizations: Category Bar Chart & Priority Split */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5">
         {/* Ticket Volume by Category (2 Cols) */}
         <div className="lg:col-span-2 p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">
