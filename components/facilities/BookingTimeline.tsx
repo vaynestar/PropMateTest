@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 
 type BookingSlot = {
   start_time: number; // in minutes from midnight
@@ -48,7 +49,7 @@ export default function BookingTimeline({
   };
 
   return (
-    <div className="w-full overflow-x-auto pb-4">
+    <ScrollHint className="w-full pb-4">
       <div className="mt-2 min-w-[600px] px-6">
         {/* Timeline Header (Hours) */}
         <div className="relative h-6 border-b border-outline-variant/40 mb-2">
@@ -139,6 +140,6 @@ export default function BookingTimeline({
           </div>
         </div>
       </div>
-    </div>
+    </ScrollHint>
   );
 }

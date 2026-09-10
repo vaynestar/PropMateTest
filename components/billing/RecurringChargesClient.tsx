@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import Link from "next/link";
 import { saveLeaseChargesAction } from "@/app/admin/billing/recurring-charges/actions";
 import { RENT_CHARGE_NAME } from "@/lib/charge-type";
@@ -225,7 +226,7 @@ export default function RecurringChargesClient({
         <div className="px-6 py-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
           <h3 className="font-title-lg text-title-lg text-on-surface">Active leases</h3>
         </div>
-        <div className="overflow-x-auto w-full">
+        <ScrollHint className="w-full">
           <table className="w-full text-left text-sm whitespace-nowrap border-collapse">
             <thead className="bg-surface-container-highest/30 border-b border-outline-variant/50 text-on-surface-variant">
               <tr>
@@ -345,7 +346,7 @@ export default function RecurringChargesClient({
               )}
             </div>
           )}
-        </div>
+        </ScrollHint>
       </div>
 
       {/* Drawer Overlay */}

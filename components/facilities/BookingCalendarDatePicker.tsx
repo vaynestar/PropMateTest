@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 
 function jsDayToMonFirst(jsDay: number): number {
   return jsDay === 0 ? 7 : jsDay;
@@ -282,7 +283,7 @@ export default function BookingCalendarDatePicker({
 
       {/* VIEW 2: Quick Open Dates Strip */}
       {viewMode === "strip" && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none animate-in fade-in duration-200">
+        <ScrollHint className="pb-2"><div className="animate-in fade-in flex items-center gap-2 duration-200">
           {openDatesStrip.map((d) => {
             const iso = dateToISO(d);
             const isSelected = iso === selectedDate;
@@ -306,7 +307,7 @@ export default function BookingCalendarDatePicker({
               </button>
             );
           })}
-        </div>
+        </div></ScrollHint>
       )}
 
       {/* Selected Date Summary Banner */}

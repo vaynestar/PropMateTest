@@ -218,7 +218,7 @@ export default function AdminReportsClient({
       )}
 
       {/* Tab Navigation */}
-      <ScrollHint className="border-b border-outline-variant/30 pb-1" label="More tabs">
+      <ScrollHint className="border-b border-outline-variant/30 pb-1">
         <div className="flex items-center gap-1">
         {TABS.map((t) => (
           <button

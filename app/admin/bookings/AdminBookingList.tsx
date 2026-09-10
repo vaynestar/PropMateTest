@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import { normaliseBookingStatus } from "@/lib/booking-status";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { updateBookingStatus } from "./actions";
@@ -641,7 +642,7 @@ export default function AdminBookingList({
       {/* 2. TABLE VIEW */}
       {viewMode === "table" && filteredBookings.length > 0 && (
         <div className="glass-card rounded-xl overflow-hidden border border-outline-variant/30">
-          <div className="overflow-x-auto w-full">
+          <ScrollHint className="w-full">
             <table className="w-full text-left text-xs whitespace-nowrap">
               <thead className="bg-surface-container/60 border-b border-outline-variant text-on-surface-variant">
                 <tr>
@@ -722,7 +723,7 @@ export default function AdminBookingList({
                 })}
               </tbody>
             </table>
-          </div>
+          </ScrollHint>
         </div>
       )}
     </div>

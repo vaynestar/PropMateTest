@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Image from "next/image";
+import ScrollHint from "@/components/ui/ScrollHint";
 
 export interface ResidentAnnouncement {
   announcement_id: string;
@@ -125,7 +126,7 @@ export default function ResidentAnnouncementList({
       {/* FILTER TABS & SEARCH BAR */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {/* Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar pb-1">
+        <ScrollHint className="pb-1"><div className="flex items-center gap-1.5">
           {CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.id;
             return (
@@ -144,7 +145,7 @@ export default function ResidentAnnouncementList({
               </button>
             );
           })}
-        </div>
+        </div></ScrollHint>
 
         {/* Search */}
         <div className="relative min-w-[200px]">

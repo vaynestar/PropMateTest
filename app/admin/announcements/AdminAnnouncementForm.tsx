@@ -184,40 +184,57 @@ export default function AdminAnnouncementForm({
   }, [state, onSuccess]);
 
   return (
-    <div className="bg-[#10141f] border border-outline-variant/60 rounded-2xl p-5 sm:p-6 shadow-2xl text-white">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30">
-        <h2 className="text-base font-bold text-white">
-          {isEditing ? "Edit announcement" : "New announcement"}
-        </h2>
-
-        <div className="flex items-center gap-2">
-          {/* This was a bare dropdown with no label, which is why nothing had
-              ever been saved as a draft: the choice was there but read as
-              decoration. */}
-          <label className="flex items-center gap-1.5 text-[11px] text-on-surface-variant">
-            Save as
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="cursor-pointer rounded-lg border border-outline-variant/60 bg-surface-container px-2.5 py-1 text-xs text-white focus:border-primary focus:outline-none"
-            >
-              <option value="Published">Published — goes up on its publish date</option>
-              <option value="Draft">Draft — not visible to residents</option>
-              <option value="Archived">Archived — taken off the board</option>
-            </select>
-          </label>
+    <div className="w-full min-w-0 overflow-x-hidden rounded-2xl border border-outline-variant/60 bg-[#10141f] p-4 text-white shadow-2xl sm:p-6">
+      {/*
+        The status control used to sit beside the title in a non-wrapping row.
+        A <select> is as wide as its longest option, and these options carry
+        their explanation ("Published — goes up on its publish date"), so on a
+        phone it shoved the title aside and forced the whole panel to scroll
+        sideways. The explanation now lives under the control, where it can wrap,
+        and the header stacks below sm.
+      */}
+      <div className="border-b border-outline-variant/30 pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="min-w-0 text-base font-bold text-white">
+            {isEditing ? "Edit announcement" : "New announcement"}
+          </h2>
 
           {onCancel && (
             <button
               type="button"
               onClick={onCancel}
-              className="w-7 h-7 rounded-lg text-on-surface-variant hover:text-white hover:bg-surface-container flex items-center justify-center transition-colors"
+              className="pressable flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container hover:text-white"
               aria-label="Close"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
             </button>
           )}
+        </div>
+
+        <div className="mt-3 flex flex-col gap-1 sm:mt-2 sm:flex-row sm:items-center sm:gap-2">
+          <label
+            htmlFor="announcement-status"
+            className="shrink-0 text-[11px] font-semibold text-on-surface-variant"
+          >
+            Save as
+          </label>
+          <select
+            id="announcement-status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full min-w-0 cursor-pointer rounded-lg border border-outline-variant/60 bg-surface-container px-2.5 py-2 text-xs text-white focus:border-primary focus:outline-none sm:w-auto"
+          >
+            <option value="Published">Published</option>
+            <option value="Draft">Draft</option>
+            <option value="Archived">Archived</option>
+          </select>
+          <span className="text-[11px] leading-snug text-on-surface-variant sm:ml-1">
+            {status === "Published"
+              ? "Goes up on its publish date."
+              : status === "Draft"
+              ? "Not visible to residents."
+              : "Taken off the board."}
+          </span>
         </div>
       </div>
 

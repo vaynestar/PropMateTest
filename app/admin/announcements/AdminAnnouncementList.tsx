@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import {
   announcementState,
   daysUntilExpiry,
@@ -627,7 +628,7 @@ export default function AdminAnnouncementList({
         </div>
       ) : (
         /* TABLE VIEW */
-        <div className="bg-surface-container border border-outline-variant/60 rounded-2xl overflow-hidden shadow-lg overflow-x-auto">
+        <ScrollHint className="rounded-2xl border border-outline-variant/60 bg-surface-container shadow-lg">
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-lowest text-on-surface-variant text-[10px] tracking-wider border-b border-outline-variant/60">
               <tr>
@@ -787,7 +788,7 @@ export default function AdminAnnouncementList({
               })}
             </tbody>
           </table>
-        </div>
+        </ScrollHint>
       )}
 
       {/* FULL PREVIEW READER MODAL */}

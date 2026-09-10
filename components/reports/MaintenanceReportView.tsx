@@ -9,6 +9,7 @@ import {
   Tooltip,
   Cell,
 } from "recharts";
+import ScrollHint from "@/components/ui/ScrollHint";
 
 interface MaintenanceReportViewProps {
   data: any;
@@ -168,7 +169,7 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
           </span>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
+        <ScrollHint className="mt-4">
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-lowest text-on-surface-variant text-[10px] tracking-wider border-b border-outline-variant/60">
               <tr>
@@ -213,7 +214,7 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollHint>
       </div>
     </div>
   );

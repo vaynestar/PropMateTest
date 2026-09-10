@@ -172,7 +172,90 @@ export default function AdminTicketTable({
           )}
         </div>
 
-        <ScrollHint className="w-full">
+        {/* Cards below md. A ticket has eight columns and a phone shows two of
+            them, so the table was scrolled past rather than read. */}
+        <div className="divide-y divide-outline-variant/30 md:hidden">
+          {filteredTickets.length === 0 ? (
+            <p className="px-5 py-10 text-center text-xs text-on-surface-variant">
+              No tickets match these filters.
+            </p>
+          ) : (
+            filteredTickets.map((t: any) => {
+              const isCommon = t.location_type === "Common Area";
+              const where = isCommon
+                ? t.location_detail || "Common area"
+                : `Unit ${t.unit?.unit_number ?? t.lease?.unit?.unit_number ?? "—"}`;
+              return (
+                <button
+                  key={t.ticket_id}
+                  type="button"
+                  onClick={() => setDetailTicketId(t.ticket_id)}
+                  className="pressable w-full px-4 py-3 text-left transition-colors hover:bg-surface-container-low/50"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="min-w-0 text-sm font-semibold leading-snug text-white">
+                      {t.title}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                        t.priority === "Urgent"
+                          ? "border-rose-500/40 bg-rose-500/20 text-rose-300"
+                          : t.priority === "High"
+                          ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
+                          : "border-outline-variant/60 bg-surface-container-high text-on-surface-variant"
+                      }`}
+                    >
+                      {t.priority}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 flex items-center gap-1.5 text-[11px] text-on-surface-variant">
+                    <span className="material-symbols-outlined text-[13px] leading-none">
+                      {isCommon ? "domain" : "meeting_room"}
+                    </span>
+                    <span className="truncate">{where}</span>
+                    <span aria-hidden>·</span>
+                    <span className="truncate">{t.ticket_category}</span>
+                  </p>
+
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <span className="rounded-md border border-outline-variant/60 bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
+                      {t.status}
+                    </span>
+                    <span className="flex items-center gap-3">
+                      <span className="font-mono text-[10px] text-on-surface-variant">
+                        {new Date(t.created_at).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                          timeZone: "Asia/Kuala_Lumpur",
+                        })}
+                      </span>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingTicket(t);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.stopPropagation();
+                            setEditingTicket(t);
+                          }
+                        }}
+                        className="pressable rounded-lg bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20"
+                      >
+                        Manage
+                      </span>
+                    </span>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+
+        <ScrollHint className="hidden w-full md:block">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant">
               <tr>

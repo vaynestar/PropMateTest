@@ -13,6 +13,7 @@ import {
   UNIT_STATUS_ORDER,
   type UnitStatusKey,
 } from "@/lib/unit-status";
+import ScrollHint from "@/components/ui/ScrollHint";
 
 interface UnitItem {
   unit_id: string;
@@ -718,7 +719,7 @@ export default function UnitsClient({
           />
         </div>
 
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+        <ScrollHint><div className="flex items-center gap-2">
           <div
             role="group"
             aria-label="Filter by status"
@@ -769,7 +770,7 @@ export default function UnitsClient({
             </span>
             <span>Add unit</span>
           </button>
-        </div>
+        </div></ScrollHint>
       </div>
 
       <div className="space-y-5">

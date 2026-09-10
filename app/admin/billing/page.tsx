@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ScrollHint from "@/components/ui/ScrollHint";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { listInvoices } from "@/lib/billing";
@@ -248,7 +249,7 @@ export default async function BillingPage() {
           </Link>
         </div>
 
-        <div className="overflow-x-auto">
+        <ScrollHint>
           <table className="w-full text-left">
             <thead className="bg-surface-container-high/50">
               <tr className="font-label-sm text-label-sm text-on-surface-variant">
@@ -312,7 +313,7 @@ export default async function BillingPage() {
               })}
             </tbody>
           </table>
-        </div>
+        </ScrollHint>
       </div>
     </div>
   );

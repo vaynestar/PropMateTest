@@ -5,6 +5,7 @@ import Link from "next/link";
 import TenantFormModal from "./TenantFormModal";
 import TenantEditModal from "./TenantEditModal";
 import TenantDeleteModal from "./TenantDeleteModal";
+import ScrollHint from "@/components/ui/ScrollHint";
 
 interface Lease {
   lease_id: string;
@@ -187,7 +188,7 @@ export default function TenantsClient({
         </div>
 
         {/* Lease Status Pills & Add Button */}
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+        <ScrollHint><div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 shrink-0 bg-surface-container-high/60 p-1 rounded-xl border border-outline-variant/40">
             {[
               { id: "ALL", label: "All" },
@@ -217,7 +218,7 @@ export default function TenantsClient({
             <span className="material-symbols-outlined text-[18px]">person_add</span>
             <span>Add Tenant</span>
           </button>
-        </div>
+        </div></ScrollHint>
       </div>
 
       {/* A tenant with no unit belongs to no property, so a property filter hides

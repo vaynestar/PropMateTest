@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import Link from "next/link";
 import StatusBadge from "./StatusBadge";
 
@@ -40,7 +41,7 @@ export default function FilterableTicketQueue({ tickets }: Props) {
   return (
     <div className="flex flex-col gap-3">
       {/* Priority Filter Pills */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 hide-scrollbar text-xs">
+      <ScrollHint className="pb-1 text-xs"><div className="flex items-center gap-1.5">
         {["All", "Urgent/High", "Normal", "Low"].map((level) => (
           <button
             key={level}
@@ -55,7 +56,7 @@ export default function FilterableTicketQueue({ tickets }: Props) {
             {level}
           </button>
         ))}
-      </div>
+      </div></ScrollHint>
 
       {/* Ticket List */}
       <div className="space-y-2.5 max-h-96 overflow-y-auto pr-1">

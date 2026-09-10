@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { NotificationItem } from "@/lib/notifications";
+import ScrollHint from "@/components/ui/ScrollHint";
 
 interface NotificationCenterProps {
   initialNotifications: NotificationItem[];
@@ -80,7 +81,7 @@ export default function NotificationCenter({ initialNotifications }: Notificatio
             </div>
 
             {/* Quick Filter Pills */}
-            <div className="px-3 py-2 border-b border-outline-variant/30 flex items-center gap-1.5 overflow-x-auto text-[11px] hide-scrollbar bg-surface-container-low">
+            <ScrollHint className="border-b border-outline-variant/30 bg-surface-container-low px-3 py-2 text-[11px]"><div className="flex items-center gap-1.5">
               {[
                 { id: "ALL", label: "All" },
                 { id: "URGENT", label: "Urgent" },
@@ -101,7 +102,7 @@ export default function NotificationCenter({ initialNotifications }: Notificatio
                   {f.label}
                 </button>
               ))}
-            </div>
+            </div></ScrollHint>
 
             {/* Notification Item List */}
             <div className="max-h-80 overflow-y-auto divide-y divide-outline-variant/30">

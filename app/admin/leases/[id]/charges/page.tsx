@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import ScrollHint from "@/components/ui/ScrollHint";
 import { requireUser } from "@/lib/auth";
 import Link from "next/link";
 import AddLeaseChargeForm from "./AddLeaseChargeForm";
@@ -75,7 +76,7 @@ export default async function LeaseChargesPage({ params }: { params: Promise<{ i
           <div className="px-6 py-4 border-b border-outline-variant/30 bg-surface-container-low">
             <h2 className="font-title-md text-title-md text-on-surface">Recurring Charges</h2>
           </div>
-          <div className="overflow-x-auto">
+          <ScrollHint>
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant">
                 <tr>
@@ -125,7 +126,7 @@ export default async function LeaseChargesPage({ params }: { params: Promise<{ i
                 )}
               </tbody>
             </table>
-          </div>
+          </ScrollHint>
         </div>
 
         <AddLeaseChargeForm lease_id={id} activeCharges={activeCharges} />

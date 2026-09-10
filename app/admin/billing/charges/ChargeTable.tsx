@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import { toggleChargeActiveAction } from "./actions";
 import EditChargeModal from "./EditChargeModal";
 import { chargeType, RENT_CHARGE_NAME } from "@/lib/charge-type";
@@ -75,7 +76,7 @@ export default function ChargeTable({ charges }: { charges: any[] }) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <ScrollHint>
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant text-xs">
               <tr>
@@ -196,7 +197,7 @@ export default function ChargeTable({ charges }: { charges: any[] }) {
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollHint>
       </div>
 
       {editingCharge && (

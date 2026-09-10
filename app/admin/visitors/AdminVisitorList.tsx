@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import {
   normaliseVisitorStatus,
   isStaleOnSite,
@@ -573,7 +574,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
         </div>
       ) : (
         /* DENSE TABLE VIEW */
-        <div className="overflow-x-auto rounded-2xl border border-outline-variant/50 bg-surface-container shadow-sm">
+        <ScrollHint className="rounded-2xl border border-outline-variant/50 bg-surface-container shadow-sm">
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-lowest border-b border-outline-variant/40 text-on-surface-variant text-[10px]">
               <tr>
@@ -679,7 +680,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollHint>
       )}
 
       {/* VISITOR PASS MODAL */}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useActionState, useTransition, useEffect } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import { useRouter } from "next/navigation";
 import {
   addInvoiceDetailAction,
@@ -258,7 +259,7 @@ export default function EditInvoiceItemsModal({
             <h4 className="text-xs font-bold text-on-surface-variant mb-2">
               Current Line Items ({details.length})
             </h4>
-            <div className="overflow-x-auto rounded-xl border border-outline-variant/40 bg-surface-container-low">
+            <ScrollHint className="rounded-xl border border-outline-variant/40 bg-surface-container-low">
               <table className="w-full text-left text-xs whitespace-nowrap">
                 <thead className="bg-surface-container/60 border-b border-outline-variant/40 text-on-surface-variant font-semibold">
                   <tr>
@@ -333,7 +334,7 @@ export default function EditInvoiceItemsModal({
                   )}
                 </tbody>
               </table>
-            </div>
+            </ScrollHint>
           </div>
 
           {/* Add 1-by-1 Item Form */}

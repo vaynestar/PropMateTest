@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import PropertyCard, { PropertyData } from "./PropertyCard";
 import PropertyFormModal from "./PropertyFormModal";
 import PropertyEditModal from "./PropertyEditModal";
@@ -149,7 +150,7 @@ export default function PropertiesClient({
         </div>
 
         {/* Right Filter Pills & Add Button */}
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar">
+        <ScrollHint><div className="flex items-center gap-2">
           {/* Filter Pills */}
           <div className="flex items-center gap-1.5 shrink-0 bg-surface-container-high/60 p-1 rounded-xl border border-outline-variant/40">
             <button
@@ -188,7 +189,7 @@ export default function PropertiesClient({
             <span className="material-symbols-outlined text-[18px]">add_business</span>
             <span>Add Property</span>
           </button>
-        </div>
+        </div></ScrollHint>
       </div>
 
       {/* Property Cards Grid */}

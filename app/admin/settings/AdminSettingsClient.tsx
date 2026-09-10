@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import { SystemSettings } from "@/lib/settings";
 import { saveSettingsAction } from "./actions";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -82,7 +83,7 @@ export default function AdminSettingsClient({ settings }: AdminSettingsClientPro
       </div>
 
       {/* Tab Navigation */}
-      <div className="flex items-center gap-1 overflow-x-auto pb-1 border-b border-outline-variant/30 hide-scrollbar">
+      <ScrollHint className="border-b border-outline-variant/30 pb-1"><div className="flex items-center gap-1">
         {SETTINGS_TABS.map((t) => (
           <button
             type="button"
@@ -98,7 +99,7 @@ export default function AdminSettingsClient({ settings }: AdminSettingsClientPro
             <span>{t.label}</span>
           </button>
         ))}
-      </div>
+      </div></ScrollHint>
 
       {/* Settings Form Container */}
       <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-lg space-y-6">

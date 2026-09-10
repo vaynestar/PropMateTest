@@ -11,6 +11,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import ScrollHint from "@/components/ui/ScrollHint";
 
 interface FinancialsReportViewProps {
   data: any;
@@ -165,7 +166,7 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
           <p className="text-[11px] text-on-surface-variant">Units with the highest accumulated overdue balances</p>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
+        <ScrollHint className="mt-4">
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-lowest text-on-surface-variant text-[10px] tracking-wider border-b border-outline-variant/60">
               <tr>
@@ -206,7 +207,7 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollHint>
       </div>
     </div>
   );
