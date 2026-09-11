@@ -6,6 +6,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { residentNav } from "@/lib/resident-nav";
 import BottomNav, { NavItem } from "./BottomNav";
+import NotificationCenter from "./NotificationCenter";
+import type { NotificationItem } from "@/lib/notifications";
 
 const PRIMARY: NavItem[] = [
   { label: "Home", href: "/resident", icon: "home" },
@@ -21,7 +23,13 @@ const MORE: NavItem[] = [
   { label: "Profile", href: "/resident/profile", icon: "person" },
 ];
 
-export default function ResidentLayout({ children }: { children: ReactNode }) {
+export default function ResidentLayout({
+  children,
+  notifications = [],
+}: {
+  children: ReactNode;
+  notifications?: NotificationItem[];
+}) {
   const pathname = usePathname();
 
   const isActive = (href: string) =>
@@ -76,13 +84,9 @@ export default function ResidentLayout({ children }: { children: ReactNode }) {
             Welcome Home
           </h1>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              className="hover:bg-surface-variant rounded-full p-2 transition-all text-on-surface"
-              aria-label="Notifications"
-            >
-              <span className="material-symbols-outlined">notifications</span>
-            </button>
+            {/* Was a bell-shaped button with no handler: it looked tappable and
+                did nothing. */}
+            <NotificationCenter initialNotifications={notifications} portal="resident" />
             <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-primary-container hidden md:flex items-center justify-center">
               <span className="material-symbols-outlined text-on-primary text-[18px]">
                 person
