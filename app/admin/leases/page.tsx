@@ -5,6 +5,7 @@ import { getAllLeases } from "@/lib/lease-management";
 import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
 import LeasesClient from "@/components/leases/LeasesClient";
 import SetupFlow from "@/components/layout/SetupFlow";
+import { getSetupProgress } from "@/lib/setup-progress";
 import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
@@ -43,15 +44,9 @@ export default async function AdminLeasesPage(props: {
     }),
   ]);
 
-  // Counts for the setup chain. It renders only while this property has no
-  // lease yet, so a new admin can see what is still missing.
+  // The setup chain, through to the first invoices (see lib/setup-progress).
   const activeProperty = properties.find((p) => p.property_id === activePropertyId) ?? null;
-  const setupCounts = {
-    properties: properties.length,
-    units: units.length,
-    tenants: users.length,
-    leases: leases.length,
-  };
+  const setupCounts = await getSetupProgress(activePropertyId);
 
   return (
     <div className="space-y-6">

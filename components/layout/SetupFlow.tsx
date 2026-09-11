@@ -8,13 +8,19 @@ import Link from "next/link";
  * a property and then be stuck on an empty Leases page with no idea what was
  * missing. This names the order and marks how far along the active property is.
  *
- * It disappears once a lease exists, so it never becomes permanent chrome.
+ * It used to disappear at the first lease - one step short: a lease bills
+ * nothing until it has charges, and that is the step nobody guesses. It now
+ * runs through to the first invoices and disappears when every step is done.
+ * If a new lease arrives with nothing to bill, it comes back and says so.
  */
 export type SetupCounts = {
   properties: number;
   units: number;
   tenants: number;
   leases: number;
+  /** Active leases that an invoice run would write nothing for. */
+  unbillableLeases: number;
+  invoices: number;
 };
 
 export default function SetupFlow({
@@ -24,7 +30,8 @@ export default function SetupFlow({
   counts: SetupCounts;
   propertyName?: string | null;
 }) {
-  if (counts.leases > 0) return null;
+  const chargesDone = counts.leases > 0 && counts.unbillableLeases === 0;
+  if (counts.leases > 0 && chargesDone && counts.invoices > 0) return null;
 
   const steps = [
     {
@@ -52,7 +59,24 @@ export default function SetupFlow({
       href: "/admin/leases",
       label: "Create a lease",
       done: counts.leases > 0,
-      detail: "Joins a tenant to a unit and starts billing",
+      detail: counts.leases > 0 ? `${counts.leases} active` : "Joins a tenant to a unit",
+    },
+    {
+      href: "/admin/billing/recurring-charges",
+      label: "Set up their charges",
+      done: chargesDone,
+      detail:
+        counts.unbillableLeases > 0
+          ? `${counts.unbillableLeases} lease${counts.unbillableLeases > 1 ? "s have" : " has"} nothing to bill`
+          : counts.leases > 0
+          ? "Every lease has something to bill"
+          : "Rent and fees each lease pays",
+    },
+    {
+      href: "/admin/invoices",
+      label: "Raise the first invoices",
+      done: counts.invoices > 0,
+      detail: counts.invoices > 0 ? `${counts.invoices} raised` : "Generate this month's bills",
     },
   ];
 
@@ -61,13 +85,15 @@ export default function SetupFlow({
   return (
     <section className="rounded-xl border border-primary/25 bg-primary/[0.04] p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-bold text-white">Setting up {propertyName ?? "this property"}</h2>
+        <h2 className="text-sm font-bold text-white">
+          {counts.invoices > 0 ? "Billing for" : "Setting up"} {propertyName ?? "this property"}
+        </h2>
         <p className="text-[11px] text-on-surface-variant">
-          {nextStep ? `Next: ${nextStep.label.toLowerCase()}` : "Ready — create the lease"}
+          {nextStep ? `Next: ${nextStep.label.toLowerCase()}` : "All set"}
         </p>
       </div>
 
-      <ol className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <ol className="grid grid-cols-2 gap-2 lg:grid-cols-3 2xl:grid-cols-6">
         {steps.map((step, i) => {
           const isNext = step === nextStep;
           return (

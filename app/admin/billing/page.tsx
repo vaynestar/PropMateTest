@@ -27,12 +27,26 @@ import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton"
 import BillingMonthlyBarChart from "@/components/billing/BillingMonthlyBarChart";
 import RefreshDataButton from "@/components/billing/RefreshDataButton";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import SetupFlow from "@/components/layout/SetupFlow";
+import { getSetupProgress } from "@/lib/setup-progress";
+import prisma from "@/lib/prisma";
 
 export default async function BillingPage() {
   await requireUser(["Admin"]);
   const propertyId = (await getActivePropertyId()) ?? undefined;
 
-  const invoices = await listInvoices(propertyId);
+  const [invoices, setupCounts, activeProperty] = await Promise.all([
+    listInvoices(propertyId),
+    // The billing half of the setup chain was an open roadmap task ("Billing
+    // Onboarding Setup Banner") and the same job as F5 - one banner, not two.
+    getSetupProgress(propertyId),
+    propertyId
+      ? prisma.propertyMaster.findUnique({
+          where: { property_id: propertyId },
+          select: { property_name: true },
+        })
+      : null,
+  ]);
 
   const totalBilled = invoices.reduce(
     (sum, inv) => sum + Number(inv.total_amount),
@@ -115,6 +129,8 @@ export default async function BillingPage() {
           <GenerateInvoicesButton />
         </div>
       </div>
+
+      <SetupFlow counts={setupCounts} propertyName={activeProperty?.property_name ?? null} />
 
       <div className="grid grid-cols-1 gap-stack-lg sm:grid-cols-3">
         {/* Outstanding leads, because it is the only figure that asks for an

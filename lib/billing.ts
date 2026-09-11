@@ -85,6 +85,25 @@ export async function getRecentInvoices(propertyId?: string, limit = 5): Promise
   });
 }
 
+/**
+ * What a lease would be billed for one month: its active recurring charges,
+ * or failing that the unit's monthly rent. Zero means an invoice run writes
+ * nothing for it (DEV-163). The invoice picker and the setup banner both ask
+ * this one function, so they cannot disagree about which leases are ready.
+ */
+export function leaseBillableAmount(lease: {
+  lease_charges: { amount: unknown; quantity: unknown }[];
+  unit: { monthly_rent: unknown };
+}) {
+  if (lease.lease_charges.length > 0) {
+    return lease.lease_charges.reduce(
+      (sum, lc) => sum + Number(lc.amount) * Number(lc.quantity),
+      0
+    );
+  }
+  return Number(lease.unit.monthly_rent) || 0;
+}
+
 export async function getEligibleLeasesForInvoicing(targetDate = new Date()) {
   const d = new Date(targetDate);
   const monthStart = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
@@ -126,12 +145,8 @@ export async function getEligibleLeasesForInvoicing(targetDate = new Date()) {
   return leases
     .filter((l) => l.invoices.length === 0)
     .map((l) => {
-      const chargeTotal = l.lease_charges.reduce(
-        (sum, lc) => sum + Number(lc.amount) * Number(lc.quantity),
-        0
-      );
       const rent = Number(l.unit.monthly_rent) || 0;
-      const amount = l.lease_charges.length > 0 ? chargeTotal : rent;
+      const amount = leaseBillableAmount(l);
 
       return {
         lease_id: l.lease_id,
