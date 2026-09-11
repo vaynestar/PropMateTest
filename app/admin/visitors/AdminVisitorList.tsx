@@ -11,6 +11,7 @@ import {
 } from "@/lib/visitor-status";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import VisitorPassModal from "@/components/visitors/VisitorPassModal";
+import EditVisitorModal from "@/components/visitors/EditVisitorModal";
 import { updateVisitorStatus } from "./actions";
 
 interface VisitorRecord {
@@ -57,6 +58,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [viewingPassVisitor, setViewingPassVisitor] = useState<VisitorRecord | null>(null);
+  const [editingVisitor, setEditingVisitor] = useState<VisitorRecord | null>(null);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState("");
@@ -372,6 +374,17 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                       >
                         <span className="material-symbols-outlined text-[17px]">qr_code_2</span>
                       </button>
+                      {v.status !== "Cancelled" && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingVisitor(v)}
+                          className="p-1.5 rounded-lg bg-surface-container-high border border-outline-variant/60 hover:border-primary text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center pressable"
+                          title="Edit visitor details"
+                          aria-label={`Edit ${v.visitor_name}`}
+                        >
+                          <span className="material-symbols-outlined text-[17px]">edit</span>
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -641,6 +654,17 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                       >
                         <span className="material-symbols-outlined text-[16px]">qr_code_2</span>
                       </button>
+                      {v.status !== "Cancelled" && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingVisitor(v)}
+                          className="p-1 rounded-lg bg-surface-container-high border border-outline-variant/60 hover:border-primary text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center pressable"
+                          title="Edit visitor details"
+                          aria-label={`Edit ${v.visitor_name}`}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">edit</span>
+                        </button>
+                      )}
 
                       {v.status === "Pending" ? (
                         <>
@@ -681,6 +705,10 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
             </tbody>
           </table>
         </ScrollHint>
+      )}
+
+      {editingVisitor && (
+        <EditVisitorModal visitor={editingVisitor} onClose={() => setEditingVisitor(null)} />
       )}
 
       {/* VISITOR PASS MODAL */}

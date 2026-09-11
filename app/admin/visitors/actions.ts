@@ -153,3 +153,85 @@ export async function updateVisitorStatus(visitorId: string, status: string) {
     return { error: error.message };
   }
 }
+
+/**
+ * Correct a visitor record.
+ *
+ * Visitors had create and status-change only, so a mistyped IC or plate was
+ * permanent - and the IC is exactly what the guard matches against the card in
+ * the visitor's hand (DEV-153).
+ *
+ * What may change depends on where the visit is, and the rule lives here rather
+ * than in the form, because a form is not a guard:
+ *   - Expected (Approved): everything.
+ *   - On site / Left: not the name or IC. Amending who is standing at the gate
+ *     mid-visit, or who was admitted last week, is not a correction - it is a
+ *     different person, and the gate log (visitor_movements) would then record
+ *     a crossing by someone who never crossed. Contact, plate, purpose and
+ *     destination can still be fixed; a guard who misread a plate should be
+ *     able to put it right.
+ *   - Cancelled: nothing. It is a closed record.
+ */
+export async function adminUpdateVisitor(visitorId: string, formData: FormData) {
+  try {
+    const user = await getSessionUser();
+    if (!user || user.role !== "Admin") throw new Error("Unauthorized");
+
+    const current = await prisma.visitor.findUnique({ where: { visitor_id: visitorId } });
+    if (!current) throw new Error("That visitor record no longer exists.");
+
+    const state = normaliseVisitorStatus(current.status);
+    if (state === "Cancelled") {
+      throw new Error("This pass was cancelled. Register a new visit instead of editing it.");
+    }
+    const identityLocked = state === "Checked In" || state === "Checked Out";
+
+    const text = (key: string) => {
+      const v = formData.get(key);
+      return typeof v === "string" ? v.trim() : "";
+    };
+
+    const data: Record<string, unknown> = {
+      contact_no: text("contact_no") || null,
+      vehicle_plate: text("vehicle_plate").toUpperCase() || null,
+      visit_purpose: text("visit_purpose") || null,
+      destination: text("destination") || null,
+      modified_by: user.userId,
+    };
+
+    if (identityLocked) {
+      // Refuse rather than silently ignore: a caller that sends a new name for
+      // someone already on site should hear no, not believe it was saved.
+      const name = text("visitor_name");
+      const ic = text("visitor_ic_no");
+      if ((name && name !== current.visitor_name) || (ic && ic !== current.visitor_ic_no)) {
+        throw new Error(
+          "The name and IC cannot be changed after the visitor has arrived. If the wrong person was admitted, check them out and register the right one."
+        );
+      }
+    } else {
+      const name = text("visitor_name");
+      const ic = text("visitor_ic_no");
+      const dateStr = text("visit_date");
+      if (!name || !ic || !dateStr) {
+        throw new Error("Enter the visitor's name, IC or passport number, and the date of the visit.");
+      }
+      const visitDate = new Date(dateStr);
+      if (isNaN(visitDate.getTime())) throw new Error("That visit date is not valid.");
+
+      data.visitor_name = name;
+      data.visitor_ic_no = ic;
+      data.visit_date = visitDate;
+      // visitor_type is deliberately not editable: it decides whether the visit
+      // hangs off a resident's lease or a free-text destination, so changing it
+      // is re-registering, not correcting.
+    }
+
+    await prisma.visitor.update({ where: { visitor_id: visitorId }, data });
+
+    revalidatePath("/admin/visitors");
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message as string };
+  }
+}
