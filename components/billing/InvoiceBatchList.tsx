@@ -515,8 +515,26 @@ After this its line items can no longer be edited. You can still record payment 
 
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
-                          <span className="font-medium text-on-surface">{inv.lease?.unit?.unit_number}</span>
-                          <span className="text-xs text-on-surface-variant">{inv.lease?.tenant?.user_name}</span>
+                          {/* The only way from an invoice to the person who owes it used to
+                              be reading the name and searching Tenants by hand. */}
+                          <Link
+                            href={`/admin/invoices?lease=${inv.lease_id}`}
+                            title="Every invoice on this lease"
+                            className="w-max font-medium text-on-surface hover:text-primary hover:underline"
+                          >
+                            {inv.lease?.unit?.unit_number}
+                          </Link>
+                          {inv.lease?.tenant ? (
+                            <Link
+                              href={`/admin/leases?tenant=${inv.lease.tenant.user_id}`}
+                              title="Open this tenant's lease"
+                              className="w-max text-xs text-on-surface-variant hover:text-primary hover:underline"
+                            >
+                              {inv.lease.tenant.user_name}
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-on-surface-variant">No tenant on the lease</span>
+                          )}
                           {inv.modifier?.user_name && (
                             <span className="text-[10px] text-on-surface-variant/70 italic mt-0.5">
                               Edited by: {inv.modifier.user_name}

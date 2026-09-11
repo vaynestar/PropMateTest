@@ -15,19 +15,36 @@ export const dynamic = "force-dynamic";
 export default async function InvoicesDetailPage({
   searchParams,
 }: {
-  searchParams: { status?: string };
+  // A Promise in Next 16. It was typed as a plain object, so `status` read as
+  // undefined on every request and the filter never applied.
+  searchParams: Promise<{ status?: string; lease?: string }>;
 }) {
   await requireUser(["Admin"]);
+  const { status, lease: leaseId } = await searchParams;
   const propertyId = (await getActivePropertyId()) ?? undefined;
 
-  let invoices = await listInvoices(propertyId);
+  /*
+   * `?lease=` is how the rest of the app reaches one tenancy's invoices - from
+   * the lease's billing page, an overdue row on Billing, or the unit on an
+   * invoice row. There was no such route: every "see their invoices" link
+   * opened the full list and left you to search for the name.
+   *
+   * It deliberately ignores the active property. The link names a lease; if the
+   * top bar is on a different building, hiding that lease's invoices would make
+   * a correct link look broken.
+   */
+  let invoices = await listInvoices(leaseId ? undefined : propertyId);
+  const leaseFocus = leaseId
+    ? invoices.find((inv) => inv.lease_id === leaseId)?.lease ?? null
+    : null;
+  if (leaseId) invoices = invoices.filter((inv) => inv.lease_id === leaseId);
   const chargeMasters = await prisma.chargeMaster.findMany({
     where: { is_active: true },
     orderBy: { charge_name: "asc" }
   });
 
-  if (searchParams.status && searchParams.status !== "All") {
-    invoices = invoices.filter(inv => inv.status === searchParams.status);
+  if (status && status !== "All") {
+    invoices = invoices.filter((inv) => inv.status === status);
   }
 
   // Prisma Decimal on invoice totals, line items and charge defaults cannot be
@@ -87,6 +104,31 @@ export default async function InvoicesDetailPage({
           <GenerateInvoicesButton />
         </div>
       </div>
+
+      {leaseId && (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/[0.06] px-4 py-3">
+          <p className="text-sm text-on-surface">
+            {leaseFocus ? (
+              <>
+                Invoices for <span className="font-semibold text-white">Unit {leaseFocus.unit?.unit_number}</span>
+                {" · "}
+                <Link
+                  href={`/admin/leases?tenant=${leaseFocus.user_id}`}
+                  className="font-semibold text-primary hover:underline"
+                >
+                  {leaseFocus.tenant?.user_name}
+                </Link>
+                <span className="text-on-surface-variant"> — {invoices.length} on record</span>
+              </>
+            ) : (
+              <span className="text-on-surface-variant">This lease has no invoices yet.</span>
+            )}
+          </p>
+          <Link href="/admin/invoices" className="text-xs font-semibold text-primary hover:underline">
+            Show all invoices
+          </Link>
+        </div>
+      )}
 
       <InvoiceBatchList invoices={serialisedInvoices as any} chargeMasters={serialisedCharges as any} />
     </div>

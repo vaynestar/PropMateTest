@@ -60,12 +60,13 @@ export default async function LeaseChargesPage({ params }: { params: Promise<{ i
               <span className="material-symbols-outlined text-[16px] text-primary">autorenew</span>
               Recurring Charges
             </Link>
+            {/* Was "Billing Details" -> the full invoice list for every tenant. */}
             <Link
-              href="/admin/invoices"
+              href={`/admin/invoices?lease=${lease.lease_id}`}
               className="px-3 py-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 text-xs font-semibold text-primary transition-colors flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined text-[16px]">receipt_long</span>
-              Billing Details
+              This lease&apos;s invoices
             </Link>
           </div>
         </div>

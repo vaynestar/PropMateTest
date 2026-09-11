@@ -196,8 +196,26 @@ export default async function BillingPage() {
                 className="flex flex-wrap items-center justify-between gap-3 px-6 py-3"
               >
                 <div className="min-w-0">
+                  {/* Billing is built around arrears, and this list is the arrears -
+                      so each row has to lead to the tenancy it is chasing. */}
                   <p className="truncate text-xs font-semibold text-white">
-                    {inv.lease?.unit?.unit_number ?? "Unit"} — {inv.lease?.tenant?.user_name ?? "Tenant"}
+                    <Link
+                      href={`/admin/invoices?lease=${inv.lease_id}`}
+                      className="hover:text-primary hover:underline"
+                    >
+                      Unit {inv.lease?.unit?.unit_number ?? "—"}
+                    </Link>
+                    {" — "}
+                    {inv.lease?.tenant ? (
+                      <Link
+                        href={`/admin/leases?tenant=${inv.lease.tenant.user_id}`}
+                        className="hover:text-primary hover:underline"
+                      >
+                        {inv.lease.tenant.user_name}
+                      </Link>
+                    ) : (
+                      "No tenant on the lease"
+                    )}
                   </p>
                   <p className="text-[11px] text-on-surface-variant">
                     {inv.invoice_no} · due {formatDate(inv.due_date)}
