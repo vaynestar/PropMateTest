@@ -36,11 +36,12 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
         </div>
 
         <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
-          <span className="text-xs text-purple-400 font-medium block">In the building now</span>
-          <span className="text-lg font-bold sm:text-2xl text-purple-300 mt-1 block">
+          {/* Emerald, because that is what "On site" is everywhere else (lib/visitor-status.ts, Checked In). This figure was purple, so one state had two colours across three screens. */}
+          <span className="text-xs text-emerald-400 font-medium block">In the building now</span>
+          <span className="text-lg font-bold sm:text-2xl text-emerald-300 mt-1 block">
             {visitors.activeInside}
           </span>
-          <span className="text-[11px] text-purple-400/80 mt-1 block">Checked in, not yet out</span>
+          <span className="text-[11px] text-emerald-400/80 mt-1 block">Checked in, not yet out</span>
         </div>
 
         <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4">
@@ -165,7 +166,7 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
             <h3 className="text-sm font-bold text-white">Active On-Site Visitors Audit</h3>
             <p className="text-[11px] text-on-surface-variant">Visitors currently checked-in inside the property</p>
           </div>
-          <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
+          <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/40">
             {visitors.activeInside} inside
           </span>
         </div>

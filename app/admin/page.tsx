@@ -114,22 +114,23 @@ export default async function AdminDashboardPage() {
         </Link>
 
         {/* Scorecard 3: Active Visitors On-Site */}
+        {/* Emerald, because that is what "On site" is everywhere else (lib/visitor-status.ts, Checked In). This figure was purple, so one state had two colours across three screens. */}
         <Link
           href="/admin/visitors"
-          className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4 hover:border-purple-500/50 transition-all group flex flex-col justify-between"
+          className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4 hover:border-emerald-500/50 transition-all group flex flex-col justify-between"
         >
           <div className="flex items-center justify-between pb-2">
-            <span className="text-xs text-purple-400 font-medium">Visitors on site</span>
-            <span className="material-symbols-outlined text-[18px] text-purple-400 group-hover:scale-110 transition-transform">
+            <span className="text-xs text-emerald-400 font-medium">Visitors on site</span>
+            <span className="material-symbols-outlined text-[18px] text-emerald-400 group-hover:scale-110 transition-transform">
               badge
             </span>
           </div>
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold sm:text-2xl text-purple-300 font-mono">
+              <span className="text-xl font-bold sm:text-2xl text-emerald-300 font-mono">
                 {stats.activeVisitorsCount}
               </span>
-              <span className="text-xs text-purple-400/80">right now</span>
+              <span className="text-xs text-emerald-400/80">right now</span>
             </div>
             <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30 text-on-surface-variant">
               <span>Guardhouse</span>
