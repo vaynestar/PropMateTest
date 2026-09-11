@@ -66,7 +66,11 @@ export default async function AdminLeasesPage(props: {
       </div>
 
       {/* Interactive Leases Workspace */}
-      <SetupFlow counts={setupCounts} propertyName={activeProperty?.property_name ?? null} />
+      {/* Not on a tenant-filtered view: that spans every property, so the
+          counts would be portfolio-wide under a heading that says "this property". */}
+      {!urlTenantId && (
+        <SetupFlow counts={setupCounts} propertyName={activeProperty?.property_name ?? null} />
+      )}
 
       <LeasesClient
         initialLeases={leases as any}

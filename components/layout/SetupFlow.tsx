@@ -123,7 +123,7 @@ export default function SetupFlow({
                 </span>
                 <span className="min-w-0">
                   <span className="block text-xs font-semibold text-white">{step.label}</span>
-                  <span className="block truncate text-[11px] text-on-surface-variant">
+                  <span className="block line-clamp-2 text-[11px] leading-snug text-on-surface-variant">
                     {step.detail}
                   </span>
                 </span>

@@ -359,9 +359,6 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                           </span>
                         )}
                       </div>
-                      <h3 className="text-base font-bold text-white truncate" title={v.visitor_name}>
-                        {v.visitor_name}
-                      </h3>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <StatusBadge status={v.status || "Pending"} />
@@ -374,19 +371,14 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                       >
                         <span className="material-symbols-outlined text-[17px]">qr_code_2</span>
                       </button>
-                      {v.status !== "Cancelled" && (
-                        <button
-                          type="button"
-                          onClick={() => setEditingVisitor(v)}
-                          className="p-1.5 rounded-lg bg-surface-container-high border border-outline-variant/60 hover:border-primary text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center pressable"
-                          title="Edit visitor details"
-                          aria-label={`Edit ${v.visitor_name}`}
-                        >
-                          <span className="material-symbols-outlined text-[17px]">edit</span>
-                        </button>
-                      )}
                     </div>
                   </div>
+                  {/* The name had the header's left column, so the status chip and
+                      QR button capped it at ~120px of a ~280px card: "SAMPLE On-…",
+                      "Yusof Bin Ha…". It is the one thing the guard reads first. */}
+                  <h3 className="text-base font-bold leading-snug text-white line-clamp-2" title={v.visitor_name}>
+                    {v.visitor_name}
+                  </h3>
 
                   {/* Destination Tag */}
                   <div className="p-2.5 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-xs flex flex-col gap-1">
@@ -570,15 +562,30 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                       type="button"
                       onClick={() => handleUpdateStatus(v.visitor_id, "Checked Out")}
                       disabled={isItemUpdating}
-                      className="w-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25 py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 pressable"
+                      className="flex-1 bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25 py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 pressable"
                     >
                       <span className="material-symbols-outlined text-[16px]">logout</span>
                       <span>Mark Checked Out</span>
                     </button>
                   ) : (
-                    <div className="w-full py-2 text-center text-on-surface-variant text-xs font-medium opacity-60">
+                    <div className="flex-1 py-2 text-center text-on-surface-variant text-xs font-medium opacity-60">
                       {v.status === "Checked Out" ? "Visit completed" : v.status}
                     </div>
+                  )}
+                  {/* Edit lives with the other actions. In the header, beside the
+                      status chip and the QR button, it squeezed the visitor's name
+                      down to five characters. */}
+                  {v.status !== "Cancelled" && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingVisitor(v)}
+                      className="px-3 bg-surface-container-high text-on-surface-variant hover:text-primary border border-outline-variant hover:border-primary py-2 rounded-xl text-xs font-medium transition-colors flex items-center gap-1 pressable"
+                      title="Edit visitor details"
+                      aria-label={`Edit ${v.visitor_name}`}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">edit</span>
+                      <span>Edit</span>
+                    </button>
                   )}
                 </div>
               </div>
