@@ -116,7 +116,7 @@ export default async function ResidentDashboardPage() {
             href="/resident/invoices"
             className="btn-primary flex-1 py-3 rounded-lg font-label-md text-label-md flex justify-center items-center gap-2"
           >
-            Pay Now
+            {outstanding.invoiceCount > 0 ? "View & Pay" : "View invoices"}
             <span className="material-symbols-outlined text-[18px]">
               arrow_forward
             </span>

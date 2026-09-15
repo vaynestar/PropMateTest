@@ -535,6 +535,18 @@ After this its line items can no longer be edited. You can still record payment 
                           ) : (
                             <span className="text-xs text-on-surface-variant">No tenant on the lease</span>
                           )}
+                          {inv.status === "Unpaid" && inv.transactions?.[0] && (
+                            <span
+                              className="mt-1 inline-flex w-max items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"
+                              title={`${inv.transactions[0].payment_method} · reference ${inv.transactions[0].reference_number ?? "-"}. Check your bank statement, then mark paid.`}
+                            >
+                              <span className="material-symbols-outlined text-[12px]">hourglass_top</span>
+                              Payment to confirm
+                              {inv.transactions[0].reference_number && (
+                                <span className="font-mono font-normal">· {inv.transactions[0].reference_number}</span>
+                              )}
+                            </span>
+                          )}
                           {inv.modifier?.user_name && (
                             <span className="text-[10px] text-on-surface-variant/70 italic mt-0.5">
                               Edited by: {inv.modifier.user_name}

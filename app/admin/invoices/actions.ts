@@ -60,6 +60,17 @@ export async function updateInvoiceStatusAction(invoiceId: string, newStatus: st
     }
   });
 
+  // R3: marking Paid is how the office confirms a resident's bank transfer.
+  // Settle their pending submission, or it would still read "Payment to
+  // confirm" on an invoice that is already paid. Gateway transactions are
+  // left alone - only ToyyibPay's own answer settles those.
+  if (newStatus === "Paid") {
+    await prisma.paymentTransaction.updateMany({
+      where: { invoice_id: invoiceId, payment_method: "Bank transfer", transaction_status: "Pending" },
+      data: { transaction_status: "Success", modified_by: user.userId },
+    });
+  }
+
   revalidatePath("/admin/invoices");
   revalidatePath("/admin/billing");
 

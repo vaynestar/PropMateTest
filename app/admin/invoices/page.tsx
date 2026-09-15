@@ -65,6 +65,11 @@ export default async function InvoicesDetailPage({
             : inv.lease.unit,
         }
       : inv.lease,
+    // Decimal again (Rule 6): the pending payments carry an amount.
+    transactions: (inv.transactions ?? []).map((t: any) => ({
+      ...t,
+      transaction_amount: Number(t.transaction_amount ?? 0),
+    })),
     details: (inv.details ?? []).map((d: any) => ({
       ...d,
       unit_price: Number(d.unit_price ?? 0),

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import { getResidentInvoices } from "@/lib/resident";
 import StatusBadge from "@/components/dashboard/StatusBadge";
@@ -42,9 +43,11 @@ export default async function ResidentInvoicesPage() {
           </p>
         )}
         {invoices.map((inv) => (
-          <div
+          // R3: every card was a dead end - nothing to tap, no line items, no PDF.
+          <Link
+            href={`/resident/invoices/${inv.invoice_id}`}
             key={inv.invoice_id}
-            className={`glass-card rounded-xl p-4 flex flex-col gap-3 text-left w-full ${
+            className={`pressable glass-card rounded-xl p-4 flex flex-col gap-3 text-left w-full transition-colors hover:border-primary/40 ${
               inv.status === "Paid" ? "opacity-70" : ""
             }`}
           >
@@ -69,11 +72,12 @@ export default async function ResidentInvoicesPage() {
               <span className="font-body-md text-body-md text-on-surface-variant">
                 Due: {formatDate(inv.due_date)}
               </span>
-              <span className="font-label-md text-label-md text-primary">
-                {inv.invoice_no}
+              <span className="flex items-center gap-1 font-label-md text-label-md text-primary">
+                {inv.status === "Unpaid" ? "View & pay" : "View"}
+                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
               </span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
