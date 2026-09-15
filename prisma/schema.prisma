@@ -258,6 +258,16 @@ model PaymentTransaction {
   reference_number   String?  @db.VarChar
   transaction_status String   @default("Pending") @db.VarChar
 
+  // Resident-submitted payment evidence (bank transfer) and the office's review.
+  // Stored in the database, not on disk: Vercel's filesystem does not persist.
+  proof_data         Bytes?    @db.ByteA
+  proof_mime         String?   @db.VarChar
+  proof_filename     String?   @db.VarChar
+  proof_size         Int?
+  reviewed_by        String?   @db.Uuid
+  reviewed_at        DateTime?
+  review_note        String?   @db.Text
+
   // Audit Trail
   created_at   DateTime @default(now())
   created_by   String?  @db.Uuid

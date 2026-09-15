@@ -67,7 +67,13 @@ export async function updateInvoiceStatusAction(invoiceId: string, newStatus: st
   if (newStatus === "Paid") {
     await prisma.paymentTransaction.updateMany({
       where: { invoice_id: invoiceId, payment_method: "Bank transfer", transaction_status: "Pending" },
-      data: { transaction_status: "Success", modified_by: user.userId },
+      data: {
+        transaction_status: "Success",
+        reviewed_by: user.userId,
+        reviewed_at: new Date(),
+        review_note: "Marked paid from the invoice list",
+        modified_by: user.userId,
+      },
     });
   }
 

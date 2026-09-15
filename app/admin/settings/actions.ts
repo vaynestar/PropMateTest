@@ -45,6 +45,12 @@ export async function saveSettingsAction(formData: FormData) {
   const taxRegNo = formData.get("BILLING_TAX_REG_NO")?.toString();
   if (taxRegNo !== undefined) updates.BILLING_TAX_REG_NO = taxRegNo;
 
+  // Where residents transfer payments (shown on their invoice page).
+  for (const key of ["BILLING_BANK_NAME", "BILLING_BANK_ACCOUNT_NAME", "BILLING_BANK_ACCOUNT_NO"]) {
+    const v = formData.get(key)?.toString();
+    if (v !== undefined) updates[key] = v.trim();
+  }
+
   // Helpdesk
   const slaUrgent = formData.get("MAINTENANCE_SLA_URGENT_HOURS")?.toString();
   if (slaUrgent) updates.MAINTENANCE_SLA_URGENT_HOURS = slaUrgent;

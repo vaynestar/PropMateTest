@@ -11,6 +11,9 @@ export type SystemSettings = {
     latePenaltyRate: number;
     invoiceCycleDay: number;
     taxRegistrationNo: string;
+    bankName: string;
+    bankAccountName: string;
+    bankAccountNo: string;
   };
   helpdesk: {
     slaUrgentHours: number;
@@ -41,6 +44,9 @@ const DEFAULT_PARAMETERS: Record<string, { value: string; category: string; desc
   BILLING_LATE_PENALTY_RATE: { value: "10", category: "BILLING", description: "Annual late payment penalty interest rate (%)" },
   BILLING_INVOICE_CYCLE_DAY: { value: "1", category: "BILLING", description: "Day of month when recurring invoices are generated" },
   BILLING_TAX_REG_NO: { value: "W10-2408-32000192", category: "BILLING", description: "SST / Tax registration identifier" },
+  BILLING_BANK_NAME: { value: "", category: "BILLING", description: "Bank residents transfer payments to" },
+  BILLING_BANK_ACCOUNT_NAME: { value: "", category: "BILLING", description: "Account holder name residents transfer to" },
+  BILLING_BANK_ACCOUNT_NO: { value: "", category: "BILLING", description: "Account number residents transfer to" },
   MAINTENANCE_SLA_URGENT_HOURS: { value: "4", category: "HELPDESK", description: "Target turnaround time in hours for urgent tickets" },
   MAINTENANCE_SLA_HIGH_HOURS: { value: "24", category: "HELPDESK", description: "Target turnaround time in hours for high priority tickets" },
   MAINTENANCE_SLA_NORMAL_HOURS: { value: "72", category: "HELPDESK", description: "Target turnaround time in hours for normal tickets" },
@@ -99,6 +105,9 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       latePenaltyRate: parseFloat(paramMap.get("BILLING_LATE_PENALTY_RATE") || "10"),
       invoiceCycleDay: parseInt(paramMap.get("BILLING_INVOICE_CYCLE_DAY") || "1", 10),
       taxRegistrationNo: paramMap.get("BILLING_TAX_REG_NO") || "",
+      bankName: paramMap.get("BILLING_BANK_NAME") || "",
+      bankAccountName: paramMap.get("BILLING_BANK_ACCOUNT_NAME") || "",
+      bankAccountNo: paramMap.get("BILLING_BANK_ACCOUNT_NO") || "",
     },
     helpdesk: {
       slaUrgentHours: parseInt(paramMap.get("MAINTENANCE_SLA_URGENT_HOURS") || "4", 10),
@@ -137,4 +146,20 @@ export async function updateSystemParameters(updates: Record<string, string>): P
   } catch (err: any) {
     return { success: false, error: err?.message || "Failed to update system parameters." };
   }
+}
+
+/**
+ * Where residents send bank transfers. Null until all three are filled in
+ * under Settings -> Billing, so a half-configured account is never shown.
+ */
+export async function getPaymentInstructions() {
+  const rows = await prisma.appParameter.findMany({
+    where: { param_key: { in: ["BILLING_BANK_NAME", "BILLING_BANK_ACCOUNT_NAME", "BILLING_BANK_ACCOUNT_NO"] } },
+    select: { param_key: true, param_value: true },
+  });
+  const get = (k: string) => rows.find((r) => r.param_key === k)?.param_value.trim() ?? "";
+  const bankName = get("BILLING_BANK_NAME");
+  const accountName = get("BILLING_BANK_ACCOUNT_NAME");
+  const accountNo = get("BILLING_BANK_ACCOUNT_NO");
+  return bankName && accountName && accountNo ? { bankName, accountName, accountNo } : null;
 }

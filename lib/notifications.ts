@@ -114,6 +114,38 @@ export async function getAdminNotifications(): Promise<NotificationItem[]> {
       });
     });
 
+    // Payment proof waiting for the office to verify
+    const toVerify = await prisma.paymentTransaction.findMany({
+      where: { payment_method: "Bank transfer", transaction_status: "Pending" },
+      select: {
+        transaction_id: true,
+        reference_number: true,
+        transaction_amount: true,
+        created_at: true,
+        invoice: {
+          select: {
+            invoice_no: true,
+            lease_id: true,
+            lease: { select: { unit: { select: { unit_number: true } }, tenant: { select: { user_name: true } } } },
+          },
+        },
+      },
+      orderBy: { created_at: "desc" },
+      take: 5,
+    });
+    toVerify.forEach((t) => {
+      notifications.push({
+        id: `pay-${t.transaction_id}`,
+        type: "BILLING",
+        title: `Payment to verify: RM ${Number(t.transaction_amount).toFixed(2)}`,
+        message: `${t.invoice.invoice_no} · Unit ${t.invoice.lease.unit.unit_number} (${t.invoice.lease.tenant.user_name}) · ref ${t.reference_number ?? "-"}`,
+        timestamp: t.created_at,
+        isRead: false,
+        href: `/admin/invoices?lease=${t.invoice.lease_id}`,
+        urgency: "HIGH",
+      });
+    });
+
     // 5. Database Notifications for the current user
     if (user?.userId) {
       const dbNotifs = await prisma.notification.findMany({
@@ -304,6 +336,41 @@ export async function getResidentNotificationsFor(userId: string): Promise<Notif
           isRead: false,
           href: "/resident/visitors",
           urgency: "INFO",
+        });
+      });
+    }
+
+    // Their payment proof has been reviewed
+    if (leaseIds.length > 0) {
+      const reviewed = await prisma.paymentTransaction.findMany({
+        where: {
+          payment_method: "Bank transfer",
+          transaction_status: { in: ["Success", "Rejected"] },
+          reviewed_at: { gte: days(14) },
+          invoice: { lease_id: { in: leaseIds } },
+        },
+        select: {
+          transaction_id: true,
+          transaction_status: true,
+          review_note: true,
+          reviewed_at: true,
+          invoice_id: true,
+          invoice: { select: { invoice_no: true } },
+        },
+        orderBy: { reviewed_at: "desc" },
+        take: 5,
+      });
+      reviewed.forEach((t) => {
+        const ok = t.transaction_status === "Success";
+        items.push({
+          id: `pay-${t.transaction_id}-${t.transaction_status}`,
+          type: "BILLING",
+          title: ok ? `Payment confirmed: ${t.invoice.invoice_no}` : `Payment not accepted: ${t.invoice.invoice_no}`,
+          message: ok ? "The office checked your proof. This invoice is paid." : t.review_note ?? "Please send your proof again.",
+          timestamp: t.reviewed_at ?? now,
+          isRead: false,
+          href: `/resident/invoices/${t.invoice_id}`,
+          urgency: ok ? "INFO" : "HIGH",
         });
       });
     }

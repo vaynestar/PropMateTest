@@ -8,6 +8,7 @@ import StatusBadge from "@/components/dashboard/StatusBadge";
 import { updateInvoiceStatusAction, issueInvoice } from "@/app/admin/invoices/actions";
 import EditInvoiceItemsModal from "./EditInvoiceItemsModal";
 import InvoicePdfPreviewModal from "./InvoicePdfPreviewModal";
+import VerifyPaymentModal from "./VerifyPaymentModal";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-MY", {
@@ -52,6 +53,7 @@ export default function InvoiceBatchList({
 
   const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
   const [pdfPreviewInvoice, setPdfPreviewInvoice] = useState<any | null>(null);
+  const [verifyingInvoice, setVerifyingInvoice] = useState<any | null>(null);
   const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "info" | "error" } | null>(null);
   const [, startTransition] = useTransition();
@@ -536,16 +538,18 @@ After this its line items can no longer be edited. You can still record payment 
                             <span className="text-xs text-on-surface-variant">No tenant on the lease</span>
                           )}
                           {inv.status === "Unpaid" && inv.transactions?.[0] && (
-                            <span
-                              className="mt-1 inline-flex w-max items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300"
-                              title={`${inv.transactions[0].payment_method} · reference ${inv.transactions[0].reference_number ?? "-"}. Check your bank statement, then mark paid.`}
+                            <button
+                              type="button"
+                              onClick={() => setVerifyingInvoice(inv)}
+                              className="pressable mt-1 inline-flex w-max items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/20"
+                              title="The resident sent proof of payment. Check it and approve or reject."
                             >
-                              <span className="material-symbols-outlined text-[12px]">hourglass_top</span>
-                              Payment to confirm
+                              <span className="material-symbols-outlined text-[12px]">fact_check</span>
+                              Verify payment
                               {inv.transactions[0].reference_number && (
                                 <span className="font-mono font-normal">· {inv.transactions[0].reference_number}</span>
                               )}
-                            </span>
+                            </button>
                           )}
                           {inv.modifier?.user_name && (
                             <span className="text-[10px] text-on-surface-variant/70 italic mt-0.5">
@@ -733,6 +737,22 @@ After this its line items can no longer be edited. You can still record payment 
       )}
 
       {/* Interactive PDF Preview Modal */}
+      {verifyingInvoice && verifyingInvoice.transactions?.[0] && (
+        <VerifyPaymentModal
+          submission={verifyingInvoice.transactions[0]}
+          invoiceNo={verifyingInvoice.invoice_no}
+          amount={Number(verifyingInvoice.total_amount)}
+          tenantName={verifyingInvoice.lease?.tenant?.user_name ?? "Tenant"}
+          unitNumber={verifyingInvoice.lease?.unit?.unit_number ?? "-"}
+          onClose={() => setVerifyingInvoice(null)}
+          onDone={(message) => {
+            setVerifyingInvoice(null);
+            showToast(message, "success");
+            router.refresh();
+          }}
+        />
+      )}
+
       {pdfPreviewInvoice && (
         <InvoicePdfPreviewModal
           invoice={pdfPreviewInvoice}

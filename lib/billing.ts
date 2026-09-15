@@ -47,13 +47,16 @@ export async function listInvoices(propertyId?: string): Promise<InvoiceWithRela
       creator: { select: { user_name: true } },
       // R3: a resident's "I've paid" waits here for the office to confirm.
       transactions: {
-        where: { transaction_status: "Pending" },
+        where: { transaction_status: "Pending", payment_method: "Bank transfer" },
         orderBy: { created_at: "desc" },
         select: {
           transaction_id: true,
           payment_method: true,
           reference_number: true,
           transaction_amount: true,
+          payment_date: true,
+          proof_mime: true,
+          proof_filename: true,
           created_at: true,
         },
       },

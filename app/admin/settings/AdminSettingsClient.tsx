@@ -243,6 +243,46 @@ export default function AdminSettingsClient({ settings }: AdminSettingsClientPro
                 </span>
               </div>
             </div>
+
+            <div className="pt-4 border-t border-outline-variant/30">
+              <h4 className="text-xs font-bold text-white">Bank account for resident payments</h4>
+              <p className="text-[11px] text-on-surface-variant mt-0.5">
+                Shown on each resident&apos;s invoice page. They transfer here, then upload proof for you to verify.
+                Leave any field empty to hide the details.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div>
+                <label className="block text-on-surface-variant font-medium mb-1">Bank</label>
+                <input
+                  name="BILLING_BANK_NAME"
+                  type="text"
+                  defaultValue={settings.billing.bankName}
+                  placeholder="e.g. Maybank"
+                  className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-on-surface-variant font-medium mb-1">Account name</label>
+                <input
+                  name="BILLING_BANK_ACCOUNT_NAME"
+                  type="text"
+                  defaultValue={settings.billing.bankAccountName}
+                  placeholder="e.g. Management Corporation"
+                  className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="block text-on-surface-variant font-medium mb-1">Account number</label>
+                <input
+                  name="BILLING_BANK_ACCOUNT_NO"
+                  type="text"
+                  inputMode="numeric"
+                  defaultValue={settings.billing.bankAccountNo}
+                  className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
           </div>
         )}
 
