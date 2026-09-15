@@ -28,7 +28,7 @@ export default function VisitorForm() {
       {isSuccess && (
         <div className="mb-6 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2 animate-slide-in">
           <span className="material-symbols-outlined">check_circle</span>
-          Visitor successfully registered and pending guard approval.
+          Visitor registered. Their pass is ready — share the QR code with them.
         </div>
       )}
 
@@ -90,6 +90,7 @@ export default function VisitorForm() {
               type="date"
               id="visit_date"
               name="visit_date"
+              min={new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" })}
               required
               className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors [color-scheme:dark]"
             />

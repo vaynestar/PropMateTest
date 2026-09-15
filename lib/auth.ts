@@ -4,6 +4,7 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { signToken, verifyToken } from "@/lib/jwt";
@@ -57,12 +58,29 @@ export type SessionUser = {
   user_email: string;
 };
 
+/*
+ * R1 (resident review D-09). `is_active` was checked once, at login. The token
+ * is stateless and the sliding window below re-issues it every day without
+ * reading the database, so a deactivated account kept working indefinitely.
+ * Checked on every request now; `cache` makes it one query per request no
+ * matter how many server components and actions ask.
+ */
+const isActiveUser = cache(async (userId: string) => {
+  const row = await prisma.user.findUnique({
+    where: { user_id: userId },
+    select: { is_active: true },
+  });
+  return !!row?.is_active;
+});
+
 export async function getSessionUser(): Promise<SessionUser | null> {
   const jar = await cookies();
   const raw = jar.get(SESSION_COOKIE)?.value;
   if (!raw) return null;
   const token = await verifyToken(raw);
   if (!token || !token.userId) return null;
+  // Before the refresh below, so a deactivated account is never re-issued a token.
+  if (!(await isActiveUser(token.userId))) return null;
 
   // Sliding Session Window: If active session token is > 24 hours old, silently issue a fresh 7-day token!
   if (token.iat) {
@@ -92,7 +110,13 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
 export async function requireUser(allowedRoles?: string[]): Promise<SessionUser> {
   const user = await getSessionUser();
-  if (!user) redirect("/login");
+  if (!user) {
+    // A cookie that no longer maps to an active user must be cleared first.
+    // Sending it straight to /login loops: the proxy sees a well-formed token
+    // on /login and bounces it back to the portal, which bounces it here.
+    const jar = await cookies();
+    redirect(jar.get(SESSION_COOKIE) ? "/logout?reason=session" : "/login");
+  }
   if (allowedRoles && !allowedRoles.includes(user.role)) redirect("/login");
   return user;
 }

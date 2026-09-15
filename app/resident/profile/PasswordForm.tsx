@@ -9,6 +9,20 @@ export default function PasswordForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
+        <label htmlFor="currentPassword" className="font-label-md text-label-md text-on-surface-variant">
+          Current Password
+        </label>
+        <input
+          id="currentPassword"
+          name="currentPassword"
+          type="password"
+          autoComplete="current-password"
+          required
+          className="bg-surface-container border border-outline-variant/50 rounded-lg px-4 py-2 text-on-surface focus:border-primary focus:outline-none transition-colors"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <label htmlFor="newPassword" className="font-label-md text-label-md text-on-surface-variant">
           New Password
         </label>
@@ -16,6 +30,8 @@ export default function PasswordForm() {
           id="newPassword"
           name="newPassword"
           type="password"
+          autoComplete="new-password"
+          minLength={6}
           required
           className="bg-surface-container border border-outline-variant/50 rounded-lg px-4 py-2 text-on-surface focus:border-primary focus:outline-none transition-colors"
         />
@@ -29,6 +45,8 @@ export default function PasswordForm() {
           id="confirmPassword"
           name="confirmPassword"
           type="password"
+          autoComplete="new-password"
+          minLength={6}
           required
           className="bg-surface-container border border-outline-variant/50 rounded-lg px-4 py-2 text-on-surface focus:border-primary focus:outline-none transition-colors"
         />

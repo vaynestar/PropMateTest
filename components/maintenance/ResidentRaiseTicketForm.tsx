@@ -72,7 +72,22 @@ export default function ResidentRaiseTicketForm({
     const formEl = e.currentTarget;
 
     startTransition(async () => {
-      const res = await raiseAction(formData);
+      let res: { success?: boolean; error?: string } | undefined;
+      try {
+        res = await raiseAction(formData);
+      } catch {
+        /*
+         * R6: a dropped connection made the server action throw out of the
+         * transition, and the error boundary replaced the whole page - taking
+         * the resident's typed report with it. Keep the form as it is and say
+         * what happened.
+         */
+        setToast({
+          message: "Couldn't send - check your connection and try again. Your report is still here.",
+          type: "error",
+        });
+        return;
+      }
       if (res?.error) {
         setToast({ message: res.error, type: "error" });
       } else {

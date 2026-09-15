@@ -32,6 +32,14 @@ export async function registerVisitor(state: any, formData: FormData) {
       throw new Error("Required fields missing: Please provide name, IC/Passport, and visit date.");
     }
 
+    // R5: a pass dated 2020 was accepted and issued a working QR code. Compared
+    // as YYYY-MM-DD strings in Malaysia time, so a pass for "today" still works
+    // after 4pm, when the UTC date has already rolled over.
+    const todayMY = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(visit_date_str) || visit_date_str < todayMY) {
+      throw new Error("Choose today or a future date for the visit.");
+    }
+
     await prisma.visitor.create({
       data: {
         property_id: lease.unit.property_id,

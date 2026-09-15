@@ -17,6 +17,7 @@ type Facility = {
 };
 
 type Booking = {
+  is_past?: boolean;
   booking_id: string;
   facility_id: string;
   facility_name?: string;
@@ -37,7 +38,8 @@ export default function ResidentFacilityTabs({
 }: ResidentFacilityTabsProps) {
   const [activeTab, setActiveTab] = useState<"facilities" | "my_bookings">("facilities");
 
-  const activeBookingsCount = myBookings.filter((b) => b.booking_status !== "Cancelled").length;
+  // R4: past bookings were counted as "active".
+  const activeBookingsCount = myBookings.filter((b) => b.booking_status !== "Cancelled" && !b.is_past).length;
 
   return (
     <div className="space-y-6 w-full min-w-0">

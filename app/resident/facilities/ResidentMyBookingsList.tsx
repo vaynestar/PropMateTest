@@ -10,9 +10,13 @@ export default function ResidentMyBookingsList({ myBookings }: { myBookings: any
   const handleCancel = (bookingId: string) => {
     if (!confirm("Are you sure you want to cancel your booking?")) return;
     startTransition(async () => {
-      const res = await cancelResidentBookingAction(bookingId);
-      if (res?.error) {
-        alert(res.error);
+      try {
+        const res = await cancelResidentBookingAction(bookingId);
+        if (res?.error) alert(res.error);
+      } catch {
+        // A dropped connection used to throw out of the transition and replace
+        // the whole page with the error screen (R6).
+        alert("Couldn't reach the server. Check your connection and try again.");
       }
     });
   };
@@ -30,12 +34,13 @@ export default function ResidentMyBookingsList({ myBookings }: { myBookings: any
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {myBookings.map((b) => {
         const isCancelled = b.booking_status === "Cancelled";
+        const isPast = !isCancelled && !!b.is_past;
 
         return (
           <div
             key={b.booking_id}
             className={`glass-card rounded-xl p-5 border flex flex-col justify-between transition-all ${
-              isCancelled ? "opacity-60 border-outline-variant/30" : "border-outline-variant/60 hover:border-primary/50"
+              isCancelled || isPast ? "opacity-60 border-outline-variant/30" : "border-outline-variant/60 hover:border-primary/50"
             }`}
           >
             <div>
@@ -48,7 +53,7 @@ export default function ResidentMyBookingsList({ myBookings }: { myBookings: any
                     📅 {b.booking_date}
                   </p>
                 </div>
-                <StatusBadge status={b.booking_status || "Reserved"} />
+                <StatusBadge status={isPast ? "Completed" : b.booking_status || "Confirmed"} />
               </div>
 
               <div className="space-y-1.5 text-xs text-on-surface-variant border-t border-outline-variant/30 pt-3 mt-2">
@@ -62,7 +67,11 @@ export default function ResidentMyBookingsList({ myBookings }: { myBookings: any
             </div>
 
             <div className="mt-4 pt-3 border-t border-outline-variant/30">
-              {!isCancelled ? (
+              {isPast ? (
+                <span className="text-xs text-on-surface-variant/60 font-medium block text-center italic">
+                  Took place as booked
+                </span>
+              ) : !isCancelled ? (
                 <button
                   type="button"
                   onClick={() => handleCancel(b.booking_id)}

@@ -1,6 +1,7 @@
 "use server";
 
 import { createBooking, getBookingsByFacilityAndDate, cancelBooking } from "@/lib/booking-management";
+import { bookingHasEnded } from "@/lib/booking-status";
 import { getSessionUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
@@ -93,6 +94,14 @@ export async function cancelResidentBookingAction(bookingId: string) {
     if (!booking) return { error: "Booking not found." };
     if (booking.user_id !== user.userId) {
       return { error: "Unauthorized: You can only cancel your own bookings." };
+    }
+    if (booking.booking_status === "Cancelled") {
+      return { error: "This booking is already cancelled." };
+    }
+    // R4: a booking that has already happened was still cancellable, which
+    // rewrote history - the facility was used, the record said it wasn't.
+    if (bookingHasEnded(booking.booking_date, booking.end_time)) {
+      return { error: "This booking has already taken place, so it can't be cancelled." };
     }
 
     await cancelBooking(bookingId, user.userId);

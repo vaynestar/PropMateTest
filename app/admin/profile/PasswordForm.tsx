@@ -9,6 +9,21 @@ export default function PasswordForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="space-y-1.5">
+        <label htmlFor="currentPassword" className="text-xs font-semibold text-white">
+          Current Password *
+        </label>
+        <input
+          id="currentPassword"
+          name="currentPassword"
+          type="password"
+          autoComplete="current-password"
+          required
+          placeholder="Enter your current password..."
+          className="w-full rounded-xl bg-surface-container-high border border-outline-variant/60 px-3.5 py-2.5 text-xs text-white placeholder:text-on-surface-variant/50 outline-none focus:border-primary transition-all"
+        />
+      </div>
+
+      <div className="space-y-1.5">
         <div className="flex items-baseline justify-between">
           <label htmlFor="newPassword" className="text-xs font-semibold text-white">
             New Password *
@@ -19,6 +34,8 @@ export default function PasswordForm() {
           id="newPassword"
           name="newPassword"
           type="password"
+          autoComplete="new-password"
+          minLength={6}
           required
           placeholder="Enter new administrator password..."
           className="w-full rounded-xl bg-surface-container-high border border-outline-variant/60 px-3.5 py-2.5 text-xs text-white placeholder:text-on-surface-variant/50 outline-none focus:border-primary transition-all"

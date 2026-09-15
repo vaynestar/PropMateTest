@@ -1,4 +1,14 @@
 import { listFacilities } from "@/lib/facility-management";
+import { bookingHasEnded } from "@/lib/booking-status";
+
+function toMyTime(value: Date | string) {
+  return new Date(value).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Kuala_Lumpur",
+  });
+}
 import { listUserBookings } from "@/lib/booking-management";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -53,14 +63,12 @@ export default async function ResidentFacilitiesPage() {
       b.booking_date instanceof Date
         ? b.booking_date.toISOString().slice(0, 10)
         : String(b.booking_date),
-    start_time:
-      b.start_time instanceof Date
-        ? b.start_time.toTimeString().slice(0, 5)
-        : String(b.start_time),
-    end_time:
-      b.end_time instanceof Date
-        ? b.end_time.toTimeString().slice(0, 5)
-        : String(b.end_time),
+    // Pinned to Malaysia time: toTimeString() used the server's zone, so on
+    // Vercel (UTC) every booking showed eight hours early.
+    start_time: toMyTime(b.start_time),
+    end_time: toMyTime(b.end_time),
+    // R4: past bookings are shown as completed and cannot be cancelled.
+    is_past: bookingHasEnded(b.booking_date, b.end_time),
     booking_status: b.booking_status,
   }));
 
