@@ -169,8 +169,8 @@ function shortDate(date: Date | string) {
  * a row is one missed call away from lying. Ids are stable (`tkt-<id>` etc.)
  * so read state can be kept per device.
  *
- * Invoices follow getResidentInvoices exactly, Drafts included, so the bell and
- * the Invoices page never disagree. Whether residents should see Drafts is F7.
+ * Invoices follow getResidentInvoices exactly - issued only, never Drafts
+ * (F7) - so the bell and the Invoices page never disagree.
  */
 export async function getResidentNotifications(): Promise<NotificationItem[]> {
   const user = await getSessionUser();
@@ -219,7 +219,7 @@ export async function getResidentNotificationsFor(userId: string): Promise<Notif
     if (leaseIds.length > 0) {
       // 2. Money: overdue first, then anything new this month
       const unpaid = await prisma.invoice.findMany({
-        where: { lease_id: { in: leaseIds }, status: "Unpaid" },
+        where: { lease_id: { in: leaseIds }, status: "Unpaid", issued_at: { not: null } },
         orderBy: { due_date: "asc" },
         take: 10,
       });

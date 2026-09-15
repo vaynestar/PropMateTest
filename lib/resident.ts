@@ -19,7 +19,13 @@ export async function getResidentPortalData(
     where: { user_id: userId, status: "Active" },
     include: {
       unit: { include: { property: true } },
-      invoices: { orderBy: { invoice_date: "desc" }, take: 5 },
+      // Drafts are the admin's working copy - editable, not yet sent (DEV-140).
+      // A resident must never be billed from one, so issued invoices only.
+      invoices: {
+        where: { issued_at: { not: null } },
+        orderBy: { invoice_date: "desc" },
+        take: 5,
+      },
       tickets: { orderBy: { created_at: "desc" }, take: 5 },
     },
   });
@@ -30,7 +36,9 @@ export async function getResidentPortalData(
 export async function getResidentInvoices(userId: string) {
   return prisma.invoice.findMany({
     orderBy: { invoice_date: "desc" },
-    where: { lease: { tenant: { user_id: userId } } },
+    // Issued only. Before F7 this returned Drafts too, so a figure an admin
+    // was still correcting showed on the resident's Invoices page as a bill.
+    where: { lease: { tenant: { user_id: userId } }, issued_at: { not: null } },
     include: {
       lease: { include: { unit: true } },
       details: { include: { charge: true } },
