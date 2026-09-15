@@ -4,6 +4,7 @@ import {
   getResidentPortalData,
   getLatestAnnouncement,
   getResidentBookings,
+  getResidentOutstanding,
 } from "@/lib/resident";
 
 export const dynamic = "force-dynamic";
@@ -57,18 +58,10 @@ export default async function ResidentDashboardPage() {
     lease.unit.property.property_id
   );
 
-  const outstanding = lease.invoices
-    .filter((i) => i.status !== "Paid")
-    .reduce((sum, i) => sum + Number(i.total_amount), 0);
-  const nextDue = lease.invoices
-    .filter((i) => i.status !== "Paid")
-    .sort(
-      (a, b) =>
-        new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
-    )[0];
-  const dueInDays = nextDue
+  const outstanding = await getResidentOutstanding(user!.userId);
+  const dueInDays = outstanding.nextDue
     ? Math.round(
-        (new Date(nextDue.due_date).setHours(0, 0, 0, 0) -
+        (new Date(outstanding.nextDue).setHours(0, 0, 0, 0) -
           new Date().setHours(0, 0, 0, 0)) /
           86400000
       )
@@ -84,20 +77,38 @@ export default async function ResidentDashboardPage() {
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
         <div className="flex justify-between items-start z-10">
           <div className="flex flex-col">
+            {/* "Outstanding", not "Current Balance" (user): a balance reads like
+                money held in an account. This is what is still owed. */}
             <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">
-              Current Balance
+              Outstanding
             </span>
             <span className="font-display-lg text-display-lg text-on-surface mt-1">
-              {formatCurrency(outstanding)}
+              {formatCurrency(outstanding.total)}
+            </span>
+            <span className="mt-1 text-xs text-on-surface-variant">
+              {outstanding.invoiceCount === 0
+                ? "Nothing to pay right now"
+                : `${outstanding.invoiceCount} unpaid invoice${outstanding.invoiceCount === 1 ? "" : "s"}`}
             </span>
           </div>
-          {dueInDays !== null && dueInDays >= 0 && (
+          {/* Overdue first: the old chip only ever showed "Due in N days", so a
+              resident with nothing but overdue bills saw no warning at all. */}
+          {outstanding.overdueCount > 0 ? (
             <div className="bg-error/10 border border-error/30 px-2 py-1 rounded text-error font-label-sm text-label-sm flex items-center gap-1">
               <span className="material-symbols-outlined text-[14px]">
                 error
               </span>
-              Due in {dueInDays} day{dueInDays === 1 ? "" : "s"}
+              {outstanding.overdueCount} overdue
             </div>
+          ) : (
+            dueInDays !== null && (
+              <div className="bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded text-amber-300 font-label-sm text-label-sm flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">
+                  schedule
+                </span>
+                {dueInDays === 0 ? "Due today" : `Due in ${dueInDays} day${dueInDays === 1 ? "" : "s"}`}
+              </div>
+            )
           )}
         </div>
         <div className="flex gap-stack-sm mt-4 z-10 w-full">

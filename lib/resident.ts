@@ -33,6 +33,40 @@ export async function getResidentPortalData(
   return { lease };
 }
 
+/**
+ * What the resident still owes, for the home screen.
+ *
+ * The dashboard summed `status !== "Paid"` over the lease's latest 5 invoices,
+ * so it counted Voided invoices as owed and silently dropped anything older
+ * than the fifth - the resident review's D-12. This totals every issued,
+ * unpaid invoice across the resident's active leases.
+ */
+export async function getResidentOutstanding(userId: string) {
+  const unpaid = await prisma.invoice.findMany({
+    where: {
+      lease: { user_id: userId, status: "Active" },
+      issued_at: { not: null },
+      status: "Unpaid",
+    },
+    select: { total_amount: true, due_date: true },
+    orderBy: { due_date: "asc" },
+  });
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const total = unpaid.reduce((sum, i) => sum + Number(i.total_amount), 0);
+  const overdue = unpaid.filter((i) => new Date(i.due_date) < today);
+  const nextDue = unpaid.find((i) => new Date(i.due_date) >= today)?.due_date ?? null;
+
+  return {
+    total,
+    invoiceCount: unpaid.length,
+    overdueCount: overdue.length,
+    overdueTotal: overdue.reduce((sum, i) => sum + Number(i.total_amount), 0),
+    nextDue,
+  };
+}
+
 export async function getResidentInvoices(userId: string) {
   return prisma.invoice.findMany({
     orderBy: { invoice_date: "desc" },
