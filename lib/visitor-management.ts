@@ -105,7 +105,9 @@ export async function createVisitor(data: {
         visit_purpose: data.visit_purpose,
         destination: data.destination,
         visit_date: new Date(data.visit_date),
-        status: data.status || "Pending",
+        // "Pending" was folded into Approved in DEV-151; defaulting to it here
+        // created passes in a state with Approve/Decline buttons nothing else uses.
+        status: data.status || "Approved",
         created_by: data.created_by,
       },
     });

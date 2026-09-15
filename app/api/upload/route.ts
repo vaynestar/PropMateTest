@@ -7,13 +7,22 @@ import path from "path";
 export async function POST(req: NextRequest) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
+    /*
+     * `folder` went straight into path.join, so "../../app" wrote outside
+     * public/uploads - and any logged-in resident could call this. Only the two
+     * folders the announcement form actually uses are accepted.
+     */
+    const ALLOWED_FOLDERS = ["announcements", "circulars"];
     const folder = (formData.get("folder") as string) || "announcements";
+    if (!ALLOWED_FOLDERS.includes(folder)) {
+      return NextResponse.json({ error: "Invalid upload folder" }, { status: 400 });
+    }
 
     if (!file) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });

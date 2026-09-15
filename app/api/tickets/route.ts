@@ -7,11 +7,18 @@ import {
   updateTicketStatus,
 } from "@/lib/maintenance";
 
+/*
+ * Admin only. The proxy skips /api/*, and these handlers only checked that
+ * *someone* was logged in - so any resident could list every tenant's full user
+ * row (password_hash, IC) through GET, and create or cancel on anyone's behalf
+ * through POST/PUT. No screen calls them: the resident portal uses server
+ * actions, which scope to the session user. Found in the resident portal review.
+ */
 export async function GET() {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
     const tickets = await listTickets();
     return NextResponse.json(tickets);
@@ -25,8 +32,8 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
     const body = await request.json();
     const ticket = await raiseTicket({

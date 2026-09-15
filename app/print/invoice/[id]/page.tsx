@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { getInvoiceById } from "@/lib/billing";
+import { requireUser } from "@/lib/auth";
 import PrintHelper from "./PrintHelper";
 
 function formatCurrency(value: number) {
@@ -22,11 +23,30 @@ function formatDate(date: Date) {
 export default async function PrintInvoicePage({
   params,
 }: {
-  params: { id: string };
+  // A Promise in Next 16. Typed as a plain object, `params.id` was undefined.
+  params: Promise<{ id: string }>;
 }) {
-  const invoice = await getInvoiceById(params.id);
+  const { id } = await params;
+
+  /*
+   * The proxy only checks that *someone* is logged in for /print. This page
+   * did no check of its own, so any resident could open any tenant's invoice
+   * - name, unit, amounts, Drafts included - by changing the id in the URL.
+   *
+   * Admin: any invoice. Resident: only an issued invoice on their own lease.
+   * Anything else is a 404 rather than a 403, so the URL does not confirm
+   * that an invoice with that id exists.
+   */
+  const user = await requireUser(["Admin", "Resident"]);
+  const invoice = await getInvoiceById(id);
 
   if (!invoice) {
+    notFound();
+  }
+  if (
+    user.role !== "Admin" &&
+    (invoice.lease.user_id !== user.userId || !invoice.issued_at)
+  ) {
     notFound();
   }
 

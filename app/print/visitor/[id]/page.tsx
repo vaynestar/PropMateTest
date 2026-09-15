@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import prisma from "@/lib/prisma";
+import { requireUser } from "@/lib/auth";
 import { QRCodeSVG } from "qrcode.react";
 import PrintHelper from "../../invoice/[id]/PrintHelper";
 import VisitorPrintToolbar from "./VisitorPrintToolbar";
@@ -26,7 +27,16 @@ export default async function PrintVisitorPassPage({
     },
   });
 
+  /*
+   * Same gap as the invoice print page: any logged-in resident could open any
+   * visitor's pass - full IC and phone - by id. A resident may print passes
+   * for their own guests only; the gate (admin) may print any.
+   */
+  const user = await requireUser(["Admin", "Resident"]);
   if (!visitor) {
+    notFound();
+  }
+  if (user.role !== "Admin" && visitor.lease?.user_id !== user.userId) {
     notFound();
   }
 

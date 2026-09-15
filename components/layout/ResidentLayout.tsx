@@ -6,6 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { residentNav } from "@/lib/resident-nav";
 import BottomNav, { NavItem } from "./BottomNav";
+import { logoutAction } from "@/app/logout/actions";
 import NotificationCenter from "./NotificationCenter";
 import type { NotificationItem } from "@/lib/notifications";
 
@@ -92,7 +93,9 @@ export default function ResidentLayout({
                 person
               </span>
             </div>
-            <form action="/logout" method="post" className="hidden md:block">
+            {/* Posted to /logout, which has no route handler - the button did
+                nothing. Same server action the admin header uses. */}
+            <form action={logoutAction} className="hidden md:block">
               <button
                 type="submit"
                 className="text-on-surface-variant hover:bg-surface-variant rounded-full p-2 transition-all"
