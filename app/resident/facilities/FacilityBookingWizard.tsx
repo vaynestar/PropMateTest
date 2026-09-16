@@ -233,7 +233,7 @@ function BookingSheet({
         onClick={onClose}
         aria-hidden
       />
-      <div className="relative glass-card rounded-t-2xl max-h-[92vh] overflow-y-auto animate-slide-up p-6 space-y-5">
+      <div className="relative glass-card rounded-t-2xl max-h-[calc(100dvh-env(safe-area-inset-top)-1rem)] overflow-y-auto animate-slide-up p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-title-md text-title-md text-on-surface">

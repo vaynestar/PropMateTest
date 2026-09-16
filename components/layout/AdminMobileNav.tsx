@@ -66,7 +66,7 @@ export function AdminMenuButton() {
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <nav className="absolute left-0 top-0 h-[100dvh] w-[280px] max-w-[85%] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-stack-lg animate-slide-in">
+          <nav className="absolute left-0 top-0 h-[100dvh] w-[280px] max-w-[85%] bg-surface-container-lowest border-r border-outline-variant flex flex-col py-stack-lg pt-[calc(var(--spacing-stack-lg)+env(safe-area-inset-top))] animate-slide-in">
             <div className="px-6 mb-6 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded bg-primary flex items-center justify-center font-bold text-on-primary">

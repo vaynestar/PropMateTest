@@ -81,7 +81,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           content unreachable — 365px of it on /admin/units. */}
       <div className="flex-1 min-w-0 ml-0 md:ml-[260px] flex flex-col min-h-screen">
         {/* TopNavBar */}
-        <header className="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 bg-surface/80 backdrop-blur-xl border-b border-outline-variant/50 shadow-sm sticky top-0 z-40 w-full">
+        <header className="flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 box-content pt-[env(safe-area-inset-top)] bg-surface/80 backdrop-blur-xl border-b border-outline-variant/50 shadow-sm sticky top-0 z-40 w-full">
           <div className="flex items-center md:hidden">
             <AdminMenuButton />
           </div>
