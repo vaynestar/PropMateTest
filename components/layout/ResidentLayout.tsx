@@ -79,11 +79,18 @@ export default function ResidentLayout({
         {/* Installed PWA (iOS): black-translucent status bar + viewportFit "cover" puts the
             page under the clock and notch, so the header adds the top safe-area inset. */}
         <header className="flex justify-between items-center px-margin-mobile md:px-margin-desktop sticky top-0 z-40 w-full h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-surface/80 backdrop-blur-xl border-b border-outline-variant/50">
-          <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-primary-container flex items-center justify-center md:hidden">
-            <span className="material-symbols-outlined text-on-primary text-[18px]">
-              person
+          {/* Was a plain <div> that looked like a profile button and did
+              nothing (user, 2026-09-17). The link pads out to a 44px touch target. */}
+          <Link
+            href="/resident/profile"
+            aria-label="My profile"
+            title="My profile"
+            className="-ml-1.5 p-1.5 rounded-full md:hidden pressable"
+          >
+            <span className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-primary-container flex items-center justify-center">
+              <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
             </span>
-          </div>
+          </Link>
           <h1 className="font-headline-md text-headline-md font-bold text-on-surface flex-1 text-center md:flex-none md:text-left">
             Welcome Home
           </h1>
@@ -91,11 +98,14 @@ export default function ResidentLayout({
             {/* Was a bell-shaped button with no handler: it looked tappable and
                 did nothing. */}
             <NotificationCenter initialNotifications={notifications} portal="resident" />
-            <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-primary-container hidden md:flex items-center justify-center">
-              <span className="material-symbols-outlined text-on-primary text-[18px]">
-                person
-              </span>
-            </div>
+            <Link
+              href="/resident/profile"
+              aria-label="My profile"
+              title="My profile"
+              className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-primary-container hidden md:flex items-center justify-center hover:border-primary transition-colors"
+            >
+              <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
+            </Link>
             {/* Posted to /logout, which has no route handler - the button did
                 nothing. Same server action the admin header uses. */}
             <form action={logoutAction} className="hidden md:block">
