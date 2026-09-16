@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { updateSystemParameters } from "@/lib/settings";
+import { STORAGE_PURPOSES, STORAGE_PURPOSE_ORDER, validateStorageFolders } from "@/lib/storage/folders";
 
 export async function saveSettingsAction(formData: FormData) {
   await requireUser(["Admin"]);
@@ -79,6 +80,18 @@ export async function saveSettingsAction(formData: FormData) {
   if (maxUploadMb) updates.STORAGE_MAX_UPLOAD_MB = String(Math.min(Math.max(parseInt(maxUploadMb, 10) || 4, 1), 4));
 
   // FIREBASE_STORAGE_PREFIX is no longer editable: the bucket comes from env.
+
+  // Storage folder masterfile - validated as a set so two kinds of upload can
+  // never share a folder. Applies to new uploads only.
+  if (STORAGE_PURPOSE_ORDER.some((p) => formData.get(STORAGE_PURPOSES[p].key) !== null)) {
+    const checked = validateStorageFolders(
+      Object.fromEntries(
+        STORAGE_PURPOSE_ORDER.map((p) => [p, String(formData.get(STORAGE_PURPOSES[p].key) ?? "")])
+      )
+    );
+    if (!checked.ok) return { success: false, error: checked.error };
+    for (const p of STORAGE_PURPOSE_ORDER) updates[STORAGE_PURPOSES[p].key] = checked.folders[p];
+  }
 
   const res = await updateSystemParameters(updates);
 

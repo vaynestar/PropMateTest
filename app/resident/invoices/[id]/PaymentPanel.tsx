@@ -54,6 +54,11 @@ export default function PaymentPanel({
     const f = e.target.files?.[0];
     setError(null);
     if (!f) return setFileNote(null);
+    if (!["image/jpeg", "image/png", "application/pdf"].includes(f.type)) {
+      setError("Please upload a JPG, JPEG, PNG or PDF file only.");
+      e.target.value = "";
+      return setFileNote(null);
+    }
     if (f.size > MAX_BYTES) {
       setError("That file is over 4 MB. Try a screenshot instead.");
       e.target.value = "";
@@ -179,11 +184,11 @@ export default function PaymentPanel({
                   type="file"
                   name="file"
                   required
-                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  accept="image/jpeg,image/png,application/pdf"
                   onChange={onFile}
                   className="rounded-lg border border-dashed border-outline-variant bg-surface-container px-3 py-2.5 text-xs text-on-surface-variant file:mr-3 file:rounded-md file:border-0 file:bg-primary/15 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary"
                 />
-                <span className="text-[11px] text-on-surface-variant">{fileNote ?? "JPG, PNG, WEBP or PDF, up to 4 MB"}</span>
+                <span className="text-[11px] text-on-surface-variant">{fileNote ?? "JPG, JPEG, PNG or PDF, up to 4 MB"}</span>
               </label>
 
               {error && (

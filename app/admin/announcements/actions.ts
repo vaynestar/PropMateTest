@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { checkAnnouncementLink } from "@/lib/storage/urls";
 import { normaliseAnnouncementStatus } from "@/lib/announcement-status";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
@@ -24,8 +25,21 @@ export async function createAnnouncement(prevState: any, formData: FormData) {
     const rawPropertyId = (formData.get("property_id") as string)?.trim();
     const property_id = rawPropertyId && rawPropertyId !== "ALL" && rawPropertyId !== "" ? rawPropertyId : null;
 
-    const image_url = (formData.get("image_url") as string)?.trim() || null;
-    const attachment_url = (formData.get("attachment_url") as string)?.trim() || null;
+    /*
+     * Stored as-is before, and the attachment is rendered as a link - so a
+     * "javascript:" value would run for whoever clicked it. Only uploaded files
+     * and ordinary web links are accepted.
+     */
+    const imageLink = checkAnnouncementLink(formData.get("image_url") as string);
+    const attachmentLink = checkAnnouncementLink(formData.get("attachment_url") as string);
+    if (!imageLink.ok || !attachmentLink.ok) {
+      return {
+        success: false,
+        error: "The photo and attachment must be an uploaded file or a web link starting with https://.",
+      };
+    }
+    const image_url = imageLink.value;
+    const attachment_url = attachmentLink.value;
 
     const publish_date_raw = formData.get("publish_date") as string;
     const expiry_date_raw = formData.get("expiry_date") as string;
@@ -104,8 +118,21 @@ export async function updateAnnouncement(announcementId: string, formData: FormD
     const rawPropertyId = (formData.get("property_id") as string)?.trim();
     const property_id = rawPropertyId && rawPropertyId !== "ALL" && rawPropertyId !== "" ? rawPropertyId : null;
 
-    const image_url = (formData.get("image_url") as string)?.trim() || null;
-    const attachment_url = (formData.get("attachment_url") as string)?.trim() || null;
+    /*
+     * Stored as-is before, and the attachment is rendered as a link - so a
+     * "javascript:" value would run for whoever clicked it. Only uploaded files
+     * and ordinary web links are accepted.
+     */
+    const imageLink = checkAnnouncementLink(formData.get("image_url") as string);
+    const attachmentLink = checkAnnouncementLink(formData.get("attachment_url") as string);
+    if (!imageLink.ok || !attachmentLink.ok) {
+      return {
+        success: false,
+        error: "The photo and attachment must be an uploaded file or a web link starting with https://.",
+      };
+    }
+    const image_url = imageLink.value;
+    const attachment_url = attachmentLink.value;
 
     const publish_date_raw = formData.get("publish_date") as string;
     const expiry_date_raw = formData.get("expiry_date") as string;

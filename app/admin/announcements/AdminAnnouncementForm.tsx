@@ -99,6 +99,17 @@ export default function AdminAnnouncementForm({
   const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = ""; // lets the same file be picked again after an error
+
+    // Checked here for a fast answer; the server checks the file's contents again.
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      setUploadError("Please upload a JPG, JPEG or PNG image only.");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setUploadError("That photo is over 4 MB. Please upload a smaller file.");
+      return;
+    }
 
     setIsUploadingImage(true);
     setUploadError(null);
@@ -129,6 +140,16 @@ export default function AdminAnnouncementForm({
   const handleAttachmentFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    e.target.value = "";
+
+    if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) {
+      setUploadError("Please upload a PDF, JPG, JPEG or PNG file only.");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setUploadError("That file is over 4 MB. Please upload a smaller file.");
+      return;
+    }
 
     setIsUploadingAttachment(true);
     setUploadError(null);
@@ -377,7 +398,7 @@ export default function AdminAnnouncementForm({
             ) : null}
 
             <input
-              type="url"
+              type="text"
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="Image URL or upload file..."
@@ -400,7 +421,7 @@ export default function AdminAnnouncementForm({
               type="file"
               ref={imageInputRef}
               onChange={handleImageFileChange}
-              accept="image/*"
+              accept="image/jpeg,image/png"
               className="hidden"
             />
           </div>
@@ -491,7 +512,7 @@ export default function AdminAnnouncementForm({
                 </label>
                 <div className="flex items-center gap-2">
                   <input
-                    type="url"
+                    type="text"
                     value={attachmentUrl}
                     onChange={(e) => setAttachmentUrl(e.target.value)}
                     placeholder="PDF link or upload file..."
@@ -514,7 +535,7 @@ export default function AdminAnnouncementForm({
                     type="file"
                     ref={attachmentInputRef}
                     onChange={handleAttachmentFileChange}
-                    accept=".pdf,.doc,.docx"
+                    accept="application/pdf,image/jpeg,image/png"
                     className="hidden"
                   />
                 </div>

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { STORAGE_PURPOSES, STORAGE_PURPOSE_ORDER, folderProblem, normaliseFolder } from "@/lib/storage/folders";
 
 export type SystemSettings = {
   general: {
@@ -29,6 +30,8 @@ export type SystemSettings = {
   storage: {
     maxUploadMb: number;
     firebaseStoragePrefix: string;
+    /** Storage folder masterfile - see lib/storage/folders.ts */
+    folders: { purpose: string; key: string; label: string; accepts: string; folder: string; defaultFolder: string }[];
   };
   properties: {
     property_id: string;
@@ -55,6 +58,9 @@ const DEFAULT_PARAMETERS: Record<string, { value: string; category: string; desc
   VISITOR_OVERSTAY_ALERT_HOURS: { value: "12", category: "VISITORS", description: "Hours after check-in before an overstay alert triggers" },
   VISITOR_REQUIRE_HOST_APPROVAL: { value: "false", category: "VISITORS", description: "Require unit host confirmation before entry clearance" },
   STORAGE_MAX_UPLOAD_MB: { value: "5", category: "STORAGE", description: "Maximum allowable file size in megabytes for uploads" },
+  STORAGE_FOLDER_ANNOUNCEMENT_IMAGE: { value: "announcements", category: "STORAGE", description: "Firebase Storage folder for announcement photos" },
+  STORAGE_FOLDER_ANNOUNCEMENT_ATTACHMENT: { value: "circulars", category: "STORAGE", description: "Firebase Storage folder for announcement attachments" },
+  STORAGE_FOLDER_PAYMENT_RECEIPT: { value: "receipts", category: "STORAGE", description: "Firebase Storage folder for payment receipts" },
   FIREBASE_STORAGE_PREFIX: { value: "https://firebasestorage.googleapis.com/v0/b/propmate-uploads/o/", category: "STORAGE", description: "Base URL prefix for cloud assets" },
 };
 
@@ -123,6 +129,18 @@ export async function getSystemSettings(): Promise<SystemSettings> {
     storage: {
       maxUploadMb: parseInt(paramMap.get("STORAGE_MAX_UPLOAD_MB") || "5", 10),
       firebaseStoragePrefix: paramMap.get("FIREBASE_STORAGE_PREFIX") || "",
+      folders: STORAGE_PURPOSE_ORDER.map((p) => {
+        const meta = STORAGE_PURPOSES[p];
+        const v = normaliseFolder(paramMap.get(meta.key) || "");
+        return {
+          purpose: p,
+          key: meta.key,
+          label: meta.label,
+          accepts: meta.accepts,
+          folder: folderProblem(v) ? meta.defaultFolder : v,
+          defaultFolder: meta.defaultFolder,
+        };
+      }),
     },
     properties,
   };

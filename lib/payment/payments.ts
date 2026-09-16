@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma";
 import { createBill, getBillPayment, getToyyibPayConfig } from "./toyyibpay";
-import { IMAGE_OR_PDF, removeFile, sniffFileType, storeFile } from "@/lib/storage/files";
+import { IMAGE_OR_PDF, removeFile, sniffFileType, storeFile, typeMessage } from "@/lib/storage/files";
+import { getStorageFolder } from "@/lib/storage/folders";
 import { firebaseStorageConfigured } from "@/lib/storage/firebase";
 
 /**
@@ -116,7 +117,7 @@ export async function submitPaymentEvidence(input: {
   if (!input.file || input.file.size === 0) throw new Error("Attach your receipt or transfer screenshot.");
   if (input.file.size > PROOF_MAX_BYTES) throw new Error("That file is over 4 MB. Try a screenshot instead.");
   const mime = sniffProofType(input.file.bytes);
-  if (!mime) throw new Error("Upload a JPG, PNG, WEBP image or a PDF.");
+  if (!mime) throw new Error(typeMessage(IMAGE_OR_PDF));
 
   const safeName = (input.file.name || "receipt").replace(/[^\w.\- ]+/g, "_").slice(0, 120);
 
@@ -127,7 +128,13 @@ export async function submitPaymentEvidence(input: {
    */
   let proofPath: string | null = null;
   if (firebaseStorageConfigured()) {
-    proofPath = (await storeFile({ folder: "receipts", bytes: input.file.bytes, allowed: IMAGE_OR_PDF })).path;
+    proofPath = (
+      await storeFile({
+        folder: await getStorageFolder("payment_receipt"),
+        bytes: input.file.bytes,
+        allowed: IMAGE_OR_PDF,
+      })
+    ).path;
   }
 
   try {

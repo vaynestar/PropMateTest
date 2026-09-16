@@ -8,21 +8,21 @@ import {
   publicFileUrl,
   storeFile,
 } from "@/lib/storage/files";
+import { getStorageFolder, type StoragePurpose } from "@/lib/storage/folders";
 
 /**
- * Admin uploads for announcements: a cover photo ("announcements") or a
- * circular document ("circulars").
+ * Admin uploads for announcements: a photo or an attachment (circular).
  *
- * This wrote to public/uploads on the server's disk. Vercel's filesystem does
- * not persist, so every uploaded image would have disappeared on the next
- * deploy - nothing was ever actually kept. Files now go to Firebase Storage
- * (private bucket) and are served by /api/files/... to logged-in users.
+ * Files go to Firebase Storage (private bucket) in the folder the storage
+ * masterfile gives for that kind of upload, and are served by /api/files/...
+ * The form still sends folder=announcements|circulars; those are read as the
+ * kind of upload, not as a path.
  */
 
-const RULES = {
-  announcements: IMAGE_TYPES,
-  circulars: IMAGE_OR_PDF,
-} as const;
+const PURPOSE: Record<string, { purpose: StoragePurpose; allowed: typeof IMAGE_TYPES }> = {
+  announcements: { purpose: "announcement_image", allowed: IMAGE_TYPES },
+  circulars: { purpose: "announcement_attachment", allowed: IMAGE_OR_PDF },
+};
 
 export async function POST(req: NextRequest) {
   const user = await getSessionUser();
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (Number(req.headers.get("content-length") ?? 0) > UPLOAD_HARD_LIMIT_BYTES + 64 * 1024) {
-    return NextResponse.json({ error: "That file is over 4 MB." }, { status: 413 });
+    return NextResponse.json({ error: "That file is over 4 MB. Please upload a smaller file." }, { status: 413 });
   }
 
   let form: FormData;
@@ -41,24 +41,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Couldn't read the upload. Please try again." }, { status: 400 });
   }
 
-  const folder = String(form.get("folder") || "announcements");
-  if (folder !== "announcements" && folder !== "circulars") {
-    return NextResponse.json({ error: "Invalid upload folder" }, { status: 400 });
-  }
+  const kind = PURPOSE[String(form.get("folder") || "announcements")];
+  if (!kind) return NextResponse.json({ error: "Invalid upload folder" }, { status: 400 });
+
   const file = form.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No file provided" }, { status: 400 });
   }
 
-  // The Settings limit applies, but never above what Vercel will accept.
   const setting = await prisma.appParameter.findUnique({ where: { param_key: "STORAGE_MAX_UPLOAD_MB" } });
   const settingBytes = (parseInt(setting?.param_value || "4", 10) || 4) * 1024 * 1024;
 
   try {
     const stored = await storeFile({
-      folder,
+      folder: await getStorageFolder(kind.purpose),
       bytes: new Uint8Array(await file.arrayBuffer()),
-      allowed: [...RULES[folder]],
+      allowed: kind.allowed,
       maxBytes: Math.min(settingBytes, UPLOAD_HARD_LIMIT_BYTES),
     });
     return NextResponse.json({

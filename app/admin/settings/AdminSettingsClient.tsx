@@ -491,6 +491,46 @@ export default function AdminSettingsClient({ settings, storageStatus }: AdminSe
                 </span>
               </div>
             </div>
+
+            {/* Storage folder masterfile (user, 2026-09-16) */}
+            <div className="pt-4 border-t border-outline-variant/30">
+              <h4 className="text-xs font-bold text-white">Storage folders</h4>
+              <p className="text-[11px] text-on-surface-variant mt-0.5">
+                Where each kind of upload is saved in Firebase Storage. Changes apply to new uploads only &mdash;
+                files already uploaded stay where they are and keep working.
+              </p>
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-outline-variant/40">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-surface-container-high/60 text-on-surface-variant">
+                  <tr>
+                    <th className="px-3 py-2 font-semibold">Upload</th>
+                    <th className="px-3 py-2 font-semibold">Accepts</th>
+                    <th className="px-3 py-2 font-semibold">Folder</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-outline-variant/30">
+                  {settings.storage.folders.map((f) => (
+                    <tr key={f.key}>
+                      <td className="px-3 py-2 font-medium text-white">{f.label}</td>
+                      <td className="px-3 py-2 text-on-surface-variant whitespace-nowrap">{f.accepts}</td>
+                      <td className="px-3 py-2">
+                        <input
+                          name={f.key}
+                          type="text"
+                          defaultValue={f.folder}
+                          required
+                          pattern="[a-z0-9][a-z0-9_\-]{0,39}(/[a-z0-9][a-z0-9_\-]{0,39}){0,2}"
+                          title="Lowercase letters, numbers, - or _, up to 3 levels separated by /"
+                          placeholder={f.defaultFolder}
+                          className="w-full min-w-[9rem] bg-surface-container-high border border-outline-variant/60 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-primary"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
