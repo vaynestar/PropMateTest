@@ -77,7 +77,7 @@ export default function ResidentLayout({
       <div className="flex-1 md:ml-[240px] flex flex-col min-h-screen min-w-0">
         {/* Installed PWA (iOS): black-translucent status bar + viewportFit "cover" puts the
             page under the clock and notch, so the header adds the top safe-area inset. */}
-        <header className="flex justify-between items-center px-margin-mobile md:px-margin-desktop sticky top-0 z-40 w-full h-16 box-content pt-[env(safe-area-inset-top)] bg-surface/80 backdrop-blur-xl border-b border-outline-variant/50">
+        <header className="flex justify-between items-center px-margin-mobile md:px-margin-desktop sticky top-0 z-40 w-full h-[calc(4rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] bg-surface/80 backdrop-blur-xl border-b border-outline-variant/50">
           <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant bg-primary-container flex items-center justify-center md:hidden">
             <span className="material-symbols-outlined text-on-primary text-[18px]">
               person
