@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       bytes: new Uint8Array(await file.arrayBuffer()),
       allowed: kind.allowed,
       maxBytes: Math.min(settingBytes, UPLOAD_HARD_LIMIT_BYTES),
+      label: file.name,
     });
     return NextResponse.json({
       success: true,

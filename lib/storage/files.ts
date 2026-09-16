@@ -1,7 +1,10 @@
 import "server-only";
-import { randomUUID } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { deleteObject, firebaseStorageConfigured, putObject } from "./firebase";
 import { folderProblem } from "./folders";
+import { slugForFile } from "./urls";
+
+export { OBJECT_NAME, isStoredPath } from "./urls";
 
 /**
  * Uploaded files: one set of rules for every upload in PropMate.
@@ -9,8 +12,9 @@ import { folderProblem } from "./folders";
  * - Type is decided by the file's bytes, never its name or the browser's MIME
  *   type, which are text the uploader chose. An HTML or SVG file renamed .png
  *   would otherwise be served back into someone's browser.
- * - Stored under a random name inside the folder the storage masterfile gives
- *   for that kind of upload (lib/storage/folders.ts).
+ * - Stored under a readable name (date, what it is, short random tail) in a
+ *   month sub-folder of the folder the storage masterfile gives for that kind
+ *   of upload (lib/storage/folders.ts, lib/storage/urls.ts).
  * - At most 4 MB: Vercel rejects request bodies over 4.5 MB.
  */
 
@@ -42,8 +46,22 @@ export function sniffFileType(bytes: Uint8Array): SniffedType | null {
   return null;
 }
 
-/** The last path segment of anything this app stores: uuid.ext */
-export const OBJECT_NAME = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(jpg|png|pdf|webp)$/;
+/** Malaysia time parts, so names match the office's calendar, not UTC. */
+function myt(now: Date) {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Kuala_Lumpur",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+    }).formatToParts(now).map((x) => [x.type, x.value])
+  );
+  return { month: `${p.year}-${p.month}`, stamp: `${p.year}${p.month}${p.day}-${p.hour}${p.minute}${p.second}` };
+}
+
+export function objectPath(folder: string, label: string | null | undefined, ext: string, now = new Date()) {
+  const t = myt(now);
+  return `${folder}/${t.month}/${t.stamp}-${slugForFile(label)}-${randomBytes(3).toString("hex")}.${ext}`;
+}
 
 /** The PropMate URL for a stored announcement photo or attachment. */
 export const publicFileUrl = (path: string) => `/api/files/${path}`;
@@ -53,6 +71,9 @@ export async function storeFile(input: {
   bytes: Uint8Array;
   allowed: SniffedType[];
   maxBytes?: number;
+  /** What the file is - becomes part of its name (original filename, title, invoice no.). */
+  label?: string | null;
+  now?: Date;
 }): Promise<{ path: string; mime: SniffedType; size: number }> {
   if (!firebaseStorageConfigured()) {
     throw new Error("File storage isn't set up on this server.");
@@ -67,7 +88,7 @@ export async function storeFile(input: {
   const mime = sniffFileType(input.bytes);
   if (!mime || !input.allowed.includes(mime)) throw new Error(typeMessage(input.allowed));
 
-  const path = `${input.folder}/${randomUUID()}.${EXT[mime]}`;
+  const path = objectPath(input.folder, input.label, EXT[mime], input.now);
   await putObject(path, input.bytes, mime);
   return { path, mime, size: input.bytes.length };
 }

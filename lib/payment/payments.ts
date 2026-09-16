@@ -133,6 +133,7 @@ export async function submitPaymentEvidence(input: {
         folder: await getStorageFolder("payment_receipt"),
         bytes: input.file.bytes,
         allowed: IMAGE_OR_PDF,
+        label: `${invoice.invoice_no}-${invoice.lease.unit.unit_number}`,
       })
     ).path;
   }

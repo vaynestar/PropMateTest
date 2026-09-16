@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
-import { OBJECT_NAME } from "@/lib/storage/files";
+import { isStoredPath } from "@/lib/storage/urls";
 import { getStorageFolders } from "@/lib/storage/folders";
 import { getObject } from "@/lib/storage/firebase";
 
@@ -18,19 +18,15 @@ import { getObject } from "@/lib/storage/firebase";
  *     carry personal payment details and go through /api/payments/proof/[id],
  *     which checks who owns the invoice.
  */
-const SEGMENT = /^[a-z0-9][a-z0-9_-]{0,39}$/;
-
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path: parts } = await params;
   const user = await getSessionUser();
   const notFound = () => new NextResponse("Not found", { status: 404 });
 
-  if (!user || !Array.isArray(parts) || parts.length < 2 || parts.length > 4) return notFound();
-  const name = parts[parts.length - 1];
-  const folders = parts.slice(0, -1);
-  if (!OBJECT_NAME.test(name) || !folders.every((s) => SEGMENT.test(s))) return notFound();
-
+  if (!user || !Array.isArray(parts)) return notFound();
   const path = parts.join("/");
+  if (!isStoredPath(path)) return notFound();
+
   const url = `/api/files/${path}`;
   const configured = await getStorageFolders();
   const inFolder = (folder: string) => path.startsWith(folder + "/");
