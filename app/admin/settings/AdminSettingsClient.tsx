@@ -8,6 +8,7 @@ import LoadingSpinner from "@/components/ui/LoadingSpinner";
 
 interface AdminSettingsClientProps {
   settings: SystemSettings;
+  storageStatus: { configured: boolean; bucket: string | null };
 }
 
 const SETTINGS_TABS = [
@@ -18,7 +19,7 @@ const SETTINGS_TABS = [
   { id: "storage", label: "Cloud & Storage", icon: "cloud" },
 ];
 
-export default function AdminSettingsClient({ settings }: AdminSettingsClientProps) {
+export default function AdminSettingsClient({ settings, storageStatus }: AdminSettingsClientProps) {
   const [activeTab, setActiveTab] = useState("general");
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -447,26 +448,37 @@ export default function AdminSettingsClient({ settings }: AdminSettingsClientPro
                   name="STORAGE_MAX_UPLOAD_MB"
                   type="number"
                   min={1}
-                  max={50}
-                  defaultValue={settings.storage.maxUploadMb}
+                  max={4}
+                  defaultValue={Math.min(settings.storage.maxUploadMb, 4)}
                   required
                   className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
                 />
                 <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
-                  Enforced on notice attachments, receipt photos, and defect images.
+                  Applies to announcement photos and circulars. Hosting caps every upload at 4 MB.
                 </span>
               </div>
 
+              {/* Was an editable "Firebase base URL prefix" pointing at a bucket that
+                  didn't exist, and nothing uploaded anywhere near it. The real
+                  connection comes from server environment variables. */}
               <div>
-                <label className="block text-on-surface-variant font-medium mb-1">
-                  Firebase / Cloud Storage Base URL Prefix
-                </label>
-                <input
-                  name="FIREBASE_STORAGE_PREFIX"
-                  type="text"
-                  defaultValue={settings.storage.firebaseStoragePrefix}
-                  className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
-                />
+                <span className="block text-on-surface-variant font-medium mb-1">File storage</span>
+                <div
+                  className={`rounded-xl border px-3 py-2 text-xs ${
+                    storageStatus.configured
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                      : "border-amber-500/30 bg-amber-500/10 text-amber-300"
+                  }`}
+                >
+                  {storageStatus.configured ? (
+                    <>
+                      Firebase Storage connected
+                      <span className="block font-mono text-[11px] text-on-surface-variant">{storageStatus.bucket}</span>
+                    </>
+                  ) : (
+                    "Not connected - uploads are disabled until FIREBASE_* variables are set on the server"
+                  )}
+                </div>
               </div>
 
               <div className="sm:col-span-2 p-3 rounded-xl bg-surface-container-high/40 border border-outline-variant/30 flex items-center justify-between">

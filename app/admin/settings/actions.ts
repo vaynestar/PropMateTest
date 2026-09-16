@@ -76,10 +76,9 @@ export async function saveSettingsAction(formData: FormData) {
 
   // Storage
   const maxUploadMb = formData.get("STORAGE_MAX_UPLOAD_MB")?.toString();
-  if (maxUploadMb) updates.STORAGE_MAX_UPLOAD_MB = maxUploadMb;
+  if (maxUploadMb) updates.STORAGE_MAX_UPLOAD_MB = String(Math.min(Math.max(parseInt(maxUploadMb, 10) || 4, 1), 4));
 
-  const firebasePrefix = formData.get("FIREBASE_STORAGE_PREFIX")?.toString();
-  if (firebasePrefix !== undefined) updates.FIREBASE_STORAGE_PREFIX = firebasePrefix;
+  // FIREBASE_STORAGE_PREFIX is no longer editable: the bucket comes from env.
 
   const res = await updateSystemParameters(updates);
 

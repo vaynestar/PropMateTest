@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 import { createBill, getBillPayment, getToyyibPayConfig } from "./toyyibpay";
+import { IMAGE_OR_PDF, removeFile, sniffFileType, storeFile } from "@/lib/storage/files";
+import { firebaseStorageConfigured } from "@/lib/storage/firebase";
 
 /**
  * Invoice payments.
@@ -54,17 +56,7 @@ function dbDate(ymd: string) {
  * admin's browser.
  */
 export function sniffProofType(bytes: Uint8Array): string | null {
-  const b = (i: number) => bytes[i];
-  if (bytes.length >= 3 && b(0) === 0xff && b(1) === 0xd8 && b(2) === 0xff) return "image/jpeg";
-  if (bytes.length >= 8 && b(0) === 0x89 && b(1) === 0x50 && b(2) === 0x4e && b(3) === 0x47) return "image/png";
-  if (
-    bytes.length >= 12 &&
-    String.fromCharCode(b(0), b(1), b(2), b(3)) === "RIFF" &&
-    String.fromCharCode(b(8), b(9), b(10), b(11)) === "WEBP"
-  )
-    return "image/webp";
-  if (bytes.length >= 5 && String.fromCharCode(b(0), b(1), b(2), b(3), b(4)) === "%PDF-") return "application/pdf";
-  return null;
+  return sniffFileType(bytes);
 }
 
 /** An issued invoice on the resident's own lease, or null. */
@@ -128,23 +120,40 @@ export async function submitPaymentEvidence(input: {
 
   const safeName = (input.file.name || "receipt").replace(/[^\w.\- ]+/g, "_").slice(0, 120);
 
-  return prisma.paymentTransaction.create({
-    data: {
-      invoice_id: invoice.invoice_id,
-      transaction_type: "Payment",
-      payment_date: dbDate(input.paidOn),
-      transaction_amount: invoice.total_amount,
-      payment_method: MANUAL_METHOD,
-      reference_number: reference,
-      transaction_status: "Pending",
-      proof_data: Buffer.from(input.file.bytes),
-      proof_mime: mime,
-      proof_filename: safeName,
-      proof_size: input.file.size,
-      created_by: input.userId,
-    },
-    select: { transaction_id: true },
-  });
+  /*
+   * Receipts go to Firebase Storage. Without Firebase configured (a local
+   * checkout with no FIREBASE_* variables) they fall back to the database, so
+   * development still works.
+   */
+  let proofPath: string | null = null;
+  if (firebaseStorageConfigured()) {
+    proofPath = (await storeFile({ folder: "receipts", bytes: input.file.bytes, allowed: IMAGE_OR_PDF })).path;
+  }
+
+  try {
+    return await prisma.paymentTransaction.create({
+      data: {
+        invoice_id: invoice.invoice_id,
+        transaction_type: "Payment",
+        payment_date: dbDate(input.paidOn),
+        transaction_amount: invoice.total_amount,
+        payment_method: MANUAL_METHOD,
+        reference_number: reference,
+        transaction_status: "Pending",
+        proof_path: proofPath,
+        proof_data: proofPath ? null : Buffer.from(input.file.bytes),
+        proof_mime: mime,
+        proof_filename: safeName,
+        proof_size: input.file.size,
+        created_by: input.userId,
+      },
+      select: { transaction_id: true },
+    });
+  } catch (error) {
+    // No row to point at it - don't leave an orphan file in the bucket.
+    await removeFile(proofPath).catch(() => {});
+    throw error;
+  }
 }
 
 export async function reviewPaymentEvidence(input: {

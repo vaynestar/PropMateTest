@@ -260,6 +260,7 @@ model PaymentTransaction {
 
   // Resident-submitted payment evidence (bank transfer) and the office's review.
   // Stored in the database, not on disk: Vercel's filesystem does not persist.
+  proof_path         String?   @db.VarChar // Firebase Storage object; proof_data is the fallback
   proof_data         Bytes?    @db.ByteA
   proof_mime         String?   @db.VarChar
   proof_filename     String?   @db.VarChar
