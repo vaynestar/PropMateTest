@@ -132,6 +132,10 @@ html, body {
   background-color: var(--color-background);
   color: var(--color-on-surface);
   overflow-x: hidden;
+  /* clip, not hidden, where supported: overflow-x:hidden makes html/body a
+     scroll container, which stops the sticky header sticking on iOS (user,
+     2026-09-17: "make the top banner static when scrolling down"). */
+  overflow-x: clip;
   max-width: 100vw;
 }
 

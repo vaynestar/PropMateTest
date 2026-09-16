@@ -8,6 +8,7 @@ import { logoutAction } from "@/app/logout/actions";
 import AdminMobileNav, { AdminMenuButton } from "@/components/layout/AdminMobileNav";
 import PropertySwitcher from "@/components/layout/PropertySwitcher";
 import SidebarNav from "@/components/layout/SidebarNav";
+import BackToTop from "@/components/layout/BackToTop";
 import { getAdminNotifications } from "@/lib/notifications";
 import { resolveActivePropertyId } from "@/lib/property-context";
 import NotificationCenter from "@/components/layout/NotificationCenter";
@@ -35,7 +36,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const safeActivePropertyId = resolveActivePropertyId(properties, activePropertyId) ?? "";
 
   return (
-    <div className="bg-surface text-on-surface font-body-md antialiased overflow-x-hidden min-h-screen flex w-full">
+    <div className="bg-surface text-on-surface font-body-md antialiased overflow-x-clip min-h-screen flex w-full">
       {/* SideNavBar (Desktop Only) */}
       <nav className="hidden md:flex flex-col h-screen fixed left-0 top-0 w-[260px] bg-surface-container-lowest border-r border-outline-variant py-stack-lg transition-all duration-300 ease-in-out z-50">
         <Link href="/admin" className="px-gutter mb-8 flex items-center gap-3 group">
@@ -128,6 +129,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <div className="max-w-container-max mx-auto">{children}</div>
         </main>
       </div>
+
+      <BackToTop />
 
       {/* Bottom Nav (Mobile Only) */}
       <div className="md:hidden">

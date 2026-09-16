@@ -8,6 +8,7 @@ import { residentNav } from "@/lib/resident-nav";
 import BottomNav, { NavItem } from "./BottomNav";
 import { logoutAction } from "@/app/logout/actions";
 import NotificationCenter from "./NotificationCenter";
+import BackToTop from "./BackToTop";
 import type { NotificationItem } from "@/lib/notifications";
 
 const PRIMARY: NavItem[] = [
@@ -37,7 +38,7 @@ export default function ResidentLayout({
     href === "/resident" ? pathname === href : pathname.startsWith(href);
 
   return (
-    <div className="min-h-screen flex bg-surface text-on-surface w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen flex bg-surface text-on-surface w-full max-w-full overflow-x-clip">
       <nav className="hidden md:flex w-[240px] h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface-container-lowest flex-col py-stack-lg z-50">
         <div className="px-6 mb-8 flex items-center gap-3">
           <Image src="/logo.png" alt="PropMate Logo" width={36} height={36} className="w-9 h-9 rounded-xl object-contain" priority />
@@ -114,6 +115,7 @@ export default function ResidentLayout({
         </main>
       </div>
 
+      <BackToTop aboveBottomNav />
       <BottomNav primary={PRIMARY} more={MORE} />
     </div>
   );
