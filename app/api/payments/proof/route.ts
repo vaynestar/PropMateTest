@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import { revalidatePath } from "next/cache";
 import { getSessionUser } from "@/lib/auth";
 import { PROOF_MAX_BYTES, submitPaymentEvidence } from "@/lib/payment/payments";
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   const declared = Number(req.headers.get("content-length") ?? 0);
   if (declared > PROOF_MAX_BYTES + 64 * 1024) {
-    return NextResponse.json({ error: "That file is over 4 MB. Try a screenshot instead." }, { status: 413 });
+    return NextResponse.json({ error: FILE_TOO_LARGE_MESSAGE }, { status: 413 });
   }
 
   let form: FormData;

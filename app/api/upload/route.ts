@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import { getSessionUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import {
@@ -31,7 +32,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (Number(req.headers.get("content-length") ?? 0) > UPLOAD_HARD_LIMIT_BYTES + 64 * 1024) {
-    return NextResponse.json({ error: "That file is over 4 MB. Please upload a smaller file." }, { status: 413 });
+    return NextResponse.json({ error: FILE_TOO_LARGE_MESSAGE }, { status: 413 });
   }
 
   let form: FormData;

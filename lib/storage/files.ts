@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { deleteObject, firebaseStorageConfigured, putObject } from "./firebase";
 import { folderProblem } from "./folders";
 import { slugForFile } from "./urls";
+import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 
 export { OBJECT_NAME, isStoredPath } from "./urls";
 
@@ -83,7 +84,11 @@ export async function storeFile(input: {
   const max = Math.min(input.maxBytes ?? UPLOAD_HARD_LIMIT_BYTES, UPLOAD_HARD_LIMIT_BYTES);
   if (input.bytes.length === 0) throw new Error("That file is empty.");
   if (input.bytes.length > max) {
-    throw new Error(`That file is over ${Math.floor(max / 1024 / 1024)} MB. Please upload a smaller file.`);
+    throw new Error(
+      max >= UPLOAD_HARD_LIMIT_BYTES
+        ? FILE_TOO_LARGE_MESSAGE
+        : `This file is over the ${Math.floor(max / 1024 / 1024)} MB limit set in Settings. Please reduce its size and upload it again.`
+    );
   }
   const mime = sniffFileType(input.bytes);
   if (!mime || !input.allowed.includes(mime)) throw new Error(typeMessage(input.allowed));

@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
+import { fitUploadLimit, formatMb } from "@/lib/client/shrink-upload";
+import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import { useRouter } from "next/navigation";
 import { payOnlineAction, type PaymentActionState } from "./actions";
 
@@ -42,6 +44,9 @@ export default function PaymentPanel({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileNote, setFileNote] = useState<string | null>(null);
+  // The file actually sent - the picked one, or its shrunk copy.
+  const [readyFile, setReadyFile] = useState<File | null>(null);
+  const [shrinking, setShrinking] = useState(false);
   const [onlineState, payOnline, paying] = useActionState<PaymentActionState, FormData>(
     payOnlineAction.bind(null, invoiceId),
     null
@@ -50,21 +55,32 @@ export default function PaymentPanel({
   const waiting = submission?.status === "Pending";
   const rejected = submission?.status === "Rejected";
 
-  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const f = input.files?.[0];
     setError(null);
+    setReadyFile(null);
     if (!f) return setFileNote(null);
     if (!["image/jpeg", "image/png", "application/pdf"].includes(f.type)) {
       setError("Please upload a JPG, JPEG, PNG or PDF file only.");
-      e.target.value = "";
+      input.value = "";
       return setFileNote(null);
     }
-    if (f.size > MAX_BYTES) {
-      setError("That file is over 4 MB. Try a screenshot instead.");
-      e.target.value = "";
+    if (f.size > MAX_BYTES) setFileNote(`Compressing ${f.name}…`);
+    setShrinking(true);
+    const fitted = await fitUploadLimit(f, MAX_BYTES);
+    setShrinking(false);
+    if (!fitted) {
+      setError(FILE_TOO_LARGE_MESSAGE);
+      input.value = "";
       return setFileNote(null);
     }
-    setFileNote(`${f.name} · ${(f.size / 1024 / 1024).toFixed(1)} MB`);
+    setReadyFile(fitted.file);
+    setFileNote(
+      fitted.shrunk
+        ? `${f.name} · compressed ${formatMb(f.size)} → ${formatMb(fitted.file.size)}`
+        : `${f.name} · ${formatMb(f.size)}`
+    );
   };
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -74,6 +90,7 @@ export default function PaymentPanel({
     try {
       const data = new FormData(e.currentTarget);
       data.set("invoiceId", invoiceId);
+      if (readyFile) data.set("file", readyFile, readyFile.name);
       const res = await fetch("/api/payments/proof", { method: "POST", body: data });
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
@@ -81,6 +98,7 @@ export default function PaymentPanel({
       } else {
         formRef.current?.reset();
         setFileNote(null);
+        setReadyFile(null);
         router.refresh();
       }
     } catch {
@@ -199,11 +217,11 @@ export default function PaymentPanel({
 
               <button
                 type="submit"
-                disabled={sending}
+                disabled={sending || shrinking}
                 className="btn-primary pressable flex w-full items-center justify-center gap-2 rounded-lg py-3 font-label-md text-label-md disabled:opacity-60"
               >
                 <span className="material-symbols-outlined text-[18px]">{sending ? "progress_activity" : "upload"}</span>
-                {sending ? "Sending…" : rejected ? "Send new proof" : "Send proof of payment"}
+                {shrinking ? "Compressing…" : sending ? "Sending…" : rejected ? "Send new proof" : "Send proof of payment"}
               </button>
             </form>
           </>

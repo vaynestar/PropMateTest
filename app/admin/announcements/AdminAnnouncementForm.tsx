@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { fitUploadLimit } from "@/lib/client/shrink-upload";
+import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import Image from "next/image";
 import { createAnnouncement, updateAnnouncement } from "./actions";
 
@@ -106,17 +108,16 @@ export default function AdminAnnouncementForm({
       setUploadError("Please upload a JPG, JPEG or PNG image only.");
       return;
     }
-    if (file.size > 4 * 1024 * 1024) {
-      setUploadError("That photo is over 4 MB. Please upload a smaller file.");
-      return;
-    }
-
     setIsUploadingImage(true);
     setUploadError(null);
 
     try {
+      // Over 4 MB: shrink it here first - the server can't receive it otherwise.
+      const fitted = await fitUploadLimit(file);
+      if (!fitted) throw new Error(FILE_TOO_LARGE_MESSAGE);
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fitted.file);
       formData.append("folder", "announcements");
 
       const res = await fetch("/api/upload", {
@@ -146,17 +147,15 @@ export default function AdminAnnouncementForm({
       setUploadError("Please upload a PDF, JPG, JPEG or PNG file only.");
       return;
     }
-    if (file.size > 4 * 1024 * 1024) {
-      setUploadError("That file is over 4 MB. Please upload a smaller file.");
-      return;
-    }
-
     setIsUploadingAttachment(true);
     setUploadError(null);
 
     try {
+      const fitted = await fitUploadLimit(file);
+      if (!fitted) throw new Error(FILE_TOO_LARGE_MESSAGE);
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", fitted.file);
       formData.append("folder", "circulars");
 
       const res = await fetch("/api/upload", {

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import { createBill, getBillPayment, getToyyibPayConfig } from "./toyyibpay";
 import { IMAGE_OR_PDF, removeFile, sniffFileType, storeFile, typeMessage } from "@/lib/storage/files";
 import { getStorageFolder } from "@/lib/storage/folders";
@@ -115,7 +116,7 @@ export async function submitPaymentEvidence(input: {
   }
 
   if (!input.file || input.file.size === 0) throw new Error("Attach your receipt or transfer screenshot.");
-  if (input.file.size > PROOF_MAX_BYTES) throw new Error("That file is over 4 MB. Try a screenshot instead.");
+  if (input.file.size > PROOF_MAX_BYTES) throw new Error(FILE_TOO_LARGE_MESSAGE);
   const mime = sniffProofType(input.file.bytes);
   if (!mime) throw new Error(typeMessage(IMAGE_OR_PDF));
 
