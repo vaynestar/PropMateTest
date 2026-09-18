@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { ViewerButton } from "@/components/ui/MediaViewer";
 import { createPortal } from "react-dom";
 import { reviewPaymentAction } from "@/app/admin/invoices/payment-actions";
 
@@ -138,15 +139,13 @@ export default function VerifyPaymentModal({
               </div>
             </dl>
 
-            <a
-              href={proofUrl}
-              target="_blank"
-              rel="noopener"
+            <ViewerButton
+              items={[{ src: proofUrl, title: "Payment receipt", kind: "doc" }]}
               className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
             >
-              <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+              <span className="material-symbols-outlined text-[16px]">open_in_full</span>
               Open full size
-            </a>
+            </ViewerButton>
 
             <p className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-2.5 leading-relaxed text-amber-200/90">
               Check the amount and reference against your bank statement before approving.

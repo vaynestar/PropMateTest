@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
+import { ViewerButton } from "@/components/ui/MediaViewer";
 import TicketPhotoPicker from "./TicketPhotoPicker";
 import type { ThreadMessage, ThreadPhoto } from "@/lib/ticket-thread";
 
@@ -8,18 +9,17 @@ export function PhotoStrip({ photos, size = "w-16 h-16" }: { photos: ThreadPhoto
   if (!photos.length) return null;
   return (
     <div className="flex flex-wrap gap-2">
-      {photos.map((p) => (
-        <a
+      {photos.map((p, idx) => (
+        <ViewerButton
           key={p.id}
-          href={`/api/tickets/attachments/${p.id}`}
-          target="_blank"
-          rel="noreferrer"
+          items={photos.map((x) => ({ src: `/api/tickets/attachments/${x.id}`, title: x.name }))}
+          start={idx}
           className={`block ${size} rounded-lg overflow-hidden border border-outline-variant/60 hover:border-primary`}
           title={p.name}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`/api/tickets/attachments/${p.id}`} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
-        </a>
+        </ViewerButton>
       ))}
     </div>
   );

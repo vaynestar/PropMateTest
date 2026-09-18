@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import MediaViewer from "@/components/ui/MediaViewer";
 import { markInvoicePrintedAction } from "@/app/admin/invoices/actions";
 
 function formatCurrency(value: number) {
@@ -30,6 +31,7 @@ export default function InvoicePdfPreviewModal({
   onPrinted?: () => void;
 }) {
   const [isPrinting, setIsPrinting] = useState(false);
+  const [printView, setPrintView] = useState<string | null>(null);
   const [printed, setPrinted] = useState(invoice.is_printed || false);
 
   const handlePrintDownload = async () => {
@@ -43,11 +45,8 @@ export default function InvoicePdfPreviewModal({
       }
 
       // Trigger browser print for PDF download/printing
-      const printUrl = `/print/invoice/${invoice.invoice_id}`;
-      const printWindow = window.open(printUrl, "_blank");
-      if (printWindow) {
-        printWindow.focus();
-      }
+      // In the in-app viewer, not a new window - an installed PWA has no way back (DEV-190).
+      setPrintView(`/print/invoice/${invoice.invoice_id}`);
     } catch (e) {
       console.error(e);
     } finally {
@@ -61,6 +60,7 @@ export default function InvoicePdfPreviewModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+      {printView && <MediaViewer items={[{ src: printView, title: "Invoice", kind: "doc" }]} onClose={() => setPrintView(null)} />}
       <div className="bg-surface-container border border-outline-variant/80 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
         {/* Top Control Action Bar */}
         <div className="px-6 py-4 bg-surface-container-low border-b border-outline-variant/40 flex flex-wrap items-center justify-between gap-4 shrink-0">

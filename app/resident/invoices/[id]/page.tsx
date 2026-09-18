@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ViewerButton } from "@/components/ui/MediaViewer";
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -18,8 +19,12 @@ export const dynamic = "force-dynamic";
 const rm = (n: number) =>
   "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const day = (d: Date | string) =>
-  new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(d));
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "16 Sep 2026" in Malaysia time (Intl prints "Sept"). */
+const day = (d: Date | string) => {
+  const [y, m, dd] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date(d)).split("-").map(Number);
+  return `${dd} ${MONTHS[m - 1]} ${y}`;
+};
 
 const STATUS_LABEL: Record<string, string> = {
   Pending: "Being checked",
@@ -138,15 +143,13 @@ export default async function ResidentInvoicePage({
           </li>
         </ul>
 
-        <a
-          href={`/print/invoice/${invoice.invoice_id}`}
-          target="_blank"
-          rel="noopener"
-          className="pressable flex items-center justify-center gap-2 rounded-lg border border-outline py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-high"
+        <ViewerButton
+          items={[{ src: `/print/invoice/${invoice.invoice_id}`, title: `Invoice ${invoice.invoice_no}`, kind: "doc" }]}
+          className="pressable w-full flex items-center justify-center gap-2 rounded-lg border border-outline py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-high"
         >
-          <span className="material-symbols-outlined text-[18px]">download</span>
-          Download or print PDF
-        </a>
+          <span className="material-symbols-outlined text-[18px]">description</span>
+          View or print invoice
+        </ViewerButton>
       </section>
 
       {isUnpaid && (

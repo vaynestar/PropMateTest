@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fileSecurityHeaders } from "@/lib/file-headers";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { isUuid } from "@/lib/payment/payments";
@@ -54,8 +55,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       "Content-Type": tx.proof_mime,
       "Content-Disposition": `inline; filename="${name}"`,
       "Cache-Control": "private, no-store",
-      "X-Content-Type-Options": "nosniff",
-      "Content-Security-Policy": "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
+      ...fileSecurityHeaders(String(tx.proof_mime)),
     },
   });
 }

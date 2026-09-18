@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
+import { ViewerButton } from "@/components/ui/MediaViewer";
 import { fitUploadLimit, formatMb } from "@/lib/client/shrink-upload";
 import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import { useRouter } from "next/navigation";
@@ -149,14 +150,12 @@ export default function PaymentPanel({
               {submission!.hasProof && (
                 <>
                   {" · "}
-                  <a
-                    href={`/api/payments/proof/${submission!.transactionId}`}
-                    target="_blank"
-                    rel="noopener"
+                  <ViewerButton
+                    items={[{ src: `/api/payments/proof/${submission!.transactionId}`, title: "Your receipt", kind: "doc" }]}
                     className="font-semibold text-primary hover:underline"
                   >
                     View what you sent
-                  </a>
+                  </ViewerButton>
                 </>
               )}
             </p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ViewerButton } from "@/components/ui/MediaViewer";
 import Image from "next/image";
 import ScrollHint from "@/components/ui/ScrollHint";
 
@@ -253,17 +254,26 @@ export default function ResidentAnnouncementList({
                   </div>
 
                   <div className="flex items-center gap-2">
-                    {item.attachment_url && (
-                      <a
-                        href={item.attachment_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-1.5 rounded-lg bg-surface-container-highest border border-outline-variant hover:border-primary text-primary transition-colors flex items-center"
-                        title="Download PDF Notice"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
-                      </a>
-                    )}
+                    {item.attachment_url &&
+                      (item.attachment_url.startsWith("/") ? (
+                        <ViewerButton
+                          items={[{ src: item.attachment_url, title: item.title, kind: "doc" }]}
+                          className="p-1.5 rounded-lg bg-surface-container-highest border border-outline-variant hover:border-primary text-primary transition-colors flex items-center"
+                          title="Open attachment"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                        </ViewerButton>
+                      ) : (
+                        <a
+                          href={item.attachment_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded-lg bg-surface-container-highest border border-outline-variant hover:border-primary text-primary transition-colors flex items-center"
+                          title="Open attachment"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                        </a>
+                      ))}
 
                     <button
                       type="button"
@@ -335,7 +345,19 @@ export default function ResidentAnnouncementList({
             </div>
 
             {/* Attachment */}
-            {readingItem.attachment_url && (
+            {readingItem.attachment_url && readingItem.attachment_url.startsWith("/") && (
+              <ViewerButton
+                items={[{ src: readingItem.attachment_url, title: readingItem.title, kind: "doc" }]}
+                className="w-full p-3 rounded-xl bg-primary/10 border border-primary/20 text-primary text-xs font-semibold flex items-center justify-between hover:bg-primary/20 transition-colors"
+              >
+                <span className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+                  <span>Open attachment</span>
+                </span>
+                <span className="material-symbols-outlined text-[18px]">open_in_full</span>
+              </ViewerButton>
+            )}
+            {readingItem.attachment_url && !readingItem.attachment_url.startsWith("/") && (
               <a
                 href={readingItem.attachment_url}
                 target="_blank"

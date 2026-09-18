@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fileSecurityHeaders } from "@/lib/file-headers";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { getObject } from "@/lib/storage/firebase";
@@ -40,8 +41,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     headers: {
       "Content-Type": file.contentType,
       "Cache-Control": "private, max-age=2592000, immutable",
-      "X-Content-Type-Options": "nosniff",
-      "Content-Security-Policy": "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
+      ...fileSecurityHeaders(String(file.contentType)),
     },
   });
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ViewerButton } from "@/components/ui/MediaViewer";
 import { createPortal } from "react-dom";
 import { adminTicketReply, adminTicketThread, ticketDetailAction } from "@/app/admin/maintenance/actions";
 import TicketConversation from "./TicketConversation";
@@ -183,18 +184,17 @@ export default function TicketDetailModal({
                 </p>
                 {ticket.photos && ticket.photos.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {ticket.photos.map((p) => (
-                      <a
+                    {ticket.photos.map((p, idx) => (
+                      <ViewerButton
                         key={p.id}
-                        href={`/api/tickets/attachments/${p.id}`}
-                        target="_blank"
-                        rel="noreferrer"
+                        items={ticket.photos!.map((x) => ({ src: `/api/tickets/attachments/${x.id}`, title: x.name }))}
+                        start={idx}
                         className="block w-20 h-20 rounded-lg overflow-hidden border border-outline-variant/60 hover:border-primary"
                         title={p.name}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={`/api/tickets/attachments/${p.id}`} alt={p.name} className="w-full h-full object-cover" />
-                      </a>
+                      </ViewerButton>
                     ))}
                   </div>
                 )}

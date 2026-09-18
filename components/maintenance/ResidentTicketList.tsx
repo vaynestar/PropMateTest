@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ViewerButton } from "@/components/ui/MediaViewer";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import ResidentTicketModal from "./ResidentTicketModal";
 
@@ -122,19 +123,17 @@ export default function ResidentTicketList({ tickets }: { tickets: ResidentTicke
 
               {t.photos.length > 0 && (
                 <div className="flex gap-2">
-                  {t.photos.map((p) => (
-                    <a
+                  {t.photos.map((p, idx) => (
+                    <ViewerButton
                       key={p.id}
-                      href={`/api/tickets/attachments/${p.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={(e) => e.stopPropagation()}
+                      items={t.photos.map((x) => ({ src: `/api/tickets/attachments/${x.id}`, title: x.name }))}
+                      start={idx}
                       className="block w-14 h-14 rounded-lg overflow-hidden border border-outline-variant/60"
                       title={p.name}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={`/api/tickets/attachments/${p.id}`} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
-                    </a>
+                    </ViewerButton>
                   ))}
                 </div>
               )}

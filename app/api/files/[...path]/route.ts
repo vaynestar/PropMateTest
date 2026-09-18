@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fileSecurityHeaders } from "@/lib/file-headers";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { isStoredPath } from "@/lib/storage/urls";
@@ -63,8 +64,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pat
       "Content-Type": file.contentType,
       // Names are random and never reused, so the bytes behind a URL never change.
       "Cache-Control": "private, max-age=2592000, immutable",
-      "X-Content-Type-Options": "nosniff",
-      "Content-Security-Policy": "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
+      ...fileSecurityHeaders(String(file.contentType)),
     },
   });
 }

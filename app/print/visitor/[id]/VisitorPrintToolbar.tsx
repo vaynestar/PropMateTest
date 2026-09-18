@@ -1,6 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 export default function VisitorPrintToolbar() {
+  // Inside the in-app viewer (DEV-190) the viewer supplies Close and Print.
+  const [framed, setFramed] = useState(false);
+  useEffect(() => setFramed(window.self !== window.top), []);
+  if (framed) return null;
   return (
     <div className="print:hidden mb-6 p-4 bg-gray-100 rounded-xl border border-gray-300 flex items-center justify-between shadow-xs">
       <div className="flex items-center gap-2">

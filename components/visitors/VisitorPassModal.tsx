@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import MediaViewer from "@/components/ui/MediaViewer";
 import { maskIdentityNumber, maskPhoneNumber } from "@/lib/visitor-status";
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -74,12 +75,18 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
   };
 
   // Open dedicated print pass window
-  const handlePrint = () => {
-    window.open(`/print/visitor/${visitor.visitor_id}`, "_blank");
-  };
+  // In the in-app viewer, not a new window - an installed PWA has no way back (DEV-190).
+  const [printing, setPrinting] = useState(false);
+  const handlePrint = () => setPrinting(true);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      {printing && (
+        <MediaViewer
+          items={[{ src: `/print/visitor/${visitor.visitor_id}`, title: `Visitor pass · ${visitor.visitor_name}`, kind: "doc" }]}
+          onClose={() => setPrinting(false)}
+        />
+      )}
       <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl w-full max-w-sm p-5 sm:p-6 shadow-2xl relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
         {/* Close Button */}
         <button
