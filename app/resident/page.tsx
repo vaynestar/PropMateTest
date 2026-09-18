@@ -9,8 +9,26 @@ import {
 
 export const dynamic = "force-dynamic";
 
+/** "RM 29,850.00" - the old toFixed() gave "RM 29850.00", hard to read at a glance. */
 function formatCurrency(value: number) {
-  return "RM " + value.toFixed(2);
+  return "RM " + value.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/** Booking times in Malaysia time - toTimeString() used the server's zone (UTC on Vercel). */
+function myTime(value: Date | string) {
+  return new Date(value).toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Kuala_Lumpur",
+  });
+}
+
+function greeting() {
+  const h = Number(
+    new Intl.DateTimeFormat("en-GB", { hour: "2-digit", hour12: false, timeZone: "Asia/Kuala_Lumpur" }).format(new Date())
+  );
+  return h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
 }
 
 function formatDate(date: Date) {
@@ -59,6 +77,7 @@ export default async function ResidentDashboardPage() {
   );
 
   const outstanding = await getResidentOutstanding(user!.userId);
+  const firstName = (user?.user_name || "there").trim().split(/\s+/)[0];
   const dueInDays = outstanding.nextDue
     ? Math.round(
         (new Date(outstanding.nextDue).setHours(0, 0, 0, 0) -
@@ -69,47 +88,57 @@ export default async function ResidentDashboardPage() {
 
   return (
     <div className="flex flex-col gap-stack-lg min-w-0 w-full max-w-full">
-      <h1 className="font-headline-md text-headline-md font-bold text-on-surface">
-        Welcome Home
-      </h1>
+      <section className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold text-on-surface leading-tight">
+          {greeting()}, {firstName}
+        </h1>
+        <p className="text-sm text-on-surface-variant flex items-center gap-1.5">
+          <span className="material-symbols-outlined text-[16px] text-primary">apartment</span>
+          Unit {lease.unit.unit_number} · {lease.unit.property.property_name}
+        </p>
+      </section>
 
-      <section className="glass-card rounded-xl p-stack-lg flex flex-col gap-stack-md relative overflow-hidden">
-        <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl" />
-        <div className="flex justify-between items-start z-10">
-          <div className="flex flex-col">
+      <section
+        className={`rounded-2xl p-stack-lg flex flex-col gap-stack-md relative overflow-hidden border ${
+          outstanding.overdueCount > 0
+            ? "border-rose-500/40 bg-gradient-to-br from-rose-950/60 via-surface-container to-surface-container"
+            : "border-primary/30 bg-gradient-to-br from-primary/20 via-surface-container to-surface-container"
+        }`}
+      >
+        <div className="absolute -top-12 -right-12 w-40 h-40 bg-primary/15 rounded-full blur-3xl" />
+        {/* Label + status on one row, the amount on its own line, so a big
+            figure never wraps beside the chip on a phone (DEV-184). */}
+        <div className="flex flex-col z-10 min-w-0">
+          <div className="flex items-center justify-between gap-2">
             {/* "Outstanding", not "Current Balance" (user): a balance reads like
                 money held in an account. This is what is still owed. */}
             <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-widest">
               Outstanding
             </span>
-            <span className="font-display-lg text-display-lg text-on-surface mt-1">
-              {formatCurrency(outstanding.total)}
-            </span>
-            <span className="mt-1 text-xs text-on-surface-variant">
-              {outstanding.invoiceCount === 0
-                ? "Nothing to pay right now"
-                : `${outstanding.invoiceCount} unpaid invoice${outstanding.invoiceCount === 1 ? "" : "s"}`}
-            </span>
-          </div>
-          {/* Overdue first: the old chip only ever showed "Due in N days", so a
-              resident with nothing but overdue bills saw no warning at all. */}
-          {outstanding.overdueCount > 0 ? (
-            <div className="bg-error/10 border border-error/30 px-2 py-1 rounded text-error font-label-sm text-label-sm flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px]">
-                error
+            {/* Overdue first: the old chip only ever showed "Due in N days", so a
+                resident with nothing but overdue bills saw no warning at all. */}
+            {outstanding.overdueCount > 0 ? (
+              <span className="bg-error/10 border border-error/30 px-2 py-1 rounded-full text-error text-xs font-bold flex items-center gap-1 whitespace-nowrap">
+                <span className="material-symbols-outlined text-[14px]">error</span>
+                {outstanding.overdueCount} overdue
               </span>
-              {outstanding.overdueCount} overdue
-            </div>
-          ) : (
-            dueInDays !== null && (
-              <div className="bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded text-amber-300 font-label-sm text-label-sm flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">
-                  schedule
+            ) : (
+              dueInDays !== null && (
+                <span className="bg-amber-500/10 border border-amber-500/30 px-2 py-1 rounded-full text-amber-300 text-xs font-bold flex items-center gap-1 whitespace-nowrap">
+                  <span className="material-symbols-outlined text-[14px]">schedule</span>
+                  {dueInDays === 0 ? "Due today" : `Due in ${dueInDays} day${dueInDays === 1 ? "" : "s"}`}
                 </span>
-                {dueInDays === 0 ? "Due today" : `Due in ${dueInDays} day${dueInDays === 1 ? "" : "s"}`}
-              </div>
-            )
-          )}
+              )
+            )}
+          </div>
+          <span className="text-[2.25rem] sm:text-5xl leading-tight font-bold text-on-surface mt-2 tabular-nums tracking-tight whitespace-nowrap">
+            {formatCurrency(outstanding.total)}
+          </span>
+          <span className="mt-1 text-sm text-on-surface/80">
+            {outstanding.invoiceCount === 0
+              ? "Nothing to pay right now"
+              : `${outstanding.invoiceCount} unpaid invoice${outstanding.invoiceCount === 1 ? "" : "s"}`}
+          </span>
         </div>
         <div className="flex gap-stack-sm mt-4 z-10 w-full">
           <Link
@@ -137,8 +166,8 @@ export default async function ResidentDashboardPage() {
             href={action.href}
             className="pressable glass-card rounded-xl p-stack-md flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-colors group"
           >
-            <div className="w-11 h-11 rounded-full bg-surface-container-high/50 flex items-center justify-center border border-outline-variant group-hover:border-primary/50 transition-colors">
-              <span className="material-symbols-outlined text-primary group-hover:text-on-surface transition-colors text-[20px]">
+            <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center border border-primary/25 group-hover:bg-primary/25 transition-colors">
+              <span className="material-symbols-outlined text-primary text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                 {action.icon}
               </span>
             </div>
@@ -167,8 +196,8 @@ export default async function ResidentDashboardPage() {
               if (d.getTime() === today.getTime()) dateDisplay = "Today";
               else if (d.getTime() === tomorrow.getTime()) dateDisplay = "Tomorrow";
 
-              const startStr = new Date(booking.start_time).toTimeString().slice(0, 5);
-              const endStr = new Date(booking.end_time).toTimeString().slice(0, 5);
+              const startStr = myTime(booking.start_time);
+              const endStr = myTime(booking.end_time);
 
               return (
                 <div
@@ -183,7 +212,7 @@ export default async function ResidentDashboardPage() {
                   </div>
                   <div>
                     <span className="font-label-md text-label-md text-on-surface">{booking.facility.facility_name}</span>
-                    <div className="flex items-center gap-2 text-on-secondary">
+                    <div className="flex items-center gap-2 text-on-surface/85 mt-1">
                       <span className="material-symbols-outlined text-[16px]">schedule</span>
                       <span className="font-label-sm text-label-sm">
                         {startStr} - {endStr}

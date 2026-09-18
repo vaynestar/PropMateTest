@@ -60,6 +60,7 @@ const DEFAULT_PARAMETERS: Record<string, { value: string; category: string; desc
   STORAGE_MAX_UPLOAD_MB: { value: "5", category: "STORAGE", description: "Maximum allowable file size in megabytes for uploads" },
   STORAGE_FOLDER_ANNOUNCEMENT_IMAGE: { value: "announcements", category: "STORAGE", description: "Firebase Storage folder for announcement photos" },
   STORAGE_FOLDER_ANNOUNCEMENT_ATTACHMENT: { value: "circulars", category: "STORAGE", description: "Firebase Storage folder for announcement attachments" },
+  STORAGE_FOLDER_FACILITY_IMAGE: { value: "facilities", category: "STORAGE", description: "Firebase Storage folder for facility photos" },
   STORAGE_FOLDER_PAYMENT_RECEIPT: { value: "receipts", category: "STORAGE", description: "Firebase Storage folder for payment receipts" },
   FIREBASE_STORAGE_PREFIX: { value: "https://firebasestorage.googleapis.com/v0/b/propmate-uploads/o/", category: "STORAGE", description: "Base URL prefix for cloud assets" },
 };

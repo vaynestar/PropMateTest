@@ -161,7 +161,7 @@ export default function BookingCalendarDatePicker({
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-1.5 text-xs font-bold text-on-surface-variant">
           <span className="material-symbols-outlined text-primary text-[18px]">calendar_month</span>
-          Step 3 — pick the date
+          Pick a date
         </label>
 
         <div className="flex items-center gap-1 bg-surface-container-high p-1 rounded-xl border border-outline-variant/40">
@@ -244,9 +244,9 @@ export default function BookingCalendarDatePicker({
                     isSelected
                       ? "bg-primary text-black font-bold shadow-lg shadow-primary/30 ring-2 ring-primary scale-[1.05]"
                       : item.isDisabled
-                      ? "opacity-30 bg-surface-container-lowest text-on-surface-variant cursor-not-allowed"
-                      : "bg-surface-container-high text-on-surface hover:bg-primary/20 hover:border-primary/40 border border-transparent"
-                  } ${!item.isCurrentMonth ? "opacity-20" : ""}`}
+                      ? "bg-transparent text-on-surface-variant/70 line-through decoration-on-surface-variant/50 cursor-not-allowed border border-outline-variant/30"
+                      : "bg-surface-container-highest text-on-surface hover:bg-primary/25 hover:border-primary/50 border border-outline-variant/40"
+                  } ${!item.isCurrentMonth ? "opacity-40" : ""}`}
                 >
                   <span className="text-xs font-semibold">{item.date.getDate()}</span>
 
@@ -264,7 +264,7 @@ export default function BookingCalendarDatePicker({
           </div>
 
           {/* Calendar Legend */}
-          <div className="flex items-center justify-center gap-4 text-[11px] text-on-surface-variant pt-2 border-t border-outline-variant/30">
+          <div className="flex items-center justify-center gap-4 text-[11px] text-on-surface/85 pt-2 border-t border-outline-variant/30">
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-primary" />
               <span>Selected</span>
@@ -274,8 +274,10 @@ export default function BookingCalendarDatePicker({
               <span>Today</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-md bg-surface-container-lowest opacity-40 border border-outline-variant" />
-              <span>Unavailable / Closed</span>
+              <span className="w-3 h-3 rounded border border-outline-variant/60 relative overflow-hidden">
+                <span className="absolute inset-x-0 top-1/2 h-px bg-on-surface-variant/70" />
+              </span>
+              <span>Unavailable</span>
             </div>
           </div>
         </div>
@@ -300,7 +302,7 @@ export default function BookingCalendarDatePicker({
                     : "bg-surface-container-high border-outline-variant text-on-surface hover:border-primary/50"
                 }`}
               >
-                <div className="text-[10px] font-bold text-on-surface-variant">
+                <div className={`text-[10px] font-bold ${isSelected ? "text-black/70" : "text-on-surface-variant"}`}>
                   {isToday ? "Today" : d.toLocaleDateString("en-MY", { weekday: "short" })}
                 </div>
                 <div className="text-sm font-bold mt-0.5">{d.getDate()} {d.toLocaleDateString("en-MY", { month: "short" })}</div>

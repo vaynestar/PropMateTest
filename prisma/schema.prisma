@@ -541,6 +541,8 @@ model Facility {
   max_capacity    Int?
   is_bookable     Boolean  @default(true)
   max_booking_hours Int?
+  // Photo shown on the resident booking card (DEV-184): /api/files/... or https link
+  image_url       String?  @db.VarChar
 
   // Operating hours (Monday-first weekday numbering: Mon=1 ... Sun=7)
   operation_days  String   @default("1,2,3,4,5,6,7") @db.VarChar // comma-separated open weekdays

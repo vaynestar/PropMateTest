@@ -1,6 +1,7 @@
 "use server";
 
 import { requireUser } from "@/lib/auth";
+import { checkAnnouncementLink } from "@/lib/storage/urls";
 import {
   createFacility,
   updateFacility,
@@ -8,6 +9,17 @@ import {
 } from "@/lib/facility-management";
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
+
+/**
+ * Facility photo (DEV-184): an uploaded file (/api/files/...) or an https
+ * link, same rule as announcement photos. undefined = field not on the form.
+ */
+function readPhoto(formData: FormData): { ok: true; value: string | null | undefined } | { ok: false } {
+  if (!formData.has("image_url")) return { ok: true, value: undefined };
+  const checked = checkAnnouncementLink(String(formData.get("image_url") ?? ""));
+  return checked.ok ? { ok: true, value: checked.value } : { ok: false };
+}
+const PHOTO_ERROR = "The photo must be an uploaded file or a web link starting with https://.";
 
 export async function addFacilityAction(formData: FormData) {
   try {
@@ -34,9 +46,13 @@ export async function addFacilityAction(formData: FormData) {
     const openTime = String(formData.get("open_time") || "08:00");
     const closeTime = String(formData.get("close_time") || "22:00");
 
+    const photo = readPhoto(formData);
+    if (!photo.ok) return { error: PHOTO_ERROR };
+
     await createFacility(
       {
         property_id: propertyId,
+        image_url: photo.value ?? null,
         facility_name: facilityName,
         facility_type: String(formData.get("facility_type") || "General"),
         facility_status: isMaint ? "Maintenance" : "Available",
@@ -74,9 +90,13 @@ export async function editFacilityAction(formData: FormData) {
       return { error: "Facility name cannot be empty." };
     }
 
+    const photo = readPhoto(formData);
+    if (!photo.ok) return { error: PHOTO_ERROR };
+
     await updateFacility(
       id,
       {
+        image_url: photo.value,
         facility_name: facilityName,
         facility_type: String(formData.get("facility_type") || "General"),
         // facility_status is NOT set here. It has a dedicated control on the

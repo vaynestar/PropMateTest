@@ -127,6 +127,13 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* The app is dark-only. Without this, Chrome/Android draw native <select>
+   pop-ups with a white background while the options inherit the page's light
+   text - the booking time lists were white-on-white (DEV-184). */
+:root {
+  color-scheme: dark;
+}
+
 html, body {
   font-family: var(--font-inter);
   background-color: var(--color-background);

@@ -52,6 +52,7 @@ export default async function ResidentFacilitiesPage() {
       open_time: f.open_time,
       close_time: f.close_time,
       max_booking_hours: f.max_booking_hours,
+      image_url: f.image_url,
     }));
 
   const userBookingsRaw = await listUserBookings(user.userId);
@@ -75,7 +76,7 @@ export default async function ResidentFacilitiesPage() {
   return (
     <div className="space-y-6">
       <section className="flex flex-col gap-1 w-full min-w-0">
-        <h1 className="font-headline-lg-mobile md:font-headline-lg text-on-surface mb-1">
+        <h1 className="font-headline-md text-headline-md md:text-headline-lg font-bold text-on-surface">
           Book a facility
         </h1>
         <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">

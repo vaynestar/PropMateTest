@@ -12,7 +12,8 @@ import {
 import { getStorageFolder, type StoragePurpose } from "@/lib/storage/folders";
 
 /**
- * Admin uploads for announcements: a photo or an attachment (circular).
+ * Admin uploads: an announcement photo or attachment (circular), or a
+ * facility photo (DEV-184).
  *
  * Files go to Firebase Storage (private bucket) in the folder the storage
  * masterfile gives for that kind of upload, and are served by /api/files/...
@@ -23,6 +24,7 @@ import { getStorageFolder, type StoragePurpose } from "@/lib/storage/folders";
 const PURPOSE: Record<string, { purpose: StoragePurpose; allowed: typeof IMAGE_TYPES }> = {
   announcements: { purpose: "announcement_image", allowed: IMAGE_TYPES },
   circulars: { purpose: "announcement_attachment", allowed: IMAGE_OR_PDF },
+  facilities: { purpose: "facility_image", allowed: IMAGE_TYPES },
 };
 
 export async function POST(req: NextRequest) {

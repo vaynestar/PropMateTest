@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useTransition, useRef, useEffect, useActionState } from "react";
+import FacilityPhotoField from "./FacilityPhotoField";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import FacilityTypeCombobox from "@/components/facilities/FacilityTypeCombobox";
 import {
@@ -393,6 +394,8 @@ export default function AdminFacilitiesManager({
               className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-4 py-2.5 text-on-surface placeholder:text-on-surface-variant outline-none focus:border-primary text-sm"
             />
           </div>
+
+          <FacilityPhotoField />
 
           <div className="space-y-1">
             <label className="text-[11px] font-bold text-on-surface-variant">
@@ -1037,6 +1040,8 @@ export default function AdminFacilitiesManager({
                       className="w-full rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface outline-none focus:border-primary text-sm"
                     />
                   </div>
+
+                  <FacilityPhotoField key={ef.facility_id} defaultValue={ef.image_url} />
 
                   <div className="space-y-1">
                     <span className="text-on-surface-variant font-medium">Facility type</span>

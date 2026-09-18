@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { cancelResidentBookingAction } from "./actions";
+import { shortDate } from "@/lib/short-date";
 
 export default function ResidentMyBookingsList({ myBookings }: { myBookings: any[] }) {
   const [isPending, startTransition] = useTransition();
@@ -40,35 +41,40 @@ export default function ResidentMyBookingsList({ myBookings }: { myBookings: any
           <div
             key={b.booking_id}
             className={`glass-card rounded-xl p-5 border flex flex-col justify-between transition-all ${
-              isCancelled || isPast ? "opacity-60 border-outline-variant/30" : "border-outline-variant/60 hover:border-primary/50"
+              isCancelled || isPast ? "border-outline-variant/30 bg-surface-container/40" : "border-primary/40 hover:border-primary/70"
             }`}
           >
             <div>
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h4 className="font-bold text-on-surface text-base">
+                  <h4 className={`font-bold text-base ${isCancelled || isPast ? "text-on-surface/80" : "text-on-surface"}`}>
                     {b.facility_name || "Facility"}
                   </h4>
-                  <p className="text-xs text-on-surface-variant font-mono mt-0.5">
-                    📅 {b.booking_date}
+                  <p className="text-xs text-on-surface/80 mt-0.5 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px] text-primary">event</span>
+                    {shortDate(b.booking_date, true)}
                   </p>
                 </div>
                 <StatusBadge status={isPast ? "Completed" : b.booking_status || "Confirmed"} />
               </div>
 
-              <div className="space-y-1.5 text-xs text-on-surface-variant border-t border-outline-variant/30 pt-3 mt-2">
-                <div className="flex justify-between items-center">
-                  <span>Reserved Time:</span>
-                  <span className="font-semibold text-on-surface font-mono">
-                    {b.start_time} – {b.end_time}
-                  </span>
-                </div>
+              <div className="flex items-center gap-2 border-t border-outline-variant/30 pt-3 mt-2">
+                <span className="material-symbols-outlined text-[18px] text-primary">schedule</span>
+                <span
+                  className={`text-sm font-bold tabular-nums px-2.5 py-1 rounded-lg border ${
+                    isCancelled
+                      ? "text-on-surface/70 line-through border-outline-variant/40 bg-surface-container-high/50"
+                      : "text-on-surface border-primary/40 bg-primary/10"
+                  }`}
+                >
+                  {b.start_time} – {b.end_time}
+                </span>
               </div>
             </div>
 
             <div className="mt-4 pt-3 border-t border-outline-variant/30">
               {isPast ? (
-                <span className="text-xs text-on-surface-variant/60 font-medium block text-center italic">
+                <span className="text-xs text-on-surface-variant font-medium block text-center">
                   Took place as booked
                 </span>
               ) : !isCancelled ? (
@@ -82,8 +88,8 @@ export default function ResidentMyBookingsList({ myBookings }: { myBookings: any
                   {isPending ? "Cancelling..." : "Cancel My Booking"}
                 </button>
               ) : (
-                <span className="text-xs text-on-surface-variant/60 font-medium block text-center italic">
-                  Booking Cancelled
+                <span className="text-xs text-on-surface-variant font-medium block text-center">
+                  Booking cancelled
                 </span>
               )}
             </div>

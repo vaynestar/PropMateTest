@@ -7,6 +7,7 @@ import BookingTimeline from "@/components/facilities/BookingTimeline";
 import BookingCalendarDatePicker from "@/components/facilities/BookingCalendarDatePicker";
 import BookingResultModal from "@/components/facilities/BookingResultModal";
 import { getFacilityAccentColor } from "@/lib/facility-colors";
+import { shortDate } from "@/lib/short-date";
 
 type Facility = {
   facility_id: string;
@@ -18,6 +19,7 @@ type Facility = {
   open_time: string;
   close_time: string;
   max_booking_hours: number | null;
+  image_url?: string | null;
 };
 
 type Booking = {
@@ -57,6 +59,26 @@ function nextOpenDates(openDays: Set<number>, count = 10): Date[] {
   return out;
 }
 
+const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** "1,2,3,4,5,6,7" -> "Every day"; "1,2,3,4,5" -> "Mon – Fri"; else "Mon, Wed, Fri". */
+function openDaysLabel(days: string): string {
+  const set = Array.from(
+    new Set(days.split(",").map((d) => Number(d.trim())).filter((n) => n >= 1 && n <= 7))
+  ).sort((a, b) => a - b);
+  if (set.length === 7) return "Every day";
+  if (set.length === 0) return "Closed";
+  const contiguous = set.every((d, i) => i === 0 || d === set[i - 1] + 1);
+  if (contiguous && set.length > 2) return `${DAY_NAMES[set[0] - 1]} – ${DAY_NAMES[set[set.length - 1] - 1]}`;
+  return set.map((d) => DAY_NAMES[d - 1]).join(", ");
+}
+
+function clock12(min: number): string {
+  const h = Math.floor(min / 60) % 24;
+  const m = min % 60;
+  return `${h % 12 || 12}:${pad(m)} ${h >= 12 ? "PM" : "AM"}`;
+}
+
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -92,68 +114,69 @@ export default function FacilityBooking({
 
           return (
             <Fragment key={f.facility_id}>
-              <div
+              {/* Photo card (DEV-184, user: "seem abit plain ... add picture for facilities") */}
+              <button
+                type="button"
                 onClick={() => setSelectedId(active ? null : f.facility_id)}
-                className={`rounded-2xl p-4 glass-card flex flex-col justify-between group cursor-pointer transition-all text-left pressable ${
+                aria-expanded={active}
+                className={`rounded-2xl overflow-hidden glass-card flex flex-col group text-left transition-all pressable ${
                   active
-                    ? "border-2 border-primary bg-primary/10 shadow-lg shadow-primary/10"
-                    : "border border-outline-variant/50 hover:border-primary/40 hover:bg-surface-container-high/60"
+                    ? "ring-2 ring-primary shadow-lg shadow-primary/20"
+                    : "border border-outline-variant/50 hover:border-primary/50"
                 }`}
               >
-                <div className="space-y-3">
-                  {/* Top Row: Icon + Type Chip */}
-                  <div className="flex items-center justify-between">
-                    <div className={`w-10 h-10 rounded-xl ${colorTheme.bg} ${colorTheme.border} border flex items-center justify-center ${colorTheme.text} shadow-inner`}>
-                      <span className="material-symbols-outlined text-[22px]">
+                <div className="relative w-full aspect-[16/9] overflow-hidden">
+                  {f.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={f.image_url}
+                      alt={f.facility_name}
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className={`absolute inset-0 ${colorTheme.bg} flex items-center justify-center`}>
+                      <span className={`material-symbols-outlined text-[64px] ${colorTheme.text} opacity-60`}>
                         {colorTheme.icon}
                       </span>
                     </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
 
-                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${colorTheme.badgeBg} ${colorTheme.text} ${colorTheme.border}`}>
-                      {f.facility_type}
-                    </span>
-                  </div>
+                  <span className="absolute top-3 left-3 text-[11px] font-bold px-2.5 py-1 rounded-full bg-black/55 text-white backdrop-blur-sm border border-white/15 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">{colorTheme.icon}</span>
+                    {f.facility_type}
+                  </span>
+                  <span className="absolute top-3 right-3 text-[11px] font-bold px-2.5 py-1 rounded-full bg-black/55 text-white backdrop-blur-sm border border-white/15 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">group</span>
+                    {f.max_capacity ? `Up to ${f.max_capacity}` : "Open"}
+                  </span>
 
-                  {/* Title */}
-                  <div>
-                    <h3 className="font-title-md text-title-md text-on-surface font-bold truncate group-hover:text-primary transition-colors">
-                      {f.facility_name}
-                    </h3>
-                    <p className="text-xs text-on-surface-variant truncate">
-                      {f.property.property_name}
-                    </p>
-                  </div>
-
-                  {/* Key specs pills */}
-                  <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <span className="text-[11px] text-on-surface-variant bg-surface-container-highest/60 px-2 py-0.5 rounded-md flex items-center gap-1 font-medium">
-                      <span className="material-symbols-outlined text-[13px] text-primary">group</span>
-                      {f.max_capacity ? `Max ${f.max_capacity} pax` : "Unlimited"}
-                    </span>
-
-                    <span className="text-[11px] text-on-surface-variant bg-surface-container-highest/60 px-2 py-0.5 rounded-md flex items-center gap-1 font-medium">
-                      <span className="material-symbols-outlined text-[13px] text-primary">schedule</span>
-                      {f.open_time} – {f.close_time}
-                    </span>
+                  <div className="absolute bottom-0 inset-x-0 p-4">
+                    <h3 className="text-lg font-bold text-white leading-tight truncate drop-shadow">{f.facility_name}</h3>
+                    <p className="text-xs text-white/80 truncate">{f.property.property_name}</p>
                   </div>
                 </div>
 
-                {/* Minimized Bottom Action Button */}
-                <div className="mt-4 pt-3 border-t border-outline-variant/30">
-                  <div
-                    className={`w-full py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 ${
-                      active
-                        ? "bg-primary text-black shadow-sm"
-                        : "bg-primary/10 text-primary group-hover:bg-primary/20"
+                <div className="p-4 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] uppercase tracking-wider text-on-surface-variant font-semibold">Open</p>
+                    <p className="text-sm font-bold text-on-surface tabular-nums flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[16px] text-primary">schedule</span>
+                      {f.open_time} – {f.close_time}
+                    </p>
+                    <p className="text-[11px] text-on-surface-variant truncate">{openDaysLabel(f.operation_days)}</p>
+                  </div>
+                  <span
+                    className={`shrink-0 px-4 py-2.5 rounded-xl font-bold text-sm flex items-center gap-1.5 transition-colors ${
+                      active ? "bg-surface-container-highest text-on-surface" : "bg-primary text-black shadow-md shadow-primary/20"
                     }`}
                   >
-                    <span>{active ? "Close Calendar" : "Reserve Slot"}</span>
-                    <span className="material-symbols-outlined text-[16px] transition-transform group-hover:translate-x-0.5">
-                      {active ? "expand_less" : "arrow_forward"}
-                    </span>
-                  </div>
+                    {active ? "Close" : "Book"}
+                    <span className="material-symbols-outlined text-[18px]">{active ? "expand_less" : "arrow_forward"}</span>
+                  </span>
                 </div>
-              </div>
+              </button>
 
               {/* Expanded Booking Calendar Details (Spans 2 columns) */}
               {active && (
@@ -310,16 +333,16 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
   }, [dayBookings, start, end, DAY_START, DAY_END, facility.max_booking_hours]);
 
   return (
-    <div className="glass-card rounded-xl p-6 space-y-4">
+    <div className="glass-card rounded-2xl p-4 sm:p-6 space-y-5 border border-primary/30">
       <div className="flex items-center gap-3">
-        <span className="material-symbols-outlined text-primary">meeting_room</span>
-        <div>
-          <p className="font-title-md text-title-md text-on-surface">
-            {facility.facility_name}
-          </p>
-          <p className="font-label-sm text-label-sm text-on-surface-variant">
-            {facility.property.property_name} · {facility.open_time}–
-            {facility.close_time}
+        <span className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center">
+          <span className="material-symbols-outlined">event_available</span>
+        </span>
+        <div className="min-w-0">
+          <p className="text-base font-bold text-on-surface truncate">Book {facility.facility_name}</p>
+          <p className="text-xs text-on-surface/80">
+            Open {facility.open_time} – {facility.close_time} · {openDaysLabel(facility.operation_days)}
+            {facility.max_booking_hours ? ` · up to ${facility.max_booking_hours} h` : ""}
           </p>
         </div>
       </div>
@@ -332,14 +355,15 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">
         <div className="flex flex-col gap-2 border border-outline-variant/30 rounded-lg p-3 md:p-4 bg-surface-container/50 min-w-0">
-          <span className="text-xs font-semibold text-on-surface-variant">
+          <span className="text-xs font-bold text-on-surface flex items-center gap-1">
+            <span className="material-symbols-outlined text-[16px] text-primary">login</span>
             Start time
           </span>
           <div className="flex flex-wrap sm:flex-nowrap gap-2">
             <select
               value={startDisplayHour}
               onChange={(e) => setStartDisplayHour(Number(e.target.value))}
-              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-highest border border-outline-variant px-2 py-2.5 text-on-surface font-semibold tabular-nums outline-none focus:border-primary text-base sm:text-sm"
             >
               {Array.from({ length: 12 }).map((_, i) => (
                 <option key={i + 1} value={i + 1}>{pad(i + 1)}</option>
@@ -349,7 +373,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
             <select
               value={startMin}
               onChange={(e) => setStartMin(Number(e.target.value))}
-              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-highest border border-outline-variant px-2 py-2.5 text-on-surface font-semibold tabular-nums outline-none focus:border-primary text-base sm:text-sm"
             >
               {Array.from({ length: 12 }).map((_, i) => (
                 <option key={i * 5} value={i * 5}>{pad(i * 5)}</option>
@@ -358,7 +382,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
             <select
               value={startPeriod}
               onChange={(e) => setStartPeriod(e.target.value as "AM"|"PM")}
-              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-highest border border-outline-variant px-2 py-2.5 text-on-surface font-semibold tabular-nums outline-none focus:border-primary text-base sm:text-sm"
             >
               <option value="AM">AM</option>
               <option value="PM">PM</option>
@@ -370,23 +394,28 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
                 key={dur}
                 type="button"
                 onClick={() => handleDuration(dur)}
-                className="flex-1 py-1 px-2 text-xs font-medium rounded border border-outline-variant hover:bg-surface-container-high transition-colors text-on-surface"
+                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg border transition-colors ${
+                  end - start === dur * 60
+                    ? "bg-primary text-black border-primary"
+                    : "border-outline-variant text-on-surface hover:bg-surface-container-high"
+                }`}
               >
-                +{dur}h
+                {dur}h
               </button>
             ))}
           </div>
         </div>
         
         <div className="flex flex-col gap-2 border border-outline-variant/30 rounded-lg p-3 md:p-4 bg-surface-container/50 min-w-0">
-          <span className="text-xs font-semibold text-on-surface-variant">
+          <span className="text-xs font-bold text-on-surface flex items-center gap-1">
+            <span className="material-symbols-outlined text-[16px] text-primary">logout</span>
             End time
           </span>
           <div className="flex flex-wrap sm:flex-nowrap gap-2">
             <select
               value={endDisplayHour}
               onChange={(e) => setEndDisplayHour(Number(e.target.value))}
-              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-highest border border-outline-variant px-2 py-2.5 text-on-surface font-semibold tabular-nums outline-none focus:border-primary text-base sm:text-sm"
             >
               {Array.from({ length: 12 }).map((_, i) => (
                 <option key={i + 1} value={i + 1}>{pad(i + 1)}</option>
@@ -396,7 +425,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
             <select
               value={endMin}
               onChange={(e) => setEndMin(Number(e.target.value))}
-              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-highest border border-outline-variant px-2 py-2.5 text-on-surface font-semibold tabular-nums outline-none focus:border-primary text-base sm:text-sm"
             >
               {Array.from({ length: 12 }).map((_, i) => (
                 <option key={i * 5} value={i * 5}>{pad(i * 5)}</option>
@@ -405,7 +434,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
             <select
               value={endPeriod}
               onChange={(e) => setEndPeriod(e.target.value as "AM"|"PM")}
-              className="flex-1 min-w-0 rounded-lg bg-surface-container-high border border-outline-variant px-2 py-2 text-on-surface outline-none focus:border-primary text-sm"
+              className="flex-1 min-w-0 rounded-lg bg-surface-container-highest border border-outline-variant px-2 py-2.5 text-on-surface font-semibold tabular-nums outline-none focus:border-primary text-base sm:text-sm"
             >
               <option value="AM">AM</option>
               <option value="PM">PM</option>
@@ -414,9 +443,29 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
         </div>
       </div>
 
+      {/* The chosen slot in plain words - the timeline alone was hard to read (DEV-184) */}
+      <div
+        className={`rounded-xl px-4 py-3 border flex items-center gap-3 ${
+          clash || end <= start ? "bg-rose-500/10 border-rose-500/40" : "bg-primary/10 border-primary/40"
+        }`}
+      >
+        <span className={`material-symbols-outlined ${clash || end <= start ? "text-rose-300" : "text-primary"}`}>
+          {clash || end <= start ? "error" : "check_circle"}
+        </span>
+        <div className="min-w-0">
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-on-surface/80">Your booking</p>
+          <p className="text-base font-bold text-on-surface tabular-nums">
+            {shortDate(date)}
+            {" · "}
+            {clock12(start)} – {clock12(end)}
+            {end > start ? ` (${(end - start) / 60} h)` : ""}
+          </p>
+        </div>
+      </div>
+
       {/* Timeline Visualization */}
-      <div className="pt-2 min-w-0 w-full max-w-full">
-        <p className="text-xs font-semibold text-on-surface-variant mb-2">Availability Timeline</p>
+      <div className="pt-1 min-w-0 w-full max-w-full">
+        <p className="text-xs font-bold text-on-surface mb-1">Who has booked this day</p>
         <BookingTimeline 
           dayStart={DAY_START} 
           dayEnd={DAY_END} 

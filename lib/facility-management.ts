@@ -13,6 +13,7 @@ export type FacilityInput = {
   close_time?: string;
   max_booking_hours?: number | null;
   next_maintenance_date?: Date | string | null;
+  image_url?: string | null;
 };
 
 export async function listFacilities(propertyId?: string) {
@@ -82,6 +83,7 @@ export async function createFacility(input: FacilityInput, createdBy?: string) {
       close_time,
       max_booking_hours: input.max_booking_hours ?? null,
       next_maintenance_date: nextMaint,
+      image_url: input.image_url ?? null,
       created_by: createdBy,
     },
   });
@@ -104,6 +106,7 @@ export type FacilityUpdateInput = Partial<{
   close_time: string;
   max_booking_hours: number | null;
   next_maintenance_date: Date | string | null;
+  image_url: string | null;
 }>;
 
 export async function updateFacility(

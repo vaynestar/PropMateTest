@@ -6,11 +6,12 @@ import { getStorageFolders } from "@/lib/storage/folders";
 import { getObject } from "@/lib/storage/firebase";
 
 /**
- * Announcement photos and attachments, from the private Firebase bucket.
+ * Announcement photos and attachments, and facility photos (DEV-184), from
+ * the private Firebase bucket.
  *
  * Folder names are editable (storage masterfile), so they can't decide who may
  * read a file. Instead:
- *   - a file is served when an announcement actually uses it;
+ *   - a file is served when an announcement or a facility actually uses it;
  *   - an admin may also open a file still sitting in the current announcement
  *     photo/attachment folders - that is the preview right after uploading,
  *     before the notice is saved;
@@ -37,11 +38,16 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pat
     where: { OR: [{ image_url: url }, { attachment_url: url }] },
     select: { announcement_id: true },
   });
+  const usedByFacility = usedByAnnouncement
+    ? null
+    : await prisma.facility.findFirst({ where: { image_url: url }, select: { facility_id: true } });
   const adminPreview =
     user.role === "Admin" &&
-    (inFolder(configured.announcement_image) || inFolder(configured.announcement_attachment));
+    (inFolder(configured.announcement_image) ||
+      inFolder(configured.announcement_attachment) ||
+      inFolder(configured.facility_image));
 
-  if (!usedByAnnouncement && !adminPreview) return notFound();
+  if (!usedByAnnouncement && !usedByFacility && !adminPreview) return notFound();
 
   let file: Awaited<ReturnType<typeof getObject>>;
   try {
