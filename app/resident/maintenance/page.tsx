@@ -3,18 +3,23 @@ import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { getResidentPortalData, getResidentTickets } from "@/lib/resident";
 import { listTicketCategories, raiseTicket } from "@/lib/maintenance";
-import StatusBadge from "@/components/dashboard/StatusBadge";
+import { getStorageFolder } from "@/lib/storage/folders";
+import { readTicketPhotos } from "@/lib/ticket-photos";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import ResidentRaiseTicketForm from "@/components/maintenance/ResidentRaiseTicketForm";
+import ResidentTicketList, { type ResidentTicket } from "@/components/maintenance/ResidentTicketList";
 
 export const dynamic = "force-dynamic";
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "11 Sep 2026" in Malaysia time (Intl gives "Sept"). */
 function formatDate(date: Date | string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
+  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+    .format(new Date(date))
+    .split("-")
+    .map(Number);
+  return `${d} ${MONTHS[m - 1]} ${y}`;
 }
 
 export default async function ResidentMaintenancePage() {
@@ -63,8 +68,15 @@ export default async function ResidentMaintenancePage() {
       return { error: "You can only report issues in your own property." };
     }
 
+    const photos = readTicketPhotos(
+      formData.getAll("attachment"),
+      await getStorageFolder("ticket_attachment"),
+      sessionUser.userId
+    );
+    if (!photos.ok) return { error: photos.error };
+
     try {
-      await raiseTicket({
+      const ticket = await raiseTicket({
         property_id: ownLease.unit.property_id,
         unit_id: locationType === "Unit" ? ownLease.unit.unit_id : undefined,
         location_type: locationType,
@@ -76,6 +88,19 @@ export default async function ResidentMaintenancePage() {
         priority: "Medium",
         createdBy: sessionUser.userId,
       });
+      if (photos.photos.length > 0) {
+        await prisma.ticketAttachment.createMany({
+          data: photos.photos.map((p) => ({
+            ticket_id: ticket.ticket_id,
+            uploaded_by: sessionUser.userId,
+            file_name: p.name,
+            file_url: p.path,
+            file_type: p.mime,
+            file_size: p.size,
+            created_by: sessionUser.userId,
+          })),
+        });
+      }
       revalidatePath("/resident/maintenance");
       return { success: true };
     } catch (err: any) {
@@ -85,19 +110,39 @@ export default async function ResidentMaintenancePage() {
 
   const activeCategories = categories.filter((c) => c.is_active);
 
+  const list: ResidentTicket[] = tickets.map((t) => {
+    const isCommonArea = t.location_type === "Common Area";
+    const unitNumber = t.unit?.unit_number || t.lease?.unit?.unit_number;
+    return {
+      id: t.ticket_id,
+      shortId: t.ticket_id.split("-")[0].toUpperCase(),
+      title: t.title,
+      description: t.description,
+      category: t.ticket_category,
+      status: t.status,
+      remark: t.remark,
+      reported: formatDate(t.created_at),
+      resolved: t.resolved_at ? formatDate(t.resolved_at) : null,
+      where: isCommonArea ? t.location_detail || "Common area" : `Unit ${unitNumber || "N/A"}`,
+      isCommonArea,
+      photos: t.attachments.map((a) => ({ id: a.attachment_id, name: a.file_name })),
+    };
+  });
+
   return (
-    <div className="flex flex-col gap-stack-lg">
-      <div>
-        <h1 className="font-headline-lg text-headline-lg text-on-surface">
-          Helpdesk Support
+    <div className="flex flex-col gap-5">
+      <section className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold text-on-surface flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary text-[26px]">build_circle</span>
+          Helpdesk
         </h1>
-        <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-          Report maintenance issues for your unit or building common areas (hallways, lifts, amenities).
+        <p className="text-sm text-on-surface-variant">
+          Report a problem in your unit or a common area, and follow it until it&apos;s fixed.
         </p>
-      </div>
+      </section>
 
       {lease && (
-        <ExpandableForm title="Raise a Helpdesk Request" buttonLabel="New Request" defaultOpen={false}>
+        <ExpandableForm title="Report a problem" buttonLabel="New Request" defaultOpen={false}>
           <ResidentRaiseTicketForm
             unitId={lease.unit.unit_id}
             unitNumber={lease.unit.unit_number}
@@ -109,81 +154,7 @@ export default async function ResidentMaintenancePage() {
         </ExpandableForm>
       )}
 
-      <div className="flex flex-col gap-stack-sm w-full">
-        <h2 className="font-title-lg text-title-lg text-on-surface px-1">
-          My Submitted Requests ({tickets.length})
-        </h2>
-        <div className="flex flex-col gap-stack-md w-full">
-          {tickets.length === 0 && (
-            <p className="font-body-md text-body-md text-on-surface-variant px-6 py-8 text-center glass-card rounded-xl">
-              No helpdesk requests reported yet.
-            </p>
-          )}
-          {tickets.map((t) => {
-            const isCommonArea = t.location_type === "Common Area";
-            const unitNumber = t.unit?.unit_number || t.lease?.unit?.unit_number;
-
-            return (
-              <div
-                key={t.ticket_id}
-                className="glass-card rounded-xl p-5 flex flex-col gap-3 w-full border border-outline-variant/30 hover:border-primary/40 transition-colors shadow-sm"
-              >
-                <div className="flex justify-between items-start w-full gap-2">
-                  <div className="flex flex-col">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant font-semibold">
-                        #{t.ticket_id.split("-")[0].toUpperCase()}
-                      </span>
-                      <span className="font-label-md text-xs text-primary font-semibold">
-                        {t.ticket_category}
-                      </span>
-                    </div>
-                    <span className="font-title-lg text-title-lg text-on-surface font-semibold">
-                      {t.title}
-                    </span>
-                  </div>
-                  <StatusBadge status={t.status} />
-                </div>
-
-                {t.description && (
-                  <p className="font-body-md text-body-md text-on-surface-variant">
-                    {t.description}
-                  </p>
-                )}
-
-                {t.remark && (
-                  <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs flex items-start gap-2">
-                    <span className="material-symbols-outlined text-[16px] text-amber-300 shrink-0">
-                      info
-                    </span>
-                    <div>
-                      <span className="font-semibold block text-amber-300">Management Remark:</span>
-                      <span>{t.remark}</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-between items-center w-full mt-1 pt-3 border-t border-outline-variant/20 text-xs">
-                  <span className="text-on-surface-variant font-mono">
-                    Reported: {formatDate(t.created_at)}
-                  </span>
-                  {isCommonArea ? (
-                    <span className="text-cyan-300 font-semibold flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[15px]">domain</span>
-                      <span>{t.location_detail || "Common Area"}</span>
-                    </span>
-                  ) : (
-                    <span className="text-primary font-semibold flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[15px]">meeting_room</span>
-                      <span>Unit {unitNumber || "N/A"}</span>
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <ResidentTicketList tickets={list} />
     </div>
   );
 }

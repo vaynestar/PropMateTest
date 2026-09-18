@@ -66,7 +66,7 @@ export default function ScrollHint({
 
   return (
     <div className={`relative ${className}`}>
-      <div ref={ref} className="hide-scrollbar overflow-x-auto">
+      <div ref={ref} className="hide-scrollbar overflow-x-auto overflow-y-hidden overscroll-x-contain py-0.5">
         {children}
       </div>
 

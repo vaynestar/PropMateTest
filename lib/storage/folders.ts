@@ -14,7 +14,7 @@ import prisma from "@/lib/prisma";
  * ownership-checked proof route.
  */
 
-export type StoragePurpose = "announcement_image" | "announcement_attachment" | "facility_image" | "payment_receipt";
+export type StoragePurpose = "announcement_image" | "announcement_attachment" | "facility_image" | "ticket_attachment" | "payment_receipt";
 
 export const STORAGE_PURPOSES: Record<
   StoragePurpose,
@@ -38,6 +38,12 @@ export const STORAGE_PURPOSES: Record<
     defaultFolder: "facilities",
     accepts: "JPG, JPEG, PNG",
   },
+  ticket_attachment: {
+    key: "STORAGE_FOLDER_TICKET_ATTACHMENT",
+    label: "Helpdesk photos",
+    defaultFolder: "tickets",
+    accepts: "JPG, JPEG, PNG",
+  },
   payment_receipt: {
     key: "STORAGE_FOLDER_PAYMENT_RECEIPT",
     label: "Payment receipts",
@@ -50,6 +56,7 @@ export const STORAGE_PURPOSE_ORDER: StoragePurpose[] = [
   "announcement_image",
   "announcement_attachment",
   "facility_image",
+  "ticket_attachment",
   "payment_receipt",
 ];
 

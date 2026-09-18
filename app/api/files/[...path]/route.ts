@@ -32,7 +32,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pat
   const configured = await getStorageFolders();
   const inFolder = (folder: string) => path.startsWith(folder + "/");
 
-  if (inFolder(configured.payment_receipt)) return notFound();
+  if (inFolder(configured.payment_receipt) || inFolder(configured.ticket_attachment)) return notFound();
 
   const usedByAnnouncement = await prisma.announcement.findFirst({
     where: { OR: [{ image_url: url }, { attachment_url: url }] },
@@ -62,7 +62,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ pat
     headers: {
       "Content-Type": file.contentType,
       // Names are random and never reused, so the bytes behind a URL never change.
-      "Cache-Control": "private, max-age=86400, immutable",
+      "Cache-Control": "private, max-age=2592000, immutable",
       "X-Content-Type-Options": "nosniff",
       "Content-Security-Policy": "sandbox; default-src 'none'; img-src 'self'; style-src 'unsafe-inline'",
     },

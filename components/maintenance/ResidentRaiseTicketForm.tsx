@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import TicketPhotoPicker from "./TicketPhotoPicker";
 
 type CategoryItem = {
   category_id: string;
@@ -44,6 +45,8 @@ export default function ResidentRaiseTicketForm({
   const [isDetailCustomized, setIsDetailCustomized] = useState(false);
 
   const [isPending, startTransition] = useTransition();
+  const [photosBusy, setPhotosBusy] = useState(false);
+  const [photoReset, setPhotoReset] = useState(0);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // When changing zone preset: update text input if user hasn't typed custom content
@@ -93,6 +96,7 @@ export default function ResidentRaiseTicketForm({
       } else {
         setToast({ message: "Reported. You can follow it under My Requests.", type: "success" });
         formEl.reset();
+        setPhotoReset((n) => n + 1);
         setLocationType("Unit");
         setCommonAreaPreset("Hallway / Corridor");
         setLocationDetail("Hallway / Corridor");
@@ -260,16 +264,18 @@ export default function ResidentRaiseTicketForm({
         />
       </div>
 
+      <TicketPhotoPicker onBusyChange={setPhotosBusy} resetKey={photoReset} />
+
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={isPending}
+        disabled={isPending || photosBusy}
         className="btn-primary px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2 transition-all md:col-span-2 rounded-lg text-white shadow-sm hover:brightness-110 disabled:opacity-50 pressable"
       >
         <span className="material-symbols-outlined text-[18px]">
           {isPending ? "sync" : "add_alert"}
         </span>
-        <span>{isPending ? "Submitting Request..." : "Submit Request"}</span>
+        <span>{photosBusy ? "Uploading photos..." : isPending ? "Submitting Request..." : "Submit Request"}</span>
       </button>
     </form>
   );

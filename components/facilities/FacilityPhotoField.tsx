@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { fitUploadLimit } from "@/lib/client/shrink-upload";
+import { optimizePhoto } from "@/lib/client/shrink-upload";
 import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 
 /**
@@ -27,7 +27,7 @@ export default function FacilityPhotoField({ defaultValue }: { defaultValue?: st
     setBusy(true);
     setError(null);
     try {
-      const fitted = await fitUploadLimit(file);
+      const fitted = await optimizePhoto(file);
       if (!fitted) throw new Error(FILE_TOO_LARGE_MESSAGE);
       const form = new FormData();
       form.append("file", fitted.file);

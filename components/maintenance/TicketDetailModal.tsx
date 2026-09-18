@@ -34,6 +34,7 @@ type TicketDetail = {
   propertyName: string | null;
   reporterName: string | null;
   assigneeName: string | null;
+  photos?: { id: string; name: string }[];
 };
 
 function fmt(value: string | null) {
@@ -167,6 +168,23 @@ export default function TicketDetailModal({
                 <p className="whitespace-pre-wrap text-xs leading-relaxed text-on-surface">
                   {ticket.description}
                 </p>
+                {ticket.photos && ticket.photos.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {ticket.photos.map((p) => (
+                      <a
+                        key={p.id}
+                        href={`/api/tickets/attachments/${p.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block w-20 h-20 rounded-lg overflow-hidden border border-outline-variant/60 hover:border-primary"
+                        title={p.name}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={`/api/tickets/attachments/${p.id}`} alt={p.name} className="w-full h-full object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="mt-4">

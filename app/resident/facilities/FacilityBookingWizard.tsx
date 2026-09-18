@@ -258,7 +258,7 @@ function BookingSheet({
           <p className="font-label-md text-label-md text-on-surface mb-2">
             Pick a date
           </p>
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+          <div className="flex gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain hide-scrollbar pb-1">
             {openDates.map((d) => {
               const iso = dateToISO(d);
               const active = iso === date;

@@ -93,6 +93,7 @@ export async function getResidentTickets(userId: string) {
       property: true,
       unit: true,
       lease: { include: { unit: true } },
+      attachments: { select: { attachment_id: true, file_name: true }, orderBy: { created_at: "asc" } },
     },
   });
 }

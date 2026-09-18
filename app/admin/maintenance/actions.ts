@@ -138,6 +138,7 @@ export async function ticketDetailAction(ticketId: string) {
         property: { select: { property_name: true } },
         reporter: { select: { user_name: true } },
         assignee: { select: { user_name: true } },
+        attachments: { select: { attachment_id: true, file_name: true }, orderBy: { created_at: "asc" } },
       },
     });
     if (!t) return { error: "That ticket no longer exists." };
@@ -157,6 +158,7 @@ export async function ticketDetailAction(ticketId: string) {
         created_at: t.created_at ? t.created_at.toISOString() : null,
         resolved_at: t.resolved_at ? t.resolved_at.toISOString() : null,
         unitNumber: t.unit?.unit_number ?? t.lease?.unit?.unit_number ?? null,
+        photos: t.attachments.map((a) => ({ id: a.attachment_id, name: a.file_name })),
         propertyName: t.property?.property_name ?? t.unit?.property?.property_name ?? null,
         reporterName: t.reporter?.user_name ?? null,
         assigneeName: t.assignee?.user_name ?? null,

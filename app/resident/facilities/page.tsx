@@ -60,6 +60,8 @@ export default async function ResidentFacilitiesPage() {
     booking_id: b.booking_id,
     facility_id: b.facility_id,
     facility_name: b.facility.facility_name,
+    facility_type: b.facility.facility_type,
+    image_url: b.facility.image_url,
     booking_date:
       b.booking_date instanceof Date
         ? b.booking_date.toISOString().slice(0, 10)

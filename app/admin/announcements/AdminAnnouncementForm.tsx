@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { fitUploadLimit } from "@/lib/client/shrink-upload";
+import { fitUploadLimit, optimizePhoto } from "@/lib/client/shrink-upload";
 import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import Image from "next/image";
 import { createAnnouncement, updateAnnouncement } from "./actions";
@@ -112,8 +112,8 @@ export default function AdminAnnouncementForm({
     setUploadError(null);
 
     try {
-      // Over 4 MB: shrink it here first - the server can't receive it otherwise.
-      const fitted = await fitUploadLimit(file);
+      // Photos are resized for the screen (max 1600px) and anything over 4 MB is shrunk.
+      const fitted = await optimizePhoto(file);
       if (!fitted) throw new Error(FILE_TOO_LARGE_MESSAGE);
 
       const formData = new FormData();

@@ -64,7 +64,7 @@ export default function StatusBadge({ status, variant }: StatusBadgeProps) {
       icon: "info",
     };
     return (
-      <span className={`px-2.5 py-1 rounded-md text-xs border flex items-center gap-1.5 ${info.cls}`}>
+      <span className={`px-2.5 py-1 rounded-md text-xs border flex items-center gap-1.5 whitespace-nowrap shrink-0 ${info.cls}`}>
         <span className="material-symbols-outlined text-[15px]">{info.icon}</span>
         {status}
       </span>
@@ -81,7 +81,7 @@ export default function StatusBadge({ status, variant }: StatusBadgeProps) {
       : status;
 
   return (
-    <span className={`px-2.5 py-1 rounded-md text-xs border font-medium ${cls}`}>
+    <span className={`px-2.5 py-1 rounded-md text-xs border font-medium whitespace-nowrap shrink-0 ${cls}`}>
       {label}
     </span>
   );

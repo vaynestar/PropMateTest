@@ -200,7 +200,7 @@ export default async function ResidentDashboardPage() {
               <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
             </Link>
           </div>
-          <div className="flex overflow-x-auto hide-scrollbar gap-stack-md pb-4 -mx-margin-mobile px-margin-mobile">
+          <div className="flex overflow-x-auto overflow-y-hidden overscroll-x-contain hide-scrollbar gap-stack-md pb-4 -mx-margin-mobile px-margin-mobile">
             {bookings.map((booking) => {
               // Compared as Malaysia dates - the server runs in UTC.
               const iso = new Date(booking.booking_date).toISOString().slice(0, 10);
