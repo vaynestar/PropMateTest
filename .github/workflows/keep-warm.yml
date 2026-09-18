@@ -1,11 +1,15 @@
 # Keeps the Neon database awake during the hours residents use PropMate.
-# Neon free compute sleeps after ~5 min idle, so this pings every 5 minutes,
-# 08:00-23:55 Malaysia time (00:00-15:55 UTC). Outside those hours it is left
-# to sleep to save compute hours. Delete this file to switch it off.
+# Neon free compute sleeps after ~5 min idle.
+#
+# OFF for now (user, 2026-09-18: "can off it first, i will on it when i need").
+# To switch it ON: remove the "#" in front of the two schedule lines below and
+# push. It then pings every 5 minutes, 08:00-23:55 Malaysia time
+# (00:00-15:55 UTC). You can also run it once by hand from GitHub:
+# Actions -> keep-warm -> Run workflow.
 name: keep-warm
 on:
-  schedule:
-    - cron: "*/5 0-15 * * *"
+  # schedule:
+  #   - cron: "*/5 0-15 * * *"
   workflow_dispatch: {}
 jobs:
   ping:
