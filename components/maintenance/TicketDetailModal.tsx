@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ticketDetailAction } from "@/app/admin/maintenance/actions";
+import { adminTicketReply, adminTicketThread, ticketDetailAction } from "@/app/admin/maintenance/actions";
+import TicketConversation from "./TicketConversation";
+import type { ThreadMessage } from "@/lib/ticket-thread";
 
 /**
  * Read-only view of one ticket.
@@ -75,8 +77,19 @@ export default function TicketDetailModal({
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [messages, setMessages] = useState<ThreadMessage[] | null>(null);
 
   useEffect(() => setMounted(true), []);
+
+  // Conversation with the resident (DEV-189)
+  const loadThread = () =>
+    adminTicketThread(ticketId)
+      .then((res: any) => setMessages(res?.thread?.messages ?? []))
+      .catch(() => setMessages([]));
+  useEffect(() => {
+    loadThread();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticketId]);
 
   useEffect(() => {
     let live = true;
@@ -219,6 +232,21 @@ export default function TicketDetailModal({
                   </p>
                 </div>
               )}
+
+              <div className="mt-4 border-t border-outline-variant/30 pt-4">
+                {messages === null ? (
+                  <p className="text-xs text-on-surface-variant">Loading conversation…</p>
+                ) : (
+                  <TicketConversation
+                    ticketId={ticket.ticket_id}
+                    messages={messages}
+                    replyAction={adminTicketReply}
+                    onSent={loadThread}
+                    canReply
+                    viewerIsOffice
+                  />
+                )}
+              </div>
             </>
           )}
         </div>

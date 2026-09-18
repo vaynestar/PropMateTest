@@ -225,19 +225,29 @@ export default async function ResidentDashboardPage() {
                     background on its own layer (z-0), the fade is z-10 and the text
                     z-20, so nothing can reorder them.
                   */}
+                  {/*
+                    DEV-188: the CSS background never loaded on the user's iPhone
+                    (card showed no photo). A real <img>, positioned with inline
+                    styles so no stylesheet or class can reorder it, eager so it
+                    isn't skipped inside the sideways scroller.
+                  */}
                   {photo && (
-                    <div
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photo}
+                      alt=""
                       aria-hidden
-                      className="absolute inset-0 z-0 bg-cover bg-center scale-105"
-                      style={{ backgroundImage: `url("${photo}")` }}
+                      decoding="async"
+                      style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", zIndex: 0 }}
                     />
                   )}
                   <div
                     aria-hidden
                     className="absolute inset-0 z-10 bg-gradient-to-t from-black/90 via-black/45 to-transparent"
+                    style={{ zIndex: 10 }}
                   />
 
-                  <div className="relative z-20 p-4 flex flex-col gap-2">
+                  <div className="relative z-20 p-4 flex flex-col gap-2" style={{ position: "relative", zIndex: 20 }}>
                     <div className="flex items-center gap-3">
                       <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-black/45 border border-white/20 text-white backdrop-blur-sm">
                         <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>

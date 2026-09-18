@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import VisitorForm from "./VisitorForm";
+import ExpandableForm from "@/components/layout/ExpandableForm";
 import ResidentVisitorList from "@/components/visitors/ResidentVisitorList";
 
 export const dynamic = "force-dynamic";
@@ -47,36 +48,38 @@ export default async function ResidentVisitorsPage() {
     });
   }
 
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+  const rows = visitors.map((v) => ({
+    ...v,
+    // YYYY-MM-DD as stored (a @db.Date comes back as UTC midnight).
+    visit_iso: v.visit_date ? new Date(v.visit_date).toISOString().slice(0, 10) : null,
+  }));
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Visitors Management</h1>
-          <p className="text-on-surface-variant text-sm mt-1">
-            Register expected visitors and generate digital QR passes for guardhouse access
-          </p>
-        </div>
-      </div>
+    <div className="flex flex-col gap-5">
+      <section className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold text-on-surface flex items-center gap-2">
+          <span className="material-symbols-outlined text-primary text-[26px]">badge</span>
+          Visitors
+        </h1>
+        <p className="text-sm text-on-surface-variant">
+          Create a pass before your guest arrives. The guard scans its QR code at the gate.
+        </p>
+      </section>
 
       {!lease ? (
-        <div className="p-6 bg-surface-container border border-outline-variant/60 rounded-2xl text-center text-on-surface-variant flex flex-col items-center justify-center gap-2">
-          <span className="material-symbols-outlined text-4xl opacity-50 text-amber-400">warning</span>
-          <p className="font-semibold text-white">No Active Lease Found</p>
-          <p className="text-xs">You need an active tenancy lease to register visitor access passes.</p>
+        <div className="p-6 glass-card rounded-2xl text-center text-on-surface-variant flex flex-col items-center gap-2">
+          <span className="material-symbols-outlined text-4xl opacity-60 text-amber-400">warning</span>
+          <p className="font-semibold text-on-surface">No active tenancy</p>
+          <p className="text-xs">You need an active lease to create visitor passes.</p>
         </div>
       ) : (
-        <VisitorForm />
+        <ExpandableForm title="Create a visitor pass" buttonLabel="New Visitor" defaultOpen={visitors.length === 0}>
+          <VisitorForm />
+        </ExpandableForm>
       )}
 
-      {/* Visitor History */}
-      <div className="pt-2">
-        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-[20px]">history</span>
-          <span>Visitor History & Generated QR Passes</span>
-        </h2>
-
-        <ResidentVisitorList visitors={visitors} />
-      </div>
+      <ResidentVisitorList visitors={rows} today={today} />
     </div>
   );
 }

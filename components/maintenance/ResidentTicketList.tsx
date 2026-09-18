@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import StatusBadge from "@/components/dashboard/StatusBadge";
+import ResidentTicketModal from "./ResidentTicketModal";
 
 export type ResidentTicket = {
   id: string;
@@ -16,6 +17,7 @@ export type ResidentTicket = {
   where: string;
   isCommonArea: boolean;
   photos: { id: string; name: string }[];
+  messages: number;
 };
 
 const DONE = new Set(["Resolved", "Closed"]);
@@ -34,8 +36,8 @@ const STRIPE: Record<string, string> = {
  * organised well"). Before: every card printed the full description, the full
  * management remark and a monospace footer, all at the same weight, in one
  * long list. Now: Active / Resolved / All tabs, compact cards (status stripe,
- * two-line title and description, photo thumbnails) that expand on tap to
- * show everything.
+ * two-line title and description, photo thumbnails). Tapping opens the full
+ * request with its conversation (ResidentTicketModal, DEV-189).
  */
 export default function ResidentTicketList({ tickets }: { tickets: ResidentTicket[] }) {
   const active = tickets.filter((t) => !DONE.has(t.status));
@@ -84,20 +86,20 @@ export default function ResidentTicketList({ tickets }: { tickets: ResidentTicke
 
       <div className="flex flex-col gap-3">
         {shown.map((t) => {
-          const expanded = open === t.id;
+          const expanded = false;
           return (
             <div
               key={t.id}
               role="button"
               tabIndex={0}
-              onClick={() => setOpen(expanded ? null : t.id)}
+              onClick={() => setOpen(t.id)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
-                  setOpen(expanded ? null : t.id);
+                  setOpen(t.id);
                 }
               }}
-              aria-expanded={expanded}
+              aria-haspopup="dialog"
               className={`relative text-left cursor-pointer rounded-2xl glass-card border overflow-hidden pl-5 pr-4 py-4 flex flex-col gap-2 transition-colors ${
                 expanded ? "border-primary/50" : "border-outline-variant/40 hover:border-primary/40"
               }`}
@@ -158,13 +160,15 @@ export default function ResidentTicketList({ tickets }: { tickets: ResidentTicke
                   {t.resolved ? `Resolved ${t.resolved}` : `Reported ${t.reported}`}
                 </span>
               </div>
-              {!expanded && (t.description.length > 90 || !!t.remark) && (
-                <span className="text-[11px] text-primary font-semibold -mt-1">Tap for details</span>
-              )}
+              <span className="text-[11px] text-primary font-semibold -mt-1 flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">forum</span>
+                {t.messages > 0 ? `${t.messages} message${t.messages === 1 ? "" : "s"} · ` : ""}Tap for details
+              </span>
             </div>
           );
         })}
       </div>
+      {open && <ResidentTicketModal ticketId={open} onClose={() => setOpen(null)} />}
     </div>
   );
 }

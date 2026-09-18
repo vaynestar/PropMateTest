@@ -125,7 +125,8 @@ export default async function ResidentMaintenancePage() {
       resolved: t.resolved_at ? formatDate(t.resolved_at) : null,
       where: isCommonArea ? t.location_detail || "Common area" : `Unit ${unitNumber || "N/A"}`,
       isCommonArea,
-      photos: t.attachments.map((a) => ({ id: a.attachment_id, name: a.file_name })),
+      photos: t.attachments.filter((a) => !a.comment_id).map((a) => ({ id: a.attachment_id, name: a.file_name })),
+      messages: t._count.comments,
     };
   });
 

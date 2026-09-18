@@ -1,131 +1,135 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { registerVisitor } from "./actions";
 
-export default function VisitorForm() {
+const PURPOSES = ["Family visit", "Friends", "Delivery", "Contractor / repair", "Ride pick-up"];
+
+const input =
+  "w-full rounded-xl bg-surface-container-high border border-outline-variant px-3.5 py-2.5 text-on-surface placeholder:text-on-surface-variant/50 outline-none focus:border-primary text-base sm:text-sm";
+
+/**
+ * Register a visitor (DEV-189 redesign; user: "redesign visitor module as well
+ * not so user friendly"). Visit date defaults to today with Today / Tomorrow
+ * shortcuts, purpose has one-tap chips, the phone number the action already
+ * accepted is finally on the form, and a success opens the new pass.
+ */
+export default function VisitorForm({ onRegistered }: { onRegistered?: () => void }) {
   const [state, formAction, isPending] = useActionState(registerVisitor, null);
-  const [isSuccess, setIsSuccess] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+  const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+  const [date, setDate] = useState(today);
+  const [purpose, setPurpose] = useState("");
 
   useEffect(() => {
     if (state?.success) {
-      setIsSuccess(true);
-      // Reset form handled natively or we can just show a success message
-      setTimeout(() => setIsSuccess(false), 3000);
+      formRef.current?.reset();
+      setDate(today);
+      setPurpose("");
+      onRegistered?.();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
   return (
-    <div className="bg-[#151b2d] border border-[#4a4455] rounded-xl p-4 sm:p-6 shadow-2xl relative overflow-hidden">
-      {/* Decorative gradient orb */}
-      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
-
-      <h3 className="text-lg font-semibold text-white mb-6 flex items-center gap-2">
-        <span className="material-symbols-outlined text-primary">person_add</span>
-        Register New Visitor
-      </h3>
-
-      {isSuccess && (
-        <div className="mb-6 p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm flex items-center gap-2 animate-slide-in">
+    <form ref={formRef} action={formAction} className="flex flex-col gap-4">
+      {state?.success && (
+        <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-sm flex items-center gap-2">
           <span className="material-symbols-outlined">check_circle</span>
-          Visitor registered. Their pass is ready — share the QR code with them.
+          Visitor registered. Their pass is under Upcoming — tap "Show pass" to share it.
         </div>
       )}
-
       {state?.error && (
-        <div className="mb-6 p-4 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm flex items-center gap-2">
+        <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm flex items-center gap-2">
           <span className="material-symbols-outlined">error</span>
           {state.error}
         </div>
       )}
 
-      <form action={formAction} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label htmlFor="visitor_name" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Visitor Name
-            </label>
-            <input
-              type="text"
-              id="visitor_name"
-              name="visitor_name"
-              required
-              className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-4 py-2.5 text-white placeholder:text-[#4a4455] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              placeholder="e.g. Ali Bin Abu"
-            />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-on-surface">Visitor name *</span>
+          <input name="visitor_name" required className={input} placeholder="e.g. Ali bin Abu" autoComplete="off" />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-on-surface">IC / passport no. *</span>
+          <input name="visitor_ic_no" required className={input} placeholder="e.g. 900101-14-5555" autoComplete="off" />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-on-surface">Phone (optional)</span>
+          <input name="contact_no" type="tel" inputMode="tel" className={input} placeholder="e.g. 012-345 6789" />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs font-semibold text-on-surface">Car plate (optional)</span>
+          <input name="vehicle_plate" className={`${input} uppercase placeholder:normal-case`} placeholder="e.g. WAB 1234" />
+        </label>
+      </div>
 
-          <div className="space-y-1">
-            <label htmlFor="visitor_ic_no" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              IC / Passport Number
-            </label>
-            <input
-              type="text"
-              id="visitor_ic_no"
-              name="visitor_ic_no"
-              required
-              className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-4 py-2.5 text-white placeholder:text-[#4a4455] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              placeholder="e.g. 900101-14-5555"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label htmlFor="vehicle_plate" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Vehicle Plate (Optional)
-            </label>
-            <input
-              type="text"
-              id="vehicle_plate"
-              name="vehicle_plate"
-              className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-4 py-2.5 text-white placeholder:text-[#4a4455] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              placeholder="e.g. WAB 1234"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label htmlFor="visit_date" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Visit Date
-            </label>
-            <input
-              type="date"
-              id="visit_date"
-              name="visit_date"
-              min={new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" })}
-              required
-              className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors [color-scheme:dark]"
-            />
-          </div>
-
-          <div className="space-y-1 md:col-span-2">
-            <label htmlFor="visit_purpose" className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-              Purpose of Visit
-            </label>
-            <input
-              type="text"
-              id="visit_purpose"
-              name="visit_purpose"
-              required
-              className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-4 py-2.5 text-white placeholder:text-[#4a4455] focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-              placeholder="e.g. Delivery, Visiting family, Maintenance"
-            />
-          </div>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-semibold text-on-surface">Visit date *</span>
+        <div className="flex flex-wrap items-center gap-2">
+          {[
+            { v: today, l: "Today" },
+            { v: tomorrow, l: "Tomorrow" },
+          ].map((o) => (
+            <button
+              key={o.l}
+              type="button"
+              onClick={() => setDate(o.v)}
+              className={`px-3.5 py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                date === o.v ? "bg-primary text-black border-primary" : "border-outline-variant text-on-surface hover:bg-surface-container-high"
+              }`}
+            >
+              {o.l}
+            </button>
+          ))}
+          <input
+            type="date"
+            name="visit_date"
+            required
+            min={today}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={`${input} w-auto flex-1 min-w-[10rem]`}
+          />
         </div>
+      </div>
 
-        <div className="pt-4 flex justify-end">
-          <button
-            type="submit"
-            disabled={isPending}
-            className="gradient-btn px-6 py-2.5 rounded-lg font-medium text-white shadow-lg flex items-center gap-2 disabled:opacity-50 pressable"
-          >
-            {isPending ? (
-              <span className="material-symbols-outlined animate-spin-slow">progress_activity</span>
-            ) : (
-              <span className="material-symbols-outlined">send</span>
-            )}
-            {isPending ? "Submitting..." : "Register Visitor"}
-          </button>
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs font-semibold text-on-surface">Purpose *</span>
+        <div className="flex flex-wrap gap-2">
+          {PURPOSES.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => setPurpose(p)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                purpose === p ? "bg-primary/20 text-primary border-primary/60" : "border-outline-variant text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              {p}
+            </button>
+          ))}
         </div>
-      </form>
-    </div>
+        <input
+          name="visit_purpose"
+          required
+          value={purpose}
+          onChange={(e) => setPurpose(e.target.value)}
+          className={input}
+          placeholder="Or type the reason"
+        />
+      </div>
+
+      <button
+        type="submit"
+        disabled={isPending}
+        className="btn-primary w-full sm:w-auto sm:self-end px-6 py-3 rounded-xl font-bold text-white flex items-center justify-center gap-2 disabled:opacity-50 pressable"
+      >
+        <span className="material-symbols-outlined">{isPending ? "progress_activity" : "qr_code_2"}</span>
+        {isPending ? "Creating pass…" : "Create visitor pass"}
+      </button>
+    </form>
   );
 }

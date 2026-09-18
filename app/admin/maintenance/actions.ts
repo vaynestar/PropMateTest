@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
 import { updateTicketStatus } from "@/lib/maintenance";
+import { addTicketMessage, getTicketThread } from "@/lib/ticket-thread";
 
 export async function updateTicketAction(formData: FormData) {
   const user = await requireUser(["Admin"]);
@@ -138,7 +139,7 @@ export async function ticketDetailAction(ticketId: string) {
         property: { select: { property_name: true } },
         reporter: { select: { user_name: true } },
         assignee: { select: { user_name: true } },
-        attachments: { select: { attachment_id: true, file_name: true }, orderBy: { created_at: "asc" } },
+        attachments: { where: { comment_id: null }, select: { attachment_id: true, file_name: true }, orderBy: { created_at: "asc" } },
       },
     });
     if (!t) return { error: "That ticket no longer exists." };
@@ -167,4 +168,26 @@ export async function ticketDetailAction(ticketId: string) {
   } catch (err: any) {
     return { error: err?.message || "Could not load that ticket." };
   }
+}
+
+/** Admin: the ticket's conversation (DEV-189). */
+export async function adminTicketThread(ticketId: string) {
+  const user = await requireUser(["Admin"]);
+  const thread = await getTicketThread(String(ticketId), user);
+  return thread ? { thread } : { error: "That ticket no longer exists." };
+}
+
+/** Admin: reply to the resident, optionally with photos (DEV-189). */
+export async function adminTicketReply(formData: FormData): Promise<{ ok?: boolean; error?: string }> {
+  const user = await requireUser(["Admin"]);
+  const res = await addTicketMessage({
+    ticketId: String(formData.get("ticket_id") || ""),
+    viewer: user,
+    text: String(formData.get("message") || ""),
+    attachments: formData.getAll("attachment"),
+  });
+  if (!res.ok) return { error: res.error };
+  revalidatePath("/admin/maintenance");
+  revalidatePath("/resident/maintenance");
+  return { ok: true };
 }

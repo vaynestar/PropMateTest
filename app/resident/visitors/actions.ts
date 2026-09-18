@@ -63,3 +63,29 @@ export async function registerVisitor(state: any, formData: FormData) {
     return { error: error.message };
   }
 }
+
+/**
+ * Resident cancels a pass that hasn't been used (DEV-189). Only their own
+ * (their lease or created by them), only while it is still "Approved" -
+ * someone already at the gate or gone can't be cancelled.
+ */
+export async function cancelVisitorPass(visitorId: string) {
+  const user = await getSessionUser();
+  if (!user || user.role !== "Resident") return { error: "Please sign in again." };
+  const id = String(visitorId || "");
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { error: "That pass no longer exists." };
+
+  const v = await prisma.visitor.findFirst({
+    where: { visitor_id: id, OR: [{ lease: { user_id: user.userId } }, { created_by: user.userId }] },
+    select: { status: true },
+  });
+  if (!v) return { error: "That pass no longer exists." };
+  if (v.status !== "Approved") return { error: "Only a pass that hasn't been used yet can be cancelled." };
+
+  await prisma.visitor.update({
+    where: { visitor_id: id },
+    data: { status: "Cancelled", modified_by: user.userId },
+  });
+  revalidatePath("/resident/visitors");
+  return { ok: true };
+}

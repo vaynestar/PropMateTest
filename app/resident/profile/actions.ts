@@ -50,3 +50,47 @@ export async function changePassword(state: any, formData: FormData) {
     return { error: error.message || "Failed to update password." };
   }
 }
+
+/** Malaysian-style phone: digits, spaces, dashes, optional +; 9-12 digits. */
+function cleanPhone(raw: FormDataEntryValue | null, label: string): { ok: true; value: string | null } | { ok: false; error: string } {
+  const v = String(raw ?? "").trim();
+  if (!v) return { ok: true, value: null };
+  const digits = v.replace(/\D/g, "");
+  if (!/^\+?[0-9][0-9 \-]*$/.test(v) || digits.length < 9 || digits.length > 12) {
+    return { ok: false, error: `${label}: enter a phone number like 012-345 6789.` };
+  }
+  return { ok: true, value: v };
+}
+
+/**
+ * DEV-189: a resident keeps their own contact details current - mobile, car
+ * plate, emergency contact. Name, email and IC are not accepted here.
+ */
+export async function updateContactDetails(_state: any, formData: FormData) {
+  try {
+    const user = await requireUser(["Resident"]);
+    const phone = cleanPhone(formData.get("phone_number"), "Mobile number");
+    if (!phone.ok) return { error: phone.error };
+    const ePhone = cleanPhone(formData.get("emergency_contact_phone"), "Emergency contact phone");
+    if (!ePhone.ok) return { error: ePhone.error };
+    const plate = String(formData.get("vehicle_plate") ?? "").trim().toUpperCase().replace(/\s+/g, " ");
+    if (plate.length > 15) return { error: "Car plate: keep it under 15 characters." };
+    const eName = String(formData.get("emergency_contact_name") ?? "").trim();
+    if (eName.length > 80) return { error: "Emergency contact name: keep it under 80 characters." };
+
+    await prisma.user.update({
+      where: { user_id: user.userId },
+      data: {
+        phone_number: phone.value,
+        vehicle_plate: plate || null,
+        emergency_contact_name: eName || null,
+        emergency_contact_phone: ePhone.value,
+        modified_by: user.userId,
+      },
+    });
+    revalidatePath("/resident/profile");
+    return { success: true };
+  } catch {
+    return { error: "Couldn't save. Check your connection and try again." };
+  }
+}

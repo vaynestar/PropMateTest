@@ -156,7 +156,7 @@ export default function ResidentAnnouncementList({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search circulars..."
+            placeholder="Search…"
             className="w-full bg-surface-container border border-outline-variant/50 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary"
           />
         </div>
