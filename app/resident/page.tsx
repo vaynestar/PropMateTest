@@ -215,38 +215,43 @@ export default async function ResidentDashboardPage() {
                 <Link
                   href="/resident/facilities"
                   key={booking.booking_id}
-                  className="relative flex-shrink-0 w-72 rounded-2xl overflow-hidden border border-outline-variant/60 bg-surface-container hover:border-primary/60 transition-colors pressable"
+                  className="relative isolate flex flex-col justify-end flex-shrink-0 w-72 h-40 rounded-2xl overflow-hidden border border-outline-variant/60 bg-surface-container hover:border-primary/60 transition-colors pressable"
                 >
-                  {/* Facility photo on the right, faded into the card so it never sits under the text (DEV-185) */}
+                  {/*
+                    Poster-style card (user, 2026-09-18, GSC app as reference): the
+                    facility photo fills the card behind a dark fade and the booking
+                    details sit on top in white. DEV-185 put an <img> on the right
+                    half; on iPhone it painted over the text. Now the photo is a CSS
+                    background on its own layer (z-0), the fade is z-10 and the text
+                    z-20, so nothing can reorder them.
+                  */}
                   {photo && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={photo}
-                      alt=""
+                    <div
                       aria-hidden
-                      loading="lazy"
-                      className="absolute inset-y-0 right-0 w-3/5 h-full object-cover opacity-60"
+                      className="absolute inset-0 z-0 bg-cover bg-center scale-105"
+                      style={{ backgroundImage: `url("${photo}")` }}
                     />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-r from-surface-container from-40% via-surface-container/85 to-surface-container/10" />
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 z-10 bg-gradient-to-t from-black/90 via-black/45 to-transparent"
+                  />
 
-                  <div className="relative p-4 flex flex-col gap-3">
+                  <div className="relative z-20 p-4 flex flex-col gap-2">
                     <div className="flex items-center gap-3">
-                      <span
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${accent.bg} ${accent.border} ${accent.text}`}
-                      >
+                      <span className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-black/45 border border-white/20 text-white backdrop-blur-sm">
                         <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                           {accent.icon}
                         </span>
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-bold uppercase tracking-wider text-primary">{dateDisplay}</p>
-                        <p className="text-sm font-bold text-on-surface truncate max-w-[10rem]">{booking.facility.facility_name}</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-primary-fixed-dim drop-shadow">{dateDisplay}</p>
+                        <p className="text-base font-bold text-white truncate max-w-[11rem] drop-shadow">{booking.facility.facility_name}</p>
                       </div>
                     </div>
 
                     {/* Time in its own colour so it reads as the time at a glance */}
-                    <span className="self-start inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 bg-sky-500/15 border border-sky-400/40 text-sky-200 text-sm font-bold tabular-nums">
+                    <span className="self-start inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 bg-sky-500/30 border border-sky-300/60 text-sky-100 text-sm font-bold tabular-nums backdrop-blur-sm">
                       <span className="material-symbols-outlined text-[16px]">schedule</span>
                       {myTime(booking.start_time)} – {myTime(booking.end_time)}
                     </span>
