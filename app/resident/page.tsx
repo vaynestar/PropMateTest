@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getFacilityAccentColor } from "@/lib/facility-colors";
+import { shortDate } from "@/lib/short-date";
 import { getSessionUser } from "@/lib/auth";
 import {
   getResidentPortalData,
@@ -22,6 +24,11 @@ function myTime(value: Date | string) {
     hour12: false,
     timeZone: "Asia/Kuala_Lumpur",
   });
+}
+
+/** YYYY-MM-DD of a moment in Malaysia time. */
+function myDateISO(d: Date) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(d);
 }
 
 function greeting() {
@@ -181,45 +188,70 @@ export default async function ResidentDashboardPage() {
       {bookings.length > 0 && (
         <section className="flex flex-col gap-stack-sm min-w-0 w-full max-w-full">
           <div className="flex justify-between items-center">
-            <h2 className="font-title-lg text-title-lg text-on-surface">Upcoming Bookings</h2>
-            <Link href="/resident/facilities" className="font-label-sm text-label-sm text-primary hover:text-primary-container">View All</Link>
+            <h2 className="font-title-lg text-title-lg text-on-surface flex items-center gap-2">
+              <span className="material-symbols-outlined text-primary text-[20px]">event_available</span>
+              <span>Upcoming Bookings</span>
+            </h2>
+            <Link
+              href="/resident/facilities"
+              className="font-label-sm text-label-sm text-primary hover:underline flex items-center gap-0.5"
+            >
+              <span>View All</span>
+              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </Link>
           </div>
           <div className="flex overflow-x-auto hide-scrollbar gap-stack-md pb-4 -mx-margin-mobile px-margin-mobile">
             {bookings.map((booking) => {
-              const d = new Date(booking.booking_date);
-              const today = new Date();
-              today.setHours(0,0,0,0);
-              const tomorrow = new Date(today);
-              tomorrow.setDate(tomorrow.getDate() + 1);
-
-              let dateDisplay = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-              if (d.getTime() === today.getTime()) dateDisplay = "Today";
-              else if (d.getTime() === tomorrow.getTime()) dateDisplay = "Tomorrow";
-
-              const startStr = myTime(booking.start_time);
-              const endStr = myTime(booking.end_time);
+              // Compared as Malaysia dates - the server runs in UTC.
+              const iso = new Date(booking.booking_date).toISOString().slice(0, 10);
+              const todayIso = myDateISO(new Date());
+              const tomorrowIso = myDateISO(new Date(Date.now() + 86400000));
+              const dateDisplay =
+                iso === todayIso ? "Today" : iso === tomorrowIso ? "Tomorrow" : shortDate(iso);
+              const accent = getFacilityAccentColor(booking.facility.facility_type);
+              const photo = booking.facility.image_url;
 
               return (
-                <div
+                <Link
+                  href="/resident/facilities"
                   key={booking.booking_id}
-                  className="glass-card rounded-xl p-stack-md flex flex-col gap-stack-sm flex-shrink-0 w-64 border-l-4 border-l-primary"
+                  className="relative flex-shrink-0 w-72 rounded-2xl overflow-hidden border border-outline-variant/60 bg-surface-container hover:border-primary/60 transition-colors pressable"
                 >
-                  <div className="flex justify-between items-start">
-                    <span className="font-label-sm text-label-sm text-primary font-bold">{dateDisplay}</span>
-                    <span className="font-label-sm text-label-sm px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant">
-                      {booking.booking_status}
+                  {/* Facility photo on the right, faded into the card so it never sits under the text (DEV-185) */}
+                  {photo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={photo}
+                      alt=""
+                      aria-hidden
+                      loading="lazy"
+                      className="absolute inset-y-0 right-0 w-3/5 h-full object-cover opacity-60"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-r from-surface-container from-40% via-surface-container/85 to-surface-container/10" />
+
+                  <div className="relative p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${accent.bg} ${accent.border} ${accent.text}`}
+                      >
+                        <span className="material-symbols-outlined text-[22px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+                          {accent.icon}
+                        </span>
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-primary">{dateDisplay}</p>
+                        <p className="text-sm font-bold text-on-surface truncate max-w-[10rem]">{booking.facility.facility_name}</p>
+                      </div>
+                    </div>
+
+                    {/* Time in its own colour so it reads as the time at a glance */}
+                    <span className="self-start inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 bg-sky-500/15 border border-sky-400/40 text-sky-200 text-sm font-bold tabular-nums">
+                      <span className="material-symbols-outlined text-[16px]">schedule</span>
+                      {myTime(booking.start_time)} – {myTime(booking.end_time)}
                     </span>
                   </div>
-                  <div>
-                    <span className="font-label-md text-label-md text-on-surface">{booking.facility.facility_name}</span>
-                    <div className="flex items-center gap-2 text-on-surface/85 mt-1">
-                      <span className="material-symbols-outlined text-[16px]">schedule</span>
-                      <span className="font-label-sm text-label-sm">
-                        {startStr} - {endStr}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -237,7 +269,7 @@ export default async function ResidentDashboardPage() {
               href="/resident/announcements"
               className="font-label-sm text-label-sm text-primary hover:underline flex items-center gap-0.5"
             >
-              <span>View All Circulars</span>
+              <span>View All</span>
               <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
             </Link>
           </div>
