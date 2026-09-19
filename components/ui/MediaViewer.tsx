@@ -2,8 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import DownloadButton from "./DownloadButton";
 
-export type MediaItem = { src: string; title?: string; kind?: "image" | "doc" };
+export type MediaItem = {
+  src: string;
+  title?: string;
+  kind?: "image" | "doc";
+  /** Adds a Download button (DEV-191) - e.g. the invoice PDF next to its preview. */
+  download?: { url: string; filename: string };
+};
 
 /**
  * Full-screen viewer inside the app (DEV-190; user: "After click and open the
@@ -86,18 +93,30 @@ export default function MediaViewer({
           {item.title}
           {many && <span className="text-white/50"> · {i + 1} / {items.length}</span>}
         </p>
-        {isDoc ? (
-          <button
-            type="button"
-            onClick={print}
-            className="h-11 px-4 rounded-full bg-white/15 text-white font-semibold flex items-center gap-1.5 active:scale-95"
-          >
-            <span className="material-symbols-outlined">print</span>
-            Print
-          </button>
-        ) : (
-          <span className="w-[5.5rem]" aria-hidden />
-        )}
+        <div className="flex items-center gap-2">
+          {item.download && (
+            <DownloadButton
+              url={item.download.url}
+              filename={item.download.filename}
+              label="Download"
+              labelClassName="hidden sm:inline"
+              className="h-11 px-3.5 rounded-full bg-white/15 text-white font-semibold flex items-center gap-1.5 active:scale-95 disabled:opacity-60"
+            />
+          )}
+          {isDoc ? (
+            <button
+              type="button"
+              onClick={print}
+              aria-label="Print"
+              className="h-11 px-3.5 rounded-full bg-white/15 text-white font-semibold flex items-center gap-1.5 active:scale-95"
+            >
+              <span className="material-symbols-outlined">print</span>
+              <span className="hidden sm:inline">Print</span>
+            </button>
+          ) : (
+            !item.download && <span className="w-[5.5rem]" aria-hidden />
+          )}
+        </div>
       </div>
 
       <div

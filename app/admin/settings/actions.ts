@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { updateSystemParameters } from "@/lib/settings";
+import { INVOICE_TEXT_KEYS, INVOICE_TEXT_LIMITS, MAX_TERMS, cleanInvoiceText } from "@/lib/invoice-document";
 import { STORAGE_PURPOSES, STORAGE_PURPOSE_ORDER, validateStorageFolders } from "@/lib/storage/folders";
 
 export async function saveSettingsAction(formData: FormData) {
@@ -52,6 +53,23 @@ export async function saveSettingsAction(formData: FormData) {
     if (v !== undefined) updates[key] = v.trim();
   }
 
+  // Invoice document wording (DEV-191). Only when that tab was on screen -
+  // the form renders one tab at a time.
+  if (formData.get(INVOICE_TEXT_KEYS.terms) !== null) {
+    const terms = String(formData.get(INVOICE_TEXT_KEYS.terms) ?? "");
+    if (terms.split(/\r?\n/).filter((l) => l.trim()).length > MAX_TERMS) {
+      return { success: false, error: `Keep the terms to ${MAX_TERMS} points or fewer - one per line.` };
+    }
+    for (const [field, key] of Object.entries(INVOICE_TEXT_KEYS) as [keyof typeof INVOICE_TEXT_KEYS, string][]) {
+      const raw = String(formData.get(key) ?? "");
+      const max = INVOICE_TEXT_LIMITS[field];
+      if (raw.trim().length > max) {
+        return { success: false, error: `That text is too long - keep it under ${max} characters.` };
+      }
+      updates[key] = cleanInvoiceText(raw, max, field === "terms");
+    }
+  }
+
   // Helpdesk
   const slaUrgent = formData.get("MAINTENANCE_SLA_URGENT_HOURS")?.toString();
   if (slaUrgent) updates.MAINTENANCE_SLA_URGENT_HOURS = slaUrgent;
@@ -72,8 +90,12 @@ export async function saveSettingsAction(formData: FormData) {
   const overstayAlert = formData.get("VISITOR_OVERSTAY_ALERT_HOURS")?.toString();
   if (overstayAlert) updates.VISITOR_OVERSTAY_ALERT_HOURS = overstayAlert;
 
-  const hostApproval = formData.get("VISITOR_REQUIRE_HOST_APPROVAL") ? "true" : "false";
-  updates.VISITOR_REQUIRE_HOST_APPROVAL = hostApproval;
+  // A checkbox sends nothing when unticked, and the form renders one tab at a
+  // time - so only read it when the Visitors tab was the one saved. Before
+  // DEV-191, saving any other tab switched host approval off.
+  if (formData.get("VISITOR_OVERSTAY_ALERT_HOURS") !== null) {
+    updates.VISITOR_REQUIRE_HOST_APPROVAL = formData.get("VISITOR_REQUIRE_HOST_APPROVAL") ? "true" : "false";
+  }
 
   // Storage
   const maxUploadMb = formData.get("STORAGE_MAX_UPLOAD_MB")?.toString();
@@ -98,6 +120,7 @@ export async function saveSettingsAction(formData: FormData) {
   revalidatePath("/admin/settings");
   revalidatePath("/admin");
   revalidatePath("/admin/properties");
+  revalidatePath("/print/invoice/[id]", "page");
 
   return res;
 }

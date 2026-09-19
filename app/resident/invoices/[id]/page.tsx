@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ViewerButton } from "@/components/ui/MediaViewer";
+import DownloadButton from "@/components/ui/DownloadButton";
 import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
@@ -82,6 +83,7 @@ export default async function ResidentInvoicePage({
     : null;
 
   const total = Number(invoice.total_amount);
+  const pdf = { url: `/api/invoices/${invoice.invoice_id}/pdf`, filename: `${invoice.invoice_no}.pdf` };
   const isUnpaid = invoice.status === "Unpaid";
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -143,13 +145,21 @@ export default async function ResidentInvoicePage({
           </li>
         </ul>
 
-        <ViewerButton
-          items={[{ src: `/print/invoice/${invoice.invoice_id}`, title: `Invoice ${invoice.invoice_no}`, kind: "doc" }]}
-          className="pressable w-full flex items-center justify-center gap-2 rounded-lg border border-outline py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-high"
-        >
-          <span className="material-symbols-outlined text-[18px]">description</span>
-          View or print invoice
-        </ViewerButton>
+        {/* Preview and download are separate (DEV-191). */}
+        <div className="grid grid-cols-2 gap-2">
+          <ViewerButton
+            items={[{ src: `/print/invoice/${invoice.invoice_id}`, title: `Invoice ${invoice.invoice_no}`, kind: "doc", download: pdf }]}
+            className="pressable flex items-center justify-center gap-2 rounded-lg border border-outline py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-high"
+          >
+            <span className="material-symbols-outlined text-[18px]">visibility</span>
+            Preview
+          </ViewerButton>
+          <DownloadButton
+            url={pdf.url}
+            filename={pdf.filename}
+            className="pressable flex w-full items-center justify-center gap-2 rounded-lg border border-outline py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-high disabled:opacity-60"
+          />
+        </div>
       </section>
 
       {isUnpaid && (

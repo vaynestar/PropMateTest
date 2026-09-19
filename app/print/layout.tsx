@@ -10,7 +10,7 @@ export default function PrintLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className="bg-white" style={{ colorScheme: "light" }}>
       <body className="bg-white text-black min-h-screen">
         {children}
       </body>

@@ -5,21 +5,25 @@ import ScrollHint from "@/components/ui/ScrollHint";
 import { SystemSettings } from "@/lib/settings";
 import { saveSettingsAction } from "./actions";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
+import { ViewerButton } from "@/components/ui/MediaViewer";
 
 interface AdminSettingsClientProps {
   settings: SystemSettings;
   storageStatus: { configured: boolean; bucket: string | null };
+  /** Most recent invoice, to preview the invoice wording on (DEV-191). */
+  sampleInvoice: { id: string; no: string } | null;
 }
 
 const SETTINGS_TABS = [
   { id: "general", label: "General & Property", icon: "tune" },
   { id: "billing", label: "Billing & Finance", icon: "payments" },
+  { id: "invoice", label: "Invoice Document", icon: "receipt_long" },
   { id: "helpdesk", label: "Helpdesk & SLA", icon: "support_agent" },
   { id: "visitors", label: "Visitors & Security", icon: "badge" },
   { id: "storage", label: "Cloud & Storage", icon: "cloud" },
 ];
 
-export default function AdminSettingsClient({ settings, storageStatus }: AdminSettingsClientProps) {
+export default function AdminSettingsClient({ settings, storageStatus, sampleInvoice }: AdminSettingsClientProps) {
   const [activeTab, setActiveTab] = useState("general");
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -240,7 +244,7 @@ export default function AdminSettingsClient({ settings, storageStatus }: AdminSe
                   className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
                 />
                 <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
-                  Appears on official PDF invoice receipts.
+                  Printed on every invoice (preview and PDF).
                 </span>
               </div>
             </div>
@@ -248,7 +252,7 @@ export default function AdminSettingsClient({ settings, storageStatus }: AdminSe
             <div className="pt-4 border-t border-outline-variant/30">
               <h4 className="text-xs font-bold text-white">Bank account for resident payments</h4>
               <p className="text-[11px] text-on-surface-variant mt-0.5">
-                Shown on each resident&apos;s invoice page. They transfer here, then upload proof for you to verify.
+                Shown on each resident&apos;s invoice page and printed on unpaid invoices. They transfer here, then upload proof for you to verify.
                 Leave any field empty to hide the details.
               </p>
             </div>
@@ -284,6 +288,92 @@ export default function AdminSettingsClient({ settings, storageStatus }: AdminSe
                 />
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB: INVOICE DOCUMENT (DEV-191) */}
+        {activeTab === "invoice" && (
+          <div className="space-y-4">
+            <div className="pb-3 border-b border-outline-variant/30 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-white">Invoice Document</h3>
+                <p className="text-[11px] text-on-surface-variant">
+                  Wording printed on every invoice - the preview residents see and the PDF they download. Changes apply to all invoices, old and new.
+                </p>
+              </div>
+              {sampleInvoice && (
+                <ViewerButton
+                  items={[{ src: `/print/invoice/${sampleInvoice.id}`, title: `Invoice ${sampleInvoice.no}`, kind: "doc", download: { url: `/api/invoices/${sampleInvoice.id}/pdf`, filename: `${sampleInvoice.no}.pdf` } }]}
+                  className="px-3 py-2 rounded-xl border border-outline-variant text-xs font-bold text-white flex items-center gap-1.5 hover:bg-surface-container-high shrink-0"
+                >
+                  <span className="material-symbols-outlined text-[16px]">visibility</span>
+                  Preview on {sampleInvoice.no}
+                </ViewerButton>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label htmlFor="INVOICE_ISSUER_NAME" className="block text-on-surface-variant font-medium mb-1">Issued by</label>
+                <input
+                  id="INVOICE_ISSUER_NAME"
+                  name="INVOICE_ISSUER_NAME"
+                  type="text"
+                  maxLength={120}
+                  defaultValue={settings.invoice.issuer}
+                  placeholder="Leave empty to use the property name"
+                  className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
+                />
+                <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
+                  e.g. the management corporation. Shown at the top, above the property address.
+                </span>
+              </div>
+              <div>
+                <label htmlFor="INVOICE_CONTACT" className="block text-on-surface-variant font-medium mb-1">Office contact</label>
+                <input
+                  id="INVOICE_CONTACT"
+                  name="INVOICE_CONTACT"
+                  type="text"
+                  maxLength={200}
+                  defaultValue={settings.invoice.contact}
+                  placeholder="e.g. Management office: 03-1234 5678 · office@example.com"
+                  className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
+                />
+                <span className="text-[10px] text-on-surface-variant/70 mt-1 block">Printed at the foot of every page.</span>
+              </div>
+            </div>
+
+            <div className="text-xs">
+              <label htmlFor="INVOICE_TERMS" className="block text-on-surface-variant font-medium mb-1">Terms &amp; conditions</label>
+              <textarea
+                id="INVOICE_TERMS"
+                name="INVOICE_TERMS"
+                rows={7}
+                maxLength={3000}
+                defaultValue={settings.invoice.terms}
+                className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white leading-relaxed focus:outline-none focus:border-primary"
+              />
+              <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
+                One term per line (up to 15) - they are numbered automatically. Leave empty to print no terms.
+              </span>
+            </div>
+
+            <div className="text-xs">
+              <label htmlFor="INVOICE_FOOTER" className="block text-on-surface-variant font-medium mb-1">Closing note</label>
+              <input
+                id="INVOICE_FOOTER"
+                name="INVOICE_FOOTER"
+                type="text"
+                maxLength={300}
+                defaultValue={settings.invoice.footer}
+                className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-primary"
+              />
+            </div>
+
+            <p className="text-[11px] text-on-surface-variant rounded-xl bg-surface-container-high/60 border border-outline-variant/40 p-3">
+              Also printed automatically: the SST / Tax Reg. No and the bank account from <b className="text-white">Billing &amp; Finance</b> (bank details only on unpaid invoices, and only when all three fields are filled).
+              Save first, then preview.
+            </p>
           </div>
         )}
 

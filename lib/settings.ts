@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { DEFAULT_INVOICE_FOOTER, DEFAULT_INVOICE_TERMS } from "@/lib/invoice-document";
 import { STORAGE_PURPOSES, STORAGE_PURPOSE_ORDER, folderProblem, normaliseFolder } from "@/lib/storage/folders";
 
 export type SystemSettings = {
@@ -15,6 +16,13 @@ export type SystemSettings = {
     bankName: string;
     bankAccountName: string;
     bankAccountNo: string;
+  };
+  /** Wording on the invoice preview and PDF (DEV-191). */
+  invoice: {
+    issuer: string;
+    contact: string;
+    terms: string;
+    footer: string;
   };
   helpdesk: {
     slaUrgentHours: number;
@@ -50,6 +58,10 @@ const DEFAULT_PARAMETERS: Record<string, { value: string; category: string; desc
   BILLING_BANK_NAME: { value: "", category: "BILLING", description: "Bank residents transfer payments to" },
   BILLING_BANK_ACCOUNT_NAME: { value: "", category: "BILLING", description: "Account holder name residents transfer to" },
   BILLING_BANK_ACCOUNT_NO: { value: "", category: "BILLING", description: "Account number residents transfer to" },
+  INVOICE_ISSUER_NAME: { value: "", category: "BILLING", description: "Name printed at the top of invoices (empty = property name)" },
+  INVOICE_CONTACT: { value: "", category: "BILLING", description: "Office contact line printed at the foot of invoices" },
+  INVOICE_TERMS: { value: DEFAULT_INVOICE_TERMS, category: "BILLING", description: "Invoice terms & conditions, one per line" },
+  INVOICE_FOOTER: { value: DEFAULT_INVOICE_FOOTER, category: "BILLING", description: "Closing note printed on invoices" },
   MAINTENANCE_SLA_URGENT_HOURS: { value: "4", category: "HELPDESK", description: "Target turnaround time in hours for urgent tickets" },
   MAINTENANCE_SLA_HIGH_HOURS: { value: "24", category: "HELPDESK", description: "Target turnaround time in hours for high priority tickets" },
   MAINTENANCE_SLA_NORMAL_HOURS: { value: "72", category: "HELPDESK", description: "Target turnaround time in hours for normal tickets" },
@@ -116,6 +128,12 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       bankName: paramMap.get("BILLING_BANK_NAME") || "",
       bankAccountName: paramMap.get("BILLING_BANK_ACCOUNT_NAME") || "",
       bankAccountNo: paramMap.get("BILLING_BANK_ACCOUNT_NO") || "",
+    },
+    invoice: {
+      issuer: paramMap.get("INVOICE_ISSUER_NAME") ?? "",
+      contact: paramMap.get("INVOICE_CONTACT") ?? "",
+      terms: paramMap.get("INVOICE_TERMS") ?? DEFAULT_INVOICE_TERMS,
+      footer: paramMap.get("INVOICE_FOOTER") ?? DEFAULT_INVOICE_FOOTER,
     },
     helpdesk: {
       slaUrgentHours: parseInt(paramMap.get("MAINTENANCE_SLA_URGENT_HOURS") || "4", 10),
