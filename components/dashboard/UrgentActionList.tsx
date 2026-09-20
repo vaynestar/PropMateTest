@@ -83,7 +83,7 @@ export default function UrgentActionList({ items }: { items: Item[] }) {
       </div>
 
       {openTicketId && (
-        <TicketDetailModal ticketId={openTicketId} onClose={() => setOpenTicketId(null)} />
+        <TicketDetailModal ticketId={openTicketId} onClose={() => setOpenTicketId(null)} showHelpdeskLink />
       )}
     </>
   );

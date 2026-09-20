@@ -2,22 +2,20 @@
 
 import { useEffect, useState } from "react";
 import { ViewerButton } from "@/components/ui/MediaViewer";
-import { createPortal } from "react-dom";
+import Modal from "@/components/admin/Modal";
+import { BTN } from "@/components/admin/ui";
 import { adminTicketReply, adminTicketThread, ticketDetailAction } from "@/app/admin/maintenance/actions";
 import TicketConversation from "./TicketConversation";
 import type { ThreadMessage } from "@/lib/ticket-thread";
 
 /**
- * Read-only view of one ticket.
+ * One ticket, read-only, with the conversation beside it.
  *
- * The list showed a truncated title and a two-line remark, and the only way to
- * see the rest was the Manage form — which is an edit screen, so reading a
- * ticket meant opening something you could accidentally change. On a phone the
- * table cut the description off entirely.
- *
- * Portalled to document.body: the dashboard renders these inside a card that
- * sits under a backdrop-filtered header, and a backdrop-filter captures
- * position: fixed descendants (DEV-159).
+ * It used to be a phone-shaped column on every screen (user: "i understand
+ * this design for mobile view, but why desktop also pop out mobile view?") and
+ * the facts were label-on-the-left / value-on-the-right rows stretched across
+ * it. On a wide screen the detail now sits on the left and the conversation on
+ * the right; on a phone they stack, in that order (DEV-196).
  */
 
 type TicketDetail = {
@@ -40,16 +38,22 @@ type TicketDetail = {
   photos?: { id: string; name: string }[];
 };
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** "06 Sep 2026, 20:08" in Malaysia time - ICU prints "Sept" (DEV-184). */
 function fmt(value: string | null) {
   if (!value) return "—";
-  return new Date(value).toLocaleString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
+  const d = new Date(value);
+  const [y, m, day] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+    .format(d)
+    .split("-")
+    .map(Number);
+  const time = new Intl.DateTimeFormat("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Asia/Kuala_Lumpur",
-  });
+  }).format(d);
+  return `${String(day).padStart(2, "0")} ${MONTHS[m - 1]} ${y}, ${time}`;
 }
 
 const PRIORITY_CHIP: Record<string, string> = {
@@ -59,11 +63,23 @@ const PRIORITY_CHIP: Record<string, string> = {
   Low: "bg-surface-container-highest text-on-surface-variant border-outline-variant/60",
 };
 
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
+const STATUS_CHIP: Record<string, string> = {
+  Open: "bg-amber-400/15 text-amber-300 border-amber-400/40",
+  "In Progress": "bg-primary/20 text-primary border-primary/40",
+  "Pending Parts": "bg-rose-500/15 text-rose-300 border-rose-500/40",
+  KIV: "bg-sky-500/15 text-sky-300 border-sky-500/40",
+  Resolved: "bg-emerald-500/15 text-emerald-300 border-emerald-500/40",
+  Closed: "bg-surface-container-highest text-on-surface-variant border-outline-variant",
+};
+
+/** A fact, label above value - readable at any width, unlike a stretched row. */
+function Fact({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-outline-variant/25 py-2 last:border-0">
-      <span className="shrink-0 text-[11px] text-on-surface-variant">{label}</span>
-      <span className="min-w-0 text-right text-xs font-medium text-on-surface">{children}</span>
+    <div className={`min-w-0 ${wide ? "col-span-2" : ""}`}>
+      <dt className="text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">{label}</dt>
+      <dd className="mt-0.5 truncate text-sm font-medium text-on-surface" title={typeof children === "string" ? children : undefined}>
+        {children}
+      </dd>
     </div>
   );
 }
@@ -71,22 +87,22 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 export default function TicketDetailModal({
   ticketId,
   onClose,
+  showHelpdeskLink = false,
 }: {
   ticketId: string;
   onClose: () => void;
+  /** Only true away from the Helpdesk page - on it, the link goes nowhere new. */
+  showHelpdeskLink?: boolean;
 }) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
   const [messages, setMessages] = useState<ThreadMessage[] | null>(null);
 
-  useEffect(() => setMounted(true), []);
-
-  // Conversation with the resident (DEV-189)
   const loadThread = () =>
     adminTicketThread(ticketId)
       .then((res: any) => setMessages(res?.thread?.messages ?? []))
       .catch(() => setMessages([]));
+
   useEffect(() => {
     loadThread();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -104,170 +120,128 @@ export default function TicketDetailModal({
     };
   }, [ticketId]);
 
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = previous;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
+  const where =
+    ticket?.location_type === "Common Area"
+      ? ticket?.location_detail || "Common area"
+      : ticket?.unitNumber
+      ? `Unit ${ticket.unitNumber}`
+      : "—";
 
-  if (!mounted) return null;
-
-  return createPortal(
-    <div
-      className="animate-fade-in fixed inset-0 z-[200] flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-outline-variant/80 bg-surface-container shadow-2xl sm:rounded-2xl"
-      >
-        <div className="flex items-start justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-high/40 px-5 py-4">
-          <div className="min-w-0">
-            <span className="block text-[11px] text-on-surface-variant">Ticket</span>
-            <h3 className="text-sm font-bold leading-snug text-white">
-              {ticket?.title ?? "Loading…"}
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="pressable flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-variant hover:text-white"
-          >
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
-
-        <div className="overflow-y-auto px-5 py-4">
-          {error && (
-            <p className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
-              <span className="material-symbols-outlined text-[16px] leading-none">error</span>
-              {error}
-            </p>
+  return (
+    <Modal
+      title={ticket?.title ?? "Loading…"}
+      subtitle={ticket ? `${ticket.ticket_category} · #${ticket.ticket_id.split("-")[0].toUpperCase()}` : undefined}
+      icon="build"
+      size="xl"
+      onClose={onClose}
+      footer={
+        <>
+          {showHelpdeskLink && (
+            <a href="/admin/maintenance" className={`${BTN.ghost} mr-auto`}>
+              <span className="material-symbols-outlined text-[18px]">open_in_new</span>
+              Open in Helpdesk
+            </a>
           )}
-
-          {!ticket && !error && (
-            <p className="py-6 text-center text-xs text-on-surface-variant">Loading…</p>
-          )}
-
-          {ticket && (
-            <>
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span
-                  className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-                    PRIORITY_CHIP[ticket.priority] ?? PRIORITY_CHIP.Low
-                  }`}
-                >
-                  {ticket.priority}
-                </span>
-                <span className="rounded-full border border-outline-variant/60 bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
-                  {ticket.status}
-                </span>
-                <span className="text-[11px] text-on-surface-variant">
-                  {ticket.ticket_category}
-                </span>
-              </div>
-
-              <div className="rounded-xl border border-outline-variant/40 bg-surface-container-high/40 p-3">
-                <span className="mb-1 block text-[11px] font-semibold text-on-surface-variant">
-                  What was reported
-                </span>
-                <p className="whitespace-pre-wrap text-xs leading-relaxed text-on-surface">
-                  {ticket.description}
-                </p>
-                {ticket.photos && ticket.photos.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {ticket.photos.map((p, idx) => (
-                      <ViewerButton
-                        key={p.id}
-                        items={ticket.photos!.map((x) => ({ src: `/api/tickets/attachments/${x.id}`, title: x.name }))}
-                        start={idx}
-                        className="block w-20 h-20 rounded-lg overflow-hidden border border-outline-variant/60 hover:border-primary"
-                        title={p.name}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={`/api/tickets/attachments/${p.id}`} alt={p.name} className="w-full h-full object-cover" />
-                      </ViewerButton>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4">
-                <Row label="Where">
-                  {ticket.location_type === "Common Area"
-                    ? ticket.location_detail || "Common area"
-                    : ticket.unitNumber
-                    ? `Unit ${ticket.unitNumber}`
-                    : "—"}
-                </Row>
-                <Row label="Property">{ticket.propertyName ?? "—"}</Row>
-                <Row label="Reported by">{ticket.reporterName ?? "—"}</Row>
-                <Row label="Assigned to">
-                  {ticket.assigneeName ?? (
-                    <span className="text-amber-300">Nobody yet</span>
-                  )}
-                </Row>
-                <Row label="Raised">{fmt(ticket.created_at)}</Row>
-                {ticket.resolved_at && <Row label="Resolved">{fmt(ticket.resolved_at)}</Row>}
-                {ticket.cost !== null && ticket.cost > 0 && (
-                  <Row label="Cost">RM {ticket.cost.toFixed(2)}</Row>
-                )}
-              </div>
-
-              {ticket.remark && (
-                <div className="mt-4 rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3">
-                  <span className="mb-1 block text-[11px] font-semibold text-emerald-300">
-                    What was done
-                  </span>
-                  <p className="whitespace-pre-wrap text-xs leading-relaxed text-emerald-100/90">
-                    {ticket.remark}
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-4 border-t border-outline-variant/30 pt-4">
-                {messages === null ? (
-                  <p className="text-xs text-on-surface-variant">Loading conversation…</p>
-                ) : (
-                  <TicketConversation
-                    ticketId={ticket.ticket_id}
-                    messages={messages}
-                    replyAction={adminTicketReply}
-                    onSent={loadThread}
-                    canReply
-                    viewerIsOffice
-                  />
-                )}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between gap-3 border-t border-outline-variant/40 bg-surface-container-high/40 px-5 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:pb-3">
-          <a
-            href="/admin/maintenance"
-            className="text-xs font-semibold text-primary hover:underline"
-          >
-            Open in Helpdesk
-          </a>
-          <button
-            type="button"
-            onClick={onClose}
-            className="pressable rounded-xl border border-outline-variant/60 bg-surface-container-high px-4 py-2 text-xs font-semibold text-on-surface transition-colors hover:text-white"
-          >
+          <button type="button" onClick={onClose} className={BTN.secondary}>
             Close
           </button>
+        </>
+      }
+    >
+      {error && (
+        <p className="flex items-center gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+          <span className="material-symbols-outlined text-[16px] leading-none">error</span>
+          {error}
+        </p>
+      )}
+
+      {!ticket && !error && <p className="py-8 text-center text-sm text-on-surface-variant">Loading…</p>}
+
+      {ticket && (
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-6">
+          {/* ── what it is ───────────────────────────────────────────── */}
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${PRIORITY_CHIP[ticket.priority] ?? PRIORITY_CHIP.Low}`}>
+                {ticket.priority}
+              </span>
+              <span className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold ${STATUS_CHIP[ticket.status] ?? STATUS_CHIP.Closed}`}>
+                {ticket.status}
+              </span>
+            </div>
+
+            <section className="rounded-xl border border-outline-variant/40 bg-surface-container-high/40 p-3.5">
+              <h3 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                What was reported
+              </h3>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-on-surface">{ticket.description}</p>
+              {ticket.photos && ticket.photos.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {ticket.photos.map((p, idx) => (
+                    <ViewerButton
+                      key={p.id}
+                      items={ticket.photos!.map((x) => ({ src: `/api/tickets/attachments/${x.id}`, title: x.name }))}
+                      start={idx}
+                      className="block h-20 w-20 overflow-hidden rounded-lg border border-outline-variant/60 hover:border-primary"
+                      title={p.name}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`/api/tickets/attachments/${p.id}`} alt={p.name} className="h-full w-full object-cover" />
+                    </ViewerButton>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-xl border border-outline-variant/40 p-3.5">
+              <Fact label="Where">{where}</Fact>
+              <Fact label="Property">{ticket.propertyName ?? "—"}</Fact>
+              <Fact label="Reported by">{ticket.reporterName ?? "—"}</Fact>
+              <Fact label="Assigned to">
+                {ticket.assigneeName ?? <span className="text-amber-300">Nobody yet</span>}
+              </Fact>
+              <Fact label="Raised">
+                <span className="tabular-nums">{fmt(ticket.created_at)}</span>
+              </Fact>
+              {ticket.resolved_at && (
+                <Fact label="Resolved">
+                  <span className="tabular-nums text-emerald-300">{fmt(ticket.resolved_at)}</span>
+                </Fact>
+              )}
+              {ticket.cost !== null && ticket.cost > 0 && (
+                <Fact label="Cost">
+                  <span className="tabular-nums">RM {ticket.cost.toFixed(2)}</span>
+                </Fact>
+              )}
+            </dl>
+
+            {ticket.remark && (
+              <section className="rounded-xl border border-emerald-500/25 bg-emerald-500/10 p-3.5">
+                <h3 className="mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-300">
+                  What was done
+                </h3>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-emerald-100/90">{ticket.remark}</p>
+              </section>
+            )}
+          </div>
+
+          {/* ── talking to the resident ──────────────────────────────── */}
+          <div className="rounded-xl border border-outline-variant/40 bg-surface-container-high/20 p-3.5 lg:max-h-[62vh] lg:overflow-y-auto">
+            {messages === null ? (
+              <p className="text-sm text-on-surface-variant">Loading conversation…</p>
+            ) : (
+              <TicketConversation
+                ticketId={ticket.ticket_id}
+                messages={messages}
+                replyAction={adminTicketReply}
+                onSent={loadThread}
+                canReply
+                viewerIsOffice
+              />
+            )}
+          </div>
         </div>
-      </div>
-    </div>,
-    document.body
+      )}
+    </Modal>
   );
 }
