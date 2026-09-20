@@ -29,7 +29,13 @@ export default async function MaintenancePage() {
     listTickets(propertyId || undefined),
     listUnits(),
     listProperties(),
-    prisma.user.findMany({ where: { role: "Admin" }, select: { user_id: true, user_name: true } }),
+    // Only active admins: a ticket is assigned to someone who can act on it,
+    // and a deactivated account cannot (DEV-198).
+    prisma.user.findMany({
+      where: { role: "Admin", is_active: true },
+      select: { user_id: true, user_name: true },
+      orderBy: { user_name: "asc" },
+    }),
     listTicketCategories(),
   ]);
 
@@ -61,6 +67,7 @@ export default async function MaintenancePage() {
   // reaching the table and the form raw - 279 console errors per load.
   const ticketsForClient = tickets.map((t: any) => ({
     ...t,
+    messageCount: t._count?.comments ?? 0,
     cost: t.cost === null || t.cost === undefined ? null : Number(t.cost),
     unit: t.unit
       ? {

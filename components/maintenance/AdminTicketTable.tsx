@@ -195,8 +195,16 @@ export default function AdminTicketTable({
                   </p>
 
                   <div className="mt-2 flex items-center justify-between gap-3">
-                    <span className="rounded-md border border-outline-variant/60 bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
-                      {t.status}
+                    <span className="flex items-center gap-2">
+                      <span className="rounded-md border border-outline-variant/60 bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
+                        {t.status}
+                      </span>
+                      {t.messageCount > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                          <span className="material-symbols-outlined text-[13px] leading-none">forum</span>
+                          {t.messageCount}
+                        </span>
+                      )}
                     </span>
                     <span className="flex items-center gap-3">
                       <span className="font-mono text-[10px] text-on-surface-variant">
@@ -242,6 +250,7 @@ export default function AdminTicketTable({
                 <th className={TABLE.th}>Title &amp; remark</th>
                 <th className={TABLE.th}>Priority</th>
                 <th className={TABLE.th}>Status</th>
+                <th className={TABLE.thNum}>Messages</th>
                 <th className={TABLE.th}>Raised</th>
                 <th className={TABLE.thNum}>Action</th>
               </tr>
@@ -249,7 +258,7 @@ export default function AdminTicketTable({
             <tbody>
               {filteredTickets.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-0">
+                  <td colSpan={9} className="p-0">
                     <EmptyState icon="search_off" title="No tickets match these filters" hint="Try clearing the search or the filters above." />
                   </td>
                 </tr>
@@ -325,6 +334,21 @@ export default function AdminTicketTable({
                       </td>
                       <td className={TABLE.td}>
                         <StatusBadge status={t.status} />
+                      </td>
+                      <td className={TABLE.tdNum}>
+                        {t.messageCount > 0 ? (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary"
+                            title={`${t.messageCount} message${t.messageCount === 1 ? "" : "s"} with the resident`}
+                          >
+                            <span className="material-symbols-outlined text-[14px] leading-none">forum</span>
+                            {t.messageCount}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-on-surface-variant/50" title="No messages yet">
+                            —
+                          </span>
+                        )}
                       </td>
                       <td className={TABLE.td + " whitespace-nowrap text-xs tabular-nums text-on-surface-variant"}>
                         {formatDate(t.created_at)}

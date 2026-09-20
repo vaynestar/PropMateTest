@@ -7,6 +7,7 @@ type TicketWithRelations = Prisma.TicketGetPayload<{
     unit: { include: { property: true } };
     lease: { include: { unit: { include: { property: true } }; tenant: true } };
     reporter: { select: { user_name: true; user_email: true; phone_number: true } };
+    _count: { select: { comments: true } };
   };
 }>;
 
@@ -102,6 +103,9 @@ export async function listTickets(propertyId?: string): Promise<TicketWithRelati
         },
       },
       reporter: { select: { user_name: true, user_email: true, phone_number: true } },
+      // So the table can show how much has been said without opening each one
+      // (DEV-198).
+      _count: { select: { comments: true } },
     },
   });
 }
@@ -120,6 +124,7 @@ export async function getRecentTickets(limit = 5): Promise<TicketWithRelations[]
         },
       },
       reporter: { select: { user_name: true, user_email: true, phone_number: true } },
+      _count: { select: { comments: true } },
     },
   });
 }
@@ -195,6 +200,22 @@ export async function updateTicketStatus(
   if (!trimmedId) throw new Error("Ticket ID is required");
   if (!VALID_STATUSES.includes(status)) {
     throw new Error(`Invalid status: ${status}`);
+  }
+
+  /*
+   * A ticket may only be assigned to an active admin (DEV-198, user: "the
+   * helpdesk assign should only point to admin person only?"). The form only
+   * ever offered admins, but a form is not a guard - the id arrives as text and
+   * nothing here had checked whose it was.
+   */
+  if (assignedTo !== undefined && assignedTo.trim() !== "") {
+    const assignee = await prisma.user.findUnique({
+      where: { user_id: assignedTo.trim() },
+      select: { role: true, is_active: true },
+    });
+    if (!assignee || assignee.role !== "Admin" || !assignee.is_active) {
+      throw new Error("A ticket can only be assigned to an active admin.");
+    }
   }
 
   const data: { 
