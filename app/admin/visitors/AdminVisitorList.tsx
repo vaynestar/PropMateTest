@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import ScrollHint from "@/components/ui/ScrollHint";
 import {
   normaliseVisitorStatus,
   isStaleOnSite,
@@ -13,6 +12,17 @@ import StatusBadge from "@/components/dashboard/StatusBadge";
 import VisitorPassModal from "@/components/visitors/VisitorPassModal";
 import EditVisitorModal from "@/components/visitors/EditVisitorModal";
 import { updateVisitorStatus } from "./actions";
+import { EmptyState, FIELD, SearchField, StatCard, StatGrid, TABLE, Toolbar } from "@/components/admin/ui";
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "06 Sep" in Malaysia time - ICU prints "Sept" (DEV-184). */
+const visitDay = (d: Date | string) => {
+  const [, m, day] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+    .format(new Date(d))
+    .split("-")
+    .map(Number);
+  return `${String(day).padStart(2, "0")} ${MONTHS[m - 1]}`;
+};
 
 interface VisitorRecord {
   visitor_id: string;
@@ -195,147 +205,88 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
   return (
     <div className="space-y-5">
       {/* What the guardhouse needs to know right now. */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="flex flex-col gap-1 rounded-2xl border border-emerald-500/30 bg-surface-container p-4 shadow-sm">
-          <span className="text-[11px] font-medium text-emerald-400">In the building now</span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight text-emerald-300">
-              {stats.onSite}
-            </span>
-            <span className="material-symbols-outlined text-xl text-emerald-400">sensors</span>
-          </div>
-        </div>
+      <StatGrid cols={3}>
+        <StatCard
+          label="On site now"
+          value={stats.onSite}
+          hint="checked in"
+          icon="sensors"
+          tone={stats.onSite > 0 ? "positive" : "neutral"}
+        />
+        <StatCard label="Expected today" value={stats.expectedToday} hint="not arrived yet" icon="today" tone="primary" />
+        <StatCard
+          label="Not checked out"
+          value={stats.stale}
+          hint="passes left open"
+          icon="running_with_errors"
+          tone={stats.stale > 0 ? "critical" : "neutral"}
+        />
+      </StatGrid>
 
-        <div className="flex flex-col gap-1 rounded-2xl border border-outline-variant/50 bg-surface-container p-4 shadow-sm">
-          <span className="text-[11px] font-medium text-on-surface-variant">Expected today</span>
-          <div className="flex items-baseline justify-between">
-            <span className="text-2xl font-bold tracking-tight text-white">
-              {stats.expectedToday}
-            </span>
-            <span className="material-symbols-outlined text-xl text-cyan-400">today</span>
-          </div>
-        </div>
-
-        <div
-          className={`flex flex-col gap-1 rounded-2xl border bg-surface-container p-4 shadow-sm ${
-            stats.stale > 0 ? "border-rose-500/40" : "border-outline-variant/50"
-          }`}
-        >
-          <span className="text-[11px] font-medium text-on-surface-variant">
-            Never checked out
-          </span>
-          <div className="flex items-baseline justify-between">
-            <span
-              className={`text-2xl font-bold tracking-tight ${
-                stats.stale > 0 ? "text-rose-300" : "text-white"
-              }`}
-            >
-              {stats.stale}
-            </span>
-            <span className="material-symbols-outlined text-xl text-rose-400">
-              running_with_errors
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* MULTI-FILTER BAR & SEARCH */}
-      <div className="bg-surface-container/60 border border-outline-variant/50 rounded-2xl p-3.5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
-        {/* Search Bar */}
-        <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-            search
-          </span>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search visitor name, IC, destination, host, or plate..."
-            className="w-full pl-9 pr-3.5 py-2 bg-surface-container-lowest border border-outline-variant/60 rounded-xl text-white text-xs placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary transition-colors"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-white"
-            >
-              <span className="material-symbols-outlined text-[16px]">close</span>
-            </button>
-          )}
-        </div>
-
-        {/* Filter Dropdowns & View Toggle */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Classification Filter */}
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs font-medium focus:outline-none focus:border-primary"
-          >
-            <option value="ALL">All visitor types</option>
-            <option value="Resident Guest">Resident guests</option>
-            <option value="Contractor">Contractors</option>
-            <option value="Delivery">Deliveries</option>
-            <option value="Official">Officials</option>
-            <option value="General">Other</option>
-          </select>
-
-          {/* Status Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs font-medium focus:outline-none focus:border-primary"
-          >
-            <option value="ALL">All statuses</option>
-            <option value="Checked In">On site</option>
-            <option value="Approved">Expected</option>
-            <option value="Checked Out">Left</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-
-          {/* Timeframe */}
-          <select
-            value={timeframeFilter}
-            onChange={(e) => setTimeframeFilter(e.target.value)}
-            className="bg-surface-container-lowest border border-outline-variant/60 rounded-xl px-3 py-2 text-white text-xs font-medium focus:outline-none focus:border-primary"
-          >
-            <option value="ALL">Any date</option>
-            <option value="TODAY">Today</option>
-            <option value="UPCOMING">Upcoming</option>
-            <option value="PAST">Past</option>
-          </select>
-
-          {/* View Mode */}
-          <div className="flex bg-surface-container-lowest rounded-xl border border-outline-variant/60 p-0.5">
+      <Toolbar
+        right={
+          <div className="flex rounded-xl border border-outline-variant/60 bg-surface-container-high p-0.5">
             <button
               type="button"
               onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-lg transition-colors ${
+              className={`rounded-lg p-2 transition-colors ${
                 viewMode === "grid" ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-white"
               }`}
-              title="Grid Cards View"
+              title="Cards"
+              aria-label="Card view"
             >
-              <span className="material-symbols-outlined text-[16px] block">grid_view</span>
+              <span className="material-symbols-outlined block text-[18px]">grid_view</span>
             </button>
             <button
               type="button"
               onClick={() => setViewMode("table")}
-              className={`p-1.5 rounded-lg transition-colors ${
+              className={`rounded-lg p-2 transition-colors ${
                 viewMode === "table" ? "bg-primary text-on-primary" : "text-on-surface-variant hover:text-white"
               }`}
-              title="Table View"
+              title="Table"
+              aria-label="Table view"
             >
-              <span className="material-symbols-outlined text-[16px] block">table_rows</span>
+              <span className="material-symbols-outlined block text-[18px]">table_rows</span>
             </button>
           </div>
-        </div>
-      </div>
+        }
+      >
+        <SearchField
+          placeholder="Search name, IC, destination, host or plate…"
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={FIELD}>
+          <option value="ALL">All visitor types</option>
+          <option value="Resident Guest">Resident guests</option>
+          <option value="Contractor">Contractors</option>
+          <option value="Delivery">Deliveries</option>
+          <option value="Official">Officials</option>
+          <option value="General">Other</option>
+        </select>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={FIELD}>
+          <option value="ALL">All statuses</option>
+          <option value="Checked In">On site</option>
+          <option value="Approved">Expected</option>
+          <option value="Checked Out">Left</option>
+          <option value="Cancelled">Cancelled</option>
+        </select>
+        <select value={timeframeFilter} onChange={(e) => setTimeframeFilter(e.target.value)} className={FIELD}>
+          <option value="ALL">Any date</option>
+          <option value="TODAY">Today</option>
+          <option value="UPCOMING">Upcoming</option>
+          <option value="PAST">Past</option>
+        </select>
+      </Toolbar>
 
       {/* VISITOR DIRECTORY LIST */}
       {filteredVisitors.length === 0 ? (
-        <div className="p-12 text-center text-on-surface-variant border border-dashed border-outline-variant/60 rounded-2xl bg-surface-container-lowest flex flex-col items-center justify-center gap-2">
-          <span className="material-symbols-outlined text-4xl opacity-40">badge</span>
-          <p className="text-sm font-medium text-white">No visitors found matching current filters.</p>
-          <p className="text-xs text-on-surface-variant">Try clearing the search query or adjusting status filters.</p>
+        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container">
+          <EmptyState
+            icon="badge"
+            title="No visitors match these filters"
+            hint="Try clearing the search, or widening the status and date filters."
+          />
         </div>
       ) : viewMode === "grid" ? (
         /* GRID CARDS VIEW */
@@ -345,177 +296,147 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
             return (
               <div
                 key={v.visitor_id}
-                className="bg-surface-container border border-outline-variant/60 rounded-2xl p-5 shadow-lg relative flex flex-col justify-between hover:border-primary/50 transition-all gap-4"
+                className="flex flex-col gap-3 rounded-2xl border border-outline-variant/60 bg-surface-container p-4 transition-colors hover:border-primary/40"
               >
-                {/* Header & Badges */}
-                <div className="flex flex-col gap-2">
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        {getTypeBadge(v.visitor_type)}
-                        {v.property?.property_name && (
-                          <span className="text-[10px] text-on-surface-variant truncate max-w-[120px]">
-                            {v.property.property_name}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <StatusBadge status={v.status || "Pending"} />
-                      <button
-                        type="button"
-                        onClick={() => setViewingPassVisitor(v)}
-                        className="p-1.5 rounded-lg bg-primary/10 border border-primary/25 hover:bg-primary/20 text-primary transition-colors flex items-center justify-center pressable"
-                        title="View / Download QR Pass"
-                        aria-label="View QR Pass"
-                      >
-                        <span className="material-symbols-outlined text-[17px]">qr_code_2</span>
-                      </button>
-                    </div>
+                {/* Who, where, and what state the visit is in. The card used to
+                    be a column of label: value rows - a form printout rather
+                    than something a guard can read at a glance (DEV-195). */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="line-clamp-2 text-base font-bold leading-tight text-white" title={v.visitor_name}>
+                      {v.visitor_name}
+                    </h3>
+                    <p className="mt-0.5 truncate text-xs text-on-surface-variant">
+                      {v.destination || (v.lease?.unit ? `Unit ${v.lease.unit.unit_number}` : "General property")}
+                      {v.lease?.tenant ? ` · host ${v.lease.tenant.user_name}` : ""}
+                    </p>
                   </div>
-                  {/* The name had the header's left column, so the status chip and
-                      QR button capped it at ~120px of a ~280px card: "SAMPLE On-…",
-                      "Yusof Bin Ha…". It is the one thing the guard reads first. */}
-                  <h3 className="text-base font-bold leading-snug text-white line-clamp-2" title={v.visitor_name}>
-                    {v.visitor_name}
-                  </h3>
-
-                  {/* Destination Tag */}
-                  <div className="p-2.5 rounded-xl bg-surface-container-lowest border border-outline-variant/40 text-xs flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-on-surface-variant">
-                      <span className="text-[10px] font-semibold">Destination</span>
-                      {v.lease?.tenant && (
-                        <span className="text-[11px] text-primary truncate max-w-[140px]" title={v.lease.tenant.user_name}>
-                          Host: {v.lease.tenant.user_name}
-                        </span>
-                      )}
-                    </div>
-                    <span className="font-semibold text-white truncate">
-                      {v.destination || (v.lease?.unit ? `Unit ${v.lease.unit.unit_number}` : "General Property")}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Details Breakdown */}
-                <div className="space-y-1.5 text-xs text-on-surface-variant border-t border-outline-variant/30 pt-3">
-                  <div className="flex justify-between">
-                    <span>IC / Passport:</span>
-                    <span
-                      className="font-mono text-white"
-                      title="Masked on this screen. The full number is on the visitor pass."
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <StatusBadge status={v.status || "Pending"} />
+                    <button
+                      type="button"
+                      onClick={() => setViewingPassVisitor(v)}
+                      className="pressable flex items-center justify-center rounded-lg border border-primary/25 bg-primary/10 p-1.5 text-primary transition-colors hover:bg-primary/20"
+                      title="View or print the pass"
+                      aria-label={`View pass for ${v.visitor_name}`}
                     >
-                      {maskIdentityNumber(v.visitor_ic_no)}
-                    </span>
+                      <span className="material-symbols-outlined text-[17px]">qr_code_2</span>
+                    </button>
                   </div>
+                </div>
 
-                  {v.contact_no && (
-                    <div className="flex justify-between">
-                      <span>Contact:</span>
-                      <span className="text-white">{maskPhoneNumber(v.contact_no)}</span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between">
-                    <span>Visit Date:</span>
-                    <span className="text-white font-medium">
-                      {v.visit_date ? new Date(v.visit_date).toLocaleDateString("en-GB", { timeZone: "Asia/Kuala_Lumpur" }) : "-"}
-                    </span>
-                  </div>
-
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {getTypeBadge(v.visitor_type)}
                   {v.vehicle_plate && (
-                    <div className="flex justify-between items-center">
-                      <span>Vehicle Plate:</span>
-                      <span className="font-mono text-amber-300 font-bold bg-surface-container-high px-1.5 py-0.5 rounded text-[11px]">
-                        {v.vehicle_plate}
-                      </span>
-                    </div>
+                    <span className="rounded-md border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 font-mono text-[11px] font-bold uppercase text-amber-300">
+                      {v.vehicle_plate}
+                    </span>
                   )}
-
-                  {v.check_in_time && (
-                    <div className="flex justify-between font-mono text-[11px] text-emerald-400">
-                      <span>Check-in:</span>
-                      <span>
-                        {new Date(v.check_in_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* The gate log. Two columns can only ever hold the current
-                      state; this is the record of the crossings themselves,
-                      with who took them and whether it was a scan. */}
-                  {(v.movements?.length ?? 0) > 0 && (
-                    <details className="rounded-md border border-outline-variant/40 bg-surface-container-high/30 px-2 py-1.5">
-                      <summary className="cursor-pointer text-[11px] font-semibold text-on-surface-variant hover:text-on-surface">
-                        Gate log ({v.movements!.length})
-                      </summary>
-                      <ol className="mt-1.5 space-y-1">
-                        {v.movements!.map((m) => (
-                          <li
-                            key={m.movement_id}
-                            className="flex items-baseline justify-between gap-2 text-[10px]"
-                          >
-                            <span
-                              className={`font-semibold ${
-                                m.direction === "In" ? "text-emerald-300" : "text-sky-300"
-                              }`}
-                            >
-                              {m.direction === "In" ? "In" : "Out"}
-                            </span>
-                            <span className="font-mono text-on-surface-variant">
-                              {new Date(m.occurred_at).toLocaleString("en-GB", {
-                                day: "2-digit",
-                                month: "short",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                timeZone: "Asia/Kuala_Lumpur",
-                              })}
-                            </span>
-                            <span className="truncate text-on-surface-variant/70">
-                              {m.method === "Scan" ? "scan" : "by hand"}
-                              {m.recorder?.user_name ? ` · ${m.recorder.user_name}` : ""}
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
-                    </details>
-                  )}
-
-                  {/* A pass still open a day later is a missed scan, not a
-                      visitor. Saying so beats a board that claims six people
-                      are in the building who went home last week. */}
-                  {isStaleOnSite(v.status, v.check_in_time) && (
-                    <div className="flex items-center gap-1.5 rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-1 text-[11px] font-semibold text-rose-300">
-                      <span className="material-symbols-outlined text-[14px] leading-none">
-                        running_with_errors
-                      </span>
-                      {(() => {
-                        const h = hoursOnSite(v.check_in_time) ?? 0;
-                        const d = Math.floor(h / 24);
-                        return d >= 1
-                          ? `On site for ${d} day${d === 1 ? "" : "s"} — check them out`
-                          : `On site ${h} hours — check them out`;
-                      })()}
-                    </div>
-                  )}
-
-                  {v.check_out_time && (
-                    <div className="flex justify-between text-on-surface-variant font-mono text-[11px]">
-                      <span>Check-out:</span>
-                      <span>
-                        {new Date(v.check_out_time).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" })}
-                      </span>
-                    </div>
-                  )}
-
-                  {v.visit_purpose && (
-                    <div className="pt-1 text-[11px] text-on-surface-variant truncate" title={v.visit_purpose}>
-                      <span className="font-semibold text-on-surface">Purpose:</span> {v.visit_purpose}
-                    </div>
+                  {v.property?.property_name && (
+                    <span className="truncate text-[11px] text-on-surface-variant">{v.property.property_name}</span>
                   )}
                 </div>
+
+                {/* Times first: they are what the gate is asked about. */}
+                <dl className="grid grid-cols-3 gap-2 border-t border-outline-variant/30 pt-3 text-xs">
+                  <div className="min-w-0">
+                    <dt className="text-[10px] uppercase tracking-wider text-on-surface-variant">Visit</dt>
+                    <dd className="truncate font-semibold tabular-nums text-white">
+                      {v.visit_date ? visitDay(v.visit_date) : "—"}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-[10px] uppercase tracking-wider text-on-surface-variant">In</dt>
+                    <dd className={`truncate font-semibold tabular-nums ${v.check_in_time ? "text-emerald-300" : "text-on-surface-variant"}`}>
+                      {v.check_in_time
+                        ? new Date(v.check_in_time).toLocaleTimeString("en-GB", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            timeZone: "Asia/Kuala_Lumpur",
+                          })
+                        : "—"}
+                    </dd>
+                  </div>
+                  <div className="min-w-0">
+                    <dt className="text-[10px] uppercase tracking-wider text-on-surface-variant">Out</dt>
+                    <dd className={`truncate font-semibold tabular-nums ${v.check_out_time ? "text-sky-300" : "text-on-surface-variant"}`}>
+                      {v.check_out_time
+                        ? new Date(v.check_out_time).toLocaleTimeString("en-GB", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            timeZone: "Asia/Kuala_Lumpur",
+                          })
+                        : "—"}
+                    </dd>
+                  </div>
+                </dl>
+
+                {/* Identity stays masked on the board; the full number is on the
+                    pass, which is where identity is actually checked. */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-on-surface-variant">
+                  <span title="Masked here. The full number is on the visitor pass.">
+                    IC <span className="font-mono text-on-surface">{maskIdentityNumber(v.visitor_ic_no)}</span>
+                  </span>
+                  {v.contact_no && (
+                    <span>
+                      Tel <span className="font-mono text-on-surface">{maskPhoneNumber(v.contact_no)}</span>
+                    </span>
+                  )}
+                </div>
+
+                {v.visit_purpose && (
+                  <p className="truncate text-[11px] text-on-surface-variant" title={v.visit_purpose}>
+                    <span className="font-semibold text-on-surface">Purpose:</span> {v.visit_purpose}
+                  </p>
+                )}
+
+                {isStaleOnSite(v.status, v.check_in_time) && (
+                  <div className="flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300">
+                    <span className="material-symbols-outlined text-[15px] leading-none">running_with_errors</span>
+                    {(() => {
+                      const h = hoursOnSite(v.check_in_time) ?? 0;
+                      const d = Math.floor(h / 24);
+                      return d >= 1
+                        ? `On site for ${d} day${d === 1 ? "" : "s"} — check them out`
+                        : `On site ${h} hours — check them out`;
+                    })()}
+                  </div>
+                )}
+
+                {/* The record of the crossings themselves: who took them, and
+                    whether the pass was scanned or waved through. */}
+                {(v.movements?.length ?? 0) > 0 && (
+                  <details className="rounded-lg border border-outline-variant/40 bg-surface-container-high/30 px-2.5 py-1.5">
+                    <summary className="cursor-pointer text-[11px] font-semibold text-on-surface-variant hover:text-on-surface">
+                      Gate log ({v.movements!.length})
+                    </summary>
+                    <ol className="mt-2 space-y-1">
+                      {v.movements!.map((m) => (
+                        <li key={m.movement_id} className="flex items-baseline justify-between gap-2 text-[10px]">
+                          <span className={`font-semibold ${m.direction === "In" ? "text-emerald-300" : "text-sky-300"}`}>
+                            {m.direction === "In" ? "In" : "Out"}
+                          </span>
+                          <span className="tabular-nums text-on-surface-variant">
+                            {new Date(m.occurred_at).toLocaleString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              timeZone: "Asia/Kuala_Lumpur",
+                            })}
+                          </span>
+                          <span className="truncate text-on-surface-variant/70">
+                            {m.method === "Scan" ? "scan" : "by hand"}
+                            {m.recorder?.user_name ? ` · ${m.recorder.user_name}` : ""}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
+                )}
 
                 {/* Action Buttons */}
-                <div className="pt-3 border-t border-outline-variant/30 flex gap-2">
+                <div className="mt-auto flex gap-2 border-t border-outline-variant/30 pt-3">
                   {v.status === "Pending" ? (
                     <>
                       <button
@@ -594,31 +515,32 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
         </div>
       ) : (
         /* DENSE TABLE VIEW */
-        <ScrollHint className="rounded-2xl border border-outline-variant/50 bg-surface-container shadow-sm">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-surface-container-lowest border-b border-outline-variant/40 text-on-surface-variant text-[10px]">
+        <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container">
+          <div className={TABLE.wrap}>
+          <table className={TABLE.table + " min-w-[900px]"}>
+            <thead>
               <tr>
-                <th className="px-4 py-3.5">Visitor & Type</th>
-                <th className="px-4 py-3.5">IC / Contact</th>
-                <th className="px-4 py-3.5">Destination / Host</th>
-                <th className="px-4 py-3.5">Vehicle</th>
-                <th className="px-4 py-3.5">Date & Time</th>
-                <th className="px-4 py-3.5">Status</th>
-                <th className="px-4 py-3.5 text-right">Actions</th>
+                <th className={TABLE.th}>Visitor</th>
+                <th className={TABLE.th}>IC / contact</th>
+                <th className={TABLE.th}>Destination</th>
+                <th className={TABLE.th}>Vehicle</th>
+                <th className={TABLE.th}>Date &amp; time</th>
+                <th className={TABLE.th}>Status</th>
+                <th className={TABLE.thNum}>Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/30">
+            <tbody>
               {filteredVisitors.map((v) => (
-                <tr key={v.visitor_id} className="hover:bg-surface-container-high/40 transition-colors">
-                  <td className="px-4 py-3.5">
+                <tr key={v.visitor_id} className={TABLE.tr}>
+                  <td className={TABLE.td}>
                     <div className="font-bold text-white">{v.visitor_name}</div>
                     <div className="mt-0.5">{getTypeBadge(v.visitor_type)}</div>
                   </td>
-                  <td className="px-4 py-3.5 font-mono">
+                  <td className={TABLE.td + " font-mono text-xs"}>
                     <div className="text-white">{maskIdentityNumber(v.visitor_ic_no)}</div>
                     {v.contact_no && <div className="text-[11px] text-on-surface-variant mt-0.5">{maskPhoneNumber(v.contact_no)}</div>}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className={TABLE.td}>
                     <div className="font-semibold text-white">
                       {v.destination || (v.lease?.unit ? `Unit ${v.lease.unit.unit_number}` : "-")}
                     </div>
@@ -628,7 +550,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className={TABLE.td}>
                     {v.vehicle_plate ? (
                       <span className="font-mono font-bold text-amber-300 bg-surface-container-high px-1.5 py-0.5 rounded text-[11px]">
                         {v.vehicle_plate}
@@ -637,7 +559,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                       <span className="text-on-surface-variant opacity-40">-</span>
                     )}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className={TABLE.td}>
                     <div className="text-white font-medium">
                       {v.visit_date ? new Date(v.visit_date).toLocaleDateString("en-GB", { timeZone: "Asia/Kuala_Lumpur" }) : "-"}
                     </div>
@@ -647,10 +569,10 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3.5">
+                  <td className={TABLE.td}>
                     <StatusBadge status={v.status || "Pending"} />
                   </td>
-                  <td className="px-4 py-3.5 text-right">
+                  <td className={TABLE.td + " text-right"}>
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         type="button"
@@ -711,7 +633,8 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
               ))}
             </tbody>
           </table>
-        </ScrollHint>
+          </div>
+        </div>
       )}
 
       {editingVisitor && (

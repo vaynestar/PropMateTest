@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import TicketDetailModal from "@/components/maintenance/TicketDetailModal";
-import ScrollHint from "@/components/ui/ScrollHint";
 import StatusBadge from "@/components/dashboard/StatusBadge";
+import { EmptyState, FIELD, SearchField, TABLE, Toolbar } from "@/components/admin/ui";
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 import { updateTicketAction } from "@/app/admin/maintenance/actions";
 
 type PropertyItem = {
@@ -65,12 +67,13 @@ export default function AdminTicketTable({
     return matchesProperty && matchesLocationType && matchesPriority && matchesStatus && matchesSearch;
   });
 
+  // Built by hand: newer ICU prints September as "Sept" (DEV-184).
   const formatDate = (date: Date | string) => {
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(date));
+    const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+      .format(new Date(date))
+      .split("-")
+      .map(Number);
+    return `${String(d).padStart(2, "0")} ${MONTHS[m - 1]} ${y}`;
   };
 
   const handleUpdateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -93,67 +96,42 @@ export default function AdminTicketTable({
 
   return (
     <>
-      <div className="glass-card rounded-xl p-0 overflow-hidden flex flex-col">
-        {/* Search and Filters Bar */}
-        <div className="p-4 border-b border-outline-variant/30 bg-surface-container-low flex flex-col lg:flex-row gap-3 items-center justify-between">
-          <div className="flex-1 w-full max-w-md relative">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
-              search
-            </span>
-            <input
-              type="text"
-              placeholder="Search by title, category, location, or unit..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none transition-colors placeholder:text-on-surface-variant/60"
-            />
-          </div>
-          <div className="grid w-full grid-cols-2 gap-2 md:grid-cols-3 lg:w-auto">
-            {/* Location Type Filter */}
-            <select
-              value={filterLocationType}
-              onChange={(e) => setFilterLocationType(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-xs text-on-surface focus:border-primary outline-none font-medium"
-            >
-              <option value="ALL">Units and common areas</option>
-              <option value="UNIT">Inside a unit</option>
-              <option value="COMMON">Common areas</option>
-            </select>
+      <div className="space-y-4">
+        <Toolbar>
+          <SearchField
+            placeholder="Search by title, category, location, or unit…"
+            value={search}
+            onChange={setSearch}
+          />
+          <select value={filterLocationType} onChange={(e) => setFilterLocationType(e.target.value)} className={FIELD}>
+            <option value="ALL">Units and common areas</option>
+            <option value="UNIT">Inside a unit</option>
+            <option value="COMMON">Common areas</option>
+          </select>
+          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className={FIELD}>
+            <option value="">All priorities</option>
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+            <option value="Urgent">Urgent</option>
+          </select>
+          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={FIELD}>
+            <option value="">All statuses</option>
+            <option value="Open">Open</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Pending Parts">Pending Parts</option>
+            <option value="KIV">KIV (Keep In View)</option>
+            <option value="Resolved">Resolved</option>
+            <option value="Closed">Closed</option>
+          </select>
+        </Toolbar>
 
-            {/* Priority Filter */}
-            <select
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-xs text-on-surface focus:border-primary outline-none"
-            >
-              <option value="">All Priorities</option>
-              <option value="Low">Low</option>
-              <option value="Medium">Medium</option>
-              <option value="High">High</option>
-              <option value="Urgent">Urgent</option>
-            </select>
-
-            {/* Status Filter */}
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-xs text-on-surface focus:border-primary outline-none font-medium"
-            >
-              <option value="">All Statuses</option>
-              <option value="Open">Open</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Pending Parts">Pending Parts</option>
-              <option value="KIV">KIV (Keep In View)</option>
-              <option value="Resolved">Resolved</option>
-              <option value="Closed">Closed</option>
-            </select>
-          </div>
-        </div>
-
+        <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container">
         {/* Results count & reset */}
-        <div className="px-5 py-2 bg-surface-container/30 border-b border-outline-variant/20 flex items-center justify-between text-xs text-on-surface-variant">
+        <div className="flex items-center justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-high/40 px-4 py-2.5 text-xs text-on-surface-variant">
           <span>
-            Showing <span className="font-semibold text-on-surface">{filteredTickets.length}</span> of {tickets.length} tickets in this property
+            Showing <span className="font-semibold tabular-nums text-on-surface">{filteredTickets.length}</span> of{" "}
+            <span className="tabular-nums">{tickets.length}</span> tickets in this property
           </span>
           {(search || filterLocationType !== "ALL" || filterPriority || filterStatus) && (
             <button
@@ -176,9 +154,7 @@ export default function AdminTicketTable({
             them, so the table was scrolled past rather than read. */}
         <div className="divide-y divide-outline-variant/30 md:hidden">
           {filteredTickets.length === 0 ? (
-            <p className="px-5 py-10 text-center text-xs text-on-surface-variant">
-              No tickets match these filters.
-            </p>
+            <EmptyState icon="search_off" title="No tickets match these filters" hint="Try clearing the search or the filters above." />
           ) : (
             filteredTickets.map((t: any) => {
               const isCommon = t.location_type === "Common Area";
@@ -255,25 +231,26 @@ export default function AdminTicketTable({
           )}
         </div>
 
-        <ScrollHint className="hidden w-full md:block">
-          <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant">
+        <div className="hidden md:block">
+          <div className={TABLE.wrap}>
+          <table className={TABLE.table + " min-w-[900px]"}>
+            <thead>
               <tr>
-                <th className="px-5 py-3 font-medium">Ticket ID</th>
-                <th className="px-5 py-3 font-medium">Location & Property</th>
-                <th className="px-5 py-3 font-medium">Category</th>
-                <th className="px-5 py-3 font-medium">Title & Remark</th>
-                <th className="px-5 py-3 font-medium">Priority</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium">Date</th>
-                <th className="px-5 py-3 font-medium text-right">Action</th>
+                <th className={TABLE.th}>Ref</th>
+                <th className={TABLE.th}>Location</th>
+                <th className={TABLE.th}>Category</th>
+                <th className={TABLE.th}>Title &amp; remark</th>
+                <th className={TABLE.th}>Priority</th>
+                <th className={TABLE.th}>Status</th>
+                <th className={TABLE.th}>Raised</th>
+                <th className={TABLE.thNum}>Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/30">
+            <tbody>
               {filteredTickets.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-on-surface-variant">
-                    No tickets found matching your filters.
+                  <td colSpan={8} className="p-0">
+                    <EmptyState icon="search_off" title="No tickets match these filters" hint="Try clearing the search or the filters above." />
                   </td>
                 </tr>
               ) : (
@@ -290,12 +267,12 @@ export default function AdminTicketTable({
                     <tr
                       key={t.ticket_id}
                       onClick={() => setDetailTicketId(t.ticket_id)}
-                      className="cursor-pointer transition-colors hover:bg-surface-container-low/50"
+                      className={"cursor-pointer " + TABLE.tr}
                     >
-                      <td className="px-5 py-3.5 font-mono text-xs text-on-surface-variant font-semibold">
+                      <td className={TABLE.td + " font-mono text-xs text-on-surface-variant"}>
                         #{t.ticket_id.split("-")[0].toUpperCase()}
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className={TABLE.td}>
                         {isCommonArea ? (
                           <div>
                             <div className="flex items-center gap-1 text-cyan-300 font-semibold text-xs">
@@ -318,10 +295,10 @@ export default function AdminTicketTable({
                           </div>
                         )}
                       </td>
-                      <td className="px-5 py-3.5 font-medium text-xs text-primary">
+                      <td className={TABLE.td + " text-xs font-medium text-primary"}>
                         {t.ticket_category}
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className={TABLE.td}>
                         <div className="max-w-[220px] truncate font-medium text-on-surface text-xs" title={t.title}>
                           {t.title}
                         </div>
@@ -336,8 +313,8 @@ export default function AdminTicketTable({
                           </div>
                         ) : null}
                       </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold ${
+                      <td className={TABLE.td}>
+                        <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold ${
                           t.priority === 'Urgent' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 
                           t.priority === 'High' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
                           t.priority === 'Medium' ? 'bg-primary/20 text-primary border border-primary/40' :
@@ -346,13 +323,13 @@ export default function AdminTicketTable({
                           {t.priority}
                         </span>
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className={TABLE.td}>
                         <StatusBadge status={t.status} />
                       </td>
-                      <td className="px-5 py-3.5 text-xs text-on-surface-variant font-mono">
+                      <td className={TABLE.td + " whitespace-nowrap text-xs tabular-nums text-on-surface-variant"}>
                         {formatDate(t.created_at)}
                       </td>
-                      <td className="px-5 py-3.5 text-right">
+                      <td className={TABLE.td + " text-right"}>
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setEditingTicket(t); }}
@@ -367,7 +344,9 @@ export default function AdminTicketTable({
               )}
             </tbody>
           </table>
-        </ScrollHint>
+          </div>
+        </div>
+        </div>
       </div>
 
       {/* Manage / Update Ticket Modal */}

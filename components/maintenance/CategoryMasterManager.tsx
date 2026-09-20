@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Modal from "@/components/admin/Modal";
+import { BTN } from "@/components/admin/ui";
 import {
   addCategoryAction,
   toggleCategoryAction,
@@ -70,33 +72,24 @@ export default function CategoryMasterManager({
   };
 
   return (
-    <div className="glass-card rounded-xl overflow-hidden border border-outline-variant/30 transition-all">
-      <div className="p-4 bg-surface-container-low flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-[22px]">settings_suggest</span>
-          <div>
-            <h3 className="font-title-md text-title-md text-on-surface font-bold">
-              Category Masterfile Settings
-            </h3>
-            <p className="text-xs text-on-surface-variant">
-              Manage ticket categories used across resident & admin helpdesk forms ({categories.length} categories)
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="px-3 py-1.5 rounded-lg bg-surface-container-high border border-outline-variant text-xs font-semibold text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-1 pressable"
-        >
-          <span className="material-symbols-outlined text-[16px]">
-            {isOpen ? "expand_less" : "tune"}
-          </span>
-          <span>{isOpen ? "Hide Settings" : "Manage Categories"}</span>
-        </button>
-      </div>
+    <>
+      <button type="button" onClick={() => setIsOpen(true)} className={BTN.secondary}>
+        <span className="material-symbols-outlined text-[18px] text-primary">tune</span>
+        Categories
+        <span className="ml-1 rounded-md bg-surface-container-highest px-1.5 py-0.5 text-[11px] tabular-nums text-on-surface-variant">
+          {categories.length}
+        </span>
+      </button>
 
       {isOpen && (
-        <div className="p-4 border-t border-outline-variant/30 space-y-6">
+        <Modal
+          title="Ticket categories"
+          subtitle="Used by both the resident and admin helpdesk forms."
+          icon="settings_suggest"
+          size="lg"
+          onClose={() => setIsOpen(false)}
+        >
+          <div className="space-y-6">
           {toast && (
             <div
               className={`p-3 rounded-lg text-xs font-semibold flex items-center gap-2 border ${
@@ -204,8 +197,9 @@ export default function CategoryMasterManager({
               </div>
             ))}
           </div>
-        </div>
+          </div>
+        </Modal>
       )}
-    </div>
+    </>
   );
 }

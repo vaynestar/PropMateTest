@@ -53,7 +53,8 @@ export default function AdminRaiseTicketForm({
   occupiedUnits,
   categories,
   defaultPropertyId,
-}: AdminRaiseTicketFormProps) {
+  onSuccess,
+}: AdminRaiseTicketFormProps & { onSuccess?: () => void }) {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(
     defaultPropertyId && properties.some((p) => p.property_id === defaultPropertyId)
       ? defaultPropertyId
@@ -110,6 +111,7 @@ export default function AdminRaiseTicketForm({
         setCommonAreaPreset("Hallway / Corridor");
         setLocationDetail("Hallway / Corridor");
         setIsDetailCustomized(false);
+        onSuccess?.();
       }
       setTimeout(() => setToast(null), 5000);
     });

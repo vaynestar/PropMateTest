@@ -1,8 +1,8 @@
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import ExpandableForm from "@/components/layout/ExpandableForm";
-import AdminVisitorForm from "./AdminVisitorForm";
 import AdminVisitorList from "./AdminVisitorList";
+import RegisterVisitorButton from "@/components/visitors/RegisterVisitorButton";
+import { PageHeader } from "@/components/admin/ui";
 import { getAllVisitors } from "@/lib/visitor-management";
 import ScanButton from "@/components/visitors/ScanButton";
 import { getActivePropertyId } from "@/lib/property-context.server";
@@ -42,32 +42,19 @@ export default async function AdminVisitorsPage() {
   ]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Visitors Management</h1>
-          <p className="text-on-surface-variant text-sm mt-1">
-            Who is expected, who is in the building, and who has left.
-          </p>
-        </div>
-        <ScanButton />
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Visitors"
+        subtitle="Who is expected, who is in the building, and who has left."
+        actions={
+          <>
+            <RegisterVisitorButton leases={leases} properties={properties} defaultPropertyId={propertyId} />
+            <ScanButton variant="secondary" />
+          </>
+        }
+      />
 
-      <ExpandableForm title="Register a visitor" buttonLabel="New Visitor" defaultOpen={false}>
-        <AdminVisitorForm
-          leases={leases}
-          properties={properties}
-          defaultPropertyId={propertyId}
-        />
-      </ExpandableForm>
-
-      <div className="pt-2">
-        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-[20px]">badge</span>
-          <span>Visitor Directory & Access Log</span>
-        </h2>
-        <AdminVisitorList visitors={visitors} />
-      </div>
+      <AdminVisitorList visitors={visitors} />
     </div>
   );
 }

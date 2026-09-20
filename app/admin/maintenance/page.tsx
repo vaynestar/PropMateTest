@@ -2,10 +2,12 @@ import { requireUser } from "@/lib/auth";
 import { listTickets, listTicketCategories } from "@/lib/maintenance";
 import { listUnits } from "@/lib/unit-management";
 import { listProperties } from "@/lib/property-management";
-import ExpandableForm from "@/components/layout/ExpandableForm";
 import AdminTicketTable from "@/components/maintenance/AdminTicketTable";
-import AdminRaiseTicketForm from "@/components/maintenance/AdminRaiseTicketForm";
+import RaiseTicketButton from "@/components/maintenance/RaiseTicketButton";
 import CategoryMasterManager from "@/components/maintenance/CategoryMasterManager";
+import BarList from "@/components/dashboard/BarList";
+import { PageHeader, SectionCard, StatCard, StatGrid } from "@/components/admin/ui";
+import { colourFor } from "@/lib/chart-colours";
 import prisma from "@/lib/prisma";
 import { getActivePropertyId } from "@/lib/property-context.server";
 
@@ -101,86 +103,86 @@ export default async function MaintenancePage() {
     status: u.status,
   }));
 
+  // How long the open ones have been waiting - the question a queue cannot
+  // answer by its length alone.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const AGE = [
+    { label: "Today", max: 1 },
+    { label: "1-3 days", max: 4 },
+    { label: "4-7 days", max: 8 },
+    { label: "Over a week", max: Infinity },
+  ];
+  const ageing = AGE.map((b) => ({ label: b.label, count: 0 }));
+  openTickets.forEach((t: any) => {
+    const age = Math.floor((startOfToday.getTime() - new Date(t.created_at).setHours(0, 0, 0, 0)) / 86_400_000);
+    const i = AGE.findIndex((b) => age < b.max);
+    ageing[i === -1 ? AGE.length - 1 : i].count++;
+  });
+
+  const byStatus = ["Open", "In Progress", "Pending Parts", "KIV", "Resolved", "Closed"]
+    .map((label) => ({ label, count: tickets.filter((t: any) => t.status === label).length }))
+    .filter((r) => r.count > 0);
+
+  const resolvedThisMonth = tickets.filter((t: any) => {
+    if (!["Resolved", "Closed"].includes(t.status)) return false;
+    const d = new Date(t.modified_at ?? t.created_at);
+    const now = new Date();
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  }).length;
+
   return (
-    <div className="flex flex-col gap-stack-lg">
-      {/* Top Header & Infographic Summary Cards */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-headline-lg text-headline-lg text-on-surface">
-            Helpdesk
-          </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-            Repairs and complaints for {activePropName} — what is outstanding, who is on
-            it, and what it cost.
-          </p>
-        </div>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Helpdesk"
+        subtitle={`Repairs and complaints for ${activePropName} — what is outstanding, who is on it, and what it cost.`}
+        actions={
+          <>
+            <CategoryMasterManager categories={categories} />
+            <RaiseTicketButton
+              properties={properties}
+              occupiedUnits={unitsForClient}
+              categories={categories}
+              defaultPropertyId={activePropId}
+            />
+          </>
+        }
+      />
 
-        {/* What is outstanding here, and what needs a decision. */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="glass-card flex min-w-[150px] items-center gap-3 rounded-xl border border-outline-variant/30 px-4 py-2.5">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-indigo-500/30 bg-indigo-500/20 text-indigo-300">
-              <span className="material-symbols-outlined text-[22px]">assignment</span>
-            </div>
-            <div>
-              <span className="block text-[11px] font-medium text-on-surface-variant">Still open</span>
-              <span className="font-headline-md text-headline-md font-bold text-on-surface">
-                {openCount}
-              </span>
-            </div>
-          </div>
+      <StatGrid>
+        <StatCard label="Still open" value={openCount} hint="unresolved" icon="assignment" tone={openCount > 0 ? "primary" : "neutral"} />
+        <StatCard
+          label="High or urgent"
+          value={urgentCount}
+          hint="of the open ones"
+          icon="priority_high"
+          tone={urgentCount > 0 ? "critical" : "neutral"}
+        />
+        <StatCard
+          label="Nobody assigned"
+          value={unassignedCount}
+          hint="needs an owner"
+          icon="person_off"
+          tone={unassignedCount > 0 ? "warning" : "neutral"}
+        />
+        <StatCard label="Closed this month" value={resolvedThisMonth} hint="resolved or closed" icon="task_alt" tone="positive" />
+      </StatGrid>
 
-          <div
-            className={`glass-card flex min-w-[150px] items-center gap-3 rounded-xl border px-4 py-2.5 ${
-              urgentCount > 0 ? "border-rose-500/40" : "border-outline-variant/30"
-            }`}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/20 text-rose-300">
-              <span className="material-symbols-outlined text-[22px]">priority_high</span>
-            </div>
-            <div>
-              <span className="block text-[11px] font-medium text-on-surface-variant">
-                High or urgent
-              </span>
-              <span className="font-headline-md text-headline-md font-bold text-on-surface">
-                {urgentCount}
-              </span>
-            </div>
-          </div>
-
-          <div
-            className={`glass-card flex min-w-[150px] items-center gap-3 rounded-xl border px-4 py-2.5 ${
-              unassignedCount > 0 ? "border-amber-500/40" : "border-outline-variant/30"
-            }`}
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/20 text-amber-300">
-              <span className="material-symbols-outlined text-[22px]">person_off</span>
-            </div>
-            <div>
-              <span className="block text-[11px] font-medium text-on-surface-variant">
-                Nobody assigned
-              </span>
-              <span className="font-headline-md text-headline-md font-bold text-on-surface">
-                {unassignedCount}
-              </span>
-            </div>
-          </div>
-        </div>
+      <div className="grid gap-5 lg:grid-cols-2">
+        <SectionCard title="Where the tickets sit" subtitle="Every ticket in this property, by status" icon="donut_small">
+          <BarList rows={byStatus} colourOf={colourFor} emptyText="No tickets yet." />
+        </SectionCard>
+        <SectionCard title="How long they have waited" subtitle="Open tickets by age" icon="hourglass_top">
+          <BarList
+            rows={ageing}
+            colourOf={(l) =>
+              l === "Over a week" ? "#fb7185" : l === "4-7 days" ? "#fbbf24" : l === "1-3 days" ? "#8b5cf6" : "#34d399"
+            }
+            emptyText="Nothing open."
+          />
+        </SectionCard>
       </div>
 
-      {/* Category Masterfile Settings */}
-      <CategoryMasterManager categories={categories} />
-
-      {/* Raise New Ticket Expandable Form with Property Filter */}
-      <ExpandableForm title="Raise New Ticket" buttonLabel="New Ticket">
-        <AdminRaiseTicketForm
-          properties={properties}
-          occupiedUnits={unitsForClient}
-          categories={categories}
-          defaultPropertyId={activePropId}
-        />
-      </ExpandableForm>
-
-      {/* Helpdesk Tickets Master Table */}
       <AdminTicketTable
         tickets={ticketsForClient}
         admins={admins}

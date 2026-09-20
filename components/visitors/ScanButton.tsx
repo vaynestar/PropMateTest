@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import QRScanner, { terminateAllMediaStreams } from "./QRScanner";
+import { BTN } from "@/components/admin/ui";
 
-export default function ScanButton() {
+export default function ScanButton({ variant = "primary" }: { variant?: "primary" | "secondary" }) {
   const [open, setOpen] = useState(false);
 
   const handleClose = () => {
@@ -37,10 +38,10 @@ export default function ScanButton() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="btn-primary px-4 py-2.5 flex items-center gap-2 rounded-xl text-white font-semibold text-xs shadow-lg hover:brightness-110 transition-all pressable"
+        className={variant === "secondary" ? BTN.secondary : BTN.primary}
       >
         <span className="material-symbols-outlined text-[18px]">qr_code_scanner</span>
-        <span>Scan Visitor QR</span>
+        <span>Scan pass</span>
       </button>
 
       {open && (

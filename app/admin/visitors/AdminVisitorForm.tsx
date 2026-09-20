@@ -24,10 +24,16 @@ export default function AdminVisitorForm({
   leases,
   properties,
   defaultPropertyId,
+  onSuccess,
+  bare = false,
 }: {
   leases: LeaseOption[];
   properties: PropertyOption[];
   defaultPropertyId?: string;
+  /** Called once the visitor is saved - the dialog uses it to close itself. */
+  onSuccess?: () => void;
+  /** true inside a dialog, which already provides the card and the padding. */
+  bare?: boolean;
 }) {
   const [state, formAction, isPending] = useActionState(adminRegisterVisitor, null);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -66,6 +72,7 @@ export default function AdminVisitorForm({
       setDestinationPreset("");
       setCustomDestination("");
       setIsCustomDestination(false);
+      onSuccess?.();
       setTimeout(() => setIsSuccess(false), 3500);
     }
   }, [state]);
@@ -77,7 +84,13 @@ export default function AdminVisitorForm({
   };
 
   return (
-    <div className="bg-surface-container border border-outline-variant/60 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+    <div
+      className={
+        bare
+          ? "relative"
+          : "relative overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container p-5 shadow-xl sm:p-6"
+      }
+    >
       <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none" />
 
       {isSuccess && (
