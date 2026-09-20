@@ -6,6 +6,10 @@ import FilterableTicketQueue from "@/components/dashboard/FilterableTicketQueue"
 import FinancialTrendChart from "@/components/dashboard/FinancialTrendChart";
 import { getActivePropertyId } from "@/lib/property-context.server";
 import MaintenanceDueBoard from "@/components/dashboard/MaintenanceDueBoard";
+import BarList from "@/components/dashboard/BarList";
+import ArrearsTable from "@/components/dashboard/ArrearsTable";
+import { UnitMixDonut, VisitorTrendChart } from "@/components/dashboard/MiniCharts";
+import { colourFor } from "@/lib/chart-colours";
 import { BTN, EmptyState, Money, PageHeader, SectionCard, StatCard, StatGrid } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
@@ -124,6 +128,52 @@ export default async function AdminDashboardPage() {
           </SectionCard>
 
           <SectionCard
+            title="Money owed"
+            subtitle="Oldest unpaid invoices first."
+            icon="request_quote"
+            action={
+              <Link href="/admin/invoices" className="text-xs font-semibold text-primary hover:underline">
+                All invoices
+              </Link>
+            }
+            padded={false}
+          >
+            <ArrearsTable rows={stats.topArrears} />
+          </SectionCard>
+
+          <SectionCard
+            title="Helpdesk load"
+            subtitle="Where the tickets sit, and how long they have been waiting."
+            icon="query_stats"
+            action={
+              <Link href="/admin/maintenance" className="text-xs font-semibold text-primary hover:underline">
+                Helpdesk
+              </Link>
+            }
+          >
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  By status
+                </p>
+                <BarList rows={stats.ticketMix} colourOf={colourFor} emptyText="No tickets yet." />
+              </div>
+              <div>
+                <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+                  Open tickets by age
+                </p>
+                <BarList
+                  rows={stats.ticketAging}
+                  colourOf={(l) =>
+                    l === "Over a week" ? "#fb7185" : l === "4-7 days" ? "#fbbf24" : l === "1-3 days" ? "#8b5cf6" : "#34d399"
+                  }
+                  emptyText="Nothing open."
+                />
+              </div>
+            </div>
+          </SectionCard>
+
+          <SectionCard
             title="Work in progress"
             subtitle="Tickets that are open or being worked on."
             icon="engineering"
@@ -138,6 +188,34 @@ export default async function AdminDashboardPage() {
         </div>
 
         <div className="space-y-5">
+          <SectionCard title="Unit mix" subtitle="Every unit in this property" icon="donut_small">
+            <UnitMixDonut
+              data={stats.unitMix}
+              centreValue={`${stats.occupancyRate}%`}
+              centreLabel="occupied"
+            />
+          </SectionCard>
+
+          <SectionCard
+            title="Visitor traffic"
+            subtitle="Expected against who actually arrived, last 7 days"
+            icon="bar_chart"
+            action={
+              <span className="flex items-center gap-3 text-[11px] text-on-surface-variant">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-sm bg-[#8b5cf6]" />
+                  Expected
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-sm bg-[#34d399]" />
+                  Arrived
+                </span>
+              </span>
+            }
+          >
+            <VisitorTrendChart data={stats.visitorTrend} />
+          </SectionCard>
+
           <SectionCard title="Recent activity" subtitle="What happened today" icon="bolt" padded={false}>
             {stats.activityFeed.length > 0 ? (
               <ul className="max-h-[22rem] divide-y divide-outline-variant/30 overflow-y-auto">

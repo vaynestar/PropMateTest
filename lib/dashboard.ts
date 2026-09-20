@@ -61,6 +61,19 @@ export type DashboardStats = {
     invoiced: number;
     collected: number;
   }[];
+  /** Infographics (DEV-194). Each is already scoped to the active property. */
+  unitMix: { label: string; count: number }[];
+  ticketMix: { label: string; count: number }[];
+  ticketAging: { label: string; count: number }[];
+  visitorTrend: { day: string; expected: number; arrived: number }[];
+  topArrears: {
+    invoice_id: string;
+    invoice_no: string;
+    unit: string;
+    tenant: string;
+    daysLate: number;
+    amount: number;
+  }[];
 };
 
 export async function getDashboardStats(propertyId?: string): Promise<DashboardStats> {
@@ -410,6 +423,87 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
   // Sort activity feed newest first
   activityFeed.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
+  // ── Infographic series (DEV-194) ────────────────────────────────────────
+  const OPEN_STATUSES = ["Open", "In Progress", "KIV", "Pending Parts"];
+  const sevenDaysAgo = new Date(startOfToday);
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+  const [unitRows, ticketRows, openTicketDates, weekVisitors, arrearsRows] = await Promise.all([
+    prisma.unit.groupBy({ by: ["status"], where: unitWhere, _count: { _all: true } }),
+    prisma.ticket.groupBy({ by: ["status"], where: ticketWhere, _count: { _all: true } }),
+    prisma.ticket.findMany({
+      where: { ...ticketWhere, status: { in: OPEN_STATUSES } },
+      select: { created_at: true },
+    }),
+    prisma.visitor.findMany({
+      where: { ...visitorWhere, visit_date: { gte: sevenDaysAgo } },
+      select: { visit_date: true, check_in_time: true },
+    }),
+    prisma.invoice.findMany({
+      where: {
+        ...(propertyId ? { lease: { unit: { property_id: propertyId } } } : {}),
+        status: "Unpaid",
+        issued_at: { not: null },
+        due_date: { lt: startOfToday },
+      },
+      select: {
+        invoice_id: true,
+        invoice_no: true,
+        due_date: true,
+        total_amount: true,
+        lease: { select: { unit: { select: { unit_number: true } }, tenant: { select: { user_name: true } } } },
+      },
+      orderBy: { due_date: "asc" },
+      take: 5,
+    }),
+  ]);
+
+  const unitMix = unitRows
+    .map((r) => ({ label: r.status || "Unknown", count: r._count._all }))
+    .sort((a, b) => b.count - a.count);
+
+  const ticketMix = ticketRows
+    .map((r) => ({ label: r.status || "Unknown", count: r._count._all }))
+    .sort((a, b) => b.count - a.count);
+
+  const AGE_BUCKETS: { label: string; max: number }[] = [
+    { label: "Today", max: 1 },
+    { label: "1-3 days", max: 4 },
+    { label: "4-7 days", max: 8 },
+    { label: "Over a week", max: Infinity },
+  ];
+  const ticketAging = AGE_BUCKETS.map((b) => ({ label: b.label, count: 0 }));
+  openTicketDates.forEach((t) => {
+    const age = Math.floor((startOfToday.getTime() - new Date(t.created_at).setHours(0, 0, 0, 0)) / 86_400_000);
+    const i = AGE_BUCKETS.findIndex((b) => age < b.max);
+    ticketAging[i === -1 ? AGE_BUCKETS.length - 1 : i].count++;
+  });
+
+  const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const visitorTrend = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(sevenDaysAgo);
+    d.setDate(d.getDate() + i);
+    const key = d.toDateString();
+    const sameDay = weekVisitors.filter((v) => v.visit_date && new Date(v.visit_date).toDateString() === key);
+    return {
+      day: DAY_NAMES[d.getDay()],
+      expected: sameDay.length,
+      arrived: sameDay.filter((v) => v.check_in_time).length,
+    };
+  });
+
+  const topArrears = arrearsRows.map((inv) => ({
+    invoice_id: inv.invoice_id,
+    invoice_no: inv.invoice_no,
+    unit: inv.lease?.unit?.unit_number ?? "-",
+    tenant: inv.lease?.tenant?.user_name ?? "-",
+    daysLate: Math.max(
+      0,
+      Math.floor((startOfToday.getTime() - new Date(inv.due_date).setHours(0, 0, 0, 0)) / 86_400_000)
+    ),
+    amount: Number(inv.total_amount),
+  }));
+
   return {
     totalProperties,
     totalFacilities,
@@ -436,5 +530,10 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
     activityFeed: activityFeed.slice(0, 10),
     openTicketsList,
     financialTrend,
+    unitMix,
+    ticketMix,
+    ticketAging,
+    visitorTrend,
+    topArrears,
   };
 }
