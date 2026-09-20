@@ -5,6 +5,7 @@ import ScanButton from "@/components/visitors/ScanButton";
 import FilterableTicketQueue from "@/components/dashboard/FilterableTicketQueue";
 import FinancialTrendChart from "@/components/dashboard/FinancialTrendChart";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import MaintenanceDueBoard from "@/components/dashboard/MaintenanceDueBoard";
 import { BTN, EmptyState, Money, PageHeader, SectionCard, StatCard, StatGrid } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
@@ -109,6 +110,9 @@ export default async function AdminDashboardPage() {
         />
       </StatGrid>
 
+      {/* Before the charts: on a phone this is the first thing after the numbers. */}
+      <MaintenanceDueBoard items={stats.upcomingMaintenanceList} />
+
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="space-y-5 lg:col-span-2">
           <SectionCard
@@ -161,52 +165,6 @@ export default async function AdminDashboardPage() {
               <EmptyState icon="notifications_off" title="Nothing has happened today yet." />
             )}
           </SectionCard>
-
-          {stats.upcomingMaintenanceList.length > 0 && (
-            <SectionCard
-              title="Maintenance due"
-              subtitle="Facilities needing service"
-              icon="handyman"
-              action={
-                <Link href="/admin/facilities" className="text-xs font-semibold text-primary hover:underline">
-                  Facilities
-                </Link>
-              }
-              padded={false}
-            >
-              <ul className="divide-y divide-outline-variant/30">
-                {stats.upcomingMaintenanceList.slice(0, 5).map((f) => (
-                  <li key={f.facility_id}>
-                    <Link
-                      href="/admin/facilities"
-                      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-container-high/50"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-xs font-semibold text-white">
-                          {f.facility_name}
-                          {f.isClosed && (
-                            <span className="ml-2 rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
-                              Closed
-                            </span>
-                          )}
-                        </p>
-                        <p className="truncate text-[11px] text-on-surface-variant">{f.facility_type}</p>
-                      </div>
-                      <span
-                        className={`shrink-0 text-[11px] font-semibold tabular-nums ${f.isOverdue ? "text-rose-300" : "text-amber-300"}`}
-                      >
-                        {f.isOverdue
-                          ? `${Math.abs(f.daysAway)} day${Math.abs(f.daysAway) === 1 ? "" : "s"} overdue`
-                          : f.daysAway === 0
-                          ? "Due today"
-                          : `in ${f.daysAway} day${f.daysAway === 1 ? "" : "s"}`}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </SectionCard>
-          )}
 
           <SectionCard title="Quick actions" icon="bolt" padded={false}>
             <ul className="divide-y divide-outline-variant/30">
