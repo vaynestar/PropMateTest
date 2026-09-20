@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { BTN } from "@/components/admin/ui";
 
 export default function RefreshDataButton() {
   const router = useRouter();
@@ -21,7 +22,7 @@ export default function RefreshDataButton() {
       type="button"
       onClick={handleRefresh}
       disabled={isPending}
-      className="px-3.5 py-2.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-on-surface text-xs font-semibold flex items-center gap-1.5 transition-all pressable disabled:opacity-50"
+      className={BTN.secondary}
       title="Refresh all billing data & charts"
     >
       <span

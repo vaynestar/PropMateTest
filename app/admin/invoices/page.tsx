@@ -8,6 +8,7 @@ import InvoiceBatchList from "@/components/billing/InvoiceBatchList";
 import prisma from "@/lib/prisma";
 
 import RefreshDataButton from "@/components/billing/RefreshDataButton";
+import { PageHeader } from "@/components/admin/ui";
 import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
@@ -87,28 +88,26 @@ export default async function InvoicesDetailPage({
   }));
 
   return (
-    <div className="flex flex-col gap-stack-lg">
-      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-        <div>
-          <Link
-            href="/admin/billing"
-            className="font-label-sm text-label-sm text-primary hover:text-primary-container transition-colors"
-          >
-            ← Back to Billing
-          </Link>
-          <h1 className="font-headline-lg text-headline-lg text-on-surface mt-2">
-            Invoices
-          </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-            Every invoice raised, newest batch first.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <RefreshDataButton />
-          <ManualInvoiceButton />
-          <GenerateInvoicesButton />
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Invoices"
+        subtitle="Every invoice raised, newest batch first."
+        actions={
+          <>
+            <RefreshDataButton />
+            <ManualInvoiceButton />
+            <GenerateInvoicesButton />
+          </>
+        }
+      >
+        <Link
+          href="/admin/billing"
+          className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+        >
+          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+          Back to Billing
+        </Link>
+      </PageHeader>
 
       {leaseId && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/[0.06] px-4 py-3">

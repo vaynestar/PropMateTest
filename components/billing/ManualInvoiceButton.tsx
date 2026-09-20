@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getAllActiveLeasesAction, manualGenerateInvoiceAction } from "@/app/admin/invoices/actions";
+import { BTN } from "@/components/admin/ui";
 
 export default function ManualInvoiceButton() {
   const [loading, setLoading] = useState(false);
@@ -41,7 +42,7 @@ export default function ManualInvoiceButton() {
       <button
         onClick={handleOpen}
         disabled={loading}
-        className="btn-outline px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+        className={BTN.secondary}
       >
         <span className="material-symbols-outlined" style={{ fontSize: 18 }}>add</span>
         Create Invoice

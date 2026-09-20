@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateInvoicesAction, getEligibleLeasesAction } from "@/app/admin/invoices/actions";
+import { BTN } from "@/components/admin/ui";
 
 export default function GenerateInvoicesButton() {
   const router = useRouter();
@@ -87,7 +88,7 @@ export default function GenerateInvoicesButton() {
       <button
         onClick={handleOpen}
         disabled={loading}
-        className="btn-primary px-6 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+        className={BTN.primary}
       >
         <span
           className={`material-symbols-outlined ${loading ? "animate-spin" : ""}`}

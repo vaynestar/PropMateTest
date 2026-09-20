@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import ScrollHint from "@/components/ui/ScrollHint";
+import { CARD, EmptyState, FIELD, TABLE } from "@/components/admin/ui";
+
+/** Row actions are icons with tooltips: four labelled buttons ran off the
+ *  right edge of the table (DEV-199). */
+const ICON_BTN = "pressable inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import StatusBadge from "@/components/dashboard/StatusBadge";
@@ -240,7 +244,7 @@ After this its line items can no longer be edited. You can still record payment 
       )}
 
       {/* Filter Toolbar */}
-      <div className="glass-card rounded-xl p-4 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
+      <div className={`${CARD} flex flex-col items-stretch justify-between gap-4 p-3.5 lg:flex-row lg:items-center`}>
         <div className="flex flex-wrap items-center gap-3">
           {/* Month Batch Selector (only active when custom date filter is off) */}
           {allBatchKeys.length > 0 && (
@@ -249,7 +253,7 @@ After this its line items can no longer be edited. You can still record payment 
               onChange={(e) => setSelectedBatch(e.target.value)}
               disabled={hasDateFilter}
               title={hasDateFilter ? "Clear the date range to pick a month" : undefined}
-              className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary font-bold text-sm focus:border-primary outline-none cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+              className={`${FIELD} cursor-pointer border-primary/30 bg-primary/10 font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-40`}
             >
               <option value="ALL">All invoices ({filteredInvoices.length})</option>
               {allBatchKeys.map((bk) => (
@@ -264,7 +268,7 @@ After this its line items can no longer be edited. You can still record payment 
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none cursor-pointer"
+            className={`${FIELD} cursor-pointer`}
           >
             <option value="All">All statuses</option>
             <option value="Overdue">Overdue</option>
@@ -278,7 +282,7 @@ After this its line items can no longer be edited. You can still record payment 
             <button
               type="button"
               onClick={() => setShowDatePicker(!showDatePicker)}
-              className={`px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition-all pressable border ${
+              className={`pressable flex h-10 items-center gap-2 rounded-xl border px-3.5 text-sm font-semibold transition-all ${
                 hasDateFilter
                   ? "bg-primary/15 text-primary border-primary/40 shadow-sm"
                   : "bg-surface-container-high hover:bg-surface-container-highest text-on-surface border-outline-variant"
@@ -444,44 +448,42 @@ After this its line items can no longer be edited. You can still record payment 
       )}
 
       {displayedInvoices.length === 0 ? (
-        <div className="glass-card rounded-xl p-12 text-center flex flex-col items-center justify-center">
-          <span className="material-symbols-outlined text-[48px] text-on-surface-variant/50 mb-4">
-            receipt_long
-          </span>
-          <h3 className="font-title-lg text-title-lg text-on-surface">No invoices found</h3>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-2">
-            Try adjusting your search or date range filters.
-          </p>
+        <div className={CARD}>
+          <EmptyState
+            icon="receipt_long"
+            title="No invoices found"
+            hint="Try a different month, status or date range."
+          />
         </div>
       ) : (
-        <div className="glass-card rounded-xl p-0 overflow-hidden flex flex-col animate-fade-in">
-          <div className="p-4 border-b border-outline-variant/30 bg-surface-container-low flex justify-between items-center">
-            <h3 className="font-title-md text-title-md text-on-surface">
+        <div className={`${CARD} animate-fade-in flex flex-col overflow-hidden`}>
+          <div className="flex items-center justify-between gap-3 border-b border-outline-variant/40 bg-gradient-to-r from-surface-container-high/70 via-surface-container-high/25 to-transparent px-4 py-3.5">
+            <h3 className="text-sm font-bold text-white">
               {hasDateFilter
                 ? "Filtered Date Range Invoices"
                 : currentBatch === "ALL"
                 ? "All invoices"
                 : currentBatch}
             </h3>
-            <span className="font-label-sm text-label-sm px-2.5 py-1 bg-surface-container-high rounded-md text-on-surface-variant font-semibold">
-              {displayedInvoices.length} Invoices
+            <span className="rounded-md bg-surface-container-high px-2.5 py-1 text-[11px] font-semibold tabular-nums text-on-surface-variant">
+              {displayedInvoices.length} invoices
             </span>
           </div>
 
-          <ScrollHint className="w-full">
-            <table className="w-full text-left text-sm whitespace-nowrap">
-              <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant">
+          <div className={TABLE.wrap}>
+            <table className={TABLE.table + " min-w-[980px]"}>
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 font-medium">Invoice No</th>
-                  <th className="px-6 py-3 font-medium">Unit & Tenant</th>
-                  <th className="px-6 py-3 font-medium">Invoice Date</th>
-                  <th className="px-6 py-3 font-medium">Due Date</th>
-                  <th className="px-6 py-3 font-medium">Amount</th>
-                  <th className="px-6 py-3 font-medium">Status</th>
-                  <th className="px-6 py-3 font-medium text-right">Actions</th>
+                  <th className={TABLE.th}>Invoice no</th>
+                  <th className={TABLE.th}>Unit &amp; tenant</th>
+                  <th className={TABLE.th}>Raised</th>
+                  <th className={TABLE.th}>Due</th>
+                  <th className={TABLE.thNum}>Amount</th>
+                  <th className={TABLE.th}>Status</th>
+                  <th className={TABLE.thNum}>Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant/30">
+              <tbody>
                 {displayedInvoices.map((inv: any) => {
                   const isPrinted = inv.is_printed;
                   const isPaid = inv.status === "Paid";
@@ -500,8 +502,11 @@ After this its line items can no longer be edited. You can still record payment 
                     : "Edit Line Items";
 
                   return (
-                    <tr key={inv.invoice_id} className={`transition-colors ${isInactive ? 'opacity-60 bg-surface-container-lowest/40' : 'hover:bg-surface-container-low/50'}`}>
-                      <td className="px-6 py-4">
+                    <tr
+                      key={inv.invoice_id}
+                      className={isInactive ? `${TABLE.tr} bg-surface-container-lowest/40 opacity-60` : TABLE.tr}
+                    >
+                      <td className={TABLE.td}>
                         <div className="flex flex-col gap-1">
                           <span className="font-mono text-xs font-bold text-on-surface">
                             {inv.invoice_no}
@@ -515,7 +520,7 @@ After this its line items can no longer be edited. You can still record payment 
                         </div>
                       </td>
 
-                      <td className="px-6 py-4">
+                      <td className={TABLE.td}>
                         <div className="flex flex-col">
                           {/* The only way from an invoice to the person who owes it used to
                               be reading the name and searching Tenants by hand. */}
@@ -559,11 +564,11 @@ After this its line items can no longer be edited. You can still record payment 
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-on-surface-variant font-mono text-xs">
+                      <td className={TABLE.td + " whitespace-nowrap text-xs tabular-nums text-on-surface-variant"}>
                         {formatDate(inv.invoice_date)}
                       </td>
 
-                      <td className="px-6 py-4 font-mono text-xs">
+                      <td className={TABLE.td + " whitespace-nowrap text-xs tabular-nums"}>
                         {(() => {
                           const due = new Date(inv.due_date);
                           const today = new Date();
@@ -595,11 +600,11 @@ After this its line items can no longer be edited. You can still record payment 
                         })()}
                       </td>
 
-                      <td className="px-6 py-4 font-mono font-bold text-on-surface">
+                      <td className={TABLE.tdNum + " font-semibold"}>
                         {formatCurrency(Number(inv.total_amount))}
                       </td>
 
-                      <td className="px-6 py-4">
+                      <td className={TABLE.td}>
                         <div className="flex items-center gap-2">
                           {isDraft ? (
                             <span className="rounded-md border border-outline-variant/60 bg-surface-container-high px-2.5 py-1 text-xs font-medium text-on-surface-variant">
@@ -611,17 +616,17 @@ After this its line items can no longer be edited. You can still record payment 
                         </div>
                       </td>
 
-                      <td className="px-6 py-4 text-right">
+                      <td className={TABLE.tdNum}>
                         <div className="flex justify-end items-center gap-2">
                           {/* PDF Preview Button */}
                           <button
                             type="button"
                             onClick={() => setPdfPreviewInvoice(inv)}
-                            className="px-2.5 py-1.5 rounded-lg bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-on-surface text-xs font-semibold inline-flex items-center gap-1.5 transition-all pressable"
-                            title="Preview PDF & Print"
+                            className={`${ICON_BTN} border-outline-variant/60 bg-surface-container-high text-primary hover:bg-surface-container-highest`}
+                            title="Preview or download the invoice"
+                            aria-label="Preview invoice"
                           >
-                            <span className="material-symbols-outlined text-[16px] text-primary">picture_as_pdf</span>
-                            <span>PDF Preview</span>
+                            <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
                           </button>
 
                           {isDraft && (
@@ -630,11 +635,9 @@ After this its line items can no longer be edited. You can still record payment 
                               onClick={() => handleIssue(inv.invoice_id, inv.invoice_no)}
                               disabled={isUpdating}
                               title="Send this invoice to the tenant. Items lock afterwards."
-                              className="pressable flex items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-xs font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
+                              className="pressable inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/15 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
                             >
-                              <span className="material-symbols-outlined text-[15px] leading-none">
-                                outgoing_mail
-                              </span>
+                              <span className="material-symbols-outlined text-[16px] leading-none">outgoing_mail</span>
                               Issue
                             </button>
                           )}
@@ -644,21 +647,21 @@ After this its line items can no longer be edited. You can still record payment 
                             <button
                               type="button"
                               onClick={() => setEditingInvoice(inv)}
-                              className="px-2.5 py-1.5 rounded-lg bg-surface-container-high/40 text-on-surface-variant/50 border border-outline-variant/30 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer hover:bg-surface-container-high transition-all"
+                              className={`${ICON_BTN} border-outline-variant/30 bg-surface-container-high/40 text-amber-400 hover:bg-surface-container-high`}
                               title={lockTooltip}
+                              aria-label="Locked - open to view or unlock"
                             >
-                              <span className="material-symbols-outlined text-[16px] text-amber-400">lock</span>
-                              <span>Locked</span>
+                              <span className="material-symbols-outlined text-[18px]">lock</span>
                             </button>
                           ) : (
                             <button
                               type="button"
                               onClick={() => setEditingInvoice(inv)}
-                              className="px-2.5 py-1.5 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 text-xs font-semibold inline-flex items-center gap-1.5 transition-all pressable"
-                              title="Edit Line Items / Add Item"
+                              className={`${ICON_BTN} border-primary/20 bg-primary/10 text-primary hover:bg-primary/20`}
+                              title="Edit the line items"
+                              aria-label="Edit line items"
                             >
-                              <span className="material-symbols-outlined text-[16px]">edit_note</span>
-                              <span>Edit Items</span>
+                              <span className="material-symbols-outlined text-[18px]">edit_note</span>
                             </button>
                           )}
 
@@ -674,21 +677,21 @@ After this its line items can no longer be edited. You can still record payment 
                                 <button
                                   type="button"
                                   onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Unpaid")}
-                                  className="pressable flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-none transition-colors text-amber-300 hover:bg-amber-500/15"
+                                  className="pressable flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold leading-none transition-colors text-amber-300 hover:bg-amber-500/15"
                                   title="Move this invoice back to unpaid"
                                 >
                                   <span className="material-symbols-outlined text-[16px] leading-none">undo</span>
-                                  <span className="hidden xl:inline">Unpay</span>
+                                  
                                 </button>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Paid")}
-                                  className="pressable flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-none transition-colors text-emerald-300 hover:bg-emerald-500/15"
+                                  className="pressable flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold leading-none transition-colors text-emerald-300 hover:bg-emerald-500/15"
                                   title="Mark this invoice as paid"
                                 >
                                   <span className="material-symbols-outlined text-[16px] leading-none">check_circle</span>
-                                  <span className="hidden xl:inline">Mark paid</span>
+                                  
                                 </button>
                               )}
 
@@ -697,21 +700,21 @@ After this its line items can no longer be edited. You can still record payment 
                                 <button
                                   type="button"
                                   onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Unpaid")}
-                                  className="pressable flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-none transition-colors text-sky-300 hover:bg-sky-500/15"
+                                  className="pressable flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold leading-none transition-colors text-sky-300 hover:bg-sky-500/15"
                                   title="Bring this invoice back into the books"
                                 >
                                   <span className="material-symbols-outlined text-[16px] leading-none">restart_alt</span>
-                                  <span className="hidden xl:inline">Restore</span>
+                                  
                                 </button>
                               ) : (
                                 <button
                                   type="button"
                                   onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Inactive")}
-                                  className="pressable flex items-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-none transition-colors text-rose-300 hover:bg-rose-500/15"
+                                  className="pressable flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold leading-none transition-colors text-rose-300 hover:bg-rose-500/15"
                                   title="Void this invoice — it stops counting towards what is owed"
                                 >
                                   <span className="material-symbols-outlined text-[16px] leading-none">block</span>
-                                  <span className="hidden xl:inline">Void</span>
+                                  
                                 </button>
                               )}
                             </div>
@@ -723,7 +726,7 @@ After this its line items can no longer be edited. You can still record payment 
                 })}
               </tbody>
             </table>
-          </ScrollHint>
+          </div>
         </div>
       )}
 

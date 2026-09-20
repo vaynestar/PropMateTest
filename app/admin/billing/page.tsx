@@ -1,26 +1,24 @@
 import Link from "next/link";
-import ScrollHint from "@/components/ui/ScrollHint";
-import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { listInvoices } from "@/lib/billing";
-import StatusBadge from "@/components/dashboard/StatusBadge";
+import { BTN, EmptyState, Money, PageHeader, SectionCard, StatCard, StatGrid, TABLE } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Whole ringgit: this page is about scale, not cents. */
 function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-MY", {
-    style: "currency",
-    currency: "MYR",
-    maximumFractionDigits: 0,
-  }).format(value);
+  return `RM ${Math.round(value).toLocaleString("en-MY")}`;
 }
 
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
+/** "16 Sep 2026" in Malaysia time - ICU prints "Sept" (DEV-184). */
+function formatDate(date: Date | string) {
+  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+    .format(new Date(date))
+    .split("-")
+    .map(Number);
+  return `${String(d).padStart(2, "0")} ${MONTHS[m - 1]} ${y}`;
 }
 
 import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton";
@@ -96,249 +94,210 @@ export default async function BillingPage() {
   });
 
   return (
-    <div className="flex flex-col gap-stack-lg">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="font-headline-lg text-headline-lg text-on-surface">
-            Billing
-          </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-            Raise this month’s invoices and see what has been collected.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <RefreshDataButton />
-          <Link
-            href="/admin/billing/recurring-charges"
-            className="btn-outline px-5 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-              autorenew
-            </span>
-            Recurring Charges
-          </Link>
-          <Link
-            href="/admin/billing/charges"
-            className="btn-outline px-5 py-2.5 font-label-md text-label-md flex items-center justify-center gap-2"
-          >
-            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-              settings
-            </span>
-            Charge types
-          </Link>
-          <GenerateInvoicesButton />
-        </div>
-      </div>
-
-      <SetupFlow counts={setupCounts} propertyName={activeProperty?.property_name ?? null} />
-
-      <div className="grid grid-cols-1 gap-stack-lg sm:grid-cols-3">
-        {/* Outstanding leads, because it is the only figure that asks for an
-            action. Overdue is called out inside it rather than buried. */}
-        <div
-          className={`rounded-xl border p-5 ${
-            overdue.length > 0
-              ? "border-rose-500/40 bg-rose-500/[0.06]"
-              : "border-outline-variant/60 bg-surface-container"
-          }`}
-        >
-          <p className="font-label-sm text-label-sm text-on-surface-variant">Outstanding</p>
-          <p className="font-headline-md text-headline-md mt-1 text-rose-300">
-            {formatCurrency(outstanding)}
-          </p>
-          <p className="mt-1.5 text-[11px]">
-            {overdue.length > 0 ? (
-              <span className="font-semibold text-rose-300">
-                {formatCurrency(overdueAmount)} of it is overdue
-                {overdue[0] ? ` — oldest by ${overdue[0].daysLate} days` : ""}
-              </span>
-            ) : unpaid.length > 0 ? (
-              <span className="text-on-surface-variant">
-                {unpaid.length} invoice{unpaid.length === 1 ? "" : "s"} not yet due
-              </span>
-            ) : (
-              <span className="text-emerald-400">Everything is paid</span>
-            )}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-outline-variant/60 bg-surface-container p-5">
-          <p className="font-label-sm text-label-sm text-on-surface-variant">Collected</p>
-          <p className="font-headline-md text-headline-md mt-1 text-emerald-300">
-            {formatCurrency(collected)}
-          </p>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface-container-highest">
-            <div className="h-full bg-emerald-500" style={{ width: `${collectedPct}%` }} />
-          </div>
-          <p className="mt-1.5 text-[11px] text-on-surface-variant">
-            {collectedPct}% of {formatCurrency(totalBilled)} billed
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-outline-variant/60 bg-surface-container p-5">
-          <p className="font-label-sm text-label-sm text-on-surface-variant">Invoices paid</p>
-          <p className="font-headline-md text-headline-md mt-1 text-on-surface">
-            {paidCount} <span className="text-on-surface-variant">of {invoices.length}</span>
-          </p>
-          <p className="mt-1.5 text-[11px] text-on-surface-variant">
-            {invoices.length - paidCount} still open
-          </p>
-        </div>
-      </div>
-
-      {/* The page previously opened with a history chart — the least actionable
-          thing on it. Who owes money, and for how long, comes first. */}
-      {overdue.length > 0 && (
-        <section className="overflow-hidden rounded-xl border border-rose-500/30 bg-surface-container">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/30 px-6 py-4">
-            <div>
-              <h2 className="font-title-lg text-title-lg text-on-surface">Chasing payment</h2>
-              <p className="mt-0.5 text-xs text-on-surface-variant">
-                {overdue.length} invoice{overdue.length === 1 ? "" : "s"} past the due date.
-              </p>
-            </div>
-            <Link
-              href="/admin/invoices"
-              className="pressable rounded-lg border border-outline-variant/60 bg-surface-container-high px-3 py-2 text-xs font-semibold text-on-surface transition-colors hover:text-white"
-            >
-              Open invoices
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Billing"
+        subtitle="Raise this month's invoices and see what has been collected."
+        actions={
+          <>
+            <RefreshDataButton />
+            <Link href="/admin/billing/recurring-charges" className={BTN.secondary}>
+              <span className="material-symbols-outlined text-[18px] text-primary">autorenew</span>
+              Recurring charges
             </Link>
-          </div>
-
-          <ul className="divide-y divide-outline-variant/20">
-            {overdue.slice(0, 5).map((inv) => (
-              <li
-                key={inv.invoice_id}
-                className="flex flex-wrap items-center justify-between gap-3 px-6 py-3"
-              >
-                <div className="min-w-0">
-                  {/* Billing is built around arrears, and this list is the arrears -
-                      so each row has to lead to the tenancy it is chasing. */}
-                  <p className="truncate text-xs font-semibold text-white">
-                    <Link
-                      href={`/admin/invoices?lease=${inv.lease_id}`}
-                      className="hover:text-primary hover:underline"
-                    >
-                      Unit {inv.lease?.unit?.unit_number ?? "—"}
-                    </Link>
-                    {" — "}
-                    {inv.lease?.tenant ? (
-                      <Link
-                        href={`/admin/leases?tenant=${inv.lease.tenant.user_id}`}
-                        className="hover:text-primary hover:underline"
-                      >
-                        {inv.lease.tenant.user_name}
-                      </Link>
-                    ) : (
-                      "No tenant on the lease"
-                    )}
-                  </p>
-                  <p className="text-[11px] text-on-surface-variant">
-                    {inv.invoice_no} · due {formatDate(inv.due_date)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-300">
-                    {inv.daysLate} days late
-                  </span>
-                  <span className="text-xs font-bold text-white">
-                    {formatCurrency(Number(inv.total_amount))}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          {overdue.length > 5 && (
-            <p className="border-t border-outline-variant/20 px-6 py-2.5 text-[11px] text-on-surface-variant">
-              and {overdue.length - 5} more.
-            </p>
-          )}
-        </section>
-      )}
-
-      {/* Client component. Pass only the three fields it reads — spreading the
-          whole invoice dragged nested Decimals (details[], lease.unit) across
-          the boundary and tripped Rule 6 again. */}
-      <BillingMonthlyBarChart
-        invoices={
-          invoices.map((inv) => ({
-            invoice_date: inv.invoice_date,
-            status: inv.status,
-            total_amount: Number(inv.total_amount),
-          })) as any
+            <Link href="/admin/billing/charges" className={BTN.secondary}>
+              <span className="material-symbols-outlined text-[18px] text-primary">sell</span>
+              Charge types
+            </Link>
+            <GenerateInvoicesButton />
+          </>
         }
       />
 
-      <div className="glass-card rounded-xl p-0 overflow-hidden">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/30">
-          <h2 className="font-title-lg text-title-lg text-on-surface">
-            Monthly batches
-          </h2>
-          <Link
-            href="/admin/invoices"
-            className="font-label-md text-label-md text-primary hover:text-primary-container transition-colors"
-          >
+      <SetupFlow counts={setupCounts} propertyName={activeProperty?.property_name ?? null} />
+
+      <StatGrid cols={3}>
+        <StatCard
+          label="Outstanding"
+          value={formatCurrency(outstanding)}
+          icon="account_balance_wallet"
+          tone={overdue.length > 0 ? "critical" : "neutral"}
+          href="/admin/invoices"
+          footer={{
+            label: overdue.length > 0 ? "Overdue" : unpaid.length > 0 ? "Not yet due" : "Status",
+            value:
+              overdue.length > 0
+                ? `${formatCurrency(overdueAmount)} · oldest ${overdue[0].daysLate}d`
+                : unpaid.length > 0
+                ? `${unpaid.length} invoice${unpaid.length === 1 ? "" : "s"}`
+                : "Everything is paid",
+            tone: overdue.length > 0 ? "critical" : unpaid.length > 0 ? "neutral" : "positive",
+          }}
+        />
+        <StatCard
+          label="Collected"
+          value={formatCurrency(collected)}
+          icon="payments"
+          tone="positive"
+          progress={collectedPct}
+          footer={{ label: "Of billed", value: `${collectedPct}% of ${formatCurrency(totalBilled)}` }}
+        />
+        <StatCard
+          label="Invoices paid"
+          value={`${paidCount} of ${invoices.length}`}
+          icon="receipt_long"
+          tone={invoices.length - paidCount > 0 ? "warning" : "positive"}
+          footer={{ label: "Still open", value: invoices.length - paidCount }}
+        />
+      </StatGrid>
+
+      {/* Who owes money, and for how long, comes before any history chart. */}
+      {overdue.length > 0 && (
+        <SectionCard
+          title="Chasing payment"
+          subtitle={`${overdue.length} invoice${overdue.length === 1 ? "" : "s"} past the due date.`}
+          icon="notification_important"
+          action={
+            <Link href="/admin/invoices" className={BTN.secondary}>
+              Open invoices
+            </Link>
+          }
+          padded={false}
+        >
+          <div className={TABLE.wrap}>
+            <table className={TABLE.table}>
+              <thead>
+                <tr>
+                  <th className={TABLE.th}>Unit</th>
+                  <th className={TABLE.th}>Resident</th>
+                  <th className={TABLE.th}>Invoice</th>
+                  <th className={TABLE.th}>Due</th>
+                  <th className={TABLE.thNum}>Late by</th>
+                  <th className={TABLE.thNum}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {overdue.slice(0, 6).map((inv) => (
+                  <tr key={inv.invoice_id} className={TABLE.tr}>
+                    <td className={TABLE.td}>
+                      {/* Each row leads to the tenancy it is chasing (DEV-164). */}
+                      <Link
+                        href={`/admin/invoices?lease=${inv.lease_id}`}
+                        className="font-semibold text-white hover:text-primary hover:underline"
+                      >
+                        {inv.lease?.unit?.unit_number ?? "—"}
+                      </Link>
+                    </td>
+                    <td className={TABLE.tdMuted}>
+                      {inv.lease?.tenant ? (
+                        <Link
+                          href={`/admin/leases?tenant=${inv.lease.tenant.user_id}`}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {inv.lease.tenant.user_name}
+                        </Link>
+                      ) : (
+                        "No tenant on the lease"
+                      )}
+                    </td>
+                    <td className={TABLE.td + " font-mono text-xs text-on-surface-variant"}>{inv.invoice_no}</td>
+                    <td className={TABLE.td + " whitespace-nowrap text-xs tabular-nums text-on-surface-variant"}>
+                      {formatDate(inv.due_date)}
+                    </td>
+                    <td className={TABLE.tdNum}>
+                      <span className="rounded-md border border-rose-500/30 bg-rose-500/10 px-2 py-0.5 text-[11px] font-semibold text-rose-300">
+                        {inv.daysLate}d
+                      </span>
+                    </td>
+                    <td className={TABLE.tdNum + " font-semibold"}>
+                      <Money value={Number(inv.total_amount)} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {overdue.length > 6 && (
+            <p className="border-t border-outline-variant/30 px-4 py-2.5 text-[11px] text-on-surface-variant">
+              and {overdue.length - 6} more.
+            </p>
+          )}
+        </SectionCard>
+      )}
+
+      <SectionCard
+        title="Collected vs outstanding"
+        subtitle="Each month's invoices, split by what has actually been paid."
+        icon="bar_chart"
+      >
+        {/* Client component. Pass only the three fields it reads - spreading the
+            whole invoice dragged nested Decimals across the boundary (Rule 6). */}
+        <BillingMonthlyBarChart
+          invoices={
+            invoices.map((inv) => ({
+              invoice_date: inv.invoice_date,
+              status: inv.status,
+              total_amount: Number(inv.total_amount),
+            })) as any
+          }
+        />
+      </SectionCard>
+
+      <SectionCard
+        title="Monthly batches"
+        subtitle="Every run of invoices, newest first."
+        icon="calendar_month"
+        action={
+          <Link href="/admin/invoices" className="text-xs font-semibold text-primary hover:underline">
             View all
           </Link>
-        </div>
-
-        <ScrollHint>
-          <table className="w-full text-left">
-            <thead className="bg-surface-container-high/50">
-              <tr className="font-label-sm text-label-sm text-on-surface-variant">
-                <th className="px-6 py-3">Batch Name</th>
-                <th className="px-6 py-3 text-center">Invoices Generated</th>
-                <th className="px-6 py-3 text-right">Collected (Paid)</th>
-                <th className="px-6 py-3 text-right">Outstanding</th>
-                <th className="px-6 py-3 text-right">Action</th>
+        }
+        padded={false}
+      >
+        <div className={TABLE.wrap}>
+          <table className={TABLE.table}>
+            <thead>
+              <tr>
+                <th className={TABLE.th}>Batch</th>
+                <th className={TABLE.thNum}>Invoices</th>
+                <th className={TABLE.thNum}>Collected</th>
+                <th className={TABLE.thNum}>Outstanding</th>
+                <th className={TABLE.thNum}>Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-outline-variant/30">
+            <tbody>
               {batchKeys.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={5}
-                    className="px-6 py-10 font-body-md text-body-md text-on-surface-variant text-center"
-                  >
-                    No invoice batches yet. Click "Generate Monthly Invoices" to create
-                    them from occupied units.
+                  <td colSpan={5} className="p-0">
+                    <EmptyState
+                      icon="receipt_long"
+                      title="No invoice batches yet"
+                      hint="Use Generate monthly invoices to raise them from the active tenancies."
+                    />
                   </td>
                 </tr>
               )}
               {batchKeys.map((bk) => {
                 const batchInvoices = batches[bk];
                 const generated = batchInvoices.length;
-                const collected = batchInvoices
+                const batchCollected = batchInvoices
                   .filter((i) => i.status === "Paid")
                   .reduce((sum, i) => sum + Number(i.total_amount), 0);
                 const outst = batchInvoices
                   .filter((i) => i.status !== "Paid")
                   .reduce((sum, i) => sum + Number(i.total_amount), 0);
                 return (
-                  <tr
-                    key={bk}
-                    className="font-body-md text-body-md text-on-surface hover:bg-surface-container-low/50 transition-colors"
-                  >
-                    <td className="px-6 py-4 font-label-md">
-                      {bk}
+                  <tr key={bk} className={TABLE.tr}>
+                    <td className={TABLE.td + " font-semibold text-white"}>{bk}</td>
+                    <td className={TABLE.tdNum}>{generated}</td>
+                    <td className={TABLE.tdNum + " text-emerald-300"}>
+                      <Money value={batchCollected} />
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="px-3 py-1 bg-surface-container-high rounded-full font-label-sm text-on-surface">
-                        {generated}
-                      </span>
+                    <td className={TABLE.tdNum + (outst > 0 ? " text-rose-300" : " text-on-surface-variant")}>
+                      <Money value={outst} />
                     </td>
-                    <td className="px-6 py-4 text-right text-emerald-400 font-medium">
-                      {formatCurrency(collected)}
-                    </td>
-                    <td className="px-6 py-4 text-right text-rose-300 font-medium">
-                      {formatCurrency(outst)}
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <Link
-                        href="/admin/invoices"
-                        className="font-label-sm text-label-sm text-primary hover:underline"
-                      >
+                    <td className={TABLE.tdNum}>
+                      <Link href="/admin/invoices" className="text-xs font-semibold text-primary hover:underline">
                         View
                       </Link>
                     </td>
@@ -347,8 +306,8 @@ export default async function BillingPage() {
               })}
             </tbody>
           </table>
-        </ScrollHint>
-      </div>
+        </div>
+      </SectionCard>
     </div>
   );
 }
