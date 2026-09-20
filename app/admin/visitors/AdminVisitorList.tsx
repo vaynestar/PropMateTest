@@ -15,6 +15,14 @@ import { updateVisitorStatus } from "./actions";
 import { EmptyState, FIELD, SearchField, StatCard, StatGrid, TABLE, Toolbar } from "@/components/admin/ui";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Card tint by where the visit is - the resident portal's gradient surface. */
+const CARD_TINT: Record<string, string> = {
+  "Checked In": "from-emerald-500/15",
+  Approved: "from-primary/15",
+  "Checked Out": "from-white/[0.05]",
+  Cancelled: "from-white/[0.03]",
+};
 /** "06 Sep" in Malaysia time - ICU prints "Sept" (DEV-184). */
 const visitDay = (d: Date | string) => {
   const [, m, day] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
@@ -296,7 +304,9 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
             return (
               <div
                 key={v.visitor_id}
-                className="flex flex-col gap-3 rounded-2xl border border-outline-variant/60 bg-surface-container p-4 transition-colors hover:border-primary/40"
+                className={`flex flex-col gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br ${
+                  CARD_TINT[normaliseVisitorStatus(v.status) ?? ""] ?? "from-white/[0.04]"
+                } via-surface-container to-surface-container p-4 transition-colors hover:border-primary/40`}
               >
                 {/* Who, where, and what state the visit is in. The card used to
                     be a column of label: value rows - a form printout rather

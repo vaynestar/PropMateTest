@@ -19,16 +19,55 @@ import type { ReactNode } from "react";
  */
 
 export const CARD = "rounded-2xl border border-outline-variant/60 bg-surface-container";
+/**
+ * The resident portal's surface: a tinted corner fading into the card colour
+ * (user, 2026-09-20: "i actually like the gradient black background you set
+ * for resident, maybe can apply the same design for admin panel"). Tailwind
+ * needs the whole class string at build time, so the tint comes in as a
+ * `from-*` class from TONE rather than being composed at runtime.
+ */
+export const GRADIENT_CARD =
+  "rounded-2xl border border-outline-variant/60 bg-gradient-to-br via-surface-container to-surface-container";
 export const LABEL = "text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant";
 
 export type Tone = "neutral" | "primary" | "positive" | "warning" | "critical";
 
-const TONE: Record<Tone, { icon: string; value: string; ring: string }> = {
-  neutral: { icon: "text-on-surface-variant bg-surface-container-highest", value: "text-on-surface", ring: "hover:border-outline" },
-  primary: { icon: "text-primary bg-primary/15", value: "text-on-surface", ring: "hover:border-primary/50" },
-  positive: { icon: "text-emerald-300 bg-emerald-500/15", value: "text-on-surface", ring: "hover:border-emerald-500/40" },
-  warning: { icon: "text-amber-300 bg-amber-500/15", value: "text-amber-200", ring: "hover:border-amber-500/40" },
-  critical: { icon: "text-rose-300 bg-rose-500/15", value: "text-rose-200", ring: "hover:border-rose-500/40" },
+const TONE: Record<Tone, { icon: string; value: string; ring: string; grad: string; glow: string }> = {
+  neutral: {
+    icon: "text-on-surface-variant bg-surface-container-highest",
+    value: "text-on-surface",
+    ring: "hover:border-outline",
+    grad: "from-white/[0.07]",
+    glow: "",
+  },
+  primary: {
+    icon: "text-primary bg-primary/15",
+    value: "text-on-surface",
+    ring: "hover:border-primary/50",
+    grad: "from-primary/25",
+    glow: "bg-primary/15",
+  },
+  positive: {
+    icon: "text-emerald-300 bg-emerald-500/15",
+    value: "text-on-surface",
+    ring: "hover:border-emerald-500/40",
+    grad: "from-emerald-500/20",
+    glow: "bg-emerald-500/15",
+  },
+  warning: {
+    icon: "text-amber-300 bg-amber-500/15",
+    value: "text-amber-200",
+    ring: "hover:border-amber-500/40",
+    grad: "from-amber-500/20",
+    glow: "bg-amber-500/15",
+  },
+  critical: {
+    icon: "text-rose-300 bg-rose-500/15",
+    value: "text-rose-200",
+    ring: "hover:border-rose-500/40",
+    grad: "from-rose-900/60",
+    glow: "bg-rose-500/15",
+  },
 };
 
 /** The top of every admin page. Title, why the page exists, actions. */
@@ -86,13 +125,17 @@ export function StatCard({
   const t = TONE[tone];
   const body = (
     <>
-      <div className="flex items-start justify-between gap-3">
+      {/* A soft bloom in the corner, the same trick the resident hero uses. */}
+      {t.glow && (
+        <span className={`pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full blur-3xl ${t.glow}`} aria-hidden />
+      )}
+      <div className="relative flex items-start justify-between gap-3">
         <span className={LABEL}>{label}</span>
         <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${t.icon}`}>
           <span className="material-symbols-outlined text-[18px]">{icon}</span>
         </span>
       </div>
-      <div className="mt-3 flex items-baseline gap-2">
+      <div className="relative mt-3 flex items-baseline gap-2">
         <span className={`text-2xl font-bold tabular-nums ${t.value}`}>{value}</span>
         {hint && <span className="truncate text-xs text-on-surface-variant">{hint}</span>}
       </div>
@@ -117,7 +160,9 @@ export function StatCard({
     </>
   );
 
-  const shell = `${CARD} p-4 transition-colors ${href ? `${t.ring} pressable` : ""}`;
+  const shell = `${GRADIENT_CARD} ${t.grad} relative overflow-hidden p-4 transition-colors ${
+    href ? `${t.ring} pressable` : ""
+  }`;
   return href ? <Link href={href} className={`block ${shell}`}>{body}</Link> : <div className={shell}>{body}</div>;
 }
 
@@ -139,9 +184,9 @@ export function SectionCard({
   padded?: boolean;
 }) {
   return (
-    <section className={`${CARD} overflow-hidden`}>
+    <section className={`${GRADIENT_CARD} from-white/[0.06] overflow-hidden`}>
       {title && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/40 px-4 py-3.5 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/40 bg-gradient-to-r from-surface-container-high/70 via-surface-container-high/25 to-transparent px-4 py-3.5 sm:px-5">
           <div className="flex min-w-0 items-center gap-2.5">
             {icon && (
               <span className="material-symbols-outlined text-[20px] text-primary">{icon}</span>
@@ -162,7 +207,7 @@ export function SectionCard({
 /** Search + filters + (optionally) a view switch, identical on every module. */
 export function Toolbar({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
-    <div className={`${CARD} flex flex-col gap-3 p-3 lg:flex-row lg:items-center`}>
+    <div className={`${GRADIENT_CARD} from-white/[0.06] flex flex-col gap-3 p-3 lg:flex-row lg:items-center`}>
       <div className="flex flex-1 flex-wrap items-center gap-2">{children}</div>
       {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
     </div>

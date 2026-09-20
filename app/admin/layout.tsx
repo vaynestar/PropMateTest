@@ -38,7 +38,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <div className="bg-surface text-on-surface font-body-md antialiased overflow-x-clip min-h-screen flex w-full">
       {/* SideNavBar (Desktop Only) */}
-      <nav className="hidden md:flex flex-col h-screen fixed left-0 top-0 w-[260px] bg-surface-container-lowest border-r border-outline-variant py-stack-lg transition-all duration-300 ease-in-out z-50">
+      <nav className="hidden md:flex flex-col h-screen fixed left-0 top-0 w-[260px] bg-gradient-to-b from-surface-container-lowest via-surface-container-lowest to-[#0d1426] border-r border-outline-variant py-stack-lg transition-all duration-300 ease-in-out z-50">
         <Link href="/admin" className="px-gutter mb-8 flex items-center gap-3 group">
           <Image
             src="/logo.png"
@@ -125,7 +125,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-margin-mobile pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-margin-desktop md:pb-12">
+        {/* A very quiet wash behind the page, so cards read as raised rather
+            than painted on flat black (DEV-197). */}
+        <main className="flex-1 overflow-y-auto bg-[radial-gradient(1200px_600px_at_20%_-10%,rgba(139,92,246,0.14),transparent_60%),radial-gradient(900px_500px_at_100%_0%,rgba(56,189,248,0.08),transparent_55%)] p-margin-mobile pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-margin-desktop md:pb-12">
           <div className="max-w-container-max mx-auto">{children}</div>
         </main>
       </div>
