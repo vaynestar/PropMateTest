@@ -35,25 +35,30 @@ const LABEL: Record<Item["type"], string> = {
   LEASE_EXPIRY: "Lease",
 };
 
-function Body({ item }: { item: Item }) {
+const ROW =
+  "pressable flex w-full items-center gap-3 rounded-xl border border-outline-variant/50 bg-surface-container-high/40 p-3 text-left transition-colors hover:border-primary/40";
+
+function Body({ item, cta }: { item: Item; cta: string }) {
   return (
     <>
-      <div className="mb-2 flex items-start justify-between gap-3">
-        <span
-          className={`rounded-md border px-2 py-0.5 text-[10px] font-bold ${BADGE[item.type]}`}
-        >
-          {LABEL[item.type]}
-        </span>
-        <span className="shrink-0 font-mono text-[11px] text-on-surface-variant">
-          {new Date(item.timestamp).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "short",
-            timeZone: "Asia/Kuala_Lumpur",
-          })}
-        </span>
-      </div>
-      <p className="text-sm font-semibold leading-snug text-white">{item.title}</p>
-      <p className="mt-0.5 text-xs text-on-surface-variant">{item.subtitle}</p>
+      <span className={`shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-bold ${BADGE[item.type]}`}>
+        {LABEL[item.type]}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold leading-snug text-white">{item.title}</span>
+        <span className="block truncate text-xs text-on-surface-variant">{item.subtitle}</span>
+      </span>
+      <span className="hidden shrink-0 text-[11px] tabular-nums text-on-surface-variant sm:block">
+        {new Date(item.timestamp).toLocaleDateString("en-GB", {
+          day: "2-digit",
+          month: "short",
+          timeZone: "Asia/Kuala_Lumpur",
+        })}
+      </span>
+      <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary">
+        <span className="hidden sm:inline">{cta}</span>
+        <span className="material-symbols-outlined text-[16px] leading-none">chevron_right</span>
+      </span>
     </>
   );
 }
@@ -63,36 +68,15 @@ export default function UrgentActionList({ items }: { items: Item[] }) {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-2">
         {items.map((item) =>
           item.type === "TICKET" ? (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setOpenTicketId(item.id)}
-              className="pressable rounded-xl border border-outline-variant/50 bg-surface-container-high/40 p-3 text-left transition-colors hover:border-primary/40"
-            >
-              <Body item={item} />
-              <span className="mt-2 flex items-center justify-end gap-1 text-xs font-semibold text-primary">
-                View
-                <span className="material-symbols-outlined text-[14px] leading-none">
-                  open_in_full
-                </span>
-              </span>
+            <button key={item.id} type="button" onClick={() => setOpenTicketId(item.id)} className={ROW}>
+              <Body item={item} cta="View" />
             </button>
           ) : (
-            <Link
-              key={item.id}
-              href={item.href}
-              className="pressable rounded-xl border border-outline-variant/50 bg-surface-container-high/40 p-3 transition-colors hover:border-primary/40"
-            >
-              <Body item={item} />
-              <span className="mt-2 flex items-center justify-end gap-1 text-xs font-semibold text-primary">
-                Open
-                <span className="material-symbols-outlined text-[14px] leading-none">
-                  arrow_forward
-                </span>
-              </span>
+            <Link key={item.id} href={item.href} className={ROW}>
+              <Body item={item} cta="Open" />
             </Link>
           )
         )}

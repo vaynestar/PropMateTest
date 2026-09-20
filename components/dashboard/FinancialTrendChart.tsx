@@ -21,31 +21,19 @@ export default function FinancialTrendChart({ data }: FinancialTrendChartProps) 
   const hasData = data && data.length > 0;
 
   return (
-    <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-sm flex flex-col justify-between">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-outline-variant/30">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[20px]">show_chart</span>
-            <h3 className="text-sm font-bold text-white tracking-tight">Billed vs collected</h3>
-          </div>
-          <p className="text-[11px] text-on-surface-variant mt-0.5">
-            What you invoiced against what was actually paid.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-4 text-[11px]">
-          <span className="flex items-center gap-1.5 text-on-surface-variant font-medium">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#8b5cf6]" />
-            Billed (RM)
-          </span>
-          <span className="flex items-center gap-1.5 text-on-surface-variant font-medium">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#34d399]" />
-            Collected (RM)
-          </span>
-        </div>
+    <div className="flex flex-col">
+      <div className="flex items-center justify-end gap-4 pb-2 text-[11px]">
+        <span className="flex items-center gap-1.5 font-medium text-on-surface-variant">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#8b5cf6]" />
+          Billed (RM)
+        </span>
+        <span className="flex items-center gap-1.5 font-medium text-on-surface-variant">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#34d399]" />
+          Collected (RM)
+        </span>
       </div>
 
-      <div className="h-64 w-full pt-4">
+      <div className="h-64 w-full">
         {hasData ? (
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>

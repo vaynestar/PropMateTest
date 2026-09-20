@@ -5,364 +5,227 @@ import ScanButton from "@/components/visitors/ScanButton";
 import FilterableTicketQueue from "@/components/dashboard/FilterableTicketQueue";
 import FinancialTrendChart from "@/components/dashboard/FinancialTrendChart";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import { BTN, EmptyState, Money, PageHeader, SectionCard, StatCard, StatGrid } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
+const ACTIVITY = {
+  VISITOR: { icon: "badge", tint: "text-purple-300 bg-purple-500/15" },
+  TICKET: { icon: "build", tint: "text-amber-300 bg-amber-500/15" },
+  PAYMENT: { icon: "payments", tint: "text-emerald-300 bg-emerald-500/15" },
+  DEFAULT: { icon: "campaign", tint: "text-primary bg-primary/15" },
+} as const;
+
+const QUICK_ACTIONS = [
+  { href: "/admin/maintenance", icon: "add_task", label: "Raise a ticket" },
+  { href: "/admin/invoices", icon: "receipt_long", label: "Issue an invoice" },
+  { href: "/admin/announcements", icon: "campaign", label: "Post a notice" },
+  { href: "/admin/bookings", icon: "calendar_month", label: "Facility schedule" },
+];
+
+/** The admin home: what needs attention, the numbers, and the work in flight. */
 export default async function AdminDashboardPage() {
   const propertyId = (await getActivePropertyId()) ?? undefined;
   const stats = await getDashboardStats(propertyId);
+  const time = (d: Date | string) =>
+    new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" }).format(new Date(d));
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
-      {/* 1. Header & Live Indicator */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-outline-variant/40">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-              Dashboard
-            </h1>
-          </div>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            What needs your attention today.
-          </p>
-        </div>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Dashboard"
+        subtitle="What needs your attention today."
+        actions={
+          <>
+            <ScanButton />
+            <Link href="/admin/reports" className={BTN.secondary}>
+              <span className="material-symbols-outlined text-[18px] text-primary">analytics</span>
+              Reports
+            </Link>
+          </>
+        }
+      />
 
-        {/* Header Fast Actions */}
-        <div className="flex items-center gap-2.5">
-          <ScanButton />
-          <Link
-            href="/admin/reports"
-            className="px-3.5 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/60 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors pressable"
-          >
-            <span className="material-symbols-outlined text-[16px] text-primary">analytics</span>
-            <span>Reports</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* 2. Urgent Attention Banner (If Critical Items Exist) */}
       {stats.urgentActionItems.length > 0 && (
-        <div className="p-4 rounded-2xl bg-surface-container border border-rose-500/40 shadow-sm space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-rose-400 text-[20px]">
-                warning
+        <section className="overflow-hidden rounded-2xl border border-rose-500/40 bg-rose-500/[0.06]">
+          <div className="flex items-center gap-2 border-b border-rose-500/25 px-4 py-3">
+            <span className="material-symbols-outlined text-[20px] text-rose-400">warning</span>
+            <h2 className="text-sm font-bold text-white">
+              Needs attention{" "}
+              <span className="ml-1 rounded-md border border-rose-500/30 bg-rose-500/15 px-1.5 py-0.5 text-[11px] font-semibold text-rose-200">
+                {stats.urgentActionItems.length}
               </span>
-              <h2 className="text-sm font-bold text-white tracking-tight">
-                Needs attention ({stats.urgentActionItems.length})
-              </h2>
-            </div>
-            <span className="text-[11px] text-rose-300 font-semibold bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 rounded-md">
-            </span>
+            </h2>
           </div>
-
-          <UrgentActionList items={stats.urgentActionItems as any} />
-        </div>
+          <div className="p-4">
+            <UrgentActionList items={stats.urgentActionItems as any} />
+          </div>
+        </section>
       )}
 
-      {/* 3. Four Core Live Pulse Scorecards */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        {/* Scorecard 1: Occupancy Rate */}
-        <Link
+      <StatGrid>
+        <StatCard
+          label="Occupancy"
+          value={`${stats.occupancyRate}%`}
+          hint={`${stats.occupiedUnits} of ${stats.totalUnits} units`}
+          icon="home_work"
+          tone="primary"
           href="/admin/units"
-          className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4 hover:border-primary/50 transition-all group flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-xs text-on-surface-variant font-medium">Occupancy</span>
-            <span className="material-symbols-outlined text-[18px] text-primary group-hover:scale-110 transition-transform">
-              home_work
-            </span>
-          </div>
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold sm:text-2xl text-white font-mono">{stats.occupancyRate}%</span>
-              <span className="text-xs text-on-surface-variant font-mono">
-                {stats.occupiedUnits} of {stats.totalUnits} units
-              </span>
-            </div>
-            <div className="w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden mt-2">
-              <div
-                className="h-full bg-primary rounded-full transition-all duration-500"
-                style={{ width: `${stats.occupancyRate}%` }}
-              />
-            </div>
-          </div>
-        </Link>
-
-        {/* Scorecard 2: Cash Collected Today */}
-        <Link
+          progress={stats.occupancyRate}
+        />
+        <StatCard
+          label="Collected today"
+          value={<Money value={stats.todayCollectedAmount} />}
+          icon="payments"
+          tone="positive"
           href="/admin/invoices"
-          className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4 hover:border-emerald-500/50 transition-all group flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-xs text-emerald-400 font-medium">Today&apos;s Collections</span>
-            <span className="material-symbols-outlined text-[18px] text-emerald-400 group-hover:scale-110 transition-transform">
-              payments
-            </span>
-          </div>
-          <div>
-            <span className="text-xl font-bold sm:text-2xl text-emerald-300 font-mono">
-              RM {stats.todayCollectedAmount.toFixed(2)}
-            </span>
-            <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30 text-on-surface-variant">
-              <span>Overdue</span>
-              <span className="font-mono font-bold text-rose-300">
-                RM {stats.outstandingAmount.toLocaleString()}
-              </span>
-            </div>
-          </div>
-        </Link>
-
-        {/* Scorecard 3: Active Visitors On-Site */}
-        {/* Emerald, because that is what "On site" is everywhere else (lib/visitor-status.ts, Checked In). This figure was purple, so one state had two colours across three screens. */}
-        <Link
+          footer={{
+            label: "Outstanding",
+            value: <Money value={stats.outstandingAmount} />,
+            tone: stats.outstandingAmount > 0 ? "critical" : "neutral",
+          }}
+        />
+        <StatCard
+          label="Visitors on site"
+          value={stats.activeVisitorsCount}
+          hint="right now"
+          icon="badge"
+          tone="positive"
           href="/admin/visitors"
-          className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4 hover:border-emerald-500/50 transition-all group flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-xs text-emerald-400 font-medium">Visitors on site</span>
-            <span className="material-symbols-outlined text-[18px] text-emerald-400 group-hover:scale-110 transition-transform">
-              badge
-            </span>
-          </div>
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold sm:text-2xl text-emerald-300 font-mono">
-                {stats.activeVisitorsCount}
-              </span>
-              <span className="text-xs text-emerald-400/80">right now</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30 text-on-surface-variant">
-              <span>Guardhouse</span>
-              <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                <span>Open</span>
-              </span>
-            </div>
-          </div>
-        </Link>
-
-        {/* Scorecard 4: Open Helpdesk Backlog */}
-        <Link
+          footer={{ label: "Guardhouse", value: "Open", tone: "positive" }}
+        />
+        <StatCard
+          label="Open tickets"
+          value={stats.openTickets}
+          hint="unresolved"
+          icon="build"
+          tone={stats.urgentTicketsCount > 0 ? "warning" : "neutral"}
           href="/admin/maintenance"
-          className="rounded-2xl border border-outline-variant/60 bg-surface-container p-3 sm:p-4 hover:border-amber-500/50 transition-all group flex flex-col justify-between"
-        >
-          <div className="flex items-center justify-between pb-2">
-            <span className="text-xs text-amber-400 font-medium">Open tickets</span>
-            <span className="material-symbols-outlined text-[18px] text-amber-400 group-hover:scale-110 transition-transform">
-              build
-            </span>
-          </div>
-          <div>
-            <div className="flex items-baseline gap-2">
-              <span className="text-xl font-bold sm:text-2xl text-white font-mono">{stats.openTickets}</span>
-              <span className="text-xs text-on-surface-variant">unresolved</span>
-            </div>
-            <div className="flex items-center justify-between text-[11px] mt-2 pt-2 border-t border-outline-variant/30">
-              <span className="text-on-surface-variant">Urgent or high</span>
-              <span className="text-amber-300 font-mono font-bold">
-                {stats.urgentTicketsCount}
-              </span>
-            </div>
-          </div>
-        </Link>
-      </div>
+          footer={{
+            label: "Urgent or high",
+            value: stats.urgentTicketsCount,
+            tone: stats.urgentTicketsCount > 0 ? "warning" : "neutral",
+          }}
+        />
+      </StatGrid>
 
-      {/* 5. Two-Column Real-Time Operational Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column (2 Cols): Financial Performance Trend Chart & Active Ticket Queue */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Financial Performance Area/Line Chart */}
-          <FinancialTrendChart data={stats.financialTrend} />
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <div className="space-y-5 lg:col-span-2">
+          <SectionCard
+            title="Billed vs collected"
+            subtitle="What you invoiced against what was actually paid."
+            icon="show_chart"
+          >
+            <FinancialTrendChart data={stats.financialTrend} />
+          </SectionCard>
 
-          {/* Active Maintenance Queue */}
-          <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
-            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-white">Work in progress</h3>
-                <p className="text-[11px] text-on-surface-variant">
-                  Tickets that are open or being worked on.
-                </p>
-              </div>
-              <Link
-                href="/admin/maintenance"
-                className="text-xs text-primary hover:underline font-semibold"
-              >
+          <SectionCard
+            title="Work in progress"
+            subtitle="Tickets that are open or being worked on."
+            icon="engineering"
+            action={
+              <Link href="/admin/maintenance" className="text-xs font-semibold text-primary hover:underline">
                 View all tickets
               </Link>
-            </div>
-
+            }
+          >
             <FilterableTicketQueue tickets={stats.openTicketsList} />
-          </div>
+          </SectionCard>
         </div>
 
-        {/* Right Column (1 Col): Live Activity Stream */}
-        <div className="space-y-6">
-          {/* Live Operational Activity Stream */}
-          <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
-            <div className="flex items-center justify-between pb-3 border-b border-outline-variant/30 mb-4">
-              <div>
-                <h3 className="text-sm font-bold text-white">Recent activity</h3>
-                <p className="text-[11px] text-on-surface-variant">What happened today</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              {stats.activityFeed.length > 0 ? (
-                stats.activityFeed.map((event) => (
-                  <div
-                    key={event.id}
-                    className="p-2.5 rounded-xl bg-surface-container-lowest/80 border border-outline-variant/40 flex items-start gap-2.5 text-xs"
-                  >
-                    <span
-                      className={`material-symbols-outlined text-[16px] shrink-0 mt-0.5 ${
-                        event.type === "VISITOR"
-                          ? "text-purple-400"
-                          : event.type === "TICKET"
-                          ? "text-amber-400"
-                          : event.type === "PAYMENT"
-                          ? "text-emerald-400"
-                          : "text-primary"
-                      }`}
-                    >
-                      {event.type === "VISITOR"
-                        ? "badge"
-                        : event.type === "TICKET"
-                        ? "build"
-                        : event.type === "PAYMENT"
-                        ? "payments"
-                        : "campaign"}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-semibold text-white truncate block">
-                          {event.title}
-                        </span>
-                        <span className="text-[10px] text-on-surface-variant shrink-0 font-mono">
-                          {new Date(event.timestamp).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                      <span className="text-[11px] text-on-surface-variant truncate block">
-                        {event.detail}
+        <div className="space-y-5">
+          <SectionCard title="Recent activity" subtitle="What happened today" icon="bolt" padded={false}>
+            {stats.activityFeed.length > 0 ? (
+              <ul className="max-h-[22rem] divide-y divide-outline-variant/30 overflow-y-auto">
+                {stats.activityFeed.map((event) => {
+                  const kind = ACTIVITY[event.type as keyof typeof ACTIVITY] ?? ACTIVITY.DEFAULT;
+                  return (
+                    <li key={event.id} className="flex items-start gap-3 px-4 py-3">
+                      <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${kind.tint}`}>
+                        <span className="material-symbols-outlined text-[16px]">{kind.icon}</span>
                       </span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-6 text-center text-on-surface-variant/70 text-xs flex flex-col items-center gap-1">
-                  <span className="material-symbols-outlined text-[24px] opacity-40">notifications_off</span>
-                  <span>Nothing has happened today yet.</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-baseline justify-between gap-2">
+                          <span className="truncate text-xs font-semibold text-white">{event.title}</span>
+                          <span className="shrink-0 text-[11px] tabular-nums text-on-surface-variant">
+                            {time(event.timestamp)}
+                          </span>
+                        </div>
+                        <p className="truncate text-[11px] text-on-surface-variant">{event.detail}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <EmptyState icon="notifications_off" title="Nothing has happened today yet." />
+            )}
+          </SectionCard>
 
-
-      {/* Facilities due for service. Overdue first — an overdue service is the
-          one that needs a decision, and the counter above excludes it. */}
-      {stats.upcomingMaintenanceList.length > 0 && (
-        <div className="rounded-2xl border border-outline-variant/60 bg-surface-container p-4 sm:p-5">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <span className="material-symbols-outlined text-[20px] text-amber-400">build</span>
-              <h2 className="text-sm font-bold text-white">Maintenance due</h2>
-            </div>
-            <Link
-              href="/admin/facilities"
-              className="text-xs font-semibold text-primary hover:underline"
+          {stats.upcomingMaintenanceList.length > 0 && (
+            <SectionCard
+              title="Maintenance due"
+              subtitle="Facilities needing service"
+              icon="handyman"
+              action={
+                <Link href="/admin/facilities" className="text-xs font-semibold text-primary hover:underline">
+                  Facilities
+                </Link>
+              }
+              padded={false}
             >
-              Facilities
-            </Link>
-          </div>
+              <ul className="divide-y divide-outline-variant/30">
+                {stats.upcomingMaintenanceList.slice(0, 5).map((f) => (
+                  <li key={f.facility_id}>
+                    <Link
+                      href="/admin/facilities"
+                      className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-surface-container-high/50"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold text-white">
+                          {f.facility_name}
+                          {f.isClosed && (
+                            <span className="ml-2 rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-300">
+                              Closed
+                            </span>
+                          )}
+                        </p>
+                        <p className="truncate text-[11px] text-on-surface-variant">{f.facility_type}</p>
+                      </div>
+                      <span
+                        className={`shrink-0 text-[11px] font-semibold tabular-nums ${f.isOverdue ? "text-rose-300" : "text-amber-300"}`}
+                      >
+                        {f.isOverdue
+                          ? `${Math.abs(f.daysAway)} day${Math.abs(f.daysAway) === 1 ? "" : "s"} overdue`
+                          : f.daysAway === 0
+                          ? "Due today"
+                          : `in ${f.daysAway} day${f.daysAway === 1 ? "" : "s"}`}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </SectionCard>
+          )}
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {stats.upcomingMaintenanceList.map((f) => (
-              <Link
-                key={f.facility_id}
-                href="/admin/facilities"
-                className={`pressable rounded-xl border p-3 transition-colors ${
-                  f.isOverdue
-                    ? "border-rose-500/40 bg-rose-500/10 hover:border-rose-500/60"
-                    : "border-outline-variant/50 bg-surface-container-high/40 hover:border-amber-500/50"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className="truncate text-xs font-semibold text-white">
-                    {f.facility_name}
-                  </span>
-                  {f.isClosed && (
-                    <span className="shrink-0 rounded border border-amber-500/40 bg-amber-500/15 px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
-                      Closed
+          <SectionCard title="Quick actions" icon="bolt" padded={false}>
+            <ul className="divide-y divide-outline-variant/30">
+              {QUICK_ACTIONS.map((a) => (
+                <li key={a.href}>
+                  <Link
+                    href={a.href}
+                    className="flex items-center gap-3 px-4 py-3 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-high/50"
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-primary">{a.icon}</span>
+                    {a.label}
+                    <span className="material-symbols-outlined ml-auto text-[16px] text-on-surface-variant">
+                      chevron_right
                     </span>
-                  )}
-                </div>
-                <p className="mt-0.5 text-[11px] text-on-surface-variant">{f.facility_type}</p>
-                <p
-                  className={`mt-1.5 font-mono text-[11px] font-bold ${
-                    f.isOverdue ? "text-rose-300" : "text-amber-300"
-                  }`}
-                >
-                  {f.isOverdue
-                    ? `${Math.abs(f.daysAway)} day${Math.abs(f.daysAway) === 1 ? "" : "s"} overdue`
-                    : f.daysAway === 0
-                    ? "Due today"
-                    : `In ${f.daysAway} day${f.daysAway === 1 ? "" : "s"}`}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-
-      {/* 4. Fast Action Matrix */}
-      <div className="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="text-on-surface-variant font-semibold shrink-0">Quick actions</span>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href="/admin/maintenance"
-            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[15px] text-amber-400">add_task</span>
-            <span>Raise Ticket</span>
-          </Link>
-
-          <Link
-            href="/admin/invoices"
-            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[15px] text-emerald-400">receipt_long</span>
-            <span>Issue Invoice</span>
-          </Link>
-
-          <Link
-            href="/admin/announcements"
-            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[15px] text-purple-400">campaign</span>
-            <span>Post Notice</span>
-          </Link>
-
-          <Link
-            href="/admin/facilities"
-            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[15px] text-cyan-400">calendar_month</span>
-            <span>Facility Schedule</span>
-          </Link>
-
-          <Link
-            href="/admin/settings"
-            className="px-3 py-1.5 rounded-xl bg-surface-container-high hover:bg-surface-container-highest border border-outline-variant/60 text-white font-medium flex items-center gap-1.5 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[15px] text-on-surface-variant">settings</span>
-            <span>Settings</span>
-          </Link>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </SectionCard>
         </div>
       </div>
     </div>
