@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
 import UnitsClient from "@/components/units/UnitsClient";
 import { resolveActivePropertyId, shouldPersistProperty } from "@/lib/property-context";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -69,27 +70,15 @@ export default async function UnitsPage(props: {
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 border-b border-outline-variant/30 pb-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-outline-variant/60 bg-surface-container-high text-on-surface-variant">
-              <span className="material-symbols-outlined text-[20px]">meeting_room</span>
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-white">Units</h1>
-          </div>
-          <p className="mt-1 text-xs text-on-surface-variant">
-            {activeProperty ? (
-              <>
-                Managing <span className="font-semibold text-on-surface">{activeProperty.property_name}</span>.
-                Switch property from the selector in the top bar.
-              </>
-            ) : (
-              "No properties yet — add a property before creating units."
-            )}
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Units"
+        subtitle={
+          activeProperty
+            ? `Every unit in ${activeProperty.property_name}. Switch property from the selector in the top bar.`
+            : "No properties yet — add a property before creating units."
+        }
+      />
 
       <UnitsClient
         initialUnits={serialisedUnits}

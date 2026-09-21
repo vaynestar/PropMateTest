@@ -6,6 +6,7 @@ import TenantFormModal from "./TenantFormModal";
 import TenantEditModal from "./TenantEditModal";
 import TenantDeleteModal from "./TenantDeleteModal";
 import ScrollHint from "@/components/ui/ScrollHint";
+import { FIELD, StatCard, StatGrid } from "@/components/admin/ui";
 
 interface Lease {
   lease_id: string;
@@ -100,64 +101,22 @@ export default function TenantsClient({
   const hiddenUnassignedCount = selectedPropertyId === "ALL" ? 0 : withoutUnitCount;
 
   return (
-    <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              Tenants
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{totalTenants}</div>
-            <span className="text-[11px] text-on-surface-variant">with a login</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-primary">
-            <span className="material-symbols-outlined text-[24px]">groups</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              With a unit
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{activeLeaseholders}</div>
-            <span className="text-[11px] text-emerald-400">in this property</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <span className="material-symbols-outlined text-[24px]">home_pin</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              No unit yet
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{withoutUnitCount}</div>
-            <span className="text-[11px] text-on-surface-variant">needs a lease</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-            <span className="material-symbols-outlined text-[24px]">person_outline</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              Properties
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{propertiesCovered}</div>
-            <span className="text-[11px] text-on-surface-variant">{selectedPropertyId === "ALL" ? "they live across" : "in view"}</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-            <span className="material-symbols-outlined text-[24px]">apartment</span>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-5">
+      <StatGrid>
+        <StatCard label="Tenants" value={totalTenants} hint="with a login" icon="groups" tone="primary" />
+        <StatCard label="With a unit" value={activeLeaseholders} hint="in this property" icon="home_pin" tone="positive" />
+        <StatCard label="No unit yet" value={withoutUnitCount} hint="needs a lease" icon="person_outline" tone={withoutUnitCount > 0 ? "warning" : "neutral"} />
+        <StatCard
+          label="Properties"
+          value={propertiesCovered}
+          hint={selectedPropertyId === "ALL" ? "they live across" : "in view"}
+          icon="apartment"
+          tone="neutral"
+        />
+      </StatGrid>
 
       {/* Filter & Controls Bar */}
-      <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-3 md:flex-row md:items-center">
         {/* Search & Property Select */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-xl">
           <select
@@ -182,7 +141,7 @@ export default function TenantsClient({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search name, email or phone"
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-surface-container-high border border-outline-variant/60 text-xs text-white placeholder:text-on-surface-variant/50 outline-none focus:border-primary transition-all"
+              className={`${FIELD} w-full pl-9 placeholder:text-on-surface-variant/60`}
             />
           </div>
         </div>
@@ -224,7 +183,7 @@ export default function TenantsClient({
       {/* A tenant with no unit belongs to no property, so a property filter hides
           them — including one just created. Say so instead of losing them. */}
       {hiddenUnassignedCount > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-outline-variant/60 bg-surface-container px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container px-4 py-3">
           <p className="text-xs text-on-surface-variant">
             <span className="font-semibold text-white">
               {hiddenUnassignedCount} tenant{hiddenUnassignedCount === 1 ? "" : "s"}

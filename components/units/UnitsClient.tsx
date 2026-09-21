@@ -676,12 +676,12 @@ export default function UnitsClient({
     : "Check the unit number, layout, tenant name or note.";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {kpis.map((k) => (
           <div
             key={k.label}
-            className="flex items-center justify-between gap-3 rounded-xl border border-outline-variant/60 bg-surface-container p-4"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-4"
           >
             <div className="min-w-0">
               <span className="text-xs font-medium text-on-surface-variant">{k.label}</span>
@@ -701,7 +701,7 @@ export default function UnitsClient({
 
       {/* Controls. No property picker here — units are managed one property at
           a time and the property is chosen once, in the top bar. */}
-      <div className="flex flex-col gap-3 rounded-xl border border-outline-variant/60 bg-surface-container p-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="relative flex-1 xl:max-w-md">
           <span
             className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
@@ -785,7 +785,7 @@ export default function UnitsClient({
           return (
             <section
               key={floor}
-              className="space-y-4 rounded-xl border border-outline-variant/60 bg-surface-container p-5"
+              className="space-y-4 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-5"
             >
               {/* The floor band reads as a drawer front: press it to open, with
                   the occupancy strip fused to its bottom edge as a fill gauge.

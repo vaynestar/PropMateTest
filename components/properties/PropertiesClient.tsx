@@ -6,6 +6,7 @@ import PropertyCard, { PropertyData } from "./PropertyCard";
 import PropertyFormModal from "./PropertyFormModal";
 import PropertyEditModal from "./PropertyEditModal";
 import PropertyDeleteModal from "./PropertyDeleteModal";
+import { FIELD, StatCard, StatGrid } from "@/components/admin/ui";
 
 interface PropertiesClientProps {
   initialProperties: PropertyData[];
@@ -59,74 +60,39 @@ export default function PropertiesClient({
   }, [initialProperties]);
 
   return (
-    <div className="space-y-6">
-      {/* Portfolio Summary KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Properties */}
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              Total properties
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{totalProperties}</div>
-            <span className="text-[11px] text-on-surface-variant">
-              {emptyProperties === 0
-                ? "all have units"
-                : `${emptyProperties} with no units yet`}
-            </span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-            <span className="material-symbols-outlined text-[24px]">domain</span>
-          </div>
-        </div>
-
-        {/* Total Registered Units */}
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              Units
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{totalUnits}</div>
-            <span className="text-[11px] text-on-surface-variant">across all properties</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-primary">
-            <span className="material-symbols-outlined text-[24px]">meeting_room</span>
-          </div>
-        </div>
-
-        {/* Occupancy Rate */}
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              Occupancy
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{avgOccupancyRate}%</div>
-            <span className="text-[11px] text-emerald-400">{totalOccupied} of {totalUnits} leased</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <span className="material-symbols-outlined text-[24px]">pie_chart</span>
-          </div>
-        </div>
-
-        {/* Default Property Scope */}
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div className="min-w-0">
-            <span className="text-xs font-medium text-on-surface-variant">
-              Working in
-            </span>
-            <div className="text-sm font-bold text-amber-300 truncate mt-1">
+    <div className="space-y-5">
+      <StatGrid>
+        <StatCard
+          label="Total properties"
+          value={totalProperties}
+          hint={emptyProperties === 0 ? "all have units" : `${emptyProperties} with no units yet`}
+          icon="domain"
+          tone="primary"
+        />
+        <StatCard label="Units" value={totalUnits} hint="across all properties" icon="meeting_room" tone="neutral" />
+        <StatCard
+          label="Occupancy"
+          value={`${avgOccupancyRate}%`}
+          hint={`${totalOccupied} of ${totalUnits} leased`}
+          icon="pie_chart"
+          tone="positive"
+          progress={avgOccupancyRate}
+        />
+        <StatCard
+          label="Working in"
+          value={
+            <span className="block truncate text-base leading-snug" title={activeDefaultProperty?.property_name}>
               {activeDefaultProperty?.property_name || "No default set"}
-            </div>
-            <span className="text-[11px] text-on-surface-variant/80">Default for new sessions</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-300 shrink-0">
-            <span className="material-symbols-outlined text-[24px]">star</span>
-          </div>
-        </div>
-      </div>
+            </span>
+          }
+          icon="star"
+          tone="warning"
+          footer={{ label: "Default for new sessions", value: activeDefaultProperty ? "Set" : "None" }}
+        />
+      </StatGrid>
 
       {/* Control Bar: Search, Type Filter & Add Property Action */}
-      <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-3 md:flex-row md:items-center">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
@@ -137,7 +103,7 @@ export default function PropertiesClient({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search name, city, state or address"
-            className="w-full pl-9 pr-4 py-2 rounded-xl bg-surface-container-high border border-outline-variant/60 text-xs text-white placeholder:text-on-surface-variant/50 outline-none focus:border-primary transition-all"
+            className={`${FIELD} w-full pl-9 placeholder:text-on-surface-variant/60`}
           />
           {searchQuery && (
             <button
@@ -205,7 +171,7 @@ export default function PropertiesClient({
         ))}
 
         {filteredProperties.length === 0 && (
-          <div className="col-span-full py-16 text-center rounded-2xl bg-surface-container border border-outline-variant/40 flex flex-col items-center gap-3">
+          <div className="col-span-full rounded-2xl border border-outline-variant/40 bg-surface-container py-10 text-center">
             <div className="w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center text-on-surface-variant">
               <span className="material-symbols-outlined text-[28px] opacity-40">domain_disabled</span>
             </div>

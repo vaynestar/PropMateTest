@@ -5,6 +5,7 @@ import { adminDeleteLease } from "@/app/admin/leases/actions";
 import Link from "next/link";
 import AdminLeaseFormModal from "./AdminLeaseFormModal";
 import AdminLeaseEditModal from "./AdminLeaseEditModal";
+import { FIELD, StatCard, StatGrid } from "@/components/admin/ui";
 
 export interface LeaseItem {
   /** Billing history — decides whether this lease may be deleted or reassigned. */
@@ -90,64 +91,16 @@ export default function LeasesClient({
   const propertiesCount = properties.length;
 
   return (
-    <div className="space-y-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              Leases
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{totalLeases}</div>
-            <span className="text-[11px] text-on-surface-variant">on record</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-primary">
-            <span className="material-symbols-outlined text-[24px]">description</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              Active
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{activeLeasesCount}</div>
-            <span className="text-[11px] text-emerald-400">someone living there</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <span className="material-symbols-outlined text-[24px]">verified</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              Ended
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{inactiveLeasesCount}</div>
-            <span className="text-[11px] text-on-surface-variant">moved out</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-surface-container-high border border-outline-variant/40 flex items-center justify-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-[24px]">history</span>
-          </div>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex items-center justify-between">
-          <div>
-            <span className="text-xs font-medium text-on-surface-variant">
-              Properties
-            </span>
-            <div className="text-2xl font-bold text-white mt-1">{propertiesCount}</div>
-            <span className="text-[11px] text-on-surface-variant">with a lease</span>
-          </div>
-          <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
-            <span className="material-symbols-outlined text-[24px]">apartment</span>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-5">
+      <StatGrid>
+        <StatCard label="Leases" value={totalLeases} hint="on record" icon="description" tone="primary" />
+        <StatCard label="Active" value={activeLeasesCount} hint="someone living there" icon="verified" tone="positive" />
+        <StatCard label="Ended" value={inactiveLeasesCount} hint="moved out" icon="history" tone="neutral" />
+        <StatCard label="Properties" value={propertiesCount} hint="with a lease" icon="apartment" tone="neutral" />
+      </StatGrid>
 
       {/* Filter & Controls Bar */}
-      <div className="p-4 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-3 md:flex-row md:items-center">
         {/* Search & Property Select */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-xl">
           <div className="relative flex-1">
@@ -159,7 +112,7 @@ export default function LeasesClient({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tenant, unit or email"
-              className="w-full pl-9 pr-4 py-2 rounded-xl bg-surface-container-high border border-outline-variant/60 text-xs text-white placeholder:text-on-surface-variant/50 outline-none focus:border-primary transition-all"
+              className={`${FIELD} w-full pl-9 placeholder:text-on-surface-variant/60`}
             />
           </div>
         </div>

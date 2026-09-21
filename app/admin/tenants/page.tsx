@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import TenantsClient from "@/components/tenants/TenantsClient";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -66,21 +67,11 @@ export default async function TenantsPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-outline-variant/30">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-[20px]">groups</span>
-            </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Tenants</h1>
-          </div>
-          <p className="text-xs text-on-surface-variant mt-1">
-            The people who live here. Add a tenant first, then give them a unit by creating a lease.
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Tenants"
+        subtitle="The people who live here. Add a tenant first, then give them a unit by creating a lease."
+      />
 
       {/* Interactive Tenants Workspace */}
       <TenantsClient

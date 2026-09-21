@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import { listProperties } from "@/lib/property-management";
 import PropertiesClient from "@/components/properties/PropertiesClient";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -12,21 +13,11 @@ export default async function PropertiesPage() {
   const activePropertyId = (await getActivePropertyId()) ?? "";
 
   return (
-    <div className="space-y-6">
-      {/* Top Section Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-outline-variant/30">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
-              <span className="material-symbols-outlined text-[20px]">domain</span>
-            </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Properties Portfolio</h1>
-          </div>
-          <p className="text-xs text-on-surface-variant mt-1">
-            Add properties, track their units, and pick which one the rest of the app works in.
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Properties"
+        subtitle="Add properties, track their units, and pick which one the rest of the app works in."
+      />
 
       {/* Interactive Client Workspace */}
       <PropertiesClient
