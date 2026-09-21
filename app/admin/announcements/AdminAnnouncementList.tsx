@@ -13,6 +13,7 @@ import {
   togglePinAnnouncement,
   updateAnnouncementStatus,
 } from "./actions";
+import { dayMonth } from "@/lib/short-date";
 
 interface PropertyOption {
   property_id: string;
@@ -506,16 +507,7 @@ export default function AdminAnnouncementList({
                   <div className="flex justify-between items-center text-[11px] text-on-surface-variant font-medium">
                     <span className="flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px]">calendar_month</span>
-                      {new Date(a.publish_date).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                      })}{" "}
-                      -{" "}
-                      {new Date(a.expiry_date).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
+                      {dayMonth(a.publish_date)} - {dayMonth(a.expiry_date, true)}
                     </span>
                     {a.author && (
                       <span className="truncate max-w-[120px]" title={a.author.user_name}>
@@ -860,11 +852,7 @@ export default function AdminAnnouncementList({
             <div className="flex items-center justify-between text-xs text-on-surface-variant pt-3 border-t border-outline-variant/40">
               <span>
                 Published:{" "}
-                {new Date(previewItem.publish_date).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
+                {dayMonth(previewItem.publish_date, true)}
               </span>
               {previewItem.author && <span>By {previewItem.author.user_name} ({previewItem.author.role})</span>}
             </div>

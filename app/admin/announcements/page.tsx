@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { getAllAnnouncements } from "@/lib/announcements";
 import AdminAnnouncementList, { AnnouncementRecord } from "./AdminAnnouncementList";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -40,20 +41,11 @@ export default async function AdminAnnouncementsPage({
   });
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-primary text-[28px]">campaign</span>
-            <span>Announcements</span>
-          </h1>
-          <p className="text-on-surface-variant text-sm mt-1">
-            Notices on the resident board — what is up now, what is queued, and what has
-            come down.
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Announcements"
+        subtitle="Notices on the resident board — what is up now, what is queued, and what has come down."
+      />
 
       {/* Main List and Manager */}
       <AdminAnnouncementList

@@ -31,7 +31,7 @@ export default async function AdminReportsPage({ searchParams }: AdminReportsPag
   const reportData = await getReportsData(propertyId, dateRange);
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+    <div className="mx-auto max-w-[1400px]">
       <AdminReportsClient
         data={reportData}
         currentPropertyId={propertyId}

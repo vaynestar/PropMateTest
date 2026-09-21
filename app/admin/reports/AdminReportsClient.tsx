@@ -8,6 +8,7 @@ import FinancialsReportView from "@/components/reports/FinancialsReportView";
 import MaintenanceReportView from "@/components/reports/MaintenanceReportView";
 import FacilitiesReportView from "@/components/reports/FacilitiesReportView";
 import VisitorsReportView from "@/components/reports/VisitorsReportView";
+import { BTN, PageHeader } from "@/components/admin/ui";
 
 interface AdminReportsClientProps {
   data: any;
@@ -132,42 +133,26 @@ export default function AdminReportsClient({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header & Export Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-outline-variant/40">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-            Reports
-          </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            How the property is doing — money in, work outstanding, and who has been
-            through the gate.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="px-3.5 py-2 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant text-xs text-white font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-          >
-            <span className="material-symbols-outlined text-[16px] text-primary">download</span>
-            <span>Export CSV</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => window.print()}
-            className="btn-primary px-4 py-2 rounded-xl text-white font-bold text-xs flex items-center gap-1.5 shadow-md"
-          >
-            <span className="material-symbols-outlined text-[16px]">print</span>
-            <span>Print Report</span>
-          </button>
-        </div>
-      </div>
+    <div className="space-y-5">
+      <PageHeader
+        title="Reports"
+        subtitle="How the property is doing — money in, work outstanding, and who has been through the gate."
+        actions={
+          <>
+            <button type="button" onClick={handleExportCSV} className={BTN.secondary}>
+              <span className="material-symbols-outlined text-[18px] text-primary">download</span>
+              Export CSV
+            </button>
+            <button type="button" onClick={() => window.print()} className={BTN.primary}>
+              <span className="material-symbols-outlined text-[18px]">print</span>
+              Print report
+            </button>
+          </>
+        }
+      />
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant/60 bg-surface-container p-2.5 text-xs sm:gap-3 sm:p-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-2.5 text-xs sm:gap-3 sm:p-3.5">
         {/* Left: Property Selector */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <span className="text-on-surface-variant font-medium shrink-0">Property:</span>

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ViewerButton } from "@/components/ui/MediaViewer";
 import Image from "next/image";
 import ScrollHint from "@/components/ui/ScrollHint";
+import { dayMonth } from "@/lib/short-date";
 
 export interface ResidentAnnouncement {
   announcement_id: string;
@@ -174,11 +175,7 @@ export default function ResidentAnnouncementList({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredList.map((item) => {
             const catMeta = CATEGORY_STYLES[item.category] || CATEGORY_STYLES.Notice;
-            const publishFormatted = new Date(item.publish_date).toLocaleDateString("en-GB", {
-              day: "2-digit",
-              month: "short",
-              year: "numeric",
-            });
+            const publishFormatted = dayMonth(item.publish_date, true);
 
             return (
               <div
@@ -376,11 +373,7 @@ export default function ResidentAnnouncementList({
             <div className="flex items-center justify-between text-xs text-on-surface-variant pt-3 border-t border-outline-variant/40">
               <span>
                 Issued on{" "}
-                {new Date(readingItem.publish_date).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "short",
-                  year: "numeric",
-                })}
+                {dayMonth(readingItem.publish_date, true)}
               </span>
               <span>PropMate Management Office</span>
             </div>
