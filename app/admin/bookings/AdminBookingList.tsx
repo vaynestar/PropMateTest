@@ -1,10 +1,23 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
-import ScrollHint from "@/components/ui/ScrollHint";
 import { normaliseBookingStatus } from "@/lib/booking-status";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { updateBookingStatus } from "./actions";
+import { StatCard, StatGrid, TABLE } from "@/components/admin/ui";
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** "30 Sep 2026" in Malaysia time - ICU prints "Sept" (DEV-184). */
+function dayMonthYear(value: Date | string) {
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "-";
+  const [y, m, day] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+    .format(d)
+    .split("-")
+    .map(Number);
+  return `${String(day).padStart(2, "0")} ${MONTHS[m - 1]} ${y}`;
+}
+
 
 type FacilityItem = {
   facility_id: string;
@@ -171,14 +184,7 @@ export default function AdminBookingList({
     }
   };
 
-  const formatDate = (isoString: string) => {
-    if (!isoString) return "-";
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(isoString));
-  };
+  const formatDate = (isoString: string) => (isoString ? dayMonthYear(isoString) : "-");
 
   const formatTime = (isoString: string) => {
     if (!isoString) return "-";
@@ -219,31 +225,12 @@ export default function AdminBookingList({
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* What is happening now and next. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="glass-card flex items-center gap-3 rounded-xl border border-outline-variant/30 p-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
-            <span className="material-symbols-outlined text-[22px]">today</span>
-          </div>
-          <div className="min-w-0">
-            <span className="block text-[11px] font-medium text-on-surface-variant">Today</span>
-            <span className="text-xl font-bold text-emerald-400">{todayCount}</span>
-          </div>
-        </div>
-
-        <div className="glass-card flex items-center gap-3 rounded-xl border border-outline-variant/30 p-3.5">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary">
-            <span className="material-symbols-outlined text-[22px]">date_range</span>
-          </div>
-          <div className="min-w-0">
-            <span className="block text-[11px] font-medium text-on-surface-variant">
-              Next 7 days
-            </span>
-            <span className="text-xl font-bold text-on-surface">{next7Count}</span>
-          </div>
-        </div>
-      </div>
+      <StatGrid cols={2}>
+        <StatCard label="Today" value={todayCount} hint="bookings" icon="today" tone={todayCount > 0 ? "positive" : "neutral"} />
+        <StatCard label="Next 7 days" value={next7Count} hint="bookings" icon="date_range" tone="primary" />
+      </StatGrid>
 
       {/* 2-PANEL MAIN TABS */}
       <div className="flex items-center justify-between border-b border-outline-variant/40 pb-2">
@@ -485,7 +472,7 @@ export default function AdminBookingList({
 
       {/* Empty State */}
       {filteredBookings.length === 0 && (
-        <div className="p-12 text-center text-on-surface-variant border border-dashed border-outline-variant/40 rounded-2xl glass-card">
+        <div className="rounded-2xl border border-dashed border-outline-variant/40 bg-surface-container p-10 text-center text-on-surface-variant">
           <span className="material-symbols-outlined text-4xl text-on-surface-variant/60 mb-2 block">
             {activeTab === "active" ? "event_available" : "history"}
           </span>
@@ -641,23 +628,21 @@ export default function AdminBookingList({
 
       {/* 2. TABLE VIEW */}
       {viewMode === "table" && filteredBookings.length > 0 && (
-        <div className="glass-card rounded-xl overflow-hidden border border-outline-variant/30">
-          <ScrollHint className="w-full">
-            <table className="w-full text-left text-xs whitespace-nowrap">
-              <thead className="bg-surface-container/60 border-b border-outline-variant text-on-surface-variant">
+        <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container">
+          <div className={TABLE.wrap}>
+            <table className={TABLE.table + " min-w-[900px]"}>
+              <thead>
                 <tr>
-                  <th className="px-5 py-3 font-medium">Booking ID</th>
-                  <th className="px-5 py-3 font-medium">Facility</th>
-                  <th className="px-5 py-3 font-medium">Resident & Unit</th>
-                  <th className="px-5 py-3 font-medium">Date & Time</th>
-                  <th className="px-5 py-3 font-medium">Purpose</th>
-                  <th className="px-5 py-3 font-medium">Status</th>
-                  {activeTab === "active" && (
-                    <th className="px-5 py-3 font-medium text-right">Action</th>
-                  )}
+                  <th className={TABLE.th}>Ref</th>
+                  <th className={TABLE.th}>Facility</th>
+                  <th className={TABLE.th}>Resident &amp; unit</th>
+                  <th className={TABLE.th}>Date &amp; time</th>
+                  <th className={TABLE.th}>Purpose</th>
+                  <th className={TABLE.th}>Status</th>
+                  {activeTab === "active" && <th className={TABLE.thNum}>Action</th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-outline-variant/20">
+              <tbody>
                 {filteredBookings.map((b) => {
                   const isThisUpdating = updatingId === b.booking_id && isPending;
                   const effectiveStatus = getEffectiveStatus(b);
@@ -665,14 +650,12 @@ export default function AdminBookingList({
                   const isCompleted = effectiveStatus.toLowerCase() === "completed";
 
                   return (
-                    <tr key={b.booking_id} className="hover:bg-surface-container-low/50 transition-colors">
-                      <td className="px-5 py-3.5 font-mono text-on-surface-variant font-semibold">
+                    <tr key={b.booking_id} className={TABLE.tr}>
+                      <td className={TABLE.td + " font-mono text-xs text-on-surface-variant"}>
                         #{b.booking_id.split("-")[0].toUpperCase()}
                       </td>
-                      <td className="px-5 py-3.5 font-semibold text-on-surface">
-                        {b.facility?.facility_name}
-                      </td>
-                      <td className="px-5 py-3.5">
+                      <td className={TABLE.td + " font-semibold text-white"}>{b.facility?.facility_name}</td>
+                      <td className={TABLE.td}>
                         {b.lease?.tenant?.user_name ? (
                           <>
                             <div className="font-medium text-on-surface">
@@ -688,7 +671,7 @@ export default function AdminBookingList({
                           <span className="text-on-surface-variant">Not linked to a lease</span>
                         )}
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className={TABLE.td}>
                         <div className="font-medium text-on-surface font-mono">
                           {formatDate(b.booking_date || b.start_time)}
                         </div>
@@ -699,11 +682,11 @@ export default function AdminBookingList({
                       <td className="px-5 py-3.5 max-w-[180px] truncate text-on-surface-variant" title={b.purpose}>
                         {b.purpose || "—"}
                       </td>
-                      <td className="px-5 py-3.5">
+                      <td className={TABLE.td}>
                         <StatusBadge status={effectiveStatus} />
                       </td>
                       {activeTab === "active" && (
-                        <td className="px-5 py-3.5 text-right">
+                        <td className={TABLE.tdNum}>
                           <div className="flex items-center justify-end gap-1.5">
                             {!isCancelled && !isCompleted && (
                               <button
@@ -723,7 +706,7 @@ export default function AdminBookingList({
                 })}
               </tbody>
             </table>
-          </ScrollHint>
+          </div>
         </div>
       )}
     </div>

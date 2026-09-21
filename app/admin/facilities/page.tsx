@@ -3,6 +3,7 @@ import { listFacilities } from "@/lib/facility-management";
 import { listProperties } from "@/lib/property-management";
 import AdminFacilitiesManager from "@/components/facilities/AdminFacilitiesManager";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -53,16 +54,11 @@ export default async function FacilitiesPage() {
   }));
 
   return (
-    <div className="flex flex-col gap-stack-lg">
-      <div>
-        <h1 className="font-headline-lg text-headline-lg text-on-surface">
-          Facilities
-        </h1>
-        <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-          Shared spaces in this property, when residents may book them, and what is
-          currently closed for maintenance.
-        </p>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Facilities"
+        subtitle="Shared spaces in this property, when residents may book them, and what is currently closed for maintenance."
+      />
 
       <AdminFacilitiesManager
         facilities={facilitiesForClient}

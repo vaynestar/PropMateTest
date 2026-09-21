@@ -52,11 +52,12 @@ function formatDate(date: Date | string) {
   try {
     const d = new Date(date);
     if (isNaN(d.getTime())) return "-";
-    return new Intl.DateTimeFormat("en-GB", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(d);
+    const [y, m, day] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+      .format(d)
+      .split("-")
+      .map(Number);
+    // ICU prints September as "Sept" (DEV-184).
+    return `${String(day).padStart(2, "0")} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][m - 1]} ${y}`;
   } catch {
     return "-";
   }

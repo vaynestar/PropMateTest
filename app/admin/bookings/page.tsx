@@ -1,9 +1,10 @@
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import ExpandableForm from "@/components/layout/ExpandableForm";
 import AdminFacilityBooking from "./AdminFacilityBooking";
 import AdminBookingList from "./AdminBookingList";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import BookForResidentButton from "@/components/bookings/BookForResidentButton";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -151,24 +152,18 @@ export default async function AdminBookingsPage() {
   }));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Facility Bookings</h1>
-          <p className="text-on-surface-variant text-sm mt-1">
-            Who has booked what, and when. Book on a resident&apos;s behalf if they call or
-            come to the office.
-          </p>
-        </div>
-      </div>
-
-      <ExpandableForm title="Book on a resident's behalf" buttonLabel="New Booking" defaultOpen={false}>
-        <AdminFacilityBooking
-          facilities={serializedActiveFacilities as any}
-          bookings={serializedBookings as any}
-          leases={serializedLeases as any}
-        />
-      </ExpandableForm>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <PageHeader
+        title="Bookings"
+        subtitle="Who has booked what, and when. Book on a resident's behalf if they call or come to the office."
+        actions={
+          <BookForResidentButton
+            facilities={serializedActiveFacilities as any}
+            bookings={serializedBookings as any}
+            leases={serializedLeases as any}
+          />
+        }
+      />
 
       <AdminBookingList
         bookings={serializedBookings as any}
