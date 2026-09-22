@@ -136,7 +136,7 @@ export default function ResidentAnnouncementList({
                 type="button"
                 key={cat.id}
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap flex items-center gap-1.5 transition-all pressable ${
+                className={`inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-xl px-3 text-xs font-semibold transition-all pressable ${
                   isSelected
                     ? "bg-primary text-on-primary font-bold shadow-md"
                     : "bg-surface-container border border-outline-variant/40 text-on-surface-variant hover:text-white hover:bg-surface-container-high"

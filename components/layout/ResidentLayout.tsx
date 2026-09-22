@@ -91,9 +91,9 @@ export default function ResidentLayout({
               <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
             </span>
           </Link>
-          <h1 className="font-headline-md text-headline-md font-bold text-on-surface flex-1 text-center md:flex-none md:text-left">
+          <p className="font-headline-md text-headline-md font-bold text-on-surface flex-1 text-center md:flex-none md:text-left">
             Welcome Home
-          </h1>
+          </p>
           <div className="flex items-center gap-3">
             {/* Was a bell-shaped button with no handler: it looked tappable and
                 did nothing. */}

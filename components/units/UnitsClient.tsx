@@ -731,7 +731,7 @@ export default function UnitsClient({
                 type="button"
                 onClick={() => setStatusFilter(f.key)}
                 aria-pressed={statusFilter === f.key}
-                className={`pressable flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                className={`pressable flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition-colors ${
                   statusFilter === f.key
                     ? f.activeClass
                     : "border border-transparent text-on-surface-variant hover:text-white"

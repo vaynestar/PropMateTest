@@ -357,7 +357,7 @@ export default function AdminTicketTable({
                         <button
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setEditingTicket(t); }}
-                          className="px-3 py-1 rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors text-xs pressable"
+                          className="pressable inline-flex h-9 items-center rounded-lg bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
                         >
                           Manage
                         </button>

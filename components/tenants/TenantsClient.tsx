@@ -158,7 +158,7 @@ export default function TenantsClient({
                 key={f.id}
                 type="button"
                 onClick={() => setLeaseFilter(f.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`inline-flex h-9 items-center rounded-lg px-3 text-xs font-semibold transition-all ${
                   leaseFilter === f.id
                     ? "bg-primary text-on-primary shadow-xs"
                     : "text-on-surface-variant hover:text-white"

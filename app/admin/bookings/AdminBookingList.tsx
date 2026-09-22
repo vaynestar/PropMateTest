@@ -292,7 +292,7 @@ export default function AdminBookingList({
           <button
             type="button"
             onClick={() => setViewMode("grid")}
-            className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-colors ${
+            className={`flex h-9 items-center gap-1 rounded px-2.5 text-xs font-semibold transition-colors ${
               viewMode === "grid"
                 ? "bg-primary text-on-primary shadow-xs"
                 : "text-on-surface-variant hover:text-on-surface"
@@ -304,7 +304,7 @@ export default function AdminBookingList({
           <button
             type="button"
             onClick={() => setViewMode("table")}
-            className={`px-2.5 py-1 rounded text-xs font-semibold flex items-center gap-1 transition-colors ${
+            className={`flex h-9 items-center gap-1 rounded px-2.5 text-xs font-semibold transition-colors ${
               viewMode === "table"
                 ? "bg-primary text-on-primary shadow-xs"
                 : "text-on-surface-variant hover:text-on-surface"

@@ -122,7 +122,7 @@ export default function PropertiesClient({
             <button
               type="button"
               onClick={() => setSelectedType("ALL")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`inline-flex h-9 items-center rounded-lg px-3 text-xs font-semibold transition-all ${
                 selectedType === "ALL"
                   ? "bg-primary text-on-primary shadow-xs"
                   : "text-on-surface-variant hover:text-white"
@@ -135,7 +135,7 @@ export default function PropertiesClient({
                 key={type}
                 type="button"
                 onClick={() => setSelectedType(type)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`inline-flex h-9 items-center rounded-lg px-3 text-xs font-semibold transition-all ${
                   selectedType === type
                     ? "bg-primary text-on-primary shadow-xs"
                     : "text-on-surface-variant hover:text-white"
