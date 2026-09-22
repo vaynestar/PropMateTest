@@ -232,16 +232,17 @@ export default function AdminBookingList({
         <StatCard label="Next 7 days" value={next7Count} hint="bookings" icon="date_range" tone="primary" />
       </StatGrid>
 
-      {/* 2-PANEL MAIN TABS */}
-      <div className="flex items-center justify-between border-b border-outline-variant/40 pb-2">
-        <div className="flex items-center gap-2">
+      {/* Tabs and the view toggle. They used to sit on one non-wrapping row,
+          which ran off the right of a phone screen (DEV-203). */}
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/40 pb-2">
+        <div className="flex min-w-0 items-center gap-2">
           <button
             type="button"
             onClick={() => {
               setActiveTab("active");
               setFilterStatus("ALL");
             }}
-            className={`px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-all ${
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-all sm:px-4 ${
               activeTab === "active"
                 ? "bg-primary text-on-primary shadow-sm"
                 : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
@@ -250,7 +251,7 @@ export default function AdminBookingList({
             <span className="material-symbols-outlined text-[18px]">event_available</span>
             <span>Upcoming</span>
             <span
-              className={`text-xs px-2 py-0.5 rounded-full font-mono font-bold ${
+              className={`rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${
                 activeTab === "active"
                   ? "bg-on-primary/20 text-on-primary"
                   : "bg-surface-container-highest text-on-surface-variant"
@@ -266,7 +267,7 @@ export default function AdminBookingList({
               setActiveTab("past");
               setFilterStatus("ALL");
             }}
-            className={`px-4 py-2 rounded-lg font-semibold text-sm flex items-center gap-2 transition-all ${
+            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-all sm:px-4 ${
               activeTab === "past"
                 ? "bg-primary text-on-primary shadow-sm"
                 : "text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high"
@@ -275,7 +276,7 @@ export default function AdminBookingList({
             <span className="material-symbols-outlined text-[18px]">history</span>
             <span>Past</span>
             <span
-              className={`text-xs px-2 py-0.5 rounded-full font-mono font-bold ${
+              className={`rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${
                 activeTab === "past"
                   ? "bg-on-primary/20 text-on-primary"
                   : "bg-surface-container-highest text-on-surface-variant"
@@ -287,7 +288,7 @@ export default function AdminBookingList({
         </div>
 
         {/* View Toggle */}
-        <div className="flex items-center gap-1 bg-surface-container-high p-1 rounded-lg border border-outline-variant shrink-0">
+        <div className="ml-auto flex shrink-0 items-center gap-1 rounded-lg border border-outline-variant bg-surface-container-high p-1">
           <button
             type="button"
             onClick={() => setViewMode("grid")}
@@ -298,7 +299,7 @@ export default function AdminBookingList({
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">grid_view</span>
-            <span>Cards</span>
+            <span className="hidden sm:inline">Cards</span>
           </button>
           <button
             type="button"
@@ -310,13 +311,13 @@ export default function AdminBookingList({
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">table_rows</span>
-            <span>Table</span>
+            <span className="hidden sm:inline">Table</span>
           </button>
         </div>
       </div>
 
       {/* FILTER CONTROL BAR */}
-      <div className="glass-card rounded-xl p-4 border border-outline-variant/30 space-y-3 bg-surface-container-low">
+      <div className="space-y-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-3.5">
         {/* Search & Main Row */}
         <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
           <div className="flex-1 w-full relative">

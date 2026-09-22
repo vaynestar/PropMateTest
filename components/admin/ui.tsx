@@ -135,9 +135,9 @@ export function StatCard({
           <span className="material-symbols-outlined text-[18px]">{icon}</span>
         </span>
       </div>
-      <div className="relative mt-3 flex items-baseline gap-2">
-        <span className={`text-2xl font-bold tabular-nums ${t.value}`}>{value}</span>
-        {hint && <span className="truncate text-xs text-on-surface-variant">{hint}</span>}
+      <div className="relative mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className={`min-w-0 break-words text-2xl font-bold tabular-nums ${t.value}`}>{value}</span>
+        {hint && <span className="text-xs text-on-surface-variant">{hint}</span>}
       </div>
       {typeof progress === "number" && (
         <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-container-highest">

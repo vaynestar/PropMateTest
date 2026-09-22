@@ -766,148 +766,136 @@ export default function AdminFacilitiesManager({
           return (
             <div
               key={f.facility_id}
-              className={`glass-card rounded-xl p-6 flex flex-col relative overflow-hidden group transition-all ${
-                isMaintenance ? "border-amber-500/40 bg-amber-950/10" : ""
+              className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container transition-colors ${
+                isMaintenance ? "border-amber-500/40" : "border-outline-variant/60 hover:border-primary/40"
               }`}
             >
-              <div
-                className={`absolute left-0 top-0 h-full w-1 ${
-                  isMaintenance
-                    ? "bg-amber-500"
-                    : f.is_bookable
-                    ? "bg-emerald-500"
-                    : "bg-outline-variant"
-                }`}
-              />
-
-              {/* Maintenance Banner */}
-              {isMaintenance && (
-                <div className="mb-3 flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/20 px-3 py-1.5 text-xs font-semibold text-amber-300">
-                  <span className="material-symbols-outlined text-[16px] leading-none">engineering</span>
-                  <span>Closed for maintenance</span>
-                </div>
-              )}
-
-              <div className="flex justify-between items-start mb-4">
-                <h4 className="font-title-lg text-title-lg text-on-surface font-bold pr-6">
-                  {f.facility_name || "Unnamed Facility"}
-                </h4>
-                <span
-                  className={`material-symbols-outlined ${
-                    isMaintenance
-                      ? "text-amber-400"
-                      : f.is_bookable
-                      ? "text-emerald-400"
-                      : "text-on-surface-variant"
-                  }`}
-                  title={
-                    isMaintenance
-                      ? "Closed for maintenance"
-                      : f.is_bookable
-                      ? "Residents can book this"
-                      : "Not bookable - shared space, listed for maintenance tracking"
-                  }
-                >
-                  {isMaintenance ? "engineering" : f.is_bookable ? "event_available" : "lock"}
-                </span>
-              </div>
-
-              <div className="space-y-2.5 mb-6 flex-1 text-xs">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-on-surface-variant">Property</span>
-                  <span className="font-semibold text-on-surface">{propertyName}</span>
-                </div>
-
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-on-surface-variant">Type</span>
-                  <span className="font-semibold text-primary">{f.facility_type || "General"}</span>
-                </div>
-
-                {f.is_bookable ? (
-                  <>
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-on-surface-variant">Capacity</span>
-                      <span className="font-semibold text-on-surface">
-                        {f.max_capacity ? `${f.max_capacity} pax` : "No limit"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-on-surface-variant">Longest booking</span>
-                      <span className="font-semibold text-on-surface">
-                        {f.max_booking_hours ? `${f.max_booking_hours} hrs` : "No limit"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-on-surface-variant">Open</span>
-                      <span className="font-semibold text-on-surface">
-                        {f.open_time || "08:00"}–{f.close_time || "22:00"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="text-on-surface-variant">Days</span>
-                      <span className="text-right font-semibold text-on-surface">
-                        {formatOpenDays(opDaysList)}
-                      </span>
-                    </div>
-                  </>
+              {/* The photo the facility already stores (DEV-184) - the resident
+                  app has shown it since then; this card never did. */}
+              <div className="relative h-32 w-full shrink-0 overflow-hidden bg-surface-container-high">
+                {f.image_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={f.image_url}
+                    alt=""
+                    loading="lazy"
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
                 ) : (
-                  <div className="rounded-lg border border-outline-variant/40 bg-surface-container-high/40 px-3 py-2 text-[11px] text-on-surface-variant">
-                    Residents cannot book this. It is listed so its maintenance can be
-                    scheduled and tracked.
-                  </div>
-                )}
-
-                {(f.maintenance?.length ?? 0) > 0 && (
-                  <div className="flex items-center justify-between gap-3 border-t border-outline-variant/30 pt-2 text-on-surface-variant">
-                    <span className="flex items-center gap-1 font-semibold">
-                      <span className="material-symbols-outlined text-[14px] leading-none">
-                        history
-                      </span>
-                      Last serviced
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-surface-container">
+                    <span className="material-symbols-outlined text-[40px] text-primary/50">
+                      {f.is_bookable ? "event_available" : "domain"}
                     </span>
-                    <span className="font-mono">{formatDate(f.maintenance[0].performed_on)}</span>
                   </div>
                 )}
+                <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-surface-container/60 to-transparent" />
 
-                {f.next_maintenance_date &&
-                  (() => {
-                    const late = daysOverdue(f.next_maintenance_date);
-                    return (
-                      <div
-                        className={`flex items-center justify-between gap-3 border-t border-outline-variant/30 pt-2 ${
-                          late > 0 ? "text-rose-300" : "text-amber-300"
-                        }`}
-                      >
-                        <span className="flex items-center gap-1 font-semibold">
-                          <span className="material-symbols-outlined text-[14px] leading-none">
-                            {late > 0 ? "error" : "build"}
-                          </span>
-                          {late > 0 ? "Maintenance overdue" : "Next maintenance"}
-                        </span>
-                        <span className="text-right">
-                          <span className="block font-mono font-bold">
-                            {formatDate(f.next_maintenance_date)}
-                          </span>
-                          {late > 0 && (
-                            <span className="block text-[10px] font-semibold">
-                              {late} day{late === 1 ? "" : "s"} late
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                    );
-                  })()}
-
-                {f.is_bookable && (
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-on-surface-variant">Bookings so far</span>
-                    <span className="font-semibold text-on-surface">{totalBookingsCount}</span>
+                <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3">
+                  <div className="min-w-0">
+                    <h4 className="text-base font-bold leading-tight text-white" title={f.facility_name}>
+                      {f.facility_name || "Unnamed facility"}
+                    </h4>
+                    <p className="mt-0.5 truncate text-[11px] text-on-surface-variant">
+                      {f.facility_type || "General"} · {propertyName}
+                    </p>
                   </div>
-                )}
+                  <span
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                      isMaintenance
+                        ? "border-amber-500/40 bg-amber-500/20 text-amber-200"
+                        : f.is_bookable
+                        ? "border-emerald-500/40 bg-emerald-500/20 text-emerald-200"
+                        : "border-outline-variant bg-surface-container-highest text-on-surface-variant"
+                    }`}
+                    title={
+                      isMaintenance
+                        ? "Closed for maintenance"
+                        : f.is_bookable
+                        ? "Residents can book this"
+                        : "Not bookable - listed for maintenance tracking"
+                    }
+                  >
+                    {isMaintenance ? "Closed" : f.is_bookable ? "Bookable" : "Not bookable"}
+                  </span>
+                </div>
               </div>
+
+              <div className="flex flex-1 flex-col gap-3 p-4">
+                {isMaintenance && (
+                  <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-amber-300">
+                    <span className="material-symbols-outlined text-[15px] leading-none">engineering</span>
+                    Closed for maintenance
+                  </div>
+                )}
+
+                {/* The booking rules as chips. They were six label-on-the-left,
+                    value-on-the-right rows - a form printout, not a card. */}
+                {f.is_bookable ? (
+                  <div className="flex flex-wrap gap-1.5 text-[11px]">
+                    <span className="inline-flex items-center gap-1 rounded-md border border-outline-variant/50 bg-surface-container-high/60 px-2 py-1 text-on-surface">
+                      <span className="material-symbols-outlined text-[14px] leading-none text-primary">schedule</span>
+                      {f.open_time || "08:00"}–{f.close_time || "22:00"}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-md border border-outline-variant/50 bg-surface-container-high/60 px-2 py-1 text-on-surface">
+                      <span className="material-symbols-outlined text-[14px] leading-none text-primary">calendar_month</span>
+                      {formatOpenDays(opDaysList)}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-md border border-outline-variant/50 bg-surface-container-high/60 px-2 py-1 text-on-surface">
+                      <span className="material-symbols-outlined text-[14px] leading-none text-primary">group</span>
+                      {f.max_capacity ? `${f.max_capacity} pax` : "No limit"}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-md border border-outline-variant/50 bg-surface-container-high/60 px-2 py-1 text-on-surface">
+                      <span className="material-symbols-outlined text-[14px] leading-none text-primary">hourglass_top</span>
+                      {f.max_booking_hours ? `${f.max_booking_hours} hrs max` : "No limit"}
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-md border border-outline-variant/50 bg-surface-container-high/60 px-2 py-1 text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[14px] leading-none">event</span>
+                      <span className="tabular-nums text-on-surface">{totalBookingsCount}</span> booked
+                    </span>
+                  </div>
+                ) : (
+                  <p className="rounded-lg border border-outline-variant/40 bg-surface-container-high/40 px-2.5 py-2 text-[11px] text-on-surface-variant">
+                    Residents cannot book this. It is listed so its maintenance can be scheduled and tracked.
+                  </p>
+                )}
+
+                {/* Servicing, at the foot of the card where the eye ends up. */}
+                <div className="mt-auto space-y-1.5 border-t border-outline-variant/30 pt-2.5 text-[11px]">
+                  {(f.maintenance?.length ?? 0) > 0 && (
+                    <div className="flex items-center justify-between gap-3 text-on-surface-variant">
+                      <span className="flex items-center gap-1 font-semibold">
+                        <span className="material-symbols-outlined text-[14px] leading-none">history</span>
+                        Last serviced
+                      </span>
+                      <span className="tabular-nums">{formatDate(f.maintenance[0].performed_on)}</span>
+                    </div>
+                  )}
+
+                  {f.next_maintenance_date &&
+                    (() => {
+                      const late = daysOverdue(f.next_maintenance_date);
+                      return (
+                        <div
+                          className={`flex items-center justify-between gap-3 ${late > 0 ? "text-rose-300" : "text-amber-300"}`}
+                        >
+                          <span className="flex items-center gap-1 font-semibold">
+                            <span className="material-symbols-outlined text-[14px] leading-none">
+                              {late > 0 ? "error" : "build"}
+                            </span>
+                            {late > 0 ? "Maintenance overdue" : "Next maintenance"}
+                          </span>
+                          <span className="text-right">
+                            <span className="block font-bold tabular-nums">{formatDate(f.next_maintenance_date)}</span>
+                            {late > 0 && (
+                              <span className="block text-[10px] font-semibold">
+                                {late} day{late === 1 ? "" : "s"} late
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                </div>
 
               {/* Maintenance Toggle Button */}
               <button
@@ -974,7 +962,6 @@ export default function AdminFacilitiesManager({
                   e.preventDefault();
                   handleDelete(f.facility_id, f.facility_name);
                 }}
-                className="mt-auto"
               >
                 <button
                   type="submit"
@@ -989,6 +976,7 @@ export default function AdminFacilitiesManager({
                   {isDeletingThis ? "Deleting..." : "Delete"}
                 </button>
               </form>
+              </div>
             </div>
           );
         })}

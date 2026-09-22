@@ -66,16 +66,19 @@ export default function PropertyCard({
               <span className="material-symbols-outlined text-[22px]">{typeIcon}</span>
             </div>
             <div className="min-w-0">
-              <h3 className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
+              {/* The name wraps: a property called "Residensi Suasana Damai"
+                  was cut to "Residensi Suasana…" on a phone (DEV-203). */}
+              <h3
+                className="text-sm font-bold leading-snug text-white transition-colors group-hover:text-primary"
+                title={property.property_name}
+              >
                 {property.property_name}
               </h3>
-              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] font-medium text-on-surface-variant">
-                <span className="shrink-0 rounded-md border border-outline-variant/40 bg-surface-container-high px-2 py-0.5">
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5 text-[11px] font-medium text-on-surface-variant">
+                <span className="rounded-md border border-outline-variant/40 bg-surface-container-high px-2 py-0.5">
                   {property.property_type}
                 </span>
-                {/* truncate, not wrap — a long city name used to stack into a
-                    narrow column and shove the title around on a phone. */}
-                <span className="truncate whitespace-nowrap">
+                <span>
                   {property.city}, {property.state}
                 </span>
               </div>
@@ -93,7 +96,7 @@ export default function PropertyCard({
         {/* Address Row */}
         <div className="flex items-center gap-1.5 text-xs text-on-surface-variant/80 border-b border-outline-variant/30 pb-3 pt-1">
           <span className="material-symbols-outlined text-[15px] text-on-surface-variant shrink-0">location_on</span>
-          <span className="truncate">{property.address}, {property.postal_code}</span>
+          <span className="line-clamp-2">{property.address}, {property.postal_code}</span>
         </div>
       </div>
 

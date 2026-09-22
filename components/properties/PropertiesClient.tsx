@@ -81,7 +81,7 @@ export default function PropertiesClient({
         <StatCard
           label="Working in"
           value={
-            <span className="block truncate text-base leading-snug" title={activeDefaultProperty?.property_name}>
+            <span className="block text-base leading-snug" title={activeDefaultProperty?.property_name}>
               {activeDefaultProperty?.property_name || "No default set"}
             </span>
           }
