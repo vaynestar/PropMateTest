@@ -174,8 +174,8 @@ export async function renderInvoicePdf(doc: InvoiceDoc): Promise<Uint8Array> {
     room(h, header);
     desc.forEach((l, i) => text(l, M + 8, y - i * 14, 10.5));
     textRight(String(line.qty), cQty, y, 10.5);
-    textRight(docMoney(line.unitPrice), cPrice, y, 10.5, regular, MUTED);
-    textRight(docMoney(line.total), right - 8, y, 11, bold);
+    textRight(docMoney(line.unitPrice, doc.settings.currency), cPrice, y, 10.5, regular, MUTED);
+    textRight(docMoney(line.total, doc.settings.currency), right - 8, y, 11, bold);
     y -= h;
     rule(y + 8);
   }
@@ -188,7 +188,7 @@ export async function renderInvoicePdf(doc: InvoiceDoc): Promise<Uint8Array> {
   page.drawRectangle({ x: boxX, y: y - 44, width: boxW, height: 52, color: SHADE, borderColor: LINE, borderWidth: 0.8 });
   const totalLabel = doc.status === "PAID" ? "Total paid" : doc.status === "VOIDED" ? "Total (voided)" : "Amount due";
   text(totalLabel.toUpperCase(), boxX + 12, y - 10, 8, bold, MUTED);
-  textRight(docMoney(doc.total), right - 12, y - 32, 18, bold, doc.status === "PAID" ? INK : ACCENT);
+  textRight(docMoney(doc.total, doc.settings.currency), right - 12, y - 32, 18, bold, doc.status === "PAID" ? INK : ACCENT);
   if (doc.status !== "PAID" && doc.status !== "VOIDED") text(`by ${doc.dueOn}`, boxX + 12, y - 30, 9, regular, MUTED);
   y -= 70;
 

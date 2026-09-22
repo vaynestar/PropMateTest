@@ -16,9 +16,6 @@ export async function saveSettingsAction(formData: FormData) {
   const currency = formData.get("SYSTEM_CURRENCY")?.toString();
   if (currency) updates.SYSTEM_CURRENCY = currency;
 
-  const dateFormat = formData.get("SYSTEM_DATE_FORMAT")?.toString();
-  if (dateFormat) updates.SYSTEM_DATE_FORMAT = dateFormat;
-
   const defaultPropertyId = formData.get("defaultPropertyId")?.toString();
   if (defaultPropertyId) {
     try {
@@ -37,9 +34,6 @@ export async function saveSettingsAction(formData: FormData) {
   // Billing
   const gracePeriod = formData.get("BILLING_GRACE_PERIOD_DAYS")?.toString();
   if (gracePeriod) updates.BILLING_GRACE_PERIOD_DAYS = gracePeriod;
-
-  const latePenalty = formData.get("BILLING_LATE_PENALTY_RATE")?.toString();
-  if (latePenalty) updates.BILLING_LATE_PENALTY_RATE = latePenalty;
 
   const invoiceCycle = formData.get("BILLING_INVOICE_CYCLE_DAY")?.toString();
   if (invoiceCycle) updates.BILLING_INVOICE_CYCLE_DAY = invoiceCycle;
@@ -84,18 +78,8 @@ export async function saveSettingsAction(formData: FormData) {
   if (slaLow) updates.MAINTENANCE_SLA_LOW_HOURS = slaLow;
 
   // Visitors
-  const passValidity = formData.get("VISITOR_PASS_VALIDITY_HOURS")?.toString();
-  if (passValidity) updates.VISITOR_PASS_VALIDITY_HOURS = passValidity;
-
   const overstayAlert = formData.get("VISITOR_OVERSTAY_ALERT_HOURS")?.toString();
   if (overstayAlert) updates.VISITOR_OVERSTAY_ALERT_HOURS = overstayAlert;
-
-  // A checkbox sends nothing when unticked, and the form renders one tab at a
-  // time - so only read it when the Visitors tab was the one saved. Before
-  // DEV-191, saving any other tab switched host approval off.
-  if (formData.get("VISITOR_OVERSTAY_ALERT_HOURS") !== null) {
-    updates.VISITOR_REQUIRE_HOST_APPROVAL = formData.get("VISITOR_REQUIRE_HOST_APPROVAL") ? "true" : "false";
-  }
 
   // Storage
   const maxUploadMb = formData.get("STORAGE_MAX_UPLOAD_MB")?.toString();

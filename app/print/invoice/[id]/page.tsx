@@ -81,10 +81,10 @@ export default async function PrintInvoicePage({ params }: { params: Promise<{ i
               <div className="min-w-0">
                 <p className="text-[15px] font-medium leading-snug">{l.description}</p>
                 <p className="mt-0.5 text-xs text-slate-500">
-                  {l.qty} × {docMoney(l.unitPrice)}
+                  {l.qty} × {docMoney(l.unitPrice, settings.currency)}
                 </p>
               </div>
-              <p className="shrink-0 whitespace-nowrap text-[15px] font-bold tabular-nums">{docMoney(l.total)}</p>
+              <p className="shrink-0 whitespace-nowrap text-[15px] font-bold tabular-nums">{docMoney(l.total, settings.currency)}</p>
             </li>
           ))}
           {!doc.lines.length && <li className="py-4 text-sm italic text-slate-500">No items on this invoice.</li>}
@@ -106,8 +106,8 @@ export default async function PrintInvoicePage({ params }: { params: Promise<{ i
             <tr key={i}>
               <td className="px-3 py-3.5 text-[15px]">{l.description}</td>
               <td className="px-3 py-3.5 text-right text-[15px] tabular-nums">{l.qty}</td>
-              <td className="whitespace-nowrap px-3 py-3.5 text-right text-[15px] tabular-nums text-slate-600">{docMoney(l.unitPrice)}</td>
-              <td className="whitespace-nowrap px-3 py-3.5 text-right text-[15px] font-bold tabular-nums">{docMoney(l.total)}</td>
+              <td className="whitespace-nowrap px-3 py-3.5 text-right text-[15px] tabular-nums text-slate-600">{docMoney(l.unitPrice, settings.currency)}</td>
+              <td className="whitespace-nowrap px-3 py-3.5 text-right text-[15px] font-bold tabular-nums">{docMoney(l.total, settings.currency)}</td>
             </tr>
           ))}
           {!doc.lines.length && (
@@ -123,7 +123,7 @@ export default async function PrintInvoicePage({ params }: { params: Promise<{ i
         <div className="w-full rounded-xl border border-slate-200 bg-slate-50 p-4 sm:w-80">
           <p className={label}>{doc.status === "PAID" ? "Total paid" : doc.status === "VOIDED" ? "Total (voided)" : "Amount due"}</p>
           <p className={`mt-1 text-3xl font-black tabular-nums ${doc.status === "PAID" ? "text-slate-900" : "text-indigo-700"}`}>
-            {docMoney(doc.total)}
+            {docMoney(doc.total, settings.currency)}
           </p>
           {open && <p className="mt-0.5 text-sm text-slate-600">by {doc.dueOn}</p>}
         </div>

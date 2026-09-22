@@ -149,7 +149,7 @@ export default async function ResidentInvoicePage({
         <div className="grid grid-cols-2 gap-2">
           <ViewerButton
             items={[{ src: `/print/invoice/${invoice.invoice_id}`, title: `Invoice ${invoice.invoice_no}`, kind: "doc", download: pdf }]}
-            className="pressable flex items-center justify-center gap-2 rounded-lg border border-outline py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-high"
+            className="pressable flex items-center justify-center gap-2 rounded-lg border border-sky-400/50 bg-sky-500/15 py-2.5 text-sm font-semibold text-sky-200 transition-colors hover:bg-sky-500/25"
           >
             <span className="material-symbols-outlined text-[18px]">visibility</span>
             Preview
@@ -157,7 +157,9 @@ export default async function ResidentInvoicePage({
           <DownloadButton
             url={pdf.url}
             filename={pdf.filename}
-            className="pressable flex w-full items-center justify-center gap-2 rounded-lg border border-outline py-2.5 text-sm font-semibold text-on-surface hover:bg-surface-container-high disabled:opacity-60"
+            /* Adobe red: people look for that colour when they want the PDF
+               (user, 2026-09-22). */
+            className="pressable flex w-full items-center justify-center gap-2 rounded-lg border border-[#e0301e]/60 bg-[#e0301e]/90 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#e0301e] disabled:opacity-60"
           />
         </div>
       </section>

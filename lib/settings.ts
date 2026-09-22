@@ -5,12 +5,10 @@ import { STORAGE_PURPOSES, STORAGE_PURPOSE_ORDER, folderProblem, normaliseFolder
 export type SystemSettings = {
   general: {
     systemCurrency: string;
-    dateFormat: string;
     defaultPropertyId: string;
   };
   billing: {
     gracePeriodDays: number;
-    latePenaltyRate: number;
     invoiceCycleDay: number;
     taxRegistrationNo: string;
     bankName: string;
@@ -31,9 +29,7 @@ export type SystemSettings = {
     slaLowHours: number;
   };
   visitors: {
-    passValidityHours: number;
     overstayAlertHours: number;
-    requireHostApproval: boolean;
   };
   storage: {
     maxUploadMb: number;
@@ -49,10 +45,8 @@ export type SystemSettings = {
 };
 
 const DEFAULT_PARAMETERS: Record<string, { value: string; category: string; description: string }> = {
-  SYSTEM_CURRENCY: { value: "MYR", category: "GENERAL", description: "Default currency code for billing and accounting" },
-  SYSTEM_DATE_FORMAT: { value: "DD/MM/YYYY", category: "GENERAL", description: "Default date formatting display" },
+  SYSTEM_CURRENCY: { value: "RM", category: "GENERAL", description: "Currency shown on invoices and receipts" },
   BILLING_GRACE_PERIOD_DAYS: { value: "14", category: "BILLING", description: "Days before unpaid invoices become overdue" },
-  BILLING_LATE_PENALTY_RATE: { value: "10", category: "BILLING", description: "Annual late payment penalty interest rate (%)" },
   BILLING_INVOICE_CYCLE_DAY: { value: "1", category: "BILLING", description: "Day of month when recurring invoices are generated" },
   BILLING_TAX_REG_NO: { value: "W10-2408-32000192", category: "BILLING", description: "SST / Tax registration identifier" },
   BILLING_BANK_NAME: { value: "", category: "BILLING", description: "Bank residents transfer payments to" },
@@ -66,9 +60,7 @@ const DEFAULT_PARAMETERS: Record<string, { value: string; category: string; desc
   MAINTENANCE_SLA_HIGH_HOURS: { value: "24", category: "HELPDESK", description: "Target turnaround time in hours for high priority tickets" },
   MAINTENANCE_SLA_NORMAL_HOURS: { value: "72", category: "HELPDESK", description: "Target turnaround time in hours for normal tickets" },
   MAINTENANCE_SLA_LOW_HOURS: { value: "168", category: "HELPDESK", description: "Target turnaround time in hours for low priority tickets" },
-  VISITOR_PASS_VALIDITY_HOURS: { value: "24", category: "VISITORS", description: "Default validity period for generated visitor QR passes" },
   VISITOR_OVERSTAY_ALERT_HOURS: { value: "12", category: "VISITORS", description: "Hours after check-in before an overstay alert triggers" },
-  VISITOR_REQUIRE_HOST_APPROVAL: { value: "false", category: "VISITORS", description: "Require unit host confirmation before entry clearance" },
   STORAGE_MAX_UPLOAD_MB: { value: "5", category: "STORAGE", description: "Maximum allowable file size in megabytes for uploads" },
   STORAGE_FOLDER_ANNOUNCEMENT_IMAGE: { value: "announcements", category: "STORAGE", description: "Firebase Storage folder for announcement photos" },
   STORAGE_FOLDER_ANNOUNCEMENT_ATTACHMENT: { value: "circulars", category: "STORAGE", description: "Firebase Storage folder for announcement attachments" },
@@ -116,13 +108,11 @@ export async function getSystemSettings(): Promise<SystemSettings> {
 
   return {
     general: {
-      systemCurrency: paramMap.get("SYSTEM_CURRENCY") || "MYR",
-      dateFormat: paramMap.get("SYSTEM_DATE_FORMAT") || "DD/MM/YYYY",
+      systemCurrency: paramMap.get("SYSTEM_CURRENCY") || "RM",
       defaultPropertyId: defaultProp?.property_id || "",
     },
     billing: {
       gracePeriodDays: parseInt(paramMap.get("BILLING_GRACE_PERIOD_DAYS") || "14", 10),
-      latePenaltyRate: parseFloat(paramMap.get("BILLING_LATE_PENALTY_RATE") || "10"),
       invoiceCycleDay: parseInt(paramMap.get("BILLING_INVOICE_CYCLE_DAY") || "1", 10),
       taxRegistrationNo: paramMap.get("BILLING_TAX_REG_NO") || "",
       bankName: paramMap.get("BILLING_BANK_NAME") || "",
@@ -142,9 +132,7 @@ export async function getSystemSettings(): Promise<SystemSettings> {
       slaLowHours: parseInt(paramMap.get("MAINTENANCE_SLA_LOW_HOURS") || "168", 10),
     },
     visitors: {
-      passValidityHours: parseInt(paramMap.get("VISITOR_PASS_VALIDITY_HOURS") || "24", 10),
       overstayAlertHours: parseInt(paramMap.get("VISITOR_OVERSTAY_ALERT_HOURS") || "12", 10),
-      requireHostApproval: paramMap.get("VISITOR_REQUIRE_HOST_APPROVAL") === "true",
     },
     storage: {
       maxUploadMb: parseInt(paramMap.get("STORAGE_MAX_UPLOAD_MB") || "5", 10),

@@ -180,6 +180,26 @@ export async function getEligibleLeasesForInvoicing(targetDate = new Date()) {
     });
 }
 
+
+/**
+ * The two billing dates an admin controls (DEV-206). Defaults match the
+ * seeded parameters: issued on the 1st, payable within 14 days.
+ */
+async function getBillingDateSettings() {
+  const rows = await prisma.appParameter.findMany({
+    where: { param_key: { in: ["BILLING_INVOICE_CYCLE_DAY", "BILLING_GRACE_PERIOD_DAYS"] } },
+    select: { param_key: true, param_value: true },
+  });
+  const num = (k: string, fallback: number, min: number, max: number) => {
+    const v = parseInt(rows.find((r) => r.param_key === k)?.param_value ?? "", 10);
+    return Number.isFinite(v) ? Math.min(Math.max(v, min), max) : fallback;
+  };
+  return {
+    invoiceCycleDay: num("BILLING_INVOICE_CYCLE_DAY", 1, 1, 28),
+    gracePeriodDays: num("BILLING_GRACE_PERIOD_DAYS", 14, 1, 90),
+  };
+}
+
 export async function generateInvoicesForLeases(leaseIds: string[], createdBy?: string, targetDate = new Date()) {
   if (leaseIds.length === 0) {
     return { generated: 0, message: "No leases selected." };
@@ -191,7 +211,20 @@ export async function generateInvoicesForLeases(leaseIds: string[], createdBy?: 
 
   const { y, m } = currentMonthKey(targetDate);
   const monthStart = startOfMonth(new Date(y, m, 1));
-  const dueDate = addMonths(monthStart, 1);
+
+  /*
+   * Settings -> Billing decides both dates (DEV-206). The invoice is dated the
+   * billing cycle day of the month, and payable within the grace period after
+   * that - which is how strata charges work here: issued on a set day, due
+   * within a stated number of days. Before this, both fields were saved and
+   * read by nothing, and every invoice was simply dated the 1st and due a
+   * month later.
+   */
+  const { invoiceCycleDay, gracePeriodDays } = await getBillingDateSettings();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const invoiceDate = new Date(y, m, Math.min(invoiceCycleDay, daysInMonth), 0, 0, 0, 0);
+  const dueDate = new Date(invoiceDate);
+  dueDate.setDate(dueDate.getDate() + gracePeriodDays);
   const invoiceNoPrefix = `INV-${y}${String(m + 1).padStart(2, "0")}`;
 
   const leases = await prisma.tenantLease.findMany({
@@ -266,7 +299,7 @@ export async function generateInvoicesForLeases(leaseIds: string[], createdBy?: 
       data: {
         lease_id: lease.lease_id,
         invoice_no: invoiceNo,
-        invoice_date: monthStart,
+        invoice_date: invoiceDate,
         due_date: dueDate,
         total_amount: totalAmount,
         status: "Unpaid",

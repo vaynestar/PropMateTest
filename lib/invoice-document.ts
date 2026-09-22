@@ -34,6 +34,8 @@ export const DEFAULT_INVOICE_TERMS = [
 export const DEFAULT_INVOICE_FOOTER = "Thank you for your prompt payment.";
 
 export type InvoiceDocSettings = {
+  /** Settings -> General; "RM" unless the office changes it (DEV-206). */
+  currency: string;
   issuer: string;
   contact: string;
   terms: string[];
@@ -73,6 +75,7 @@ export async function getInvoiceDocSettings(): Promise<InvoiceDocSettings> {
         in: [
           ...Object.values(INVOICE_TEXT_KEYS),
           "BILLING_TAX_REG_NO",
+          "SYSTEM_CURRENCY",
           "BILLING_BANK_NAME",
           "BILLING_BANK_ACCOUNT_NAME",
           "BILLING_BANK_ACCOUNT_NO",
@@ -91,6 +94,7 @@ export async function getInvoiceDocSettings(): Promise<InvoiceDocSettings> {
   const accountNo = get("BILLING_BANK_ACCOUNT_NO");
 
   return {
+    currency: get("SYSTEM_CURRENCY") || "RM",
     issuer: get(INVOICE_TEXT_KEYS.issuer),
     contact: get(INVOICE_TEXT_KEYS.contact),
     terms: orDefault(INVOICE_TEXT_KEYS.terms, DEFAULT_INVOICE_TERMS)
@@ -111,10 +115,10 @@ export const docDate = (d: Date | string) => {
   return `${dd} ${MONTHS[m - 1]} ${y}`;
 };
 
-/** "RM 1,234.50" - built by hand so server and PDF agree exactly. */
-export const docMoney = (n: number) => {
+/** "RM 1,234.50" - built by hand so the screen and the PDF agree exactly. */
+export const docMoney = (n: number, currency = "RM") => {
   const [int, dec] = Math.abs(n).toFixed(2).split(".");
-  return `${n < 0 ? "-" : ""}RM ${int.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${dec}`;
+  return `${n < 0 ? "-" : ""}${currency} ${int.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${dec}`;
 };
 
 /**

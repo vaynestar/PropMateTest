@@ -149,22 +149,10 @@ export default function AdminSettingsClient({ settings, storageStatus, sampleInv
                   className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
                 />
                 <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
-                  e.g., MYR, SGD, USD. Formats all monetary tables.
+                  Printed before every figure on invoices and receipts, e.g. RM.
                 </span>
               </div>
 
-              <div>
-                <label className="block text-on-surface-variant font-medium mb-1">
-                  Date Format Display
-                </label>
-                <input
-                  name="SYSTEM_DATE_FORMAT"
-                  type="text"
-                  defaultValue={settings.general.dateFormat}
-                  required
-                  className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
-                />
-              </div>
             </div>
           </div>
         )}
@@ -180,7 +168,7 @@ export default function AdminSettingsClient({ settings, storageStatus, sampleInv
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <label className="block text-on-surface-variant font-medium mb-1">
-                  Invoice Grace Period (Days)
+                  Days to pay (grace period)
                 </label>
                 <input
                   name="BILLING_GRACE_PERIOD_DAYS"
@@ -192,32 +180,13 @@ export default function AdminSettingsClient({ settings, storageStatus, sampleInv
                   className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
                 />
                 <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
-                  Number of days after invoice issue date before status changes to Overdue.
+                  How long a resident has to pay. A generated invoice is due this many days after its date, and counts as overdue afterwards.
                 </span>
               </div>
 
               <div>
                 <label className="block text-on-surface-variant font-medium mb-1">
-                  Late Surcharge Penalty Rate (%)
-                </label>
-                <input
-                  name="BILLING_LATE_PENALTY_RATE"
-                  type="number"
-                  step="0.1"
-                  min={0}
-                  max={100}
-                  defaultValue={settings.billing.latePenaltyRate}
-                  required
-                  className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
-                />
-                <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
-                  Annual percentage rate applied on severely overdue arrears accounts.
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-on-surface-variant font-medium mb-1">
-                  Monthly Recurring Cycle (Day of Month)
+                  Invoice date (day of month)
                 </label>
                 <input
                   name="BILLING_INVOICE_CYCLE_DAY"
@@ -229,7 +198,7 @@ export default function AdminSettingsClient({ settings, storageStatus, sampleInv
                   className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
                 />
                 <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
-                  Day of month when maintenance batch billing runs (1st - 28th).
+                  The day of the month a generated invoice is dated (1st - 28th).
                 </span>
               </div>
 
@@ -466,31 +435,13 @@ export default function AdminSettingsClient({ settings, storageStatus, sampleInv
           <div className="space-y-4">
             <div className="pb-3 border-b border-outline-variant/30">
               <h3 className="text-sm font-bold text-white">Visitor Pass & Guardhouse Security</h3>
-              <p className="text-[11px] text-on-surface-variant">Gate access pass lifetimes, overstay thresholds, and clearance policies</p>
+              <p className="text-[11px] text-on-surface-variant">When a visitor who has not checked out counts as still on site</p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
               <div>
                 <label className="block text-on-surface-variant font-medium mb-1">
-                  Visitor Pass Validity (Hours)
-                </label>
-                <input
-                  name="VISITOR_PASS_VALIDITY_HOURS"
-                  type="number"
-                  min={1}
-                  max={72}
-                  defaultValue={settings.visitors.passValidityHours}
-                  required
-                  className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
-                />
-                <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
-                  Generated QR pass automatically expires if unused after this duration.
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-on-surface-variant font-medium mb-1">
-                  Overstay Warning Alert Threshold (Hours)
+                  Overstay alert after (hours)
                 </label>
                 <input
                   name="VISITOR_OVERSTAY_ALERT_HOURS"
@@ -502,21 +453,10 @@ export default function AdminSettingsClient({ settings, storageStatus, sampleInv
                   className="w-full bg-surface-container-high border border-outline-variant/60 rounded-xl px-3 py-2 text-xs text-white font-mono focus:outline-none focus:border-primary"
                 />
                 <span className="text-[10px] text-on-surface-variant/70 mt-1 block">
-                  Triggers guardhouse overstay alert if visitor has not checked out.
+                  A checked-in visitor is flagged "not checked out" after this many hours, on the Visitors board and its counter.
                 </span>
               </div>
 
-              <div className="sm:col-span-2 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-white font-medium">
-                  <input
-                    name="VISITOR_REQUIRE_HOST_APPROVAL"
-                    type="checkbox"
-                    defaultChecked={settings.visitors.requireHostApproval}
-                    className="rounded bg-surface-container-high border border-outline-variant/60 text-primary focus:ring-0 cursor-pointer w-4 h-4"
-                  />
-                  <span>Require Resident Host Pre-Approval for Contractor & Delivery Passes</span>
-                </label>
-              </div>
             </div>
           </div>
         )}
