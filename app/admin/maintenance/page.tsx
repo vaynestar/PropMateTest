@@ -10,6 +10,7 @@ import { PageHeader, SectionCard, StatCard, StatGrid } from "@/components/admin/
 import { colourFor } from "@/lib/chart-colours";
 import prisma from "@/lib/prisma";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import { getOperationalSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function MaintenancePage() {
    * getActivePropertyId() already applies the correct precedence
    * (?property= -> cookie -> is_default -> first), so its answer is used as-is.
    */
-  const [tickets, units, properties, admins, categories] = await Promise.all([
+  const [tickets, units, properties, admins, categories, ops] = await Promise.all([
     listTickets(propertyId || undefined),
     listUnits(),
     listProperties(),
@@ -37,6 +38,7 @@ export default async function MaintenancePage() {
       orderBy: { user_name: "asc" },
     }),
     listTicketCategories(),
+    getOperationalSettings(),
   ]);
 
   const activeProperty = properties.find((p) => p.property_id === propertyId) || properties[0];
@@ -62,12 +64,26 @@ export default async function MaintenancePage() {
   ).length;
   const unassignedCount = openTickets.filter((t) => !t.assigned_to).length;
 
+  /*
+   * SLA (DEV-205). The target hours per priority were editable under Settings
+   * and read by nothing - so "Urgent: 4 hours" was a number in a form, not a
+   * promise the system kept. An open ticket past its target is marked here and
+   * in the table.
+   */
+  const slaHours = (priority: string) => ops.sla[priority] ?? ops.sla.Medium;
+  const hoursOpen = (t: any) => (Date.now() - new Date(t.created_at).getTime()) / 3_600_000;
+  const isBreached = (t: any) =>
+    ["Open", "In Progress", "Pending Parts", "KIV"].includes(t.status) && hoursOpen(t) > slaHours(t.priority);
+  const breachedCount = openTickets.filter(isBreached).length;
+
   // AGENTS.md Rule 6: Prisma Decimal cannot cross into a Client Component.
   // Ticket.cost, and unit.area_sqft / monthly_rent on the nested unit, were
   // reaching the table and the form raw - 279 console errors per load.
   const ticketsForClient = tickets.map((t: any) => ({
     ...t,
     messageCount: t._count?.comments ?? 0,
+    slaBreached: isBreached(t),
+    slaHours: slaHours(t.priority),
     cost: t.cost === null || t.cost === undefined ? null : Number(t.cost),
     unit: t.unit
       ? {
@@ -172,7 +188,14 @@ export default async function MaintenancePage() {
           icon="person_off"
           tone={unassignedCount > 0 ? "warning" : "neutral"}
         />
-        <StatCard label="Closed this month" value={resolvedThisMonth} hint="resolved or closed" icon="task_alt" tone="positive" />
+        <StatCard
+          label="Past SLA"
+          value={breachedCount}
+          hint="open beyond target"
+          icon="timer_off"
+          tone={breachedCount > 0 ? "critical" : "positive"}
+          footer={{ label: "Closed this month", value: resolvedThisMonth, tone: "positive" }}
+        />
       </StatGrid>
 
       <div className="grid gap-5 lg:grid-cols-2">

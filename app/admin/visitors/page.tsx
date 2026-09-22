@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/admin/ui";
 import { getAllVisitors } from "@/lib/visitor-management";
 import ScanButton from "@/components/visitors/ScanButton";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import { getOperationalSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export default async function AdminVisitorsPage() {
   await requireUser(["Admin"]);
   const propertyId = (await getActivePropertyId()) ?? undefined;
 
-  const [visitors, properties, leases] = await Promise.all([
+  const [visitors, properties, leases, ops] = await Promise.all([
     getAllVisitors(propertyId),
     prisma.propertyMaster.findMany({
       select: { property_id: true, property_name: true, is_default: true },
@@ -39,6 +40,7 @@ export default async function AdminVisitorsPage() {
       },
       orderBy: { unit: { unit_number: "asc" } },
     }),
+    getOperationalSettings(),
   ]);
 
   return (
@@ -54,7 +56,7 @@ export default async function AdminVisitorsPage() {
         }
       />
 
-      <AdminVisitorList visitors={visitors} />
+      <AdminVisitorList visitors={visitors} overstayHours={ops.visitorOverstayHours} />
     </div>
   );
 }

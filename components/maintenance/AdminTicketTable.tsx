@@ -199,6 +199,12 @@ export default function AdminTicketTable({
                       <span className="rounded-md border border-outline-variant/60 bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
                         {t.status}
                       </span>
+                      {t.slaBreached && (
+                        <span className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold text-rose-300">
+                          <span className="material-symbols-outlined text-[13px] leading-none">timer_off</span>
+                          SLA
+                        </span>
+                      )}
                       {t.messageCount > 0 && (
                         <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
                           <span className="material-symbols-outlined text-[13px] leading-none">forum</span>
@@ -333,7 +339,18 @@ export default function AdminTicketTable({
                         </span>
                       </td>
                       <td className={TABLE.td}>
-                        <StatusBadge status={t.status} />
+                        <span className="flex items-center gap-1.5">
+                          <StatusBadge status={t.status} />
+                          {t.slaBreached && (
+                            <span
+                              className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold text-rose-300"
+                              title={`Open longer than the ${t.slaHours}-hour target for ${t.priority} priority`}
+                            >
+                              <span className="material-symbols-outlined text-[13px] leading-none">timer_off</span>
+                              SLA
+                            </span>
+                          )}
+                        </span>
                       </td>
                       <td className={TABLE.tdNum}>
                         {t.messageCount > 0 ? (

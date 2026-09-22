@@ -72,7 +72,14 @@ interface VisitorRecord {
   } | null;
 }
 
-export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord[] }) {
+export default function AdminVisitorList({
+  visitors,
+  overstayHours = 24,
+}: {
+  visitors: VisitorRecord[];
+  /** From Settings -> Visitors (DEV-205). */
+  overstayHours?: number;
+}) {
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [viewingPassVisitor, setViewingPassVisitor] = useState<VisitorRecord | null>(null);
@@ -107,7 +114,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
     const onSite = visitors.filter(
       (v) => normaliseVisitorStatus(v.status) === "Checked In"
     );
-    const stale = onSite.filter((v) => isStaleOnSite(v.status, v.check_in_time));
+    const stale = onSite.filter((v) => isStaleOnSite(v.status, v.check_in_time, overstayHours));
     const today = visitors.filter((v) => {
       if (!v.visit_date) return false;
       return new Date(v.visit_date).toISOString().split("T")[0] === todayStr;
@@ -122,7 +129,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
       today: today.length,
       expectedToday,
     };
-  }, [visitors]);
+  }, [visitors, overstayHours]);
 
   // Filtered List
   const filteredVisitors = useMemo(() => {
@@ -400,7 +407,7 @@ export default function AdminVisitorList({ visitors }: { visitors: VisitorRecord
                   </p>
                 )}
 
-                {isStaleOnSite(v.status, v.check_in_time) && (
+                {isStaleOnSite(v.status, v.check_in_time, overstayHours) && (
                   <div className="flex items-center gap-1.5 rounded-lg border border-rose-500/30 bg-rose-500/10 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300">
                     <span className="material-symbols-outlined text-[15px] leading-none">running_with_errors</span>
                     {(() => {

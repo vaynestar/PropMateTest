@@ -201,3 +201,41 @@ export async function getPaymentInstructions() {
   const accountNo = get("BILLING_BANK_ACCOUNT_NO");
   return bankName && accountName && accountNo ? { bankName, accountName, accountNo } : null;
 }
+
+/**
+ * Operational thresholds the modules act on (DEV-205).
+ *
+ * These were stored and edited under Settings but read by nothing: the
+ * guardhouse's "never checked out" flag was hardcoded at 24 hours and the SLA
+ * hours were decorative. A setting that changes nothing is worse than no
+ * setting (see the changelog's finding 28).
+ */
+export async function getOperationalSettings() {
+  const rows = await prisma.appParameter.findMany({
+    where: {
+      param_key: {
+        in: [
+          "VISITOR_OVERSTAY_ALERT_HOURS",
+          "MAINTENANCE_SLA_URGENT_HOURS",
+          "MAINTENANCE_SLA_HIGH_HOURS",
+          "MAINTENANCE_SLA_NORMAL_HOURS",
+          "MAINTENANCE_SLA_LOW_HOURS",
+        ],
+      },
+    },
+    select: { param_key: true, param_value: true },
+  });
+  const num = (k: string, fallback: number) => {
+    const v = parseInt(rows.find((r) => r.param_key === k)?.param_value ?? "", 10);
+    return Number.isFinite(v) && v > 0 ? v : fallback;
+  };
+  return {
+    visitorOverstayHours: num("VISITOR_OVERSTAY_ALERT_HOURS", 12),
+    sla: {
+      Urgent: num("MAINTENANCE_SLA_URGENT_HOURS", 4),
+      High: num("MAINTENANCE_SLA_HIGH_HOURS", 24),
+      Medium: num("MAINTENANCE_SLA_NORMAL_HOURS", 72),
+      Low: num("MAINTENANCE_SLA_LOW_HOURS", 168),
+    } as Record<string, number>,
+  };
+}

@@ -130,11 +130,13 @@ export function hoursOnSite(checkInTime: Date | string | null | undefined): numb
 /** On site since before today — almost certainly a missed check-out. */
 export function isStaleOnSite(
   status: string | null | undefined,
-  checkInTime: Date | string | null | undefined
+  checkInTime: Date | string | null | undefined,
+  /** Settings -> Visitors -> overstay alert hours; 24 when nothing is set. */
+  thresholdHours = 24
 ): boolean {
   if (normaliseVisitorStatus(status) !== "Checked In") return false;
   const hours = hoursOnSite(checkInTime);
-  return hours !== null && hours >= 24;
+  return hours !== null && hours >= thresholdHours;
 }
 
 /**
