@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import VisitorPassModal from "@/components/visitors/VisitorPassModal";
-import { visitorStatus } from "@/lib/visitor-status";
+import { normaliseVisitorStatus, visitorStatus } from "@/lib/visitor-status";
 import { shortDate } from "@/lib/short-date";
 import { cancelVisitorPass } from "@/app/resident/visitors/actions";
 
@@ -46,9 +46,18 @@ export default function ResidentVisitorList({ visitors, today }: { visitors: Res
     return d.toISOString().slice(0, 10);
   })();
 
+  /*
+   * These three tests compared the raw column with "Approved", so a row still
+   * carrying a legacy spelling the vocabulary folds into Approved - "Pending",
+   * lower-case "approved" - was filed under Past and shown no QR pass at all
+   * (R23/D-35). Normalised first, like every other screen.
+   */
+  const stateOf = (v: ResidentVisitorRecord) => normaliseVisitorStatus(v.status);
+
   const groupOf = (v: ResidentVisitorRecord): Group => {
-    if (v.status === "Checked In") return "onsite";
-    if (v.status === "Approved" && (v.visit_iso ?? "") >= today) return "upcoming";
+    const state = stateOf(v);
+    if (state === "Checked In") return "onsite";
+    if (state === "Approved" && (v.visit_iso ?? "") >= today) return "upcoming";
     return "past";
   };
   const groups: Record<Group, ResidentVisitorRecord[]> = { upcoming: [], onsite: [], past: [] };
@@ -114,10 +123,10 @@ export default function ResidentVisitorList({ visitors, today }: { visitors: Res
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {shown.map((v) => {
           const iso = v.visit_iso ?? "";
-          const expired = v.status === "Approved" && iso < today;
+          const expired = stateOf(v) === "Approved" && iso < today;
           const meta = visitorStatus(v.status);
           const when = iso === today ? "Today" : iso === tomorrow ? "Tomorrow" : iso ? shortDate(iso, true) : "—";
-          const usable = v.status === "Approved" && !expired;
+          const usable = stateOf(v) === "Approved" && !expired;
           return (
             <div
               key={v.visitor_id}
@@ -130,7 +139,9 @@ export default function ResidentVisitorList({ visitors, today }: { visitors: Res
                   {v.visitor_name.trim().slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-bold text-on-surface text-base truncate">{v.visitor_name}</h3>
+                  {/* truncate cut long guest names on a phone - DEV-169 fixed
+                      this on the admin side only (R13). It wraps instead. */}
+                  <h3 className="font-bold text-on-surface text-base break-words leading-tight">{v.visitor_name}</h3>
                   <p className="text-xs text-on-surface-variant truncate">{v.visit_purpose || "Visiting"}</p>
                 </div>
                 <span

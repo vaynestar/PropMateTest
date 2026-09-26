@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
+import { isUuid } from "@/lib/uuid";
 import { QRCodeSVG } from "qrcode.react";
 import PrintHelper from "../../invoice/[id]/PrintHelper";
 import VisitorPrintToolbar from "./VisitorPrintToolbar";
@@ -13,6 +14,8 @@ export default async function PrintVisitorPassPage({
 }) {
   const resolvedParams = await Promise.resolve(params);
   const visitorId = resolvedParams.id;
+  // A malformed id is a miss, not a crash: visitor_id is @db.Uuid (R8).
+  if (!isUuid(visitorId)) notFound();
 
   const visitor = await prisma.visitor.findUnique({
     where: { visitor_id: visitorId },

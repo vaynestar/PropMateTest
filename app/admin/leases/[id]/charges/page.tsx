@@ -1,6 +1,8 @@
 import prisma from "@/lib/prisma";
 import ScrollHint from "@/components/ui/ScrollHint";
 import { requireUser } from "@/lib/auth";
+import { isUuid } from "@/lib/uuid";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import AddLeaseChargeForm from "./AddLeaseChargeForm";
 import { removeLeaseChargeAction } from "./actions";
@@ -10,6 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function LeaseChargesPage({ params }: { params: Promise<{ id: string }> }) {
   await requireUser(["Admin"]);
   const { id } = await params;
+  if (!isUuid(id)) notFound();
 
   const lease = await prisma.tenantLease.findUnique({
     where: { lease_id: id },

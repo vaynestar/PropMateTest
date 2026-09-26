@@ -20,11 +20,22 @@ export async function getAdminNotifications(): Promise<NotificationItem[]> {
   const notifications: NotificationItem[] = [];
 
   try {
-    // 1. Dynamic Urgent Tickets
+    /*
+     * 1. Tickets wanting attention.
+     *
+     * This asked for Urgent or High only, and a resident's ticket is always
+     * raised as Medium - there is no urgency picker on the resident form. So
+     * no report a resident ever made reached this bell (R15). An Open ticket
+     * nobody has picked up is exactly what the office needs telling about,
+     * whatever its priority; In Progress ones already have an owner, so they
+     * stay in on priority alone.
+     */
     const urgentTickets = await prisma.ticket.findMany({
       where: {
-        status: { in: ["Open", "In Progress"] },
-        priority: { in: ["Urgent", "High"] },
+        OR: [
+          { status: "Open" },
+          { status: "In Progress", priority: { in: ["Urgent", "High"] } },
+        ],
       },
       include: {
         lease: { include: { unit: { select: { unit_number: true } } } },
@@ -34,15 +45,20 @@ export async function getAdminNotifications(): Promise<NotificationItem[]> {
     });
 
     urgentTickets.forEach((t) => {
+      const unit = t.lease?.unit?.unit_number || "Common area";
       notifications.push({
         id: `tkt-${t.ticket_id}`,
         type: "TICKET",
-        title: `${t.priority} Ticket: ${t.title}`,
-        message: `Unit ${t.lease?.unit?.unit_number || "Common Area"} • Requires technician assignment`,
+        title: t.status === "Open" ? `New ticket: ${t.title}` : `${t.priority} ticket: ${t.title}`,
+        message:
+          t.status === "Open"
+            ? `Unit ${unit} · nobody has picked this up yet`
+            : `Unit ${unit} · ${t.priority.toLowerCase()} priority, in progress`,
         timestamp: t.created_at,
         isRead: false,
         href: "/admin/maintenance",
-        urgency: t.priority === "Urgent" ? "CRITICAL" : "HIGH",
+        urgency:
+          t.priority === "Urgent" ? "CRITICAL" : t.priority === "High" ? "HIGH" : "NORMAL",
       });
     });
 
@@ -225,6 +241,37 @@ export async function getResidentNotificationsFor(userId: string): Promise<Notif
     const leaseIds = leases.map((l) => l.lease_id);
     const propertyIds = Array.from(new Set(leases.map((l) => l.unit.property_id)));
 
+    /*
+     * 1a. Their ticket has moved along but is not finished.
+     *
+     * Only Resolved and Closed were reported, so a resident heard nothing
+     * between raising a report and its being done - including when the office
+     * put it on hold, which is exactly when someone wonders if it was received
+     * at all (R16).
+     */
+    const moving = await prisma.ticket.findMany({
+      where: {
+        OR: [{ requester_id: user.userId }, { lease_id: { in: leaseIds } }],
+        status: { in: ["In Progress", "KIV"] },
+        modified_at: { gte: days(14) },
+      },
+      orderBy: { modified_at: "desc" },
+      take: 5,
+    });
+    moving.forEach((t) => {
+      const onHold = t.status === "KIV";
+      items.push({
+        id: `tkt-${t.ticket_id}-${t.status}`,
+        type: "TICKET",
+        title: onHold ? `On hold: ${t.title}` : `Being worked on: ${t.title}`,
+        message: t.remark?.trim() || (onHold ? "The office has put this on hold." : "Someone is on it."),
+        timestamp: t.modified_at,
+        isRead: false,
+        href: "/resident/maintenance",
+        urgency: "INFO",
+      });
+    });
+
     // 1. Tickets they raised that have been dealt with
     const resolved = await prisma.ticket.findMany({
       where: {
@@ -282,10 +329,40 @@ export async function getResidentNotificationsFor(userId: string): Promise<Notif
         }
       });
 
-      // 3. Their bookings in the next two days
-      const soon = await prisma.booking.findMany({
+      // 2b. An invoice the office voided. They saw it, then it vanished.
+      const voided = await prisma.invoice.findMany({
         where: {
           lease_id: { in: leaseIds },
+          status: "Voided",
+          issued_at: { not: null },
+          modified_at: { gte: days(14) },
+        },
+        orderBy: { modified_at: "desc" },
+        take: 5,
+      });
+      voided.forEach((inv) => {
+        items.push({
+          id: `inv-${inv.invoice_id}-voided`,
+          type: "BILLING",
+          title: `Cancelled: ${inv.invoice_no}`,
+          message: `The office cancelled this invoice. Nothing is owed on it.`,
+          timestamp: inv.modified_at,
+          isRead: false,
+          href: `/resident/invoices/${inv.invoice_id}`,
+          urgency: "INFO",
+        });
+      });
+
+      /*
+       * 3. Their bookings in the next two days.
+       *
+       * Matched on lease_id alone, while the My Bookings list reads by
+       * user_id - so a booking the office made for them, or one on a second
+       * tenancy, showed on the page and never in the bell (R23/D-26).
+       */
+      const soon = await prisma.booking.findMany({
+        where: {
+          OR: [{ user_id: user.userId }, { lease_id: { in: leaseIds } }],
           booking_status: "Confirmed",
           booking_date: { gte: days(1), lte: new Date(now.getTime() + 2 * 86_400_000) },
         },
@@ -313,6 +390,33 @@ export async function getResidentNotificationsFor(userId: string): Promise<Notif
             urgency: "NORMAL",
           });
         });
+
+      // 3b. A booking cancelled by someone other than them - the office.
+      const cancelled = await prisma.booking.findMany({
+        where: {
+          OR: [{ user_id: user.userId }, { lease_id: { in: leaseIds } }],
+          booking_status: "Cancelled",
+          modified_at: { gte: days(14) },
+          NOT: { modified_by: user.userId },
+        },
+        include: { facility: { select: { facility_name: true } } },
+        orderBy: { modified_at: "desc" },
+        take: 5,
+      });
+      cancelled.forEach((b) => {
+        items.push({
+          id: `book-${b.booking_id}-cancelled`,
+          type: "BOOKING",
+          title: `Booking cancelled: ${b.facility.facility_name}`,
+          message: b.cancellation_reason?.trim()
+            ? `${shortDate(b.booking_date)} · ${b.cancellation_reason}`
+            : `${shortDate(b.booking_date)} · cancelled by the management office`,
+          timestamp: b.modified_at,
+          isRead: false,
+          href: "/resident/facilities",
+          urgency: "HIGH",
+        });
+      });
 
       // 4. A guest of theirs has arrived
       const arrived = await prisma.visitor.findMany({

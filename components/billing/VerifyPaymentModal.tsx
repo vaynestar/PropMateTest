@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { ViewerButton } from "@/components/ui/MediaViewer";
 import { createPortal } from "react-dom";
 import { reviewPaymentAction } from "@/app/admin/invoices/payment-actions";
+import { rm } from "@/lib/money";
 
 /**
  * The office checks a resident's payment evidence against its bank statement
@@ -19,8 +20,6 @@ export type PendingSubmission = {
   proof_filename: string | null;
 };
 
-const rm = (n: number) =>
-  "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const day = (d: string | Date) =>
   new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(d));
 

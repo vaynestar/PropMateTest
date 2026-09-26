@@ -471,9 +471,9 @@ export default function AdminAnnouncementList({
                   {/* Title & Property Tag */}
                   <div>
                     <div className="text-[11px] text-on-surface-variant flex items-center gap-1 mb-1 font-medium">
+                      {/* "Audience: All" on every row, because nothing ever
+                          filtered by it (R23/D-27). */}
                       <span>{a.property ? a.property.property_name : "All properties"}</span>
-                      <span>•</span>
-                      <span>Audience: {a.target_audience}</span>
                     </div>
                     <h3
                       className="text-base font-bold text-white leading-snug cursor-pointer hover:text-primary transition-colors line-clamp-2"

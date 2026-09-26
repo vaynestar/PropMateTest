@@ -8,6 +8,7 @@ import { readTicketPhotos } from "@/lib/ticket-photos";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import ResidentRaiseTicketForm from "@/components/maintenance/ResidentRaiseTicketForm";
 import ResidentTicketList, { type ResidentTicket } from "@/components/maintenance/ResidentTicketList";
+import { ACTIVE_LEASE_ORDER } from "@/lib/resident";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +57,7 @@ export default async function ResidentMaintenancePage() {
      */
     const ownLease = await prisma.tenantLease.findFirst({
       where: { user_id: sessionUser.userId, status: "Active" },
+    orderBy: ACTIVE_LEASE_ORDER,
       select: { unit: { select: { unit_id: true, property_id: true } } },
     });
     if (!ownLease?.unit) {

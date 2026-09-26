@@ -14,11 +14,11 @@ import {
   todayMY,
 } from "@/lib/payment/payments";
 import PaymentPanel, { type Submission } from "./PaymentPanel";
+import { rm } from "@/lib/money";
+import { invoiceState } from "@/lib/invoice-state";
 
 export const dynamic = "force-dynamic";
 
-const rm = (n: number) =>
-  "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "16 Sep 2026" in Malaysia time (Intl prints "Sept"). */
@@ -85,10 +85,13 @@ export default async function ResidentInvoicePage({
   const total = Number(invoice.total_amount);
   const pdf = { url: `/api/invoices/${invoice.invoice_id}/pdf`, filename: `${invoice.invoice_no}.pdf` };
   const isUnpaid = invoice.status === "Unpaid";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const overdue = isUnpaid && new Date(invoice.due_date) < today;
   const checking = submission?.status === "Pending";
+  /*
+   * This page read the server's midnight and ignored the payment under review,
+   * so an invoice showed Overdue here and "Being checked" in the list it was
+   * opened from (R17). Both now ask lib/invoice-state.
+   */
+  const overdue = invoiceState(invoice, checking) === "overdue";
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-stack-lg">

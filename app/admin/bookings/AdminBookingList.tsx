@@ -4,7 +4,8 @@ import { useState, useTransition, useMemo } from "react";
 import { normaliseBookingStatus } from "@/lib/booking-status";
 import StatusBadge from "@/components/dashboard/StatusBadge";
 import { updateBookingStatus } from "./actions";
-import { StatCard, StatGrid, TABLE } from "@/components/admin/ui";
+import { BTN, StatCard, StatGrid, TABLE } from "@/components/admin/ui";
+import Modal from "@/components/admin/Modal";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "30 Sep 2026" in Malaysia time - ICU prints "Sept" (DEV-184). */
@@ -152,13 +153,27 @@ export default function AdminBookingList({
     return matchesFacility && matchesStatus && matchesDateRange && matchesSearch;
   });
 
-  // Action: cancel a booking
-  const handleUpdateStatus = (bookingId: string, status: string) => {
+  /*
+   * Cancelling asks why. The reason is written to the booking and is what the
+   * resident is told in their notification - before this, cancelling was one
+   * silent click and they found out by looking (R16).
+   */
+  const [cancelling, setCancelling] = useState<{ id: string; facility: string } | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+
+  const handleUpdateStatus = (bookingId: string, status: string, reason?: string) => {
     setUpdatingId(bookingId);
     startTransition(async () => {
-      await updateBookingStatus(bookingId, status);
+      await updateBookingStatus(bookingId, status, reason);
       setUpdatingId(null);
+      setCancelling(null);
+      setCancelReason("");
     });
+  };
+
+  const askToCancel = (bookingId: string, facilityName: string) => {
+    setCancelReason("");
+    setCancelling({ id: bookingId, facility: facilityName });
   };
 
   // Date helpers for past quick shortcuts
@@ -603,7 +618,7 @@ export default function AdminBookingList({
                     {!isCancelled && !isCompleted && (
                       <button
                         type="button"
-                        onClick={() => handleUpdateStatus(b.booking_id, "Cancelled")}
+                        onClick={() => askToCancel(b.booking_id, b.facility?.facility_name ?? "this facility")}
                         disabled={isPending}
                         className="pressable flex w-full items-center justify-center gap-1 rounded-lg border border-rose-500/30 bg-rose-500/10 py-1.5 text-xs font-semibold text-rose-300 transition-all hover:bg-rose-500/20 disabled:opacity-50"
                       >
@@ -692,7 +707,7 @@ export default function AdminBookingList({
                             {!isCancelled && !isCompleted && (
                               <button
                                 type="button"
-                                onClick={() => handleUpdateStatus(b.booking_id, "Cancelled")}
+                                onClick={() => askToCancel(b.booking_id, b.facility?.facility_name ?? "this facility")}
                                 disabled={isPending}
                                 className="px-2.5 py-1 rounded bg-rose-500/10 text-rose-300 border border-rose-500/30 hover:bg-rose-500/20 text-xs font-medium pressable disabled:opacity-50"
                               >
@@ -709,6 +724,48 @@ export default function AdminBookingList({
             </table>
           </div>
         </div>
+      )}
+
+      {cancelling && (
+        <Modal
+          title="Cancel this booking"
+          subtitle={cancelling.facility}
+          icon="event_busy"
+          size="sm"
+          onClose={() => setCancelling(null)}
+          footer={
+            <div className="flex justify-end gap-2">
+              <button type="button" className={BTN.secondary} onClick={() => setCancelling(null)}>
+                Keep it
+              </button>
+              <button
+                type="button"
+                className={`${BTN.primary} !bg-rose-600 hover:!bg-rose-500`}
+                disabled={isPending}
+                onClick={() => handleUpdateStatus(cancelling.id, "Cancelled", cancelReason)}
+              >
+                {isPending ? "Cancelling…" : "Cancel booking"}
+              </button>
+            </div>
+          }
+        >
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-on-surface-variant">
+              Why? The resident is told this.
+            </span>
+            <textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              rows={3}
+              maxLength={200}
+              placeholder="e.g. The pool is closed for repairs that day."
+              className="rounded-xl border border-outline-variant/60 bg-surface-container-high px-3 py-2 text-sm text-on-surface outline-none transition-colors focus:border-primary resize-none placeholder:text-on-surface-variant/60"
+            />
+            <span className="text-[11px] text-on-surface-variant">
+              Optional, but a blank reason tells them only that the office cancelled it.
+            </span>
+          </label>
+        </Modal>
       )}
     </div>
   );

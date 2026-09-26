@@ -4,6 +4,7 @@ import { createBill, getBillPayment, getToyyibPayConfig } from "./toyyibpay";
 import { IMAGE_OR_PDF, removeFile, sniffFileType, storeFile, typeMessage } from "@/lib/storage/files";
 import { getStorageFolder } from "@/lib/storage/folders";
 import { firebaseStorageConfigured } from "@/lib/storage/firebase";
+import { isUuid } from "@/lib/uuid";
 
 /**
  * Invoice payments.
@@ -37,8 +38,7 @@ export function onlinePaymentsAreSandbox() {
   return getToyyibPayConfig()?.isSandbox ?? false;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-export const isUuid = (v: string) => UUID.test(v);
+export { isUuid };
 
 /** Today in Malaysia as YYYY-MM-DD. */
 export function todayMY() {

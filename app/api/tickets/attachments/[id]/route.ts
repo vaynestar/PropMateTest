@@ -3,18 +3,17 @@ import { fileSecurityHeaders } from "@/lib/file-headers";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { getObject } from "@/lib/storage/firebase";
+import { isUuid } from "@/lib/uuid";
 
 /**
  * A helpdesk photo (DEV-187). Admins, or the resident who reported the ticket
  * (or the tenant on its lease). Anyone else gets 404 - same rule as receipts.
  */
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await getSessionUser();
   const notFound = () => new NextResponse("Not found", { status: 404 });
-  if (!user || !UUID.test(id)) return notFound();
+  if (!user || !isUuid(id)) return notFound();
 
   const a = await prisma.ticketAttachment.findUnique({
     where: { attachment_id: id },

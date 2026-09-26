@@ -2,6 +2,8 @@ import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { MANUAL_METHOD } from "@/lib/payment/payments";
 import ResidentInvoiceList, { type ResidentInvoiceRow } from "@/components/billing/ResidentInvoiceList";
+import { rm } from "@/lib/money";
+import { invoiceState, todayKeyMY, daysLate as lateBy } from "@/lib/invoice-state";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +15,6 @@ function myParts(d: Date) {
   return { y, m, day };
 }
 
-const rm = (n: number) => "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default async function ResidentInvoicesPage() {
   const user = await getSessionUser();
@@ -40,28 +41,19 @@ export default async function ResidentInvoicesPage() {
     },
   });
 
-  const today = myParts(new Date());
-  const todayKey = today.y * 10000 + today.m * 100 + today.day;
+  const todayKey = todayKeyMY();
 
   let outstanding = 0;
   let overdueCount = 0;
   const rows: ResidentInvoiceRow[] = invoices.map((inv) => {
-    const due = myParts(new Date(inv.due_date));
     const period = myParts(new Date(inv.invoice_date));
-    const dueKey = due.y * 10000 + due.m * 100 + due.day;
+    const due = myParts(new Date(inv.due_date));
     const amount = Number(inv.total_amount);
-    let state: ResidentInvoiceRow["state"] =
-      inv.status === "Paid" ? "paid" : inv.status === "Voided" ? "voided" : "unpaid";
-    if (state === "unpaid") {
-      outstanding += amount;
-      if (inv.transactions.length > 0) state = "checking";
-      else if (dueKey < todayKey) state = "overdue";
-    }
+    // One rule for every screen - see lib/invoice-state.ts (R17).
+    const state = invoiceState(inv, inv.transactions.length > 0, todayKey);
+    if (state === "unpaid" || state === "checking" || state === "overdue") outstanding += amount;
     if (state === "overdue") overdueCount++;
-    const daysLate =
-      state === "overdue"
-        ? Math.round((Date.UTC(today.y, today.m - 1, today.day) - Date.UTC(due.y, due.m - 1, due.day)) / 86400000)
-        : 0;
+    const daysLate = state === "overdue" ? lateBy(inv.due_date, todayKey) : 0;
     return {
       id: inv.invoice_id,
       invoiceNo: inv.invoice_no,

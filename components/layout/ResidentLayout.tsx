@@ -37,6 +37,14 @@ export default function ResidentLayout({
   const isActive = (href: string) =>
     href === "/resident" ? pathname === href : pathname.startsWith(href);
 
+  // Longest match wins, so /resident/invoices/<id> still reads "Invoices".
+  const pageTitle =
+    pathname === "/resident"
+      ? "Welcome Home"
+      : residentNav
+          .filter((item) => item.href !== "/resident" && pathname.startsWith(item.href))
+          .sort((a, b) => b.href.length - a.href.length)[0]?.label ?? "PropMate";
+
   return (
     <div className="min-h-screen flex bg-surface text-on-surface w-full max-w-full overflow-x-clip">
       <nav className="hidden md:flex w-[240px] h-screen fixed left-0 top-0 border-r border-outline-variant bg-surface-container-lowest flex-col py-stack-lg z-50">
@@ -91,8 +99,10 @@ export default function ResidentLayout({
               <span className="material-symbols-outlined text-on-primary text-[18px]">person</span>
             </span>
           </Link>
-          <p className="font-headline-md text-headline-md font-bold text-on-surface flex-1 text-center md:flex-none md:text-left">
-            Welcome Home
+          {/* Said "Welcome Home" on every page, and the home page repeated it
+              directly below (R19). It names where you are instead. */}
+          <p className="font-headline-md text-headline-md font-bold text-on-surface flex-1 text-center md:flex-none md:text-left truncate px-2">
+            {pageTitle}
           </p>
           <div className="flex items-center gap-3">
             {/* Was a bell-shaped button with no handler: it looked tappable and
@@ -126,7 +136,7 @@ export default function ResidentLayout({
       </div>
 
       <BackToTop aboveBottomNav />
-      <BottomNav primary={PRIMARY} more={MORE} />
+      <BottomNav primary={PRIMARY} more={MORE} phoneOnly />
     </div>
   );
 }

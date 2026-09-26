@@ -8,13 +8,9 @@ import {
   getResidentBookings,
   getResidentOutstanding,
 } from "@/lib/resident";
+import { rm } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
-
-/** "RM 29,850.00" - the old toFixed() gave "RM 29850.00", hard to read at a glance. */
-function formatCurrency(value: number) {
-  return "RM " + value.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
 
 /** Booking times in Malaysia time - toTimeString() used the server's zone (UTC on Vercel). */
 function myTime(value: Date | string) {
@@ -63,8 +59,9 @@ export default async function ResidentDashboardPage() {
   if (!lease) {
     return (
       <div className="flex flex-col gap-stack-lg">
+        {/* The header already says "Welcome Home" here (R19). */}
         <h1 className="font-headline-lg text-headline-lg text-on-surface">
-          Welcome Home
+          Your account
         </h1>
         <div className="glass-card rounded-xl p-8 text-center">
           <span className="material-symbols-outlined text-on-surface-variant text-5xl">
@@ -139,7 +136,7 @@ export default async function ResidentDashboardPage() {
             )}
           </div>
           <span className="text-[2.25rem] sm:text-5xl leading-tight font-bold text-on-surface mt-2 tabular-nums tracking-tight whitespace-nowrap">
-            {formatCurrency(outstanding.total)}
+            {rm(outstanding.total)}
           </span>
           <span className="mt-1 text-sm text-on-surface/80">
             {outstanding.invoiceCount === 0
@@ -171,14 +168,16 @@ export default async function ResidentDashboardPage() {
           <Link
             key={action.label}
             href={action.href}
-            className="pressable glass-card rounded-xl p-stack-md flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-colors group"
+            className="pressable glass-card rounded-xl px-1.5 py-stack-md flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-colors group"
           >
             <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center border border-primary/25 group-hover:bg-primary/25 transition-colors">
               <span className="material-symbols-outlined text-primary text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
                 {action.icon}
               </span>
             </div>
-            <span className="font-label-sm text-label-sm text-on-surface text-center truncate w-full">
+            {/* truncate in a six-column row cut "Invoices" to "Invo..." at
+                tablet width (R13). It wraps instead. */}
+            <span className="font-label-sm text-label-sm text-on-surface text-center w-full leading-tight break-words">
               {action.label}
             </span>
           </Link>

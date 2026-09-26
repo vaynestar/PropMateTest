@@ -22,13 +22,17 @@ type Facility = {
   image_url?: string | null;
 };
 
-type Booking = {
-  booking_id: string;
+/**
+ * A booked slot on this facility, already reduced to minutes in Malaysia time
+ * by the page. This used to be the resident's own bookings with "18:00" time
+ * strings, which `new Date()` turned into NaN - so nothing ever clashed and
+ * the timeline drew nothing (R10).
+ */
+type Slot = {
   facility_id: string;
   booking_date: string;
-  start_time: string;
-  end_time: string;
-  booking_status: string;
+  start_min: number;
+  end_min: number;
 };
 
 function jsDayToMonFirst(jsDay: number): number {
@@ -97,10 +101,10 @@ function SubmitButton() {
 
 export default function FacilityBooking({
   facilities,
-  bookings,
+  slots,
 }: {
   facilities: Facility[];
-  bookings: Booking[];
+  slots: Slot[];
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
@@ -153,7 +157,8 @@ export default function FacilityBooking({
                   </span>
 
                   <div className="absolute bottom-0 inset-x-0 p-4">
-                    <h3 className="text-lg font-bold text-white leading-tight truncate drop-shadow">{f.facility_name}</h3>
+                    {/* A two-column grid at tablet width cut the longer facility names (R13). */}
+                    <h3 className="text-lg font-bold text-white leading-tight break-words drop-shadow line-clamp-2">{f.facility_name}</h3>
                     <p className="text-xs text-white/80 truncate">{f.property.property_name}</p>
                   </div>
                 </div>
@@ -181,7 +186,7 @@ export default function FacilityBooking({
               {/* Expanded Booking Calendar Details (Spans 2 columns) */}
               {active && (
                 <div className="col-span-1 sm:col-span-2 w-full animate-in fade-in slide-in-from-top-4 duration-300">
-                  <BookingCard facility={f} bookings={bookings} />
+                  <BookingCard facility={f} slots={slots} />
                 </div>
               )}
             </Fragment>
@@ -192,7 +197,7 @@ export default function FacilityBooking({
   );
 }
 
-function BookingCard({ facility, bookings }: { facility: Facility; bookings: Booking[] }) {
+function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] }) {
   const openDays = useMemo(
     () =>
       new Set(
@@ -309,14 +314,8 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
   const end = endHour * 60 + endMin;
 
   const dayBookings = useMemo(
-    () =>
-      bookings.filter(
-        (b) =>
-          b.facility_id === facility.facility_id &&
-          b.booking_date === date &&
-          b.booking_status !== "Cancelled"
-      ),
-    [bookings, facility.facility_id, date]
+    () => slots.filter((s) => s.facility_id === facility.facility_id && s.booking_date === date),
+    [slots, facility.facility_id, date]
   );
 
   const clash = useMemo(() => {
@@ -324,11 +323,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
     if (facility.max_booking_hours && (end - start) > facility.max_booking_hours * 60) return "max_exceeded";
     if (start < DAY_START || end > DAY_END) return "out_of_bounds";
     return (
-      dayBookings.find((b) => {
-        const bs = new Date(b.start_time).getHours() * 60 + new Date(b.start_time).getMinutes();
-        const be = new Date(b.end_time).getHours() * 60 + new Date(b.end_time).getMinutes();
-        return start < be && end > bs;
-      }) ?? null
+      dayBookings.find((b) => start < b.end_min && end > b.start_min) ?? null
     );
   }, [dayBookings, start, end, DAY_START, DAY_END, facility.max_booking_hours]);
 
@@ -339,7 +334,7 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
           <span className="material-symbols-outlined">event_available</span>
         </span>
         <div className="min-w-0">
-          <p className="text-base font-bold text-on-surface truncate">Book {facility.facility_name}</p>
+          <p className="text-base font-bold text-on-surface break-words leading-tight">Book {facility.facility_name}</p>
           <p className="text-xs text-on-surface/80">
             Open {facility.open_time} – {facility.close_time} · {openDaysLabel(facility.operation_days)}
             {facility.max_booking_hours ? ` · up to ${facility.max_booking_hours} h` : ""}
@@ -394,7 +389,8 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
                 key={dur}
                 type="button"
                 onClick={() => handleDuration(dur)}
-                className={`flex-1 py-1.5 px-2 text-xs font-bold rounded-lg border transition-colors ${
+                /* py-1.5 made a 26px target on a phone (R20). */
+                className={`h-11 min-w-[56px] flex-1 px-2 text-xs font-bold rounded-lg border transition-colors ${
                   end - start === dur * 60
                     ? "bg-primary text-black border-primary"
                     : "border-outline-variant text-on-surface hover:bg-surface-container-high"
@@ -469,10 +465,8 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
         <BookingTimeline 
           dayStart={DAY_START} 
           dayEnd={DAY_END} 
-          bookings={dayBookings.map(b => ({
-            start_time: new Date(b.start_time).getHours() * 60 + new Date(b.start_time).getMinutes(),
-            end_time: new Date(b.end_time).getHours() * 60 + new Date(b.end_time).getMinutes(),
-          }))} 
+          bookings={dayBookings.map((b) => ({ start_time: b.start_min, end_time: b.end_min }))}
+          
           selectedStart={start}
           selectedEnd={end}
           hasClash={!!clash}
@@ -524,6 +518,31 @@ function BookingCard({ facility, bookings }: { facility: Facility; bookings: Boo
         <input type="hidden" name="booking_date" value={date} />
         <input type="hidden" name="start_time" value={fmt(start)} />
         <input type="hidden" name="end_time" value={fmt(end)} />
+
+        {/*
+          The booking carries a pax count, the admin list draws it and the
+          server checks it against the facility's capacity - but the resident
+          form never sent one, so every booking was a party of one (R23/D-30).
+        */}
+        <div className="flex flex-col gap-1.5 mb-3">
+          <label htmlFor={`pax-${facility.facility_id}`} className="text-xs font-bold text-on-surface">
+            How many people?
+            {facility.max_capacity ? (
+              <span className="font-normal text-on-surface-variant"> · up to {facility.max_capacity}</span>
+            ) : null}
+          </label>
+          <input
+            id={`pax-${facility.facility_id}`}
+            name="pax_count"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={facility.max_capacity ?? undefined}
+            defaultValue={1}
+            className="h-11 w-28 rounded-lg border border-outline-variant bg-surface-container-high px-3 text-sm text-on-surface outline-none focus:border-primary"
+          />
+        </div>
+
         <div className="opacity-0 h-0 w-0 overflow-hidden">
            {/* Prevent form submission if clash */}
            <input type="text" name="_guard" required={!!clash} />

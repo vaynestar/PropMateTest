@@ -1,18 +1,11 @@
 import { listFacilities } from "@/lib/facility-management";
 import { bookingHasEnded } from "@/lib/booking-status";
-
-function toMyTime(value: Date | string) {
-  return new Date(value).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Kuala_Lumpur",
-  });
-}
+import { clockMY, minutesMY, todayMY } from "@/lib/booking-time";
 import { listUserBookings } from "@/lib/booking-management";
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ResidentFacilityTabs from "./ResidentFacilityTabs";
+import { ACTIVE_LEASE_ORDER } from "@/lib/resident";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +27,7 @@ export default async function ResidentFacilitiesPage() {
    */
   const lease = await prisma.tenantLease.findFirst({
     where: { user_id: user.userId, status: "Active" },
+    orderBy: ACTIVE_LEASE_ORDER,
     select: { unit: { select: { property_id: true } } },
   });
   const propertyId = lease?.unit?.property_id;
@@ -68,12 +62,41 @@ export default async function ResidentFacilitiesPage() {
         : String(b.booking_date),
     // Pinned to Malaysia time: toTimeString() used the server's zone, so on
     // Vercel (UTC) every booking showed eight hours early.
-    start_time: toMyTime(b.start_time),
-    end_time: toMyTime(b.end_time),
+    start_time: clockMY(b.start_time),
+    end_time: clockMY(b.end_time),
     // R4: past bookings are shown as completed and cannot be cancelled.
-    is_past: bookingHasEnded(b.booking_date, b.end_time),
+    is_past: bookingHasEnded(b.end_time),
     booking_status: b.booking_status,
   }));
+
+  /*
+   * "Who has booked this day" was drawn from the resident's OWN bookings, and
+   * their times arrive here as "18:00" strings - `new Date("18:00")` is an
+   * Invalid Date, so every comparison was NaN and the timeline never drew a
+   * thing, nor did the clash warning ever fire (R10).
+   *
+   * It needs every booking on the facility, not just this resident's. Only the
+   * two numbers the timeline draws are sent - no names, no purpose - and the
+   * clock is read in Malaysia here, on the server, so the view does not depend
+   * on the viewer's timezone.
+   */
+  const slots = facilities.length
+    ? (
+        await prisma.booking.findMany({
+          where: {
+            facility_id: { in: facilities.map((f) => f.facility_id) },
+            booking_date: { gte: new Date(todayMY()) },
+            booking_status: { not: "Cancelled" },
+          },
+          select: { facility_id: true, booking_date: true, start_time: true, end_time: true },
+        })
+      ).map((b) => ({
+        facility_id: b.facility_id,
+        booking_date: b.booking_date.toISOString().slice(0, 10),
+        start_min: minutesMY(b.start_time),
+        end_min: minutesMY(b.end_time),
+      }))
+    : [];
 
   return (
     <div className="space-y-6">
@@ -87,7 +110,7 @@ export default async function ResidentFacilitiesPage() {
       </section>
 
       {/* Main Tabbed Switcher Component */}
-      <ResidentFacilityTabs facilities={facilities} myBookings={myBookings} />
+      <ResidentFacilityTabs facilities={facilities} myBookings={myBookings} slots={slots} today={todayMY()} />
     </div>
   );
 }

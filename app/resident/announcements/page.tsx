@@ -2,6 +2,7 @@ import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getResidentAnnouncements } from "@/lib/announcements";
 import ResidentAnnouncementList, { ResidentAnnouncement } from "@/components/announcements/ResidentAnnouncementList";
+import { ACTIVE_LEASE_ORDER } from "@/lib/resident";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export default async function ResidentAnnouncementsPage() {
   // Get active lease for resident
   const lease = await prisma.tenantLease.findFirst({
     where: { user_id: user.userId, status: "Active" },
+    orderBy: ACTIVE_LEASE_ORDER,
     include: {
       unit: {
         include: {

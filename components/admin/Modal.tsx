@@ -71,7 +71,7 @@ export default function Modal({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-full p-1.5 text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-white"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-white"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>

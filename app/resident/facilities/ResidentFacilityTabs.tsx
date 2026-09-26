@@ -27,14 +27,26 @@ type Booking = {
   booking_status: string;
 };
 
+/** Every booked slot on these facilities, as minutes in Malaysia time (R10). */
+export type Slot = {
+  facility_id: string;
+  booking_date: string;
+  start_min: number;
+  end_min: number;
+};
+
 interface ResidentFacilityTabsProps {
   facilities: Facility[];
   myBookings: Booking[];
+  slots: Slot[];
+  today: string;
 }
 
 export default function ResidentFacilityTabs({
   facilities,
   myBookings,
+  slots,
+  today,
 }: ResidentFacilityTabsProps) {
   const [activeTab, setActiveTab] = useState<"facilities" | "my_bookings">("facilities");
 
@@ -49,13 +61,13 @@ export default function ResidentFacilityTabs({
           <button
             type="button"
             onClick={() => setActiveTab("facilities")}
-            className={`px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center justify-center gap-2 pressable ${
+            className={`px-2 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 sm:gap-2 pressable ${
               activeTab === "facilities"
                 ? "bg-primary text-black shadow-lg shadow-primary/20 scale-[1.02]"
                 : "text-on-surface-variant hover:text-on-surface"
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">apartment</span>
+            <span className="material-symbols-outlined text-[20px] hidden sm:inline">apartment</span>
             Facilities
             <span
               className={`text-xs px-2 py-0.5 rounded-full font-bold ${
@@ -69,13 +81,13 @@ export default function ResidentFacilityTabs({
           <button
             type="button"
             onClick={() => setActiveTab("my_bookings")}
-            className={`px-3 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center justify-center gap-2 pressable ${
+            className={`px-2 sm:px-5 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap transition-all flex items-center justify-center gap-1.5 sm:gap-2 pressable ${
               activeTab === "my_bookings"
                 ? "bg-primary text-black shadow-lg shadow-primary/20 scale-[1.02]"
                 : "text-on-surface-variant hover:text-on-surface"
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">event_note</span>
+            <span className="material-symbols-outlined text-[20px] hidden sm:inline">event_note</span>
             My Bookings
             {activeBookingsCount > 0 && (
               <span
@@ -100,7 +112,7 @@ export default function ResidentFacilityTabs({
               <p className="text-xs">Your building manager has not opened any facilities for booking.</p>
             </div>
           ) : (
-            <FacilityBooking facilities={facilities} bookings={myBookings} />
+            <FacilityBooking facilities={facilities} slots={slots} />
           )}
         </div>
       )}
@@ -118,7 +130,7 @@ export default function ResidentFacilityTabs({
             </span>
           </div>
 
-          <ResidentMyBookingsList myBookings={myBookings} />
+          <ResidentMyBookingsList myBookings={myBookings} today={today} />
         </div>
       )}
     </div>

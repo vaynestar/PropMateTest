@@ -2,6 +2,7 @@ import "server-only";
 import prisma from "@/lib/prisma";
 import { getInvoiceById } from "@/lib/billing";
 import type { SessionUser } from "@/lib/auth";
+import { isUuid } from "@/lib/uuid";
 
 /**
  * Everything printed on an invoice (DEV-191) - one loader for the on-screen
@@ -127,7 +128,7 @@ export const docMoney = (n: number, currency = "RM") => {
  * lease (DEV-170 / DEV-171).
  */
 export async function loadInvoiceDoc(id: string, user: SessionUser): Promise<InvoiceDoc | null> {
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) return null;
+  if (!isUuid(id)) return null;
   const [invoice, settings] = await Promise.all([getInvoiceById(id), getInvoiceDocSettings()]);
   if (!invoice) return null;
   if (user.role !== "Admin" && (invoice.lease.user_id !== user.userId || !invoice.issued_at)) return null;

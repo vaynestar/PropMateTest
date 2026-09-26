@@ -61,7 +61,13 @@ export default function AdminAnnouncementForm({
   const [selectedPropertyId, setSelectedPropertyId] = useState(
     initialData ? initialData.property_id || "ALL" : defaultPropertyId || "ALL"
   );
-  const [targetAudience, setTargetAudience] = useState(initialData?.target_audience || "All");
+  /*
+   * "Tenants only" / "Owners only" was saved to target_audience and read by
+   * nothing - every notice reached every resident (R23/D-27). It cannot work
+   * either: the owner/renter field was dropped in DEV-135, so the system has
+   * no way to tell the two apart. The picker is gone; the column keeps "All".
+   */
+  const targetAudience = "All";
 
   const [publishDate, setPublishDate] = useState(
     initialData?.publish_date
@@ -93,7 +99,6 @@ export default function AdminAnnouncementForm({
     Boolean(
       initialData?.image_url ||
       initialData?.attachment_url ||
-      (initialData?.target_audience && initialData.target_audience !== "All") ||
       (initialData?.property_id && initialData.property_id !== defaultPropertyId)
     )
   );
@@ -461,20 +466,6 @@ export default function AdminAnnouncementForm({
                   </select>
                 </div>
 
-                <div>
-                  <label className="text-[11px] text-on-surface-variant block mb-1">
-                    Audience
-                  </label>
-                  <select
-                    value={targetAudience}
-                    onChange={(e) => setTargetAudience(e.target.value)}
-                    className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-primary"
-                  >
-                    <option value="All">All residents</option>
-                    <option value="Tenants">Tenants only</option>
-                    <option value="Owners">Owners only</option>
-                  </select>
-                </div>
               </div>
 
               {/* Dates */}

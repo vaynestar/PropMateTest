@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
+import { ACTIVE_LEASE_ORDER } from "@/lib/resident";
 
 export async function registerVisitor(state: any, formData: FormData) {
   try {
@@ -14,6 +15,7 @@ export async function registerVisitor(state: any, formData: FormData) {
     // Get active lease for resident with unit relation
     const lease = await prisma.tenantLease.findFirst({
       where: { user_id: user.userId, status: "Active" },
+    orderBy: ACTIVE_LEASE_ORDER,
       include: { unit: true },
     });
 

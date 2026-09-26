@@ -5,6 +5,7 @@ import { bookingHasEnded } from "@/lib/booking-status";
 import { getSessionUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
+import { ACTIVE_LEASE_ORDER } from "@/lib/resident";
 
 function toMin(t: string): number {
   const [h, m] = t.split(":").map(Number);
@@ -40,6 +41,7 @@ export async function bookFacility(state: any, formData: FormData) {
 
     const lease = await prisma.tenantLease.findFirst({
       where: { user_id: user.userId, status: "Active" },
+    orderBy: ACTIVE_LEASE_ORDER,
       select: { lease_id: true, unit: { select: { property_id: true } } },
     });
     if (!lease) {
@@ -100,7 +102,7 @@ export async function cancelResidentBookingAction(bookingId: string) {
     }
     // R4: a booking that has already happened was still cancellable, which
     // rewrote history - the facility was used, the record said it wasn't.
-    if (bookingHasEnded(booking.booking_date, booking.end_time)) {
+    if (bookingHasEnded(booking.end_time)) {
       return { error: "This booking has already taken place, so it can't be cancelled." };
     }
 

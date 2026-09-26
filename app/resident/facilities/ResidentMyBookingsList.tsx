@@ -13,8 +13,25 @@ import { getFacilityAccentColor } from "@/lib/facility-colors";
  * name, the date, and the time as the same sky-blue chip used on Home.
  * Upcoming bookings first; past and cancelled ones below, their photo greyed.
  */
-export default function ResidentMyBookingsList({ myBookings }: { myBookings: any[] }) {
+export default function ResidentMyBookingsList({
+  myBookings,
+  today,
+}: {
+  myBookings: any[];
+  /** Today in Malaysia, YYYY-MM-DD. */
+  today: string;
+}) {
   const [isPending, startTransition] = useTransition();
+
+  // Home says "Today" and "Tomorrow"; this list always printed the date, so
+  // the same booking read two ways on two screens (R17).
+  const tomorrow = (() => {
+    const d = new Date(`${today}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  const whenLabel = (iso: string) =>
+    iso === today ? "Today" : iso === tomorrow ? "Tomorrow" : shortDate(iso, true);
 
   const handleCancel = (bookingId: string) => {
     if (!confirm("Are you sure you want to cancel your booking?")) return;
@@ -81,7 +98,7 @@ export default function ResidentMyBookingsList({ myBookings }: { myBookings: any
             </div>
             <p className="text-xs text-on-surface/80 flex items-center gap-1">
               <span className="material-symbols-outlined text-[14px] text-primary">event</span>
-              {shortDate(b.booking_date, true)}
+              {whenLabel(b.booking_date)}
             </p>
             <span
               className={`self-start inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-bold tabular-nums border ${

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createBooking } from "@/lib/booking-management";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
+import { normaliseBookingStatus } from "@/lib/booking-status";
 
 export async function adminBookFacility(formData: FormData) {
   try {
@@ -65,16 +66,31 @@ export async function adminBookFacility(formData: FormData) {
   }
 }
 
-export async function updateBookingStatus(bookingId: string, status: string) {
+/**
+ * `cancellation_reason` was rendered on the booking card and written by
+ * nothing, and the update recorded no author - so a resident whose booking the
+ * office cancelled was told neither that it happened nor why (R16).
+ */
+export async function updateBookingStatus(bookingId: string, status: string, reason?: string) {
   try {
     const user = await getSessionUser();
     if (!user || user.role !== "Admin") {
       throw new Error("Unauthorized");
     }
 
+    // The action wrote whatever string it was handed, so a typo or a retired
+    // name like "Reserved" could reach a resident's screen (R23/D-34).
+    const next = normaliseBookingStatus(status);
+    if (!next) throw new Error(`Unknown booking status: ${status}`);
+
+    const cancelling = next === "Cancelled";
     await prisma.booking.update({
       where: { booking_id: bookingId },
-      data: { booking_status: status },
+      data: {
+        booking_status: next,
+        modified_by: user.userId,
+        cancellation_reason: cancelling ? reason?.trim() || null : null,
+      },
     });
 
     revalidatePath("/admin/bookings");

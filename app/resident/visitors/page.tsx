@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import VisitorForm from "./VisitorForm";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import ResidentVisitorList from "@/components/visitors/ResidentVisitorList";
+import { ACTIVE_LEASE_ORDER } from "@/lib/resident";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function ResidentVisitorsPage() {
   // Get active lease for resident with unit and property relation
   const lease = await prisma.tenantLease.findFirst({
     where: { user_id: user.userId, status: "Active" },
+    orderBy: ACTIVE_LEASE_ORDER,
     include: {
       unit: {
         include: {
@@ -32,12 +34,29 @@ export default async function ResidentVisitorsPage() {
         ],
       },
       orderBy: [{ visit_date: "desc" }, { created_at: "desc" }],
-      include: {
+      /*
+       * `include` on unit brought back area_sqft and monthly_rent, which are
+       * Prisma Decimals - not plain objects, so React logged "Only plain
+       * objects can be passed to Client Components" on every load (R22). Only
+       * the four fields the card actually draws are selected.
+       */
+      select: {
+        visitor_id: true,
+        visitor_name: true,
+        visitor_ic_no: true,
+        visitor_type: true,
+        destination: true,
+        vehicle_plate: true,
+        visit_purpose: true,
+        visit_date: true,
+        contact_no: true,
+        status: true,
         property: { select: { property_name: true } },
         lease: {
-          include: {
+          select: {
             unit: {
-              include: {
+              select: {
+                unit_number: true,
                 property: { select: { property_name: true } },
               },
             },
@@ -53,6 +72,7 @@ export default async function ResidentVisitorsPage() {
     ...v,
     // YYYY-MM-DD as stored (a @db.Date comes back as UTC midnight).
     visit_iso: v.visit_date ? new Date(v.visit_date).toISOString().slice(0, 10) : null,
+    visit_date: v.visit_date ? new Date(v.visit_date).toISOString() : null,
   }));
 
   return (

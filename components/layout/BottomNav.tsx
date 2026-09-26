@@ -16,12 +16,20 @@ type BottomNavProps = {
   primary: NavItem[];
   more: NavItem[];
   showLogout?: boolean;
+  /**
+   * Hide the bar from md up. The resident portal has a desktop sidebar, so the
+   * bar was drawn twice over and sat on top of the page at 1440 (R7). The admin
+   * panel navigates from the bottom at every width by design (DEV-21), so it
+   * leaves this off.
+   */
+  phoneOnly?: boolean;
 };
 
 export default function BottomNav({
   primary,
   more,
   showLogout = true,
+  phoneOnly = false,
 }: BottomNavProps) {
   const pathname = usePathname();
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -39,7 +47,11 @@ export default function BottomNav({
 
   return (
     <>
-      <nav className="fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-t border-outline-variant/30 flex justify-around items-stretch h-16 md:h-20 pb-safe px-2 md:px-4">
+      <nav
+        className={`fixed bottom-0 w-full z-50 bg-surface/90 backdrop-blur-xl border-t border-outline-variant/30 justify-around items-stretch h-16 md:h-20 pb-safe px-2 md:px-4 ${
+          phoneOnly ? "flex md:hidden" : "flex"
+        }`}
+      >
         {visibleTabs.map((item) =>
           item.icon === "blank" ? (
             <span key="spacer" className="flex-1" />

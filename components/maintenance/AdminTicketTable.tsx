@@ -516,12 +516,14 @@ export default function AdminTicketTable({
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-on-surface-variant flex items-center justify-between">
                   <span>What was done</span>
-                  <span className="text-[10px] text-on-surface-variant font-normal">(Optional)</span>
+                  {/* The placeholder invited internal notes; the resident reads
+                      this field on their own ticket (R11). */}
+                  <span className="text-[10px] text-amber-300/90 font-normal">The resident sees this</span>
                 </label>
                 <textarea
                   name="remark"
                   defaultValue={editingTicket.remark || ""}
-                  placeholder="Internal admin notes, parts status, or resolution remarks..."
+                  placeholder="e.g. Replaced the tap washer. Please tell us if it still drips."
                   rows={2}
                   className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary text-xs resize-none placeholder:text-on-surface-variant/60"
                 />

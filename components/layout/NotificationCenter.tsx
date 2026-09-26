@@ -140,7 +140,7 @@ export default function NotificationCenter({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="relative text-on-surface-variant hover:text-white hover:bg-surface-variant rounded-full p-2 transition-all"
+        className="relative flex h-11 w-11 items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-variant rounded-full transition-all"
         aria-label="Notifications"
       >
         <span className="material-symbols-outlined text-[22px]">notifications</span>
@@ -170,7 +170,7 @@ export default function NotificationCenter({
                 <button
                   type="button"
                   onClick={handleMarkAllRead}
-                  className="text-[11px] text-primary hover:underline font-semibold"
+                  className="-my-2 -mr-2 flex h-9 items-center rounded-lg px-2 text-[11px] font-semibold text-primary hover:bg-primary/10 hover:underline"
                 >
                   Mark all read
                 </button>

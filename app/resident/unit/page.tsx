@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getSessionUser } from "@/lib/auth";
 import { getResidentPortalData } from "@/lib/resident";
+import prisma from "@/lib/prisma";
+import { rm } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
 
@@ -24,8 +26,6 @@ function tenure(from: Date, to: Date | null) {
   if (!y && !m) return "Less than a month";
   return [y ? `${y} yr${y > 1 ? "s" : ""}` : "", m ? `${m} mo` : ""].filter(Boolean).join(" ");
 }
-
-const rm = (n: number) => "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /**
  * My Unit (DEV-189 redesign). A hero card for the home itself, the tenancy
@@ -53,11 +53,26 @@ export default async function ResidentUnitPage() {
     (part) => part && !p.address.toLowerCase().includes(String(part).toLowerCase())
   );
   const address = [p.address, ...tail].join(", ");
+  /*
+   * This tile read `unit.monthly_rent` and called it "Monthly rent" (R17).
+   * That figure belongs to the unit, not to this tenancy - it is what the unit
+   * is listed at, not what this resident is billed. What they actually pay
+   * every month is the recurring charges on their own lease, which is what the
+   * invoice generator uses too.
+   */
+  const recurring = await prisma.leaseCharge.findMany({
+    where: { lease_id: lease.lease_id, is_active: true, charge: { charge_type: "Recurring" } },
+    select: { amount: true, quantity: true, charge: { select: { charge_name: true } } },
+  });
+  const monthlyTotal = recurring.reduce((sum, c) => sum + Number(c.amount) * Number(c.quantity), 0);
+
   const facts = [
     { icon: "category", label: "Unit type", value: unit.unit_type },
     { icon: "stairs", label: "Floor", value: `Level ${unit.floor_number}` },
     { icon: "square_foot", label: "Built-up", value: `${Number(unit.area_sqft).toLocaleString("en-MY")} sq ft` },
-    { icon: "payments", label: "Monthly rent", value: rm(Number(unit.monthly_rent)) },
+    // The monthly figure has its own card below, with the breakdown; a tile
+    // repeating the total only truncated it.
+    ...(recurring.length ? [] : [{ icon: "payments", label: "Monthly charges", value: "Not set up yet" }]),
   ];
 
   return (
@@ -90,6 +105,33 @@ export default async function ResidentUnitPage() {
         ))}
       </section>
 
+      {recurring.length > 0 && (
+        <section className="glass-card rounded-2xl p-4 border border-outline-variant/40 flex flex-col gap-2">
+          <p className="text-[11px] uppercase tracking-widest font-semibold text-on-surface-variant">
+            What makes up the monthly bill
+          </p>
+          <ul className="flex flex-col divide-y divide-outline-variant/30">
+            {recurring.map((c, i) => (
+              <li key={i} className="flex items-baseline justify-between gap-3 py-1.5">
+                <span className="text-sm text-on-surface min-w-0 break-words">
+                  {c.charge.charge_name}
+                  {Number(c.quantity) !== 1 && (
+                    <span className="text-on-surface-variant"> x {Number(c.quantity)}</span>
+                  )}
+                </span>
+                <span className="text-sm font-semibold tabular-nums text-on-surface shrink-0">
+                  {rm(Number(c.amount) * Number(c.quantity))}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="flex items-baseline justify-between gap-3 border-t border-outline-variant/50 pt-2">
+            <span className="text-sm font-bold text-on-surface">Every month</span>
+            <span className="text-base font-bold tabular-nums text-primary">{rm(monthlyTotal)}</span>
+          </div>
+        </section>
+      )}
+
       <section className="grid grid-cols-2 gap-3">
         {facts.map((f) => (
           <div key={f.label} className="glass-card rounded-2xl p-4 border border-outline-variant/40 flex items-center gap-3">
@@ -98,7 +140,7 @@ export default async function ResidentUnitPage() {
             </span>
             <div className="min-w-0">
               <p className="text-[11px] text-on-surface-variant">{f.label}</p>
-              <p className="text-sm font-bold text-on-surface truncate">{f.value}</p>
+              <p className="text-sm font-bold text-on-surface break-words leading-tight">{f.value}</p>
             </div>
           </div>
         ))}

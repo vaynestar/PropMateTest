@@ -105,22 +105,11 @@ export function bookingStatus(value: string | null | undefined): BookingStatusMe
 /**
  * Has this booking already finished?
  *
- * `booking_date` is a @db.Date (the UTC date is the calendar day) and
- * `end_time` is a timestamp whose clock time is what matters. Combined in
- * Malaysia time, so the answer does not depend on the server's timezone -
- * Vercel runs in UTC, eight hours behind the building.
+ * `end_time` is a real instant (see lib/booking-time.ts), so this is a plain
+ * comparison. It used to rebuild the moment from `booking_date` plus the
+ * clock time read in Malaysia, which disagreed with itself on the rows whose
+ * slot crosses midnight MYT.
  */
-export function bookingHasEnded(
-  bookingDate: Date | string,
-  endTime: Date | string,
-  now: Date = new Date()
-): boolean {
-  const day = new Date(bookingDate).toISOString().slice(0, 10);
-  const hhmm = new Date(endTime).toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Kuala_Lumpur",
-  });
-  return new Date(`${day}T${hhmm}:00+08:00`) <= now;
+export function bookingHasEnded(endTime: Date | string, now: Date = new Date()): boolean {
+  return new Date(endTime) <= now;
 }

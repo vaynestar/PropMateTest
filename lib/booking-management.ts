@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import type { BookingStatusKey } from "@/lib/booking-status";
+import { bookingInstant, toMinutes, todayMY, weekdayMY } from "@/lib/booking-time";
 
 export async function listBookings(facilityId?: string) {
   return prisma.booking.findMany({
@@ -42,9 +43,38 @@ export type BookingInput = {
   booking_status?: BookingStatusKey;
 };
 
-function toMinutes(time: string): number {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
+const DAY_NAMES = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+/**
+ * The booking rules a facility carries - open days, opening hours, longest
+ * booking - were checked by the form and by nothing else (R9). The form is a
+ * courtesy: the admin path, the API route and a replayed request all reach
+ * here, so the rules live here.
+ */
+function checkFacilityRules(
+  facility: { facility_name: string; operation_days: string; open_time: string; close_time: string; max_booking_hours: number | null },
+  bookingDate: string,
+  start: number,
+  end: number
+) {
+  const day = weekdayMY(bookingDate);
+  const open = facility.operation_days.split(",").map((d) => Number(d.trim()));
+  if (!open.includes(day)) {
+    throw new Error(`${facility.facility_name} is closed on ${DAY_NAMES[day]}.`);
+  }
+
+  const opens = toMinutes(facility.open_time);
+  const closes = toMinutes(facility.close_time);
+  if (start < opens || end > closes) {
+    throw new Error(
+      `${facility.facility_name} is open ${facility.open_time} to ${facility.close_time}. Choose a time inside that.`
+    );
+  }
+
+  if (facility.max_booking_hours && end - start > facility.max_booking_hours * 60) {
+    const h = facility.max_booking_hours;
+    throw new Error(`${facility.facility_name} can be booked for up to ${h} hour${h === 1 ? "" : "s"} at a time.`);
+  }
 }
 
 export async function createBooking(input: BookingInput, createdBy?: string) {
@@ -71,15 +101,24 @@ export async function createBooking(input: BookingInput, createdBy?: string) {
     throw new Error("This facility is currently under maintenance and cannot be booked.");
   }
 
-  const requestedDate = new Date(input.booking_date);
+  const day = input.booking_date.slice(0, 10);
+  checkFacilityRules(facility, day, start, end);
 
-  const startDt = new Date(requestedDate);
-  const [sh, sm] = input.start_time.split(":").map(Number);
-  startDt.setHours(sh, sm, 0, 0);
+  // A slot in the past can't be booked. Today is fine until its start passes.
+  const today = todayMY();
+  if (day < today) {
+    throw new Error("That date has passed. Choose today or a later date.");
+  }
 
-  const endDt = new Date(requestedDate);
-  const [eh, em] = input.end_time.split(":").map(Number);
-  endDt.setHours(eh, em, 0, 0);
+  const requestedDate = new Date(day);
+  // Built as instants in Malaysia time, not with setHours(), which produced a
+  // slot eight hours out whenever the code ran on a UTC server (R23).
+  const startDt = bookingInstant(day, input.start_time);
+  const endDt = bookingInstant(day, input.end_time);
+
+  if (startDt.getTime() <= Date.now()) {
+    throw new Error("That time has already passed. Choose a later slot.");
+  }
 
   const overlapping = await prisma.booking.findFirst({
     where: {
