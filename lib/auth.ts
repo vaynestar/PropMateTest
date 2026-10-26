@@ -48,7 +48,15 @@ export async function createSession(
 
 export async function destroySession() {
   const jar = await cookies();
-  jar.delete(SESSION_COOKIE);
+  const isProd = process.env.NODE_ENV === "production";
+  jar.set(SESSION_COOKIE, "", {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? "none" : "lax",
+    partitioned: isProd,
+    path: "/",
+    maxAge: 0,
+  });
 }
 
 export type SessionUser = {
@@ -59,18 +67,15 @@ export type SessionUser = {
 };
 
 /*
- * R1 (resident review D-09). `is_active` was checked once, at login. The token
- * is stateless and the sliding window below re-issues it every day without
- * reading the database, so a deactivated account kept working indefinitely.
- * Checked on every request now; `cache` makes it one query per request no
- * matter how many server components and actions ask.
+ * User record cached per-request. Fetches current name, role, and active status
+ * so changes made directly in the database (or via profile updates) reflect
+ * immediately without waiting for session expiry or requiring logout.
  */
-const isActiveUser = cache(async (userId: string) => {
-  const row = await prisma.user.findUnique({
+const getActiveUser = cache(async (userId: string) => {
+  return prisma.user.findUnique({
     where: { user_id: userId },
-    select: { is_active: true },
+    select: { is_active: true, user_name: true, role: true, user_email: true },
   });
-  return !!row?.is_active;
 });
 
 export async function getSessionUser(): Promise<SessionUser | null> {
@@ -79,8 +84,10 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   if (!raw) return null;
   const token = await verifyToken(raw);
   if (!token || !token.userId) return null;
-  // Before the refresh below, so a deactivated account is never re-issued a token.
-  if (!(await isActiveUser(token.userId))) return null;
+
+  // Verify user is active and pull current profile details directly from the database
+  const activeUser = await getActiveUser(token.userId);
+  if (!activeUser?.is_active) return null;
 
   // Sliding Session Window: If active session token is > 24 hours old, silently issue a fresh 7-day token!
   if (token.iat) {
@@ -90,9 +97,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
       try {
         await createSession(
           token.userId,
-          token.role,
-          token.user_name,
-          token.user_email
+          activeUser.role || token.role,
+          activeUser.user_name || token.user_name,
+          activeUser.user_email || token.user_email
         );
       } catch {
         // Silently catch if cookies cannot be modified during certain server component render passes
@@ -102,9 +109,9 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 
   return {
     userId: token.userId,
-    role: token.role,
-    user_name: token.user_name || "User",
-    user_email: token.user_email || "",
+    role: activeUser.role || token.role,
+    user_name: activeUser.user_name || token.user_name || "User",
+    user_email: activeUser.user_email || token.user_email || "",
   };
 }
 
