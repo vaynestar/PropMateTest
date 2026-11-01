@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { monthYear } from "@/lib/short-date";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-MY", {
@@ -11,11 +12,7 @@ function formatCurrency(value: number) {
 }
 
 function getMonthYearKey(date: Date | string) {
-  const d = new Date(date);
-  return new Intl.DateTimeFormat("en-GB", {
-    month: "short",
-    year: "numeric",
-  }).format(d);
+  return monthYear(date);
 }
 
 export default function BillingMonthlyBarChart({ invoices }: { invoices: any[] }) {

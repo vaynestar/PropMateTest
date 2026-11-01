@@ -6,6 +6,7 @@ import { isUuid } from "@/lib/uuid";
 import { QRCodeSVG } from "qrcode.react";
 import PrintHelper from "../../invoice/[id]/PrintHelper";
 import VisitorPrintToolbar from "./VisitorPrintToolbar";
+import { dayMonth } from "@/lib/short-date";
 
 export default async function PrintVisitorPassPage({
   params,
@@ -55,11 +56,7 @@ export default async function PrintVisitorPassPage({
     };
 
   const formattedVisitDate = visitor.visit_date
-    ? new Date(visitor.visit_date).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+    ? dayMonth(visitor.visit_date, true)
     : "Valid Today";
 
   const destination =

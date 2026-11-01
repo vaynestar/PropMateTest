@@ -28,3 +28,38 @@ export function dayMonth(value: Date | string | null | undefined, withYear = fal
   const base = `${String(day).padStart(2, "0")} ${MONTHS[m - 1]}`;
   return withYear ? `${base} ${y}` : base;
 }
+
+/** "Sep" for a Date or ISO string, read in Malaysia. */
+export function monthShort(value: Date | string): string {
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "-";
+  const [, m] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+    .format(d)
+    .split("-")
+    .map(Number);
+  return MONTHS[m - 1];
+}
+
+/** "Sep 2026". */
+export function monthYear(value: Date | string): string {
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "-";
+  const [y, m] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+    .format(d)
+    .split("-")
+    .map(Number);
+  return `${MONTHS[m - 1]} ${y}`;
+}
+
+/** "30 Sep, 14:05" - a moment, in Malaysia. */
+export function dayMonthTime(value: Date | string): string {
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return "-";
+  const time = d.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Kuala_Lumpur",
+  });
+  return `${dayMonth(d)}, ${time}`;
+}

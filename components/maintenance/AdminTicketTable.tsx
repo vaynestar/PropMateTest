@@ -7,6 +7,7 @@ import { EmptyState, FIELD, SearchField, TABLE, Toolbar } from "@/components/adm
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 import { updateTicketAction } from "@/app/admin/maintenance/actions";
+import { dayMonth } from "@/lib/short-date";
 
 type PropertyItem = {
   property_id: string;
@@ -214,11 +215,7 @@ export default function AdminTicketTable({
                     </span>
                     <span className="flex items-center gap-3">
                       <span className="font-mono text-[10px] text-on-surface-variant">
-                        {new Date(t.created_at).toLocaleDateString("en-GB", {
-                          day: "2-digit",
-                          month: "short",
-                          timeZone: "Asia/Kuala_Lumpur",
-                        })}
+                        {dayMonth(t.created_at)}
                       </span>
                       <span
                         role="button"

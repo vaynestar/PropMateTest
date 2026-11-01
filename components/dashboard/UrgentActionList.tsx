@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import TicketDetailModal from "@/components/maintenance/TicketDetailModal";
+import { dayMonth } from "@/lib/short-date";
 
 /**
  * The "needs attention" strip.
@@ -49,11 +50,7 @@ function Body({ item, cta }: { item: Item; cta: string }) {
         <span className="block truncate text-xs text-on-surface-variant">{item.subtitle}</span>
       </span>
       <span className="hidden shrink-0 text-[11px] tabular-nums text-on-surface-variant sm:block">
-        {new Date(item.timestamp).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          timeZone: "Asia/Kuala_Lumpur",
-        })}
+        {dayMonth(item.timestamp)}
       </span>
       <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-primary">
         <span className="hidden sm:inline">{cta}</span>

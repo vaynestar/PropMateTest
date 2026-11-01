@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import MediaViewer from "@/components/ui/MediaViewer";
 import { maskIdentityNumber, maskPhoneNumber } from "@/lib/visitor-status";
 import { QRCodeCanvas } from "qrcode.react";
+import { dayMonth } from "@/lib/short-date";
 
 interface VisitorPassProps {
   visitor: {
@@ -41,11 +42,7 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const formattedDate = visitor.visit_date
-    ? new Date(visitor.visit_date).toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+    ? dayMonth(visitor.visit_date, true)
     : "Today";
 
   const propertyName =

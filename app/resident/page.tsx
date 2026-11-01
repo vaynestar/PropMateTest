@@ -9,6 +9,7 @@ import {
   getResidentOutstanding,
 } from "@/lib/resident";
 import { rm } from "@/lib/money";
+import { dayMonth } from "@/lib/short-date";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +36,7 @@ function greeting() {
 }
 
 function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
+  return dayMonth(date, true);
 }
 
 const QUICK_ACTIONS = [

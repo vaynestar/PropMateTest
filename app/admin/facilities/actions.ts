@@ -9,6 +9,7 @@ import {
 } from "@/lib/facility-management";
 import { revalidatePath } from "next/cache";
 import prisma from "@/lib/prisma";
+import { dayMonth } from "@/lib/short-date";
 
 /**
  * Facility photo (DEV-184): an uploaded file (/api/files/...) or an https
@@ -243,7 +244,7 @@ export async function logMaintenanceAction(prevState: any, formData: FormData) {
     return {
       success: true,
       message: nextDueDate
-        ? `Logged for ${facility.facility_name}. Next service due ${nextDueDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}.`
+        ? `Logged for ${facility.facility_name}. Next service due ${dayMonth(nextDueDate, true)}.`
         : `Logged for ${facility.facility_name}. No next service scheduled.`,
     };
   } catch (error: any) {

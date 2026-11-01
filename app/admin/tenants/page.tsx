@@ -73,8 +73,17 @@ export default async function TenantsPage() {
         subtitle="The people who live here. Add a tenant first, then give them a unit by creating a lease."
       />
 
-      {/* Interactive Tenants Workspace */}
+      {/*
+        Keyed on the active property. The client holds the chosen property in
+        state seeded from this prop, and `useState` only reads its argument on
+        the first render - so switching property in the top bar re-rendered the
+        server component with new data while this filter stayed on the old one,
+        and the list showed "No Residents Found" until the page was reloaded.
+        The key remounts it, which is the React answer to "reset state when a
+        prop changes".
+      */}
       <TenantsClient
+        key={activePropertyId ?? "all"}
         initialTenants={serialisedTenants as any}
         properties={properties}
         activePropertyId={activePropertyId}

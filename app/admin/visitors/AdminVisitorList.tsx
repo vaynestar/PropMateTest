@@ -13,6 +13,7 @@ import VisitorPassModal from "@/components/visitors/VisitorPassModal";
 import EditVisitorModal from "@/components/visitors/EditVisitorModal";
 import { updateVisitorStatus } from "./actions";
 import { EmptyState, FIELD, SearchField, StatCard, StatGrid, TABLE, Toolbar } from "@/components/admin/ui";
+import { dayMonthTime } from "@/lib/short-date";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -434,13 +435,7 @@ export default function AdminVisitorList({
                             {m.direction === "In" ? "In" : "Out"}
                           </span>
                           <span className="tabular-nums text-on-surface-variant">
-                            {new Date(m.occurred_at).toLocaleString("en-GB", {
-                              day: "2-digit",
-                              month: "short",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              timeZone: "Asia/Kuala_Lumpur",
-                            })}
+                            {dayMonthTime(m.occurred_at)}
                           </span>
                           <span className="truncate text-on-surface-variant/70">
                             {m.method === "Scan" ? "scan" : "by hand"}

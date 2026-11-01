@@ -13,6 +13,7 @@ import { updateInvoiceStatusAction, issueInvoice } from "@/app/admin/invoices/ac
 import EditInvoiceItemsModal from "./EditInvoiceItemsModal";
 import InvoicePdfPreviewModal from "./InvoicePdfPreviewModal";
 import VerifyPaymentModal from "./VerifyPaymentModal";
+import { dayMonth } from "@/lib/short-date";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-MY", {
@@ -23,11 +24,7 @@ function formatCurrency(value: number) {
 }
 
 function formatDate(date: Date | string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(date));
+  return dayMonth(date, true);
 }
 
 function getMonthYear(date: Date | string) {

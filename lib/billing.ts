@@ -221,10 +221,19 @@ export async function generateInvoicesForLeases(leaseIds: string[], createdBy?: 
    * month later.
    */
   const { invoiceCycleDay, gracePeriodDays } = await getBillingDateSettings();
-  const daysInMonth = new Date(y, m + 1, 0).getDate();
-  const invoiceDate = new Date(y, m, Math.min(invoiceCycleDay, daysInMonth), 0, 0, 0, 0);
+  const daysInMonth = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+  /*
+   * Built in UTC, not local time. `invoice_date` and `due_date` are @db.Date,
+   * and this codebase reads a @db.Date as "the UTC date is the calendar day".
+   * `new Date(y, m, d)` is LOCAL midnight, so on a machine ahead of UTC - any
+   * machine in Malaysia - 1 November became 31 October the moment it was
+   * stored, and the November run produced invoices dated 31 Oct. Correct on
+   * Vercel (UTC) and wrong on the developer's laptop, which is the mirror of
+   * the booking-time bug fixed in DEV-207.
+   */
+  const invoiceDate = new Date(Date.UTC(y, m, Math.min(invoiceCycleDay, daysInMonth)));
   const dueDate = new Date(invoiceDate);
-  dueDate.setDate(dueDate.getDate() + gracePeriodDays);
+  dueDate.setUTCDate(dueDate.getUTCDate() + gracePeriodDays);
   const invoiceNoPrefix = `INV-${y}${String(m + 1).padStart(2, "0")}`;
 
   const leases = await prisma.tenantLease.findMany({

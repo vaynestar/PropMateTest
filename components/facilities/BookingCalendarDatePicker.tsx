@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import ScrollHint from "@/components/ui/ScrollHint";
+import { monthShort } from "@/lib/short-date";
 
 function jsDayToMonFirst(jsDay: number): number {
   return jsDay === 0 ? 7 : jsDay;
@@ -305,7 +306,7 @@ export default function BookingCalendarDatePicker({
                 <div className={`text-[10px] font-bold ${isSelected ? "text-black/70" : "text-on-surface-variant"}`}>
                   {isToday ? "Today" : d.toLocaleDateString("en-MY", { weekday: "short" })}
                 </div>
-                <div className="text-sm font-bold mt-0.5">{d.getDate()} {d.toLocaleDateString("en-MY", { month: "short" })}</div>
+                <div className="text-sm font-bold mt-0.5">{d.getDate()} {monthShort(d)}</div>
               </button>
             );
           })}
