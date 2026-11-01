@@ -3,6 +3,7 @@
 import { useState, useActionState, useTransition, useEffect } from "react";
 import ScrollHint from "@/components/ui/ScrollHint";
 import { useRouter } from "next/navigation";
+import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
 import {
   addInvoiceDetailAction,
   removeInvoiceDetailAction,
@@ -22,6 +23,7 @@ export default function EditInvoiceItemsModal({
   chargeMasters: any[];
   onClose: () => void;
 }) {
+  useDialogDismiss(true, onClose);
   const router = useRouter();
   const [details, setDetails] = useState<any[]>(invoice.details || []);
   const [totalAmount, setTotalAmount] = useState<number>(Number(invoice.total_amount) || 0);
@@ -129,7 +131,7 @@ export default function EditInvoiceItemsModal({
   const isDraft = !isLocked;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in" {...backdropProps(onClose)}>
       <div className="bg-surface-container border border-outline-variant/80 rounded-2xl w-full max-w-2xl p-6 shadow-2xl relative max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-outline-variant/40 mb-4 shrink-0">

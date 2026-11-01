@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { editProperty } from "@/app/admin/properties/actions";
+import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
 
 interface PropertyEditModalProps {
   property: {
@@ -49,6 +50,7 @@ const MALAYSIAN_STATES = [
 ];
 
 export default function PropertyEditModal({ property, isOpen, onClose }: PropertyEditModalProps) {
+  useDialogDismiss(isOpen, onClose);
   const [state, formAction, isPending] = useActionState(editProperty, null);
   const [selectedType, setSelectedType] = useState(property?.property_type || "Condominium");
   const [selectedState, setSelectedState] = useState(property?.state || "Selangor");
@@ -72,7 +74,7 @@ export default function PropertyEditModal({ property, isOpen, onClose }: Propert
   if (!isOpen || !property) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in" {...backdropProps(onClose)}>
       <div
         className="w-full max-w-2xl bg-surface-container border border-outline-variant/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
         role="dialog"

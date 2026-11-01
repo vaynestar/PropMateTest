@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { removeTenant } from "@/app/admin/tenants/actions";
+import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
 
 interface TenantDeleteModalProps {
   tenant: {
@@ -14,6 +15,7 @@ interface TenantDeleteModalProps {
 }
 
 export default function TenantDeleteModal({ tenant, isOpen, onClose }: TenantDeleteModalProps) {
+  useDialogDismiss(isOpen, onClose);
   const [state, formAction, isPending] = useActionState(removeTenant, null);
 
   useEffect(() => {
@@ -30,7 +32,7 @@ export default function TenantDeleteModal({ tenant, isOpen, onClose }: TenantDel
   const leaseCount = tenant.tenant_leases?.length || 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in" {...backdropProps(onClose)}>
       <div
         className="w-full max-w-md bg-surface-container border border-rose-500/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90dvh] overflow-y-auto"
         role="dialog"

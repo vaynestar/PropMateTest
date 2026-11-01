@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { addUnit } from "@/app/admin/units/actions";
+import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
 
 interface UnitFormModalProps {
   properties: { property_id: string; property_name: string }[];
@@ -27,6 +28,7 @@ export default function UnitFormModal({
   isOpen,
   onClose,
 }: UnitFormModalProps) {
+  useDialogDismiss(isOpen, onClose);
   const [state, formAction, isPending] = useActionState(addUnit, null);
   const [mode, setMode] = useState<"single" | "bulk">("single");
   const [selectedPropertyId, setSelectedPropertyId] = useState(activePropertyId || properties[0]?.property_id || "");
@@ -49,7 +51,7 @@ export default function UnitFormModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in" {...backdropProps(onClose)}>
       <div
         className="w-full max-w-2xl bg-surface-container border border-outline-variant/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
         role="dialog"

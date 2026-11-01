@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { updateUnitAction } from "@/app/admin/units/actions";
+import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
 
 interface UnitEditModalProps {
   unit: {
@@ -37,6 +38,7 @@ export default function UnitEditModal({
   isOpen,
   onClose,
 }: UnitEditModalProps) {
+  useDialogDismiss(isOpen, onClose);
   const [state, formAction, isPending] = useActionState(updateUnitAction, null);
   const [selectedType, setSelectedType] = useState(unit?.unit_type || "2-Bedroom Standard");
   const [selectedStatus, setSelectedStatus] = useState(unit?.status || "Vacant");
@@ -62,7 +64,7 @@ export default function UnitEditModal({
   const hasActiveLease = unit.leases && unit.leases.length > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in" {...backdropProps(onClose)}>
       <div
         className="w-full max-w-2xl bg-surface-container border border-outline-variant/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
         role="dialog"

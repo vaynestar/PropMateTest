@@ -5,6 +5,7 @@ import MediaViewer from "@/components/ui/MediaViewer";
 import { maskIdentityNumber, maskPhoneNumber } from "@/lib/visitor-status";
 import { QRCodeCanvas } from "qrcode.react";
 import { dayMonth } from "@/lib/short-date";
+import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
 
 interface VisitorPassProps {
   visitor: {
@@ -31,6 +32,7 @@ interface VisitorPassProps {
 }
 
 export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps) {
+  useDialogDismiss(true, onClose);
   const [copied, setCopied] = useState(false);
   /*
    * This pass is opened from the directory on the guardhouse screen, not on the
@@ -77,7 +79,7 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
   const handlePrint = () => setPrinting(true);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200" {...backdropProps(onClose)}>
       {printing && (
         <MediaViewer
           items={[{ src: `/print/visitor/${visitor.visitor_id}`, title: `Visitor pass · ${visitor.visitor_name}`, kind: "doc" }]}

@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect } from "react";
 import { updateTenant } from "@/app/admin/tenants/actions";
+import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
 
 interface TenantEditModalProps {
   tenant: {
@@ -15,6 +16,7 @@ interface TenantEditModalProps {
 }
 
 export default function TenantEditModal({ tenant, isOpen, onClose }: TenantEditModalProps) {
+  useDialogDismiss(isOpen, onClose);
   const [state, formAction, isPending] = useActionState(updateTenant, null);
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function TenantEditModal({ tenant, isOpen, onClose }: TenantEditM
   if (!isOpen || !tenant) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in" {...backdropProps(onClose)}>
       <div
         className="w-full max-w-lg bg-surface-container border border-outline-variant/80 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200"
         role="dialog"

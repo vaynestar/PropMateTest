@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { addTenant } from "@/app/admin/tenants/actions";
+import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
 
 interface TenantFormModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ function Field({
 }
 
 export default function TenantFormModal({ isOpen, onClose }: TenantFormModalProps) {
+  useDialogDismiss(isOpen, onClose);
   const [state, formAction, isPending] = useActionState(addTenant, null);
   const [copied, setCopied] = useState(false);
 
@@ -45,7 +47,7 @@ export default function TenantFormModal({ isOpen, onClose }: TenantFormModalProp
   const created = state?.success ? state : null;
 
   return (
-    <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+    <div className="animate-fade-in fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm" {...backdropProps(onClose)}>
       <div
         className="animate-in zoom-in-95 flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl duration-200"
         role="dialog"

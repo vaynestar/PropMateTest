@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateInvoicesAction, getEligibleLeasesAction } from "@/app/admin/invoices/actions";
 import { BTN } from "@/components/admin/ui";
+import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
 
 export default function GenerateInvoicesButton() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [fetchingLeases, setFetchingLeases] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const closeModal = useCallback(() => setModalOpen(false), []);
   const [leases, setLeases] = useState<any[]>([]);
   // Which building this run bills. Resolved on the server from the same cookie
   // the top-bar switcher writes, so the dialog cannot disagree with the page.
@@ -21,6 +23,8 @@ export default function GenerateInvoicesButton() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  useDialogDismiss(modalOpen, closeModal);
 
   const fetchLeases = async (monthStr: string) => {
     setFetchingLeases(true);
@@ -104,7 +108,7 @@ export default function GenerateInvoicesButton() {
       </button>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" {...backdropProps(closeModal)}>
           <div className="bg-surface-container rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col animate-slide-up max-h-[85vh]">
             <div className="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
               <div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
+
 interface BookingResultModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -23,12 +25,13 @@ export default function BookingResultModal({
   startTime,
   endTime,
 }: BookingResultModalProps) {
+  useDialogDismiss(isOpen, onClose);
   if (!isOpen) return null;
 
   const isSuccess = type === "success";
 
   return (
-    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[300] flex items-center justify-center p-4 animate-in fade-in duration-200" {...backdropProps(onClose)}>
       <div
         className={`glass-card rounded-3xl max-w-md w-full max-h-[90dvh] overflow-y-auto p-6 text-center space-y-5 border shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden ${
           isSuccess
