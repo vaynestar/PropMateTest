@@ -4,11 +4,28 @@ import { revalidatePath } from "next/cache";
 import { requireUser, verifyPassword } from "@/lib/auth";
 import { generateInvoicesForLeases, markInvoicePaid, getEligibleLeasesForInvoicing } from "@/lib/billing";
 import prisma from "@/lib/prisma";
+import { getActivePropertyId } from "@/lib/property-context.server";
 
+/*
+ * Both billing actions resolve the active property here, on the server, from
+ * the same cookie the top-bar switcher writes - rather than trusting the
+ * client to say which property it meant. A billing run is per property (user,
+ * 2026-11-01).
+ */
 export async function getEligibleLeasesAction(targetDateStr?: string) {
   await requireUser(["Admin"]);
   const targetDate = targetDateStr ? new Date(targetDateStr) : new Date();
-  return getEligibleLeasesForInvoicing(targetDate);
+  const propertyId = await getActivePropertyId();
+  const [leases, property] = await Promise.all([
+    getEligibleLeasesForInvoicing(targetDate, propertyId),
+    propertyId
+      ? prisma.propertyMaster.findUnique({
+          where: { property_id: propertyId },
+          select: { property_name: true },
+        })
+      : null,
+  ]);
+  return { leases, propertyName: property?.property_name ?? null };
 }
 
 export async function getAllActiveLeasesAction() {
@@ -22,7 +39,8 @@ export async function getAllActiveLeasesAction() {
 export async function generateInvoicesAction(leaseIds: string[], targetDateStr?: string) {
   const user = await requireUser(["Admin"]);
   const targetDate = targetDateStr ? new Date(targetDateStr) : new Date();
-  const result = await generateInvoicesForLeases(leaseIds, user.userId, targetDate);
+  const propertyId = await getActivePropertyId();
+  const result = await generateInvoicesForLeases(leaseIds, user.userId, targetDate, propertyId);
   revalidatePath("/admin/billing");
   revalidatePath("/admin/invoices");
   return result;

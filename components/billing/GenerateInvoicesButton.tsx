@@ -11,6 +11,9 @@ export default function GenerateInvoicesButton() {
   const [fetchingLeases, setFetchingLeases] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [leases, setLeases] = useState<any[]>([]);
+  // Which building this run bills. Resolved on the server from the same cookie
+  // the top-bar switcher writes, so the dialog cannot disagree with the page.
+  const [propertyName, setPropertyName] = useState<string | null>(null);
   const [selectedLeaseIds, setSelectedLeaseIds] = useState<Set<string>>(new Set());
   
   // Default to current month
@@ -24,8 +27,9 @@ export default function GenerateInvoicesButton() {
     try {
       const [year, month] = monthStr.split('-').map(Number);
       const d = new Date(year, month - 1, 1);
-      const data = await getEligibleLeasesAction(d.toISOString());
+      const { leases: data, propertyName: name } = await getEligibleLeasesAction(d.toISOString());
       setLeases(data);
+      setPropertyName(name);
       // Only the leases that would actually produce an invoice. Selecting one
       // with nothing to bill used to look like billing it: the lease was
       // skipped and still counted in the confirmation.
@@ -105,6 +109,12 @@ export default function GenerateInvoicesButton() {
             <div className="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
               <div>
                 <h2 className="text-xl font-bold text-on-surface">Generate Monthly Bills</h2>
+                {propertyName && (
+                  <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-primary">
+                    <span className="material-symbols-outlined text-[18px]">domain</span>
+                    {propertyName}
+                  </p>
+                )}
                 <div className="flex items-center gap-3 mt-2">
                   <span className="text-sm text-on-surface-variant font-medium">Billing Month:</span>
                   <input
@@ -115,7 +125,8 @@ export default function GenerateInvoicesButton() {
                   />
                 </div>
                 <p className="text-sm text-on-surface-variant mt-2">
-                  {leases.length} tenants are due for an invoice in this month.
+                  {leases.length} {leases.length === 1 ? "tenancy is" : "tenancies are"} due for an invoice this month
+                  {propertyName ? " in this property" : ""}. Switch property in the top bar to bill another building.
                 </p>
               </div>
               <button onClick={() => setModalOpen(false)} className="text-on-surface-variant hover:text-on-surface p-1">
@@ -132,7 +143,9 @@ export default function GenerateInvoicesButton() {
               ) : leases.length === 0 ? (
                 <div className="text-center py-8 text-on-surface-variant">
                   <span className="material-symbols-outlined text-[48px] opacity-50 mb-4 text-emerald-400">check_circle</span>
-                  <p className="font-semibold text-on-surface">All active tenants have been billed for this month!</p>
+                  <p className="font-semibold text-on-surface">
+                    Everyone {propertyName ? `in ${propertyName}` : ""} has been billed for this month.
+                  </p>
                   <p className="text-xs text-on-surface-variant mt-1">Select a different month above or check lease statuses.</p>
                 </div>
               ) : (

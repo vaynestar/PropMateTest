@@ -29,6 +29,12 @@ export async function POST() {
     if (!user || user.role !== "Admin") {
       return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
+    /*
+     * The admin screen bills one property at a time (DEV-210). This route has
+     * no property context - it is the maintenance path - so it deliberately
+     * bills every active tenancy, and says so rather than looking like the
+     * same operation as the button.
+     */
     const eligible = await getEligibleLeasesForInvoicing();
     const leaseIds = eligible.map(l => l.lease_id);
     const result = await generateInvoicesForLeases(leaseIds, user.userId);

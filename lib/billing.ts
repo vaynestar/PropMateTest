@@ -119,13 +119,32 @@ export function leaseBillableAmount(lease: {
   return Number(lease.unit.monthly_rent) || 0;
 }
 
-export async function getEligibleLeasesForInvoicing(targetDate = new Date()) {
+/**
+ * Who is due an invoice this month, for one property.
+ *
+ * A billing run belongs to a building (user decision, 2026-11-01). This used
+ * to return every active lease in the system, so the Invoices page could be
+ * scoped to Residensi Suasana Damai, show its eight invoices, and then offer
+ * to bill fourteen tenants across all four properties. The screen said one
+ * thing and the button did another.
+ *
+ * `propertyId` is required by the callers that have an active property; it is
+ * optional here only so the maintenance API route can still bill everything
+ * deliberately.
+ */
+export async function getEligibleLeasesForInvoicing(
+  targetDate = new Date(),
+  propertyId?: string | null
+) {
   const d = new Date(targetDate);
   const monthStart = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
   const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1, 0, 0, 0, 0);
 
   const leases = await prisma.tenantLease.findMany({
-    where: { status: "Active" },
+    where: {
+      status: "Active",
+      ...(propertyId ? { unit: { property_id: propertyId } } : {}),
+    },
     include: {
       unit: { include: { property: true } },
       tenant: true,
@@ -200,9 +219,29 @@ async function getBillingDateSettings() {
   };
 }
 
-export async function generateInvoicesForLeases(leaseIds: string[], createdBy?: string, targetDate = new Date()) {
+export async function generateInvoicesForLeases(
+  leaseIds: string[],
+  createdBy?: string,
+  targetDate = new Date(),
+  propertyId?: string | null
+) {
   if (leaseIds.length === 0) {
     return { generated: 0, message: "No leases selected." };
+  }
+
+  /*
+   * The picker only offers this property's leases, but a picker is a courtesy,
+   * not a guard - the action takes lease ids straight from the client. Refuse
+   * any that belong somewhere else (same reasoning as the booking rules in
+   * DEV-207).
+   */
+  if (propertyId) {
+    const foreign = await prisma.tenantLease.count({
+      where: { lease_id: { in: leaseIds }, NOT: { unit: { property_id: propertyId } } },
+    });
+    if (foreign > 0) {
+      throw new Error("Some of those tenancies belong to another property. Switch property and try again.");
+    }
   }
 
   const rentalCharge = await prisma.chargeMaster.findFirst({
