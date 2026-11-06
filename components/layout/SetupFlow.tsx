@@ -10,8 +10,14 @@ import Link from "next/link";
  *
  * It used to disappear at the first lease - one step short: a lease bills
  * nothing until it has charges, and that is the step nobody guesses. It now
- * runs through to the first invoices and disappears when every step is done.
- * If a new lease arrives with nothing to bill, it comes back and says so.
+ * runs through to the first invoices.
+ *
+ * It also used to return null once every step was done, which meant the only
+ * thing in the app that explains the operating model was visible exclusively
+ * to an admin with an empty database - never to a tester, a supervisor, or
+ * anyone taking over a running property. It now collapses to a single strip
+ * instead of vanishing: still out of the way, still there to open. A <details>
+ * does the collapsing, so this stays a Server Component.
  */
 export type SetupCounts = {
   properties: number;
@@ -31,7 +37,7 @@ export default function SetupFlow({
   propertyName?: string | null;
 }) {
   const chargesDone = counts.leases > 0 && counts.unbillableLeases === 0;
-  if (counts.leases > 0 && chargesDone && counts.invoices > 0) return null;
+  const allDone = counts.leases > 0 && chargesDone && counts.invoices > 0;
 
   const steps = [
     {
@@ -83,17 +89,33 @@ export default function SetupFlow({
   const nextStep = steps.find((s) => !s.done);
 
   return (
-    <section className="rounded-xl border border-primary/25 bg-primary/[0.04] p-4">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-sm font-bold text-white">
-          {counts.invoices > 0 ? "Billing for" : "Setting up"} {propertyName ?? "this property"}
+    <details
+      open={!allDone}
+      className={`group rounded-xl border p-4 ${
+        allDone
+          ? "border-outline-variant/50 bg-surface-container"
+          : "border-primary/25 bg-primary/[0.04]"
+      }`}
+    >
+      <summary className="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-2 [&::-webkit-details-marker]:hidden">
+        <h2 className="flex items-baseline gap-1.5 text-sm font-bold text-white">
+          <span className="material-symbols-outlined shrink-0 text-[18px] text-on-surface-variant transition-transform group-open:rotate-90">
+            chevron_right
+          </span>
+          {allDone
+            ? "How a property gets billed"
+            : `${counts.invoices > 0 ? "Billing for" : "Setting up"} ${propertyName ?? "this property"}`}
         </h2>
         <p className="text-[11px] text-on-surface-variant">
-          {nextStep ? `Next: ${nextStep.label.toLowerCase()}` : "All set"}
+          {allDone
+            ? "Property → Units → Tenants → Lease → Charges → Invoices"
+            : nextStep
+            ? `Next: ${nextStep.label.toLowerCase()}`
+            : "All set"}
         </p>
-      </div>
+      </summary>
 
-      <ol className="grid grid-cols-2 gap-2 lg:grid-cols-3 2xl:grid-cols-6">
+      <ol className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-3 2xl:grid-cols-6">
         {steps.map((step, i) => {
           const isNext = step === nextStep;
           return (
@@ -132,6 +154,6 @@ export default function SetupFlow({
           );
         })}
       </ol>
-    </section>
+    </details>
   );
 }

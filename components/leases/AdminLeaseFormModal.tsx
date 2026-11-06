@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
+import { useActionState, useState } from "react";
 import { adminCreateLease } from "@/app/admin/leases/actions";
 import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
 
@@ -35,14 +36,10 @@ export default function AdminLeaseFormModal({
   const vacantUnits = units.filter((u) => u.status === "Vacant");
   const [selectedUserId, setSelectedUserId] = useState(users[0]?.user_id || "");
 
-  useEffect(() => {
-    if (state?.success) {
-      const timer = setTimeout(() => {
-        onClose();
-      }, 800);
-      return () => clearTimeout(timer);
-    }
-  }, [state, onClose]);
+  // It used to close itself 800ms after saving, which threw away the one
+  // moment the admin is looking for what comes next. The dialog now waits and
+  // offers the step: a lease with no charges bills nothing.
+  const created = state?.success ? state : null;
 
   if (!isOpen) return null;
 
@@ -82,14 +79,33 @@ export default function AdminLeaseFormModal({
             </div>
           )}
 
-          {state?.success && (
-            <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5">
-              <span className="material-symbols-outlined text-emerald-400 text-[18px]">check_circle</span>
-              <span>Lease created. The unit is now marked Occupied — set up its charges next.</span>
+          {created && (
+            <div className="space-y-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5">
+              <div className="flex items-center gap-2.5 text-xs text-emerald-300">
+                <span className="material-symbols-outlined text-[18px] text-emerald-400">check_circle</span>
+                <span>Lease created. The unit is now marked Occupied.</span>
+              </div>
+              <p className="text-xs text-on-surface-variant">
+                It will not bill anything yet. Rent and any recurring fees are set up on the
+                lease — that is the next step.
+              </p>
+              {created.leaseId && (
+                <Link
+                  href={`/admin/leases/${created.leaseId}/charges`}
+                  className="pressable inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-on-primary shadow-md transition-all hover:bg-primary/90"
+                >
+                  <span className="material-symbols-outlined text-[16px]">receipt_long</span>
+                  Set up their charges
+                </Link>
+              )}
             </div>
           )}
 
-          <form action={formAction} id="create-lease-form" className="space-y-4">
+          <form
+            action={formAction}
+            id="create-lease-form"
+            className={`space-y-4 ${created ? "hidden" : ""}`}
+          >
             {/* Target Unit */}
             <div className="space-y-1.5">
               <div className="flex items-baseline justify-between">
@@ -180,11 +196,12 @@ export default function AdminLeaseFormModal({
             disabled={isPending}
             className="px-4 py-2 rounded-xl bg-surface-container-high hover:bg-surface-variant border border-outline-variant/60 text-xs font-semibold text-on-surface-variant hover:text-white transition-all pressable"
           >
-            Cancel
+            {created ? "Done" : "Cancel"}
           </button>
           <button
             type="submit"
             form="create-lease-form"
+            hidden={Boolean(created)}
             disabled={isPending}
             className="px-5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center gap-2 transition-all shadow-md pressable disabled:opacity-50"
           >

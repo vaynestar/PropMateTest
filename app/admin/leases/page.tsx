@@ -64,9 +64,45 @@ export default async function AdminLeasesPage(props: {
       )}
 
       <LeasesClient
-        initialLeases={leases as any}
+        // Same reason as availableUnits below: lease.unit carried the whole
+        // Prisma row through the `as any`, Decimals and all.
+        initialLeases={leases.map((l: any) => ({
+          _count: l._count,
+          lease_id: l.lease_id,
+          unit_id: l.unit_id,
+          user_id: l.user_id,
+          move_in_date: l.move_in_date,
+          move_out_date: l.move_out_date,
+          status: l.status,
+          unit: {
+            unit_id: l.unit.unit_id,
+            unit_number: l.unit.unit_number,
+            unit_type: l.unit.unit_type,
+            property_id: l.unit.property_id,
+            property: l.unit.property
+              ? {
+                  property_id: l.unit.property.property_id,
+                  property_name: l.unit.property.property_name,
+                }
+              : undefined,
+          },
+          tenant: {
+            user_id: l.tenant.user_id,
+            user_name: l.tenant.user_name,
+            user_email: l.tenant.user_email,
+            phone_number: l.tenant.phone_number,
+          },
+        }))}
         properties={properties}
-        availableUnits={units as any}
+        // Only the four fields the client actually declares. The `as any` cast
+        // used to hand it the whole Prisma row, Decimal monthly_rent and
+        // area_sqft included - which React refuses to serialise (Rule 6).
+        availableUnits={units.map((u) => ({
+          unit_id: u.unit_id,
+          unit_number: u.unit_number,
+          status: u.status,
+          property: u.property ? { property_name: u.property.property_name } : undefined,
+        }))}
         users={users}
         activePropertyId={activePropertyId}
       />

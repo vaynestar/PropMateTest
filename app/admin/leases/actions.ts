@@ -20,7 +20,7 @@ export async function adminCreateLease(state: any, formData: FormData) {
       throw new Error("Required fields missing");
     }
 
-    await createLease({
+    const lease = await createLease({
       unit_id,
       user_id,
       move_in_date,
@@ -28,7 +28,9 @@ export async function adminCreateLease(state: any, formData: FormData) {
     }, user.userId);
 
     revalidatePath("/admin/leases");
-    return { success: true };
+    // The id goes back so the dialog can offer the next step - a lease bills
+    // nothing until it has charges, and that page is where they are set up.
+    return { success: true, leaseId: lease.lease_id };
   } catch (error: any) {
     return { error: error.message };
   }

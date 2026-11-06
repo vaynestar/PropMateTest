@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect, useState } from "react";
 import { addTenant } from "@/app/admin/tenants/actions";
 import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
@@ -116,6 +117,22 @@ export default function TenantFormModal({ isOpen, onClose }: TenantFormModalProp
                     {copied ? "Copied" : "Copy"}
                   </button>
                 </div>
+              </div>
+
+              {/* The account on its own gives them a login and nothing to see.
+                  A lease is what attaches them to a unit and starts billing. */}
+              <div className="rounded-xl border border-outline-variant/60 bg-surface-container-high p-4">
+                <p className="text-xs font-semibold text-white">They have no unit yet</p>
+                <p className="mt-0.5 text-[11px] text-on-surface-variant">
+                  A lease joins them to a unit and starts their billing.
+                </p>
+                <Link
+                  href="/admin/leases"
+                  className="pressable mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-on-primary shadow-md transition-all hover:bg-primary/90"
+                >
+                  <span className="material-symbols-outlined text-[16px]">contract_edit</span>
+                  Create their lease
+                </Link>
               </div>
             </div>
           ) : (

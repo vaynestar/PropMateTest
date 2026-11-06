@@ -6,6 +6,7 @@ import Link from "next/link";
 import AdminLeaseFormModal from "./AdminLeaseFormModal";
 import AdminLeaseEditModal from "./AdminLeaseEditModal";
 import { FIELD, StatCard, StatGrid } from "@/components/admin/ui";
+import { dayMonth } from "@/lib/short-date";
 
 export interface LeaseItem {
   /** Billing history — decides whether this lease may be deleted or reassigned. */
@@ -155,12 +156,12 @@ export default function LeasesClient({
               : chargeCount > 0
               ? `${chargeCount} recurring charge${chargeCount === 1 ? "" : "s"} set up — remove them first`
               : undefined;
-          const moveInStr = lease.move_in_date
-            ? new Date(lease.move_in_date).toLocaleDateString()
-            : "N/A";
-          const moveOutStr = lease.move_out_date
-            ? new Date(lease.move_out_date).toLocaleDateString()
-            : "—";
+          // toLocaleDateString() reads the *runtime's* locale, so the server
+          // rendered 06/11/2026 and the browser 11/6/2026 - a hydration
+          // mismatch, and an ambiguous date either way. dayMonth is pinned to
+          // Malaysia and spells the month out.
+          const moveInStr = lease.move_in_date ? dayMonth(lease.move_in_date, true) : "N/A";
+          const moveOutStr = lease.move_out_date ? dayMonth(lease.move_out_date, true) : "—";
 
           return (
             <div

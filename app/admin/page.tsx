@@ -5,6 +5,9 @@ import ScanButton from "@/components/visitors/ScanButton";
 import FilterableTicketQueue from "@/components/dashboard/FilterableTicketQueue";
 import FinancialTrendChart from "@/components/dashboard/FinancialTrendChart";
 import { getActivePropertyId } from "@/lib/property-context.server";
+import prisma from "@/lib/prisma";
+import SetupFlow from "@/components/layout/SetupFlow";
+import { getSetupProgress } from "@/lib/setup-progress";
 import MaintenanceDueBoard from "@/components/dashboard/MaintenanceDueBoard";
 import BarList from "@/components/dashboard/BarList";
 import ArrearsTable from "@/components/dashboard/ArrearsTable";
@@ -31,7 +34,20 @@ const QUICK_ACTIONS = [
 /** The admin home: what needs attention, the numbers, and the work in flight. */
 export default async function AdminDashboardPage() {
   const propertyId = (await getActivePropertyId()) ?? undefined;
-  const stats = await getDashboardStats(propertyId);
+  // The setup chain belongs here above all: /admin is where every session
+  // starts, and a new admin should not have to find Leases or Billing to
+  // learn that a lease is what joins a unit to a tenant. Collapsed to one
+  // strip once the property is billing (see components/layout/SetupFlow).
+  const [stats, setupCounts, activeProperty] = await Promise.all([
+    getDashboardStats(propertyId),
+    getSetupProgress(propertyId ?? null),
+    propertyId
+      ? prisma.propertyMaster.findUnique({
+          where: { property_id: propertyId },
+          select: { property_name: true },
+        })
+      : null,
+  ]);
   const time = (d: Date | string) =>
     new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" }).format(new Date(d));
 
@@ -50,6 +66,8 @@ export default async function AdminDashboardPage() {
           </>
         }
       />
+
+      <SetupFlow counts={setupCounts} propertyName={activeProperty?.property_name ?? null} />
 
       {stats.urgentActionItems.length > 0 && (
         <section className="overflow-hidden rounded-2xl border border-rose-500/40 bg-rose-500/[0.06]">
