@@ -15,8 +15,13 @@
 2. **Knotpad Desktop MCP (folder `PropMate Development`):**
    - The workspace was **re-imported in Oct 2026 and every note id changed**, so ids are no longer listed here — they go stale. Find notes by **title** with `search_notes` / `get_workspace_overview`.
    - Read first: **`00 Architecture & Agent`** (schema, auth layers, module pattern, conventions, known drift).
-   - Then: **`07 Session Checkpoint & Resume`** (newest-first; read before resuming, write before stopping) and **`05 Changelog (Newest to Oldest)`**.
+   - Then: **`07 Session Checkpoint & Resume`** (read before resuming, write before stopping) and **`05 Changelog (Newest to Oldest)`**.
    - Open work: **`04 Index Roadmap Stack`** § B. Data edits: **`12 Data Change Log`**. UAT: **`15 UAT`**.
+   - **Write with `append_to_note`, not `update_note` (user, 2026-11-07).** Knotpad sorts and
+     filters on its own, so the old "newest first, always" rule is retired — **append, date the
+     entry, and never rewrite a note just to re-order it.** `update_note` has no partial edit, so
+     a rewrite costs the whole note and risks blanking it; use it only when the content is wrong.
+     Changelog entries append under **§ Appended entries**.
 
 > **On-disk mirror has duplicates from that re-import.** Use the space-named files
 > (`04 Index Roadmap Stack.md`); the underscore ones are 2026-09 snapshots and are
@@ -27,7 +32,10 @@
 3. **Scratch files:** `E:\Unitar document\Course\Year 3 Sem 1\Minor Project\FYP\Gemini\claude-scratch\` (NEVER write to `C:\`).
 4. **Always log after finishing:**
    - Increment to `DEV-(NN+1)` (check the top of `05_Changelog.md` for the current number) and check off tasks in `04 Index Roadmap Stack.md`.
-   - Keep on-disk `../Knotpad_Notes/` and Knotpad MCP notes in 100% sync.
+   - **Disk first, then Knotpad:** full prose into `05_Changelog.md` (newest-first at the top —
+     free, it is a plain file), then one appended line in the Knotpad note.
+   - Keep on-disk `../Knotpad_Notes/` and Knotpad MCP notes in 100% sync *in content*. Order may
+     differ: the disk files stay newest-first, the Knotpad notes are append-order.
    - Run `npx next build` to guarantee 0 errors.
    - Commit & push: `git add . && git commit -m "feat/fix: DEV-NN ..." && git push origin main`.
 
