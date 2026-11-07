@@ -57,7 +57,7 @@ export default async function FacilitiesPage() {
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
         title="Facilities"
-        subtitle="Shared spaces in this property, when residents may book them, and what is currently closed for maintenance."
+        subtitle="Shared spaces residents can book, and what is closed for maintenance."
       />
 
       <AdminFacilitiesManager

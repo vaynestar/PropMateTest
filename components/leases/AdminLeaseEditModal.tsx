@@ -64,7 +64,7 @@ export default function AdminLeaseEditModal({
             </div>
             <div>
               <h2 className="text-base font-bold text-white">Edit Lease Terms: Unit {lease.unit.unit_number}</h2>
-              <p className="text-xs text-on-surface-variant">Update move-in / move-out dates or terminate tenancy</p>
+              <p className="text-xs text-on-surface-variant">Change the dates, or end the tenancy.</p>
             </div>
           </div>
           <button
@@ -112,10 +112,7 @@ export default function AdminLeaseEditModal({
             {/* Dates: Move-In and Move-Out */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
                   <label className="text-xs font-semibold text-white">Move-In Date *</label>
-                  <span className="text-[11px] text-on-surface-variant">Effective start</span>
-                </div>
                 <input
                   name="move_in_date"
                   type="date"
@@ -126,10 +123,7 @@ export default function AdminLeaseEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
                   <label className="text-xs font-semibold text-white">Move-Out Date</label>
-                  <span className="text-[11px] text-on-surface-variant">Tenancy termination</span>
-                </div>
                 <input
                   name="move_out_date"
                   type="date"

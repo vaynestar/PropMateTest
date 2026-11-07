@@ -155,7 +155,7 @@ export default async function AdminBookingsPage() {
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
         title="Bookings"
-        subtitle="Who has booked what, and when. Book on a resident's behalf if they call or come to the office."
+        subtitle="This week's bookings. You can also book for a resident who calls or walks in."
         actions={
           <BookForResidentButton
             facilities={serializedActiveFacilities as any}

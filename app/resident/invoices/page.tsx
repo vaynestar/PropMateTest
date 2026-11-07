@@ -73,7 +73,7 @@ export default async function ResidentInvoicesPage() {
           <span className="material-symbols-outlined text-primary text-[26px]">receipt_long</span>
           My Invoices
         </h1>
-        <p className="text-sm text-on-surface-variant">Your bills, what&apos;s due, and what you&apos;ve paid.</p>
+        <p className="text-sm text-on-surface-variant">Everything billed to your unit, newest first.</p>
       </section>
 
       <section

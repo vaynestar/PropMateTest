@@ -150,7 +150,7 @@ export default function TenantFormModal({ isOpen, onClose }: TenantFormModalProp
                 <input name="ic_number" placeholder="e.g. 900101-14-5566" className={fieldClass} />
               </Field>
 
-              <Field label="Email" hint="This is their login">
+              <Field label="Email">
                 <input
                   name="user_email"
                   type="email"

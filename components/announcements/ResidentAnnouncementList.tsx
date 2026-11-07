@@ -169,7 +169,7 @@ export default function ResidentAnnouncementList({
         <div className="p-12 text-center text-on-surface-variant glass-card rounded-2xl flex flex-col items-center justify-center gap-2">
           <span className="material-symbols-outlined text-4xl opacity-40">campaign</span>
           <p className="text-sm font-semibold text-white">No active circulars in this category.</p>
-          <p className="text-xs text-on-surface-variant">Check back later or view all notice categories.</p>
+          <p className="text-xs text-on-surface-variant">Try another category, or check back later.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

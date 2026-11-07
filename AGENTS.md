@@ -79,7 +79,12 @@ Step 5: Git Commit & Push
 
 1. **Rule 1 — Build Gate:** Always run `npx next build` before committing. Never push broken TypeScript or failing route handlers. (Note: `next lint` fails on paths with spaces; use `next build` as the compiler gate).
 2. **Rule 2 — File Storage Isolation:** **NEVER write files to the `C:\` drive.** All scratch scripts, temp files, test outputs, or data dumps must go to `E:\Unitar document\Course\Year 3 Sem 1\Minor Project\FYP\Gemini\` (or `FYP/Gemini/claude-scratch/`).
-3. **Rule 3 — Anti-AI-Slop Form Subtitles:** Every modal input field and form control must include a clear, descriptive subtitle or helper text (e.g. *New Password — Minimum 6 characters*). Never display naked unlabeled inputs.
+3. **Rule 3 — Helper text must earn its place (revised 2026-11-07).** Never display an unlabeled input. Beyond the label, add helper text **only when it tells the user something the label cannot**:
+   - a constraint or consequence — *Minimum 6 characters* · *Vacant units only* · *Billing starts here*
+   - optionality — *Optional* · *Leave blank to keep unchanged*
+   - a format example — *e.g., A-12-03*
+
+   **Do not add a second label.** The original rule said *every* field needed a subtitle, and that produced 32 of them across Properties / Units / Tenants / Leases that said nothing: Postcode → *"Poskod"*, City → *"Bandar"*, Total Units → *"Total units"*, Property Name → *"Official development title"*. The user's verdict (2026-11-07): *"sould so ai and not professional"*. A hint that restates, translates or dresses up the label is slop — delete it. If a field needs no caveat, the label alone is correct and more professional.
 4. **Rule 4 — Unified UI Action Buttons:**
    - Primary action: `bg-primary hover:bg-primary/90 text-on-primary font-bold transition-all shadow-md pressable rounded-xl`
    - Secondary / Edit: `bg-surface-container-high hover:bg-surface-variant text-on-surface border border-outline-variant/60 rounded-xl pressable`

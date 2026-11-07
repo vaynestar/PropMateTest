@@ -77,8 +77,8 @@ export default function UnitEditModal({
               <span className="material-symbols-outlined text-[20px]">edit_square</span>
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Edit Unit Details: {unit.unit_number}</h2>
-              <p className="text-xs text-on-surface-variant">Update layout specifications, area sqft, and base rental</p>
+              <h2 className="text-base font-bold text-white">Edit unit {unit.unit_number}</h2>
+              <p className="text-xs text-on-surface-variant">Layout, size and rent for this unit.</p>
             </div>
           </div>
           <button
@@ -111,10 +111,7 @@ export default function UnitEditModal({
 
             {/* Target Property */}
             <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between">
-                <label className="text-xs font-semibold text-white">Development Building *</label>
-                <span className="text-[11px] text-on-surface-variant">Property assignment</span>
-              </div>
+                <label className="text-xs font-semibold text-white">Property *</label>
               <select
                 name="property_id"
                 defaultValue={unit.property_id}
@@ -133,7 +130,7 @@ export default function UnitEditModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Unit Identifier *</label>
+                  <label className="text-xs font-semibold text-white">Unit number *</label>
                   <span className="text-[11px] text-on-surface-variant">e.g., A-12-03</span>
                 </div>
                 <input
@@ -145,10 +142,7 @@ export default function UnitEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Unit Layout Type *</label>
-                  <span className="text-[11px] text-on-surface-variant">Floor plan</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Unit type *</label>
                 <select
                   name="unit_type"
                   value={selectedType}
@@ -167,10 +161,7 @@ export default function UnitEditModal({
             {/* Floor Level & Built-up Area */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Floor Level *</label>
-                  <span className="text-[11px] text-on-surface-variant">Integer floor number</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Floor *</label>
                 <input
                   name="floor_number"
                   type="number"
@@ -181,10 +172,7 @@ export default function UnitEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Built-up Area (Sq Ft) *</label>
-                  <span className="text-[11px] text-on-surface-variant">Gross square feet</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Built-up area (sq ft) *</label>
                 <input
                   name="area_sqft"
                   type="number"
@@ -198,10 +186,7 @@ export default function UnitEditModal({
             {/* Base Rent & Status */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Base Monthly Rent (RM)</label>
-                  <span className="text-[11px] text-on-surface-variant">Market baseline rate</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Monthly rent (RM)</label>
                 <input
                   name="monthly_rent"
                   type="number"
@@ -212,10 +197,7 @@ export default function UnitEditModal({
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Operational Status</label>
-                  <span className="text-[11px] text-on-surface-variant">Readiness state</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Status</label>
                 <select
                   name="status"
                   value={selectedStatus}

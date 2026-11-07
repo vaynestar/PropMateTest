@@ -68,8 +68,8 @@ export default function PropertyFormModal({ isOpen, onClose }: PropertyFormModal
               <span className="material-symbols-outlined text-[20px]">domain_add</span>
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Register New Property</h2>
-              <p className="text-xs text-on-surface-variant">Add a residential or commercial development to your portfolio</p>
+              <h2 className="text-base font-bold text-white">New property</h2>
+              <p className="text-xs text-on-surface-variant">The building itself. Its units are added next.</p>
             </div>
           </div>
           <button
@@ -101,10 +101,7 @@ export default function PropertyFormModal({ isOpen, onClose }: PropertyFormModal
           <form action={formAction} id="add-property-form" className="space-y-4">
             {/* Property Name */}
             <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between">
-                <label className="text-xs font-semibold text-white">Property Name *</label>
-                <span className="text-[11px] text-on-surface-variant">Official development title</span>
-              </div>
+                <label className="text-xs font-semibold text-white">Property name *</label>
               <input
                 name="property_name"
                 placeholder="e.g., Harmoni Heights, Residensi Parkview"
@@ -116,10 +113,7 @@ export default function PropertyFormModal({ isOpen, onClose }: PropertyFormModal
             {/* Property Category & Declared Units */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Property Category *</label>
-                  <span className="text-[11px] text-on-surface-variant">Strata type</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Property type *</label>
                 <select
                   name="property_type"
                   value={selectedType}
@@ -135,10 +129,7 @@ export default function PropertyFormModal({ isOpen, onClose }: PropertyFormModal
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Planned Unit Capacity</label>
-                  <span className="text-[11px] text-on-surface-variant">Total units</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Total units</label>
                 <input
                   name="total_units"
                   type="number"
@@ -152,10 +143,7 @@ export default function PropertyFormModal({ isOpen, onClose }: PropertyFormModal
 
             {/* Street Address */}
             <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between">
-                <label className="text-xs font-semibold text-white">Street Address *</label>
-                <span className="text-[11px] text-on-surface-variant">Jalan / Lorong & building number</span>
-              </div>
+                <label className="text-xs font-semibold text-white">Address *</label>
               <input
                 name="address"
                 placeholder="e.g., No. 18, Jalan Bukit Ceylon"
@@ -167,10 +155,7 @@ export default function PropertyFormModal({ isOpen, onClose }: PropertyFormModal
             {/* City, State, Postal Code */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
                   <label className="text-xs font-semibold text-white">City *</label>
-                  <span className="text-[11px] text-on-surface-variant">Bandar</span>
-                </div>
                 <input
                   name="city"
                   placeholder="e.g., Kuala Lumpur"
@@ -180,10 +165,7 @@ export default function PropertyFormModal({ isOpen, onClose }: PropertyFormModal
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
                   <label className="text-xs font-semibold text-white">State *</label>
-                  <span className="text-[11px] text-on-surface-variant">Negeri</span>
-                </div>
                 <select
                   name="state"
                   defaultValue="Selangor"
@@ -198,10 +180,7 @@ export default function PropertyFormModal({ isOpen, onClose }: PropertyFormModal
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Postal Code *</label>
-                  <span className="text-[11px] text-on-surface-variant">Poskod</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Postcode *</label>
                 <input
                   name="postal_code"
                   placeholder="e.g., 50200"

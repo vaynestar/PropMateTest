@@ -16,7 +16,7 @@ export default async function PropertiesPage() {
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
         title="Properties"
-        subtitle="Add properties, track their units, and pick which one the rest of the app works in."
+        subtitle="Your buildings. The one selected here scopes the rest of the app."
       />
 
       {/* Interactive Client Workspace */}

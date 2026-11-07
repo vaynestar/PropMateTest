@@ -47,7 +47,7 @@ export default function PasswordForm() {
           <label htmlFor="confirmPassword" className="text-xs font-semibold text-white">
             Confirm Password *
           </label>
-          <span className="text-[11px] text-on-surface-variant">Re-enter same password</span>
+          <span className="text-[11px] text-on-surface-variant">Must match the new password</span>
         </div>
         <input
           id="confirmPassword"

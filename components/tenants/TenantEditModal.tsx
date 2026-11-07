@@ -45,7 +45,7 @@ export default function TenantEditModal({ tenant, isOpen, onClose }: TenantEditM
             </div>
             <div>
               <h2 className="text-base font-bold text-white">Edit Resident Details</h2>
-              <p className="text-xs text-on-surface-variant">Update contact information or reset portal password</p>
+              <p className="text-xs text-on-surface-variant">Their contact details, and a new password if they are locked out.</p>
             </div>
           </div>
           <button
@@ -78,10 +78,7 @@ export default function TenantEditModal({ tenant, isOpen, onClose }: TenantEditM
 
             {/* Full Name */}
             <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between">
                 <label className="text-xs font-semibold text-white">Full Legal Name *</label>
-                <span className="text-[11px] text-on-surface-variant">Official resident name</span>
-              </div>
               <input
                 name="user_name"
                 defaultValue={tenant.user_name}
@@ -92,10 +89,7 @@ export default function TenantEditModal({ tenant, isOpen, onClose }: TenantEditM
 
             {/* Email Address */}
             <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between">
                 <label className="text-xs font-semibold text-white">Email Address *</label>
-                <span className="text-[11px] text-on-surface-variant">Portal login handle</span>
-              </div>
               <input
                 name="user_email"
                 type="email"
@@ -107,10 +101,7 @@ export default function TenantEditModal({ tenant, isOpen, onClose }: TenantEditM
 
             {/* Phone Number */}
             <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between">
                 <label className="text-xs font-semibold text-white">Phone Number *</label>
-                <span className="text-[11px] text-on-surface-variant">Compulsory mobile contact</span>
-              </div>
               <input
                 name="phone_number"
                 defaultValue={tenant.phone_number || ""}

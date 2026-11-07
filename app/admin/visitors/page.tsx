@@ -47,7 +47,7 @@ export default async function AdminVisitorsPage() {
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
         title="Visitors"
-        subtitle="Who is expected, who is in the building, and who has left."
+        subtitle="Guests expected today, and who is on site now."
         actions={
           <>
             <RegisterVisitorButton leases={leases} properties={properties} defaultPropertyId={propertyId} />

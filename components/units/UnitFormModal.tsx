@@ -64,8 +64,8 @@ export default function UnitFormModal({
               <span className="material-symbols-outlined text-[20px]">meeting_room</span>
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Add Units to Inventory</h2>
-              <p className="text-xs text-on-surface-variant">Register individual units or batch-generate floor inventory</p>
+              <h2 className="text-base font-bold text-white">Add units</h2>
+              <p className="text-xs text-on-surface-variant">Add one unit, or generate a whole floor at once.</p>
             </div>
           </div>
           <button
@@ -126,10 +126,7 @@ export default function UnitFormModal({
 
             {/* Target Property */}
             <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between">
-                <label className="text-xs font-semibold text-white">Target Development *</label>
-                <span className="text-[11px] text-on-surface-variant">Property building assignment</span>
-              </div>
+                <label className="text-xs font-semibold text-white">Property *</label>
               <select
                 name="property_id"
                 value={selectedPropertyId}
@@ -149,7 +146,7 @@ export default function UnitFormModal({
             {mode === "single" ? (
               <div className="space-y-1.5">
                 <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Unit Number *</label>
+                  <label className="text-xs font-semibold text-white">Unit number *</label>
                   <span className="text-[11px] text-on-surface-variant">e.g., A-12-03, B-08</span>
                 </div>
                 <input
@@ -171,7 +168,7 @@ export default function UnitFormModal({
                   <span className="text-[10px] text-on-surface-variant block">e.g., Floor prefix</span>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-white">Start # *</label>
+                  <label className="text-xs font-semibold text-white">From *</label>
                   <input
                     name="start_number"
                     type="number"
@@ -183,7 +180,7 @@ export default function UnitFormModal({
                   <span className="text-[10px] text-on-surface-variant block">First unit index</span>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-white">End # *</label>
+                  <label className="text-xs font-semibold text-white">To *</label>
                   <input
                     name="end_number"
                     type="number"
@@ -200,10 +197,7 @@ export default function UnitFormModal({
             {/* Layout Type & Floor Number */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Unit Layout Type *</label>
-                  <span className="text-[11px] text-on-surface-variant">Floor plan</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Unit type *</label>
                 <select
                   name="unit_type"
                   defaultValue="2-Bedroom Standard"
@@ -218,10 +212,7 @@ export default function UnitFormModal({
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Floor Level *</label>
-                  <span className="text-[11px] text-on-surface-variant">Integer floor #</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Floor *</label>
                 <input
                   name="floor_number"
                   type="number"
@@ -235,10 +226,7 @@ export default function UnitFormModal({
             {/* Built-up Area & Base Rent */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Built-up Area (Sq Ft) *</label>
-                  <span className="text-[11px] text-on-surface-variant">Gross square feet</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Built-up area (sq ft) *</label>
                 <input
                   name="area_sqft"
                   type="number"
@@ -249,10 +237,7 @@ export default function UnitFormModal({
               </div>
 
               <div className="space-y-1.5">
-                <div className="flex items-baseline justify-between">
-                  <label className="text-xs font-semibold text-white">Base Monthly Rent (RM)</label>
-                  <span className="text-[11px] text-on-surface-variant">Reference rental rate</span>
-                </div>
+                  <label className="text-xs font-semibold text-white">Monthly rent (RM)</label>
                 <input
                   name="monthly_rent"
                   type="number"
@@ -265,10 +250,7 @@ export default function UnitFormModal({
 
             {/* Initial Status */}
             <div className="space-y-1.5">
-              <div className="flex items-baseline justify-between">
-                <label className="text-xs font-semibold text-white">Initial Operational Status</label>
-                <span className="text-[11px] text-on-surface-variant">Occupancy readiness</span>
-              </div>
+                <label className="text-xs font-semibold text-white">Status</label>
               <select
                 name="status"
                 defaultValue="Vacant"

@@ -44,7 +44,7 @@ export default async function AdminAnnouncementsPage({
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
         title="Announcements"
-        subtitle="Notices on the resident board — what is up now, what is queued, and what has come down."
+        subtitle="What is on the resident notice board, and what has come down."
       />
 
       {/* Main List and Manager */}

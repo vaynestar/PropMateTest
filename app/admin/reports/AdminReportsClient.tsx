@@ -136,7 +136,7 @@ export default function AdminReportsClient({
     <div className="space-y-5">
       <PageHeader
         title="Reports"
-        subtitle="How the property is doing — money in, work outstanding, and who has been through the gate."
+        subtitle="How the property is doing over the period you choose."
         actions={
           <>
             <button type="button" onClick={handleExportCSV} className={BTN.secondary}>
