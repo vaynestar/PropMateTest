@@ -200,10 +200,9 @@ export default function AdminTicketTable({
                       <span className="rounded-md border border-outline-variant/60 bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
                         {t.status}
                       </span>
-                      {t.slaBreached && (
-                        <span className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold text-rose-300">
-                          <span className="material-symbols-outlined text-[13px] leading-none">timer_off</span>
-                          SLA
+                      {t.openFor && (
+                        <span className="text-[10px] font-medium tabular-nums text-on-surface-variant">
+                          for {t.openFor}
                         </span>
                       )}
                       {t.messageCount > 0 && (
@@ -338,13 +337,9 @@ export default function AdminTicketTable({
                       <td className={TABLE.td}>
                         <span className="flex items-center gap-1.5">
                           <StatusBadge status={t.status} />
-                          {t.slaBreached && (
-                            <span
-                              className="inline-flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/15 px-1.5 py-0.5 text-[10px] font-bold text-rose-300"
-                              title={`Open longer than the ${t.slaHours}-hour target for ${t.priority} priority`}
-                            >
-                              <span className="material-symbols-outlined text-[13px] leading-none">timer_off</span>
-                              SLA
+                          {t.openFor && (
+                            <span className="whitespace-nowrap text-[11px] tabular-nums text-on-surface-variant">
+                              for {t.openFor}
                             </span>
                           )}
                         </span>

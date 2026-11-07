@@ -766,31 +766,34 @@ export default function AdminFacilitiesManager({
           return (
             <div
               key={f.facility_id}
-              className={`group relative flex flex-col overflow-hidden rounded-2xl border bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container transition-colors ${
-                isMaintenance ? "border-amber-500/40" : "border-outline-variant/60 hover:border-primary/40"
+              className={`group relative flex flex-col overflow-hidden rounded-xl border bg-surface-container transition-colors ${
+                isMaintenance ? "border-amber-500/40" : "border-outline-variant/50 hover:border-primary/40"
               }`}
             >
-              {/* The photo the facility already stores (DEV-184) - the resident
-                  app has shown it since then; this card never did. */}
-              <div className="relative h-32 w-full shrink-0 overflow-hidden bg-surface-container-high">
-                {f.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={f.image_url}
-                    alt=""
-                    loading="lazy"
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-surface-container">
-                    <span className="material-symbols-outlined text-[40px] text-primary/50">
-                      {f.is_bookable ? "event_available" : "domain"}
-                    </span>
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-surface-container via-surface-container/60 to-transparent" />
+              {/*
+                The facility's photo as a background wash over the top of the
+                card, same treatment as the booking cards (DEV-216): 30%
+                opacity, masked so it is gone by the rule above the servicing
+                block — the line directly before "Close for maintenance".
+                It was a full-strength 128px banner with a dark scrim on top.
+              */}
+              {f.image_url && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={f.image_url}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                  className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover opacity-30 transition-transform duration-500 group-hover:scale-105"
+                  style={{
+                    maskImage: "linear-gradient(to bottom, #000 0%, #000 22%, transparent 62%)",
+                    WebkitMaskImage: "linear-gradient(to bottom, #000 0%, #000 22%, transparent 62%)",
+                  }}
+                />
+              )}
 
-                <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3">
+              <div className="relative flex min-h-[104px] shrink-0 items-end p-3">
+                <div className="flex w-full items-end justify-between gap-2">
                   <div className="min-w-0">
                     <h4 className="text-base font-bold leading-tight text-white" title={f.facility_name}>
                       {f.facility_name || "Unnamed facility"}
@@ -820,7 +823,7 @@ export default function AdminFacilitiesManager({
                 </div>
               </div>
 
-              <div className="flex flex-1 flex-col gap-3 p-4">
+              <div className="relative flex flex-1 flex-col gap-3 p-4">
                 {isMaintenance && (
                   <div className="flex items-center gap-1.5 rounded-lg border border-amber-500/40 bg-amber-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-amber-300">
                     <span className="material-symbols-outlined text-[15px] leading-none">engineering</span>
@@ -909,7 +912,7 @@ export default function AdminFacilitiesManager({
                     ? "Residents will not be able to book this until you reopen it."
                     : "Mark this space as closed while work is carried out."
                 }
-                className={`w-full mb-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all pressable border disabled:opacity-50 ${
+                className={`relative w-full mb-3 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all pressable border disabled:opacity-50 ${
                   isMaintenance
                     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/30"
                     : "bg-amber-500/20 text-amber-300 border-amber-500/30 hover:bg-amber-500/30"
@@ -928,7 +931,7 @@ export default function AdminFacilitiesManager({
               </button>
 
               {/* Edit Details Accordion */}
-              <div className="mb-3 grid grid-cols-2 gap-2">
+              <div className="relative mb-3 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setLoggingFacility(f)}
@@ -956,8 +959,8 @@ export default function AdminFacilitiesManager({
                 </button>
               </div>
 
-              {/* Requirement 1: Restored Previous Delete Button Design */}
               <form
+                className="relative"
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleDelete(f.facility_id, f.facility_name);

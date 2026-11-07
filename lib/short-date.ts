@@ -63,3 +63,21 @@ export function dayMonthTime(value: Date | string): string {
   });
   return `${dayMonth(d)}, ${time}`;
 }
+
+/**
+ * How long something has been open, as a compact "20m" / "5h" / "3d".
+ *
+ * Computed on the server and passed down as a string, never recomputed in the
+ * browser: `Date.now()` differs between the render on the server and the
+ * hydration in the browser, and a value that crosses a minute or hour
+ * boundary between the two is a hydration mismatch.
+ */
+export function durationSince(value: Date | string): string {
+  const then = new Date(value).getTime();
+  if (isNaN(then)) return "";
+  const mins = Math.max(0, Math.round((Date.now() - then) / 60_000));
+  if (mins < 60) return `${Math.max(1, mins)}m`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}

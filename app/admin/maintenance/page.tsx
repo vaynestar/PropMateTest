@@ -8,6 +8,7 @@ import CategoryMasterManager from "@/components/maintenance/CategoryMasterManage
 import BarList from "@/components/dashboard/BarList";
 import { PageHeader, SectionCard, StatCard, StatGrid } from "@/components/admin/ui";
 import { ageColourFor, colourFor } from "@/lib/chart-colours";
+import { durationSince } from "@/lib/short-date";
 import prisma from "@/lib/prisma";
 import { getActivePropertyId } from "@/lib/property-context.server";
 import { getOperationalSettings } from "@/lib/settings";
@@ -82,8 +83,10 @@ export default async function MaintenancePage() {
   const ticketsForClient = tickets.map((t: any) => ({
     ...t,
     messageCount: t._count?.comments ?? 0,
-    slaBreached: isBreached(t),
-    slaHours: slaHours(t.priority),
+    // User, 2026-11-07: the SLA badge is not wanted - "it is best just
+    // display directly how long is the ticket being opened". Formatted on
+    // the server so the browser never recomputes Date.now() and desyncs.
+    openFor: isUnresolved(t.status) ? durationSince(t.created_at) : null,
     cost: t.cost === null || t.cost === undefined ? null : Number(t.cost),
     unit: t.unit
       ? {
