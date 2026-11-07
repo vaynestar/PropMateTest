@@ -152,7 +152,7 @@ export default function AdminReportsClient({
       />
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-2.5 text-xs sm:gap-3 sm:p-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-outline-variant/50 bg-surface-container p-2.5 text-xs sm:gap-3 sm:p-3.5">
         {/* Left: Property Selector */}
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <span className="text-on-surface-variant font-medium shrink-0">Property:</span>

@@ -14,6 +14,7 @@ import {
   type UnitStatusKey,
 } from "@/lib/unit-status";
 import ScrollHint from "@/components/ui/ScrollHint";
+import { StatCard, StatGrid } from "@/components/admin/ui";
 
 interface UnitItem {
   unit_id: string;
@@ -386,7 +387,7 @@ function UnitCard({
         </dl>
 
         {tenant ? (
-          <div className="mt-3 rounded-md border border-outline-variant/40 bg-surface-container/70 p-2.5">
+          <div className="mt-3 border-t border-outline-variant/40 pt-2.5">
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-xs font-semibold text-white">{tenant.user_name}</span>
               {activeLease && (
@@ -583,43 +584,27 @@ export default function UnitsClient({
   const toggleAllFloors = () =>
     setCollapsedFloors(allCollapsed ? new Set() : new Set(allFloors));
 
+  /*
+   * The page's own tile row, hand-built before components/admin/ui.tsx
+   * existed: four cards, each with a coloured icon chip and a caption. It
+   * now uses the shared StatCard like every other module, which also drops
+   * the four icon chips and the captions that only restated the label
+   * ("Off the market", "None available").
+   */
   const kpis = [
-    {
-      label: "Total units",
-      value: totalUnits,
-      detail: activePropertyName ?? "No property selected",
-      icon: "apartment",
-      accent: "bg-surface-container-high border-outline-variant/60 text-on-surface-variant",
-      detailClass: "text-on-surface-variant",
-    },
+    { label: "Total units", value: totalUnits, tone: "neutral" as const },
     {
       label: "Occupied",
       value: occupiedUnits,
-      detail: `${occupancyPct}% occupancy`,
-      icon: UNIT_STATUSES.Occupied.icon,
-      accent: UNIT_STATUSES.Occupied.accent,
-      detailClass: UNIT_STATUSES.Occupied.text,
+      hint: `${occupancyPct}%`,
+      tone: "positive" as const,
     },
-    {
-      label: "Vacant",
-      value: vacantUnits,
-      detail: vacantUnits > 0 ? "Available to lease" : "None available",
-      icon: UNIT_STATUSES.Vacant.icon,
-      accent: UNIT_STATUSES.Vacant.accent,
-      detailClass: UNIT_STATUSES.Vacant.text,
-    },
+    { label: "Vacant", value: vacantUnits, tone: "primary" as const },
     {
       label: "Repair",
       value: repairUnits,
-      detail:
-        reservedUnits > 0
-          ? `${reservedUnits} also reserved`
-          : repairUnits > 0
-          ? "Off the market"
-          : "Nothing out of service",
-      icon: UNIT_STATUSES.Repair.icon,
-      accent: UNIT_STATUSES.Repair.accent,
-      detailClass: UNIT_STATUSES.Repair.text,
+      hint: reservedUnits > 0 ? `${reservedUnits} also reserved` : undefined,
+      tone: repairUnits > 0 ? ("warning" as const) : ("neutral" as const),
     },
   ];
 
@@ -677,31 +662,15 @@ export default function UnitsClient({
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <StatGrid>
         {kpis.map((k) => (
-          <div
-            key={k.label}
-            className="flex items-center justify-between gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-4"
-          >
-            <div className="min-w-0">
-              <span className="text-xs font-medium text-on-surface-variant">{k.label}</span>
-              <div className="mt-1 text-2xl font-bold leading-none text-white">{k.value}</div>
-              <span className={`mt-1.5 block truncate text-[11px] ${k.detailClass}`}>
-                {k.detail}
-              </span>
-            </div>
-            <div
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${k.accent}`}
-            >
-              <span className="material-symbols-outlined text-[22px]">{k.icon}</span>
-            </div>
-          </div>
+          <StatCard key={k.label} label={k.label} value={k.value} hint={k.hint} tone={k.tone} />
         ))}
-      </div>
+      </StatGrid>
 
       {/* Controls. No property picker here — units are managed one property at
           a time and the property is chosen once, in the top bar. */}
-      <div className="flex flex-col gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-4 xl:flex-row xl:items-center xl:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl border border-outline-variant/50 bg-surface-container p-4 xl:flex-row xl:items-center xl:justify-between">
         <div className="relative flex-1 xl:max-w-md">
           <span
             className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
@@ -793,42 +762,34 @@ export default function UnitsClient({
           return (
             <section
               key={floor}
-              className="space-y-4 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-5"
+              className="space-y-4 rounded-xl border border-outline-variant/50 bg-surface-container p-5"
             >
-              {/* The floor band reads as a drawer front: press it to open, with
-                  the occupancy strip fused to its bottom edge as a fill gauge.
-                  Collapsing dims the whole band, so a folded floor is obvious
-                  from across the page rather than only from a rotated chevron. */}
-              <header
-                className={`rounded-lg border transition-colors ${
-                  collapsed
-                    ? "border-outline-variant/40 bg-surface-container-high/40"
-                    : "border-outline-variant/60 bg-surface-container-high"
-                }`}
-              >
-                <div className="flex flex-wrap items-center justify-between gap-3 p-2.5">
+              {/*
+                Was a bordered, filled band containing a bordered, filled
+                button containing a tinted icon chip — three nested boxes to
+                say "Floor 1", inside the section's own box, above a unit card
+                that is another box again. Five borders deep for one number.
+                It is a heading row now: a chevron, the floor, the count.
+              */}
+              <header className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <button
                     type="button"
                     onClick={() => toggleFloor(floor)}
                     aria-expanded={!collapsed}
                     aria-controls={panelId}
-                    className="pressable flex items-center gap-2.5 rounded-md border border-outline-variant/60 bg-surface-container-highest py-2 pl-2 pr-3 text-left transition-colors hover:border-primary/50 hover:bg-surface-variant"
+                    className="pressable -ml-1 flex items-center gap-2 rounded-lg px-1 py-1 text-left transition-colors hover:bg-surface-container-high"
                   >
                     <span
-                      className="material-symbols-outlined rounded bg-primary/15 p-0.5 text-[20px] leading-none text-primary transition-transform"
+                      className="material-symbols-outlined text-[20px] leading-none text-on-surface-variant transition-transform"
                       style={{ transform: collapsed ? "rotate(-90deg)" : "none" }}
                       aria-hidden="true"
                     >
                       expand_more
                     </span>
-                    <span className="block">
-                      <h3 className="text-sm font-bold leading-tight text-white">Floor {floor}</h3>
-                      <span className="text-[11px] text-on-surface-variant">
-                        {floorUnits.length} unit{floorUnits.length === 1 ? "" : "s"}
-                      </span>
-                    </span>
-                    <span className="ml-1 border-l border-outline-variant/50 pl-3 text-[11px] font-semibold text-on-surface-variant">
-                      {collapsed ? "Show" : "Hide"}
+                    <h3 className="text-sm font-semibold leading-none text-white">Floor {floor}</h3>
+                    <span className="text-[11px] text-on-surface-variant">
+                      {floorUnits.length} unit{floorUnits.length === 1 ? "" : "s"}
                     </span>
                   </button>
 
@@ -853,7 +814,7 @@ export default function UnitsClient({
               {!collapsed && (
                 <div
                   id={panelId}
-                  className="grid grid-cols-1 gap-3 border-t border-outline-variant/30 pt-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
+                  className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
                 >
                   {floorUnits.map((unit) => (
                     <UnitCard

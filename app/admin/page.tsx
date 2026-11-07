@@ -9,27 +9,11 @@ import prisma from "@/lib/prisma";
 import SetupFlow from "@/components/layout/SetupFlow";
 import { getSetupProgress } from "@/lib/setup-progress";
 import MaintenanceDueBoard from "@/components/dashboard/MaintenanceDueBoard";
-import BarList from "@/components/dashboard/BarList";
 import ArrearsTable from "@/components/dashboard/ArrearsTable";
-import { UnitMixDonut, VisitorTrendChart } from "@/components/dashboard/MiniCharts";
-import { colourFor } from "@/lib/chart-colours";
-import { BTN, EmptyState, Money, PageHeader, SectionCard, StatCard, StatGrid } from "@/components/admin/ui";
+import { VisitorTrendChart } from "@/components/dashboard/MiniCharts";
+import { BTN, Money, PageHeader, SectionCard, StatCard, StatGrid } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
-
-const ACTIVITY = {
-  VISITOR: { icon: "badge", tint: "text-purple-300 bg-purple-500/15" },
-  TICKET: { icon: "build", tint: "text-amber-300 bg-amber-500/15" },
-  PAYMENT: { icon: "payments", tint: "text-emerald-300 bg-emerald-500/15" },
-  DEFAULT: { icon: "campaign", tint: "text-primary bg-primary/15" },
-} as const;
-
-const QUICK_ACTIONS = [
-  { href: "/admin/maintenance", icon: "add_task", label: "Raise a ticket" },
-  { href: "/admin/invoices", icon: "receipt_long", label: "Issue an invoice" },
-  { href: "/admin/announcements", icon: "campaign", label: "Post a notice" },
-  { href: "/admin/bookings", icon: "calendar_month", label: "Facility schedule" },
-];
 
 /** The admin home: what needs attention, the numbers, and the work in flight. */
 export default async function AdminDashboardPage() {
@@ -48,9 +32,6 @@ export default async function AdminDashboardPage() {
         })
       : null,
   ]);
-  const time = (d: Date | string) =>
-    new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kuala_Lumpur" }).format(new Date(d));
-
   return (
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
@@ -135,153 +116,66 @@ export default async function AdminDashboardPage() {
       {/* Before the charts: on a phone this is the first thing after the numbers. */}
       <MaintenanceDueBoard items={stats.upcomingMaintenanceList} />
 
+      {/*
+        Four blocks were removed here (DEV-215), all of them restating
+        something already on the page:
+          · Unit mix donut   — the Occupancy tile is the same 50% / 6 of 12
+          · Helpdesk load    — the Open tickets tile plus the ages already in
+                               Work in progress
+          · Recent activity  — ten rows of visitor check-ins nobody acts on
+          · Quick actions    — the sidebar is the navigation
+        Money first, then the work. Nothing is said twice.
+      */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="space-y-5 lg:col-span-2">
-          <SectionCard
-            title="Billed vs collected"
-            subtitle="What you invoiced against what was actually paid."
-            icon="show_chart"
-          >
+        <div className="lg:col-span-2">
+          <SectionCard title="Billed vs collected">
             <FinancialTrendChart data={stats.financialTrend} />
           </SectionCard>
-
-          <SectionCard
-            title="Money owed"
-            subtitle="Oldest unpaid invoices first."
-            icon="request_quote"
-            action={
-              <Link href="/admin/invoices" className="text-xs font-semibold text-primary hover:underline">
-                All invoices
-              </Link>
-            }
-            padded={false}
-          >
-            <ArrearsTable rows={stats.topArrears} />
-          </SectionCard>
-
-          <SectionCard
-            title="Helpdesk load"
-            subtitle="Where the tickets sit, and how long they have been waiting."
-            icon="query_stats"
-            action={
-              <Link href="/admin/maintenance" className="text-xs font-semibold text-primary hover:underline">
-                Helpdesk
-              </Link>
-            }
-          >
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
-                  By status
-                </p>
-                <BarList rows={stats.ticketMix} colourOf={colourFor} emptyText="No tickets yet." />
-              </div>
-              <div>
-                <p className="mb-3 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
-                  Open tickets by age
-                </p>
-                <BarList
-                  rows={stats.ticketAging}
-                  colourOf={(l) =>
-                    l === "Over a week" ? "#fb7185" : l === "4-7 days" ? "#fbbf24" : l === "1-3 days" ? "#8b5cf6" : "#34d399"
-                  }
-                  emptyText="Nothing open."
-                />
-              </div>
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="Work in progress"
-            subtitle="Tickets that are open or being worked on."
-            icon="engineering"
-            action={
-              <Link href="/admin/maintenance" className="text-xs font-semibold text-primary hover:underline">
-                View all tickets
-              </Link>
-            }
-          >
-            <FilterableTicketQueue tickets={stats.openTicketsList} />
-          </SectionCard>
         </div>
 
-        <div className="space-y-5">
-          <SectionCard title="Unit mix" subtitle="Every unit in this property" icon="donut_small">
-            <UnitMixDonut
-              data={stats.unitMix}
-              centreValue={`${stats.occupancyRate}%`}
-              centreLabel="occupied"
-            />
-          </SectionCard>
-
-          <SectionCard
-            title="Visitor traffic"
-            subtitle="Expected against who actually arrived, last 7 days"
-            icon="bar_chart"
-            action={
-              <span className="flex items-center gap-3 text-[11px] text-on-surface-variant">
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-sm bg-[#8b5cf6]" />
-                  Expected
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-sm bg-[#34d399]" />
-                  Arrived
-                </span>
+        <SectionCard
+          title="Visitor traffic"
+          subtitle="Last 7 days"
+          action={
+            <span className="flex items-center gap-3 text-[11px] text-on-surface-variant">
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-sm bg-[#8b5cf6]" />
+                Expected
               </span>
-            }
-          >
-            <VisitorTrendChart data={stats.visitorTrend} />
-          </SectionCard>
-
-          <SectionCard title="Recent activity" subtitle="What happened today" icon="bolt" padded={false}>
-            {stats.activityFeed.length > 0 ? (
-              <ul className="max-h-[22rem] divide-y divide-outline-variant/30 overflow-y-auto">
-                {stats.activityFeed.map((event) => {
-                  const kind = ACTIVITY[event.type as keyof typeof ACTIVITY] ?? ACTIVITY.DEFAULT;
-                  return (
-                    <li key={event.id} className="flex items-start gap-3 px-4 py-3">
-                      <span className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${kind.tint}`}>
-                        <span className="material-symbols-outlined text-[16px]">{kind.icon}</span>
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <span className="truncate text-xs font-semibold text-white">{event.title}</span>
-                          <span className="shrink-0 text-[11px] tabular-nums text-on-surface-variant">
-                            {time(event.timestamp)}
-                          </span>
-                        </div>
-                        <p className="truncate text-[11px] text-on-surface-variant">{event.detail}</p>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <EmptyState icon="notifications_off" title="Nothing has happened today yet." />
-            )}
-          </SectionCard>
-
-          <SectionCard title="Quick actions" icon="bolt" padded={false}>
-            <ul className="divide-y divide-outline-variant/30">
-              {QUICK_ACTIONS.map((a) => (
-                <li key={a.href}>
-                  <Link
-                    href={a.href}
-                    className="flex items-center gap-3 px-4 py-3 text-xs font-semibold text-on-surface transition-colors hover:bg-surface-container-high/50"
-                  >
-                    <span className="material-symbols-outlined text-[18px] text-primary">{a.icon}</span>
-                    {a.label}
-                    <span className="material-symbols-outlined ml-auto text-[16px] text-on-surface-variant">
-                      chevron_right
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </SectionCard>
-        </div>
+              <span className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-sm bg-[#34d399]" />
+                Arrived
+              </span>
+            </span>
+          }
+        >
+          <VisitorTrendChart data={stats.visitorTrend} />
+        </SectionCard>
       </div>
+
+      <SectionCard
+        title="Money owed"
+        subtitle="Oldest unpaid invoices first."
+        action={
+          <Link href="/admin/invoices" className="text-xs font-semibold text-primary hover:underline">
+            All invoices
+          </Link>
+        }
+        padded={false}
+      >
+        <ArrearsTable rows={stats.topArrears} />
+      </SectionCard>
+
+      <SectionCard
+        title="Work in progress"
+        action={
+          <Link href="/admin/maintenance" className="text-xs font-semibold text-primary hover:underline">
+            View all tickets
+          </Link>
+        }
+      >
+        <FilterableTicketQueue tickets={stats.openTicketsList} />
+      </SectionCard>
     </div>
   );
 }

@@ -62,14 +62,32 @@
   --font-sans: var(--font-inter);
 }
 
+/*
+ * One card surface, 31 files (DEV-215).
+ *
+ * The blur was decorative: the background is fully opaque, so there was never
+ * anything behind it to blur — it cost a compositing layer on every card and
+ * changed nothing on screen. The border was also a warm grey (#4a4455) that
+ * belongs to no token, so cards sat slightly off from everything drawn with
+ * `border-outline-variant`. Both fixed; the surface now matches CARD in
+ * components/admin/ui.tsx exactly.
+ */
 .glass-card {
-    background-color: #151b2d;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid #4a4455;
+    background-color: var(--color-surface-container);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 50%, transparent);
 }
+/*
+ * Was a 135° violet gradient. A gradient on the primary button is the same
+ * error as a gradient on every card — decoration standing in for emphasis —
+ * and it is the single most recognisable "generated dashboard" signature.
+ * Flat fill, matching AGENTS.md Rule 4.
+ */
 .btn-primary {
-    background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+    background-color: var(--color-primary);
+    color: var(--color-on-primary);
+}
+.btn-primary:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-primary) 90%, transparent);
 }
 .btn-secondary {
     background: transparent;

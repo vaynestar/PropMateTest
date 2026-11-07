@@ -18,55 +18,52 @@ import type { ReactNode } from "react";
  *  - sections are separated by `space-y-5`, nothing tighter.
  */
 
-export const CARD = "rounded-2xl border border-outline-variant/60 bg-surface-container";
+export const CARD = "rounded-xl border border-outline-variant/50 bg-surface-container";
 /**
- * The resident portal's surface: a tinted corner fading into the card colour
- * (user, 2026-09-20: "i actually like the gradient black background you set
- * for resident, maybe can apply the same design for admin panel"). Tailwind
- * needs the whole class string at build time, so the tint comes in as a
- * `from-*` class from TONE rather than being composed at runtime.
+ * Kept as an alias so the eleven call sites keep compiling. There is no
+ * gradient any more — see the note on StatCard.
+ * @deprecated use CARD.
  */
-export const GRADIENT_CARD =
-  "rounded-2xl border border-outline-variant/60 bg-gradient-to-br via-surface-container to-surface-container";
-export const LABEL = "text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant";
+export const GRADIENT_CARD = CARD;
+export const LABEL = "text-[11px] font-medium text-on-surface-variant";
 
 export type Tone = "neutral" | "primary" | "positive" | "warning" | "critical";
 
-const TONE: Record<Tone, { icon: string; value: string; ring: string; grad: string; glow: string }> = {
+/**
+ * Tone marks an exception, and it marks it in exactly two places: a 2px rule
+ * down the left edge and the value's colour. No tinted icon chip, no corner
+ * gradient, no blurred bloom.
+ *
+ * Those three were the reason the portal read as generated. Every tile had an
+ * icon in a coloured rounded box, a gradient and a glow, so a tile that
+ * mattered looked identical to one that did not — the page had five accents
+ * and therefore none. (User, 2026-11-07: "still crowded and very ai like".)
+ */
+const TONE: Record<Tone, { rule: string; value: string; ring: string }> = {
   neutral: {
-    icon: "text-on-surface-variant bg-surface-container-highest",
-    value: "text-on-surface",
+    rule: "",
+    value: "text-white",
     ring: "hover:border-outline",
-    grad: "from-white/[0.07]",
-    glow: "",
   },
   primary: {
-    icon: "text-primary bg-primary/15",
-    value: "text-on-surface",
+    rule: "before:bg-primary/70",
+    value: "text-white",
     ring: "hover:border-primary/50",
-    grad: "from-primary/25",
-    glow: "bg-primary/15",
   },
   positive: {
-    icon: "text-emerald-300 bg-emerald-500/15",
-    value: "text-on-surface",
+    rule: "before:bg-emerald-400/70",
+    value: "text-white",
     ring: "hover:border-emerald-500/40",
-    grad: "from-emerald-500/20",
-    glow: "bg-emerald-500/15",
   },
   warning: {
-    icon: "text-amber-300 bg-amber-500/15",
+    rule: "before:bg-amber-400/80",
     value: "text-amber-200",
     ring: "hover:border-amber-500/40",
-    grad: "from-amber-500/20",
-    glow: "bg-amber-500/15",
   },
   critical: {
-    icon: "text-rose-300 bg-rose-500/15",
+    rule: "before:bg-rose-400/80",
     value: "text-rose-200",
     ring: "hover:border-rose-500/40",
-    grad: "from-rose-900/60",
-    glow: "bg-rose-500/15",
   },
 };
 
@@ -114,7 +111,8 @@ export function StatCard({
   label: string;
   value: ReactNode;
   hint?: string;
-  icon: string;
+  /** @deprecated no longer rendered; kept so existing call sites compile. */
+  icon?: string;
   tone?: Tone;
   href?: string;
   /** 0-100; draws a thin bar under the value. */
@@ -125,22 +123,17 @@ export function StatCard({
   const t = TONE[tone];
   const body = (
     <>
-      {/* A soft bloom in the corner, the same trick the resident hero uses. */}
-      {t.glow && (
-        <span className={`pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full blur-3xl ${t.glow}`} aria-hidden />
-      )}
-      <div className="relative flex items-start justify-between gap-3">
-        <span className={LABEL}>{label}</span>
-        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${t.icon}`}>
-          <span className="material-symbols-outlined text-[18px]">{icon}</span>
+      <span className={`${LABEL} block truncate`}>{label}</span>
+      <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
+        <span
+          className={`min-w-0 break-words text-[26px] font-semibold leading-none tracking-tight tabular-nums ${t.value}`}
+        >
+          {value}
         </span>
-      </div>
-      <div className="relative mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span className={`min-w-0 break-words text-2xl font-bold tabular-nums ${t.value}`}>{value}</span>
         {hint && <span className="text-xs text-on-surface-variant">{hint}</span>}
       </div>
       {typeof progress === "number" && (
-        <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-container-highest">
+        <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-surface-container-highest">
           <div
             className={`h-full rounded-full ${tone === "critical" ? "bg-rose-400" : tone === "warning" ? "bg-amber-400" : "bg-primary"}`}
             style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
@@ -160,7 +153,11 @@ export function StatCard({
     </>
   );
 
-  const shell = `${GRADIENT_CARD} ${t.grad} relative overflow-hidden p-4 transition-colors ${
+  // The 2px tone rule is a ::before so it hugs the rounded left edge without
+  // an extra wrapper. `icon` is still accepted by the prop type — twenty-eight
+  // call sites pass one — but nothing renders it any more.
+  void icon;
+  const shell = `${CARD} relative overflow-hidden p-4 transition-colors before:absolute before:inset-y-0 before:left-0 before:w-[2px] ${t.rule} ${
     href ? `${t.ring} pressable` : ""
   }`;
   return href ? <Link href={href} className={`block ${shell}`}>{body}</Link> : <div className={shell}>{body}</div>;
@@ -177,24 +174,21 @@ export function SectionCard({
 }: {
   title?: string;
   subtitle?: string;
+  /** @deprecated no longer rendered; a section heading does not need a glyph. */
   icon?: string;
   action?: ReactNode;
   children: ReactNode;
   /** false when the child is a table that should meet the card edges. */
   padded?: boolean;
 }) {
+  void icon;
   return (
-    <section className={`${GRADIENT_CARD} from-white/[0.06] overflow-hidden`}>
+    <section className={`${CARD} overflow-hidden`}>
       {title && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/40 bg-gradient-to-r from-surface-container-high/70 via-surface-container-high/25 to-transparent px-4 py-3.5 sm:px-5">
-          <div className="flex min-w-0 items-center gap-2.5">
-            {icon && (
-              <span className="material-symbols-outlined text-[20px] text-primary">{icon}</span>
-            )}
-            <div className="min-w-0">
-              <h2 className="truncate text-sm font-bold text-white">{title}</h2>
-              {subtitle && <p className="truncate text-xs text-on-surface-variant">{subtitle}</p>}
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/40 px-4 py-3 sm:px-5">
+          <div className="min-w-0">
+            <h2 className="truncate text-sm font-semibold text-white">{title}</h2>
+            {subtitle && <p className="truncate text-xs text-on-surface-variant">{subtitle}</p>}
           </div>
           {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
         </div>
@@ -207,7 +201,7 @@ export function SectionCard({
 /** Search + filters + (optionally) a view switch, identical on every module. */
 export function Toolbar({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
-    <div className={`${GRADIENT_CARD} from-white/[0.06] flex flex-col gap-3 p-3 lg:flex-row lg:items-center`}>
+    <div className={`${CARD} flex flex-col gap-3 p-3 lg:flex-row lg:items-center`}>
       <div className="flex flex-1 flex-wrap items-center gap-2">{children}</div>
       {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
     </div>
@@ -250,8 +244,12 @@ export function SearchField({
 
 /** Buttons. Exactly three kinds, so every module's actions look the same. */
 export const BTN = {
+  // Flat fill, not the 135° purple gradient `.btn-primary` carried since the
+  // first build. A gradient on the one control the eye should land on is the
+  // same mistake as a gradient on every card: decoration where emphasis was
+  // needed. This also finally matches AGENTS.md Rule 4.
   primary:
-    "btn-primary pressable inline-flex h-10 items-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white disabled:opacity-50",
+    "pressable inline-flex h-10 items-center gap-1.5 rounded-xl bg-primary px-4 text-sm font-bold text-on-primary shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50",
   secondary:
     "pressable inline-flex h-10 items-center gap-1.5 rounded-xl border border-outline-variant/60 bg-surface-container-high px-3.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-highest disabled:opacity-50",
   ghost:

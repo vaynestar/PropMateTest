@@ -332,7 +332,7 @@ export default function AdminBookingList({
       </div>
 
       {/* FILTER CONTROL BAR */}
-      <div className="space-y-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-3.5">
+      <div className="space-y-3 rounded-xl border border-outline-variant/50 bg-surface-container p-3.5">
         {/* Search & Main Row */}
         <div className="flex flex-col lg:flex-row gap-3 items-center justify-between">
           <div className="flex-1 w-full relative">
@@ -644,7 +644,7 @@ export default function AdminBookingList({
 
       {/* 2. TABLE VIEW */}
       {viewMode === "table" && filteredBookings.length > 0 && (
-        <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container">
+        <div className="overflow-hidden rounded-xl border border-outline-variant/50 bg-surface-container">
           <div className={TABLE.wrap}>
             <table className={TABLE.table + " min-w-[900px]"}>
               <thead>

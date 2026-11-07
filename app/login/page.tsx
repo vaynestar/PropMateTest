@@ -80,7 +80,7 @@ function LoginForm() {
       )}
 
       <button
-        className="mt-4 w-full py-3 bg-gradient-to-r from-primary-container to-inverse-primary hover:brightness-110 text-white font-label-md text-label-md rounded shadow-[0_0_15px_rgba(160,120,255,0.2)] hover:shadow-[0_0_25px_rgba(160,120,255,0.4)] transition-all duration-300 flex items-center justify-center gap-2 group disabled:opacity-60 pressable"
+        className="pressable mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-60"
         type="submit"
         disabled={pending}
       >
@@ -99,60 +99,68 @@ export default function LoginPage() {
   return (
     <div className="bg-surface text-on-surface font-body-md min-h-[100dvh] w-full flex overflow-x-hidden">
       {/* Left Panel */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-surface-container-lowest overflow-hidden items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-surface via-surface to-primary-container/20 z-10 mix-blend-overlay" />
-        <div className="absolute inset-0 bg-cover bg-center z-0 opacity-60 mix-blend-screen bg-[radial-gradient(circle_at_30%_30%,#2e1a5e_0%,#0c1324_60%)]" />
-        <div className="relative z-20 flex flex-col items-center text-center p-12 max-w-lg">
+      {/* Was two stacked blend layers over a violet radial burst, with a 40px
+          glow around the logo and a drop-shadow on the wordmark. Calm surface,
+          one hairline, no glow: the front door should look like the product
+          behind it. */}
+      <div className="hidden lg:flex lg:w-1/2 relative border-r border-outline-variant/40 bg-surface-container-lowest items-center justify-center">
+        <div className="relative flex max-w-md flex-col items-start p-12">
           <Image
             src="/logo.png"
-            alt="PropMate Logo"
-            width={96}
-            height={96}
-            className="w-24 h-24 rounded-2xl object-contain shadow-[0_0_40px_rgba(123,87,231,0.5)] mb-6"
+            alt=""
+            width={56}
+            height={56}
+            className="mb-7 h-14 w-14 rounded-xl object-contain"
             priority
           />
-          <h1 className="font-display-lg text-display-lg text-on-surface mb-6 drop-shadow-lg">
-            Prop Mate
+          <h1 className="text-[34px] font-semibold leading-tight tracking-tight text-white">
+            PropMate
           </h1>
-          <p className="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+          <p className="mt-3 text-base leading-relaxed text-on-surface-variant">
             Your Best Mate of Solution for Property Management.
           </p>
+          <dl className="mt-10 space-y-3 border-t border-outline-variant/40 pt-7 text-sm">
+            {[
+              ["Residents", "Invoices, bookings, visitor passes and helpdesk tickets."],
+              ["Management", "Units, tenancies, billing runs and the facility schedule."],
+            ].map(([who, what]) => (
+              <div key={who} className="flex gap-3">
+                <dt className="w-24 shrink-0 font-semibold text-on-surface">{who}</dt>
+                <dd className="text-on-surface-variant">{what}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </div>
 
       {/* Right Panel */}
       <div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12 relative">
-        <div className="absolute top-1/4 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="w-full max-w-[440px] bg-surface-container/50 backdrop-blur-xl border border-outline-variant rounded-lg p-8 sm:p-10 shadow-[0_20px_40px_rgba(0,0,0,0.4)] relative z-10 flex flex-col gap-8">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-3 mb-2">
-              <Image
-                src="/logo.png"
-                alt="PropMate Logo"
-                width={40}
-                height={40}
-                className="w-10 h-10 rounded-xl object-contain shadow-sm"
-                priority
-              />
-              <span className="font-headline-md text-headline-md font-bold tracking-tight text-on-surface">
-                PropMate
-              </span>
-            </div>
-            <h2 className="font-headline-lg text-headline-lg text-on-surface">Sign in</h2>
-            <p className="font-body-md text-body-md text-on-surface-variant">
-              Enter your details for login.
-            </p>
+        <div className="relative z-10 flex w-full max-w-[400px] flex-col gap-7">
+          {/* The logo and wordmark are in the left panel on a desktop; on a
+              phone that panel is hidden, so they appear here instead of twice. */}
+          <div className="flex items-center gap-3 lg:hidden">
+            <Image
+              src="/logo.png"
+              alt=""
+              width={36}
+              height={36}
+              className="h-9 w-9 rounded-xl object-contain"
+              priority
+            />
+            <span className="text-xl font-semibold tracking-tight text-white">PropMate</span>
           </div>
 
-          <Suspense fallback={<div className="text-center py-8 text-on-surface-variant text-sm">Loading sign in...</div>}>
+          <h2 className="text-2xl font-semibold tracking-tight text-white">Sign in</h2>
+
+          <Suspense fallback={<div className="py-8 text-center text-sm text-on-surface-variant">Loading sign in…</div>}>
             <LoginForm />
           </Suspense>
 
-          <div className="pt-4 border-t border-outline-variant text-center">
-            <p className="font-body-md text-body-md text-on-surface-variant">
-              Demo accounts: admin@propmate.com / resident@propmate.com
-            </p>
-          </div>
+          <p className="border-t border-outline-variant/40 pt-5 text-xs leading-relaxed text-on-surface-variant">
+            <span className="font-semibold text-on-surface">Demo accounts</span>
+            <br />
+            admin@propmate.com · resident@propmate.com
+          </p>
         </div>
       </div>
     </div>

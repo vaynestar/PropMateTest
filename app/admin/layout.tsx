@@ -52,9 +52,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             {/* The brand is not the page heading - the page's own PageHeader
                 is (DEV-204). Two h1s made every screen announce twice. */}
             <span className="font-headline-md text-headline-md block font-bold leading-none text-on-surface">
-              Prop Mate
+              PropMate
             </span>
-            <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">Admin Command</p>
+            <p className="font-label-sm text-label-sm text-on-surface-variant mt-1">Management</p>
           </div>
         </Link>
 

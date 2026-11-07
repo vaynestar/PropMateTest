@@ -40,7 +40,9 @@ export default function ResidentLayout({
   // Longest match wins, so /resident/invoices/<id> still reads "Invoices".
   const pageTitle =
     pathname === "/resident"
-      ? "Welcome Home"
+      // "Welcome Home" sat directly above the page's own "Good evening, …",
+      // so the first thing on the screen was two greetings and no information.
+      ? "Home"
       : residentNav
           .filter((item) => item.href !== "/resident" && pathname.startsWith(item.href))
           .sort((a, b) => b.href.length - a.href.length)[0]?.label ?? "PropMate";

@@ -89,19 +89,17 @@ export default function LeasesClient({
   const totalLeases = initialLeases.length;
   const activeLeasesCount = initialLeases.filter((l) => l.status === "Active").length;
   const inactiveLeasesCount = totalLeases - activeLeasesCount;
-  const propertiesCount = properties.length;
 
   return (
     <div className="space-y-5">
-      <StatGrid>
-        <StatCard label="Leases" value={totalLeases} hint="on record" icon="description" tone="primary" />
-        <StatCard label="Active" value={activeLeasesCount} hint="someone living there" icon="verified" tone="positive" />
-        <StatCard label="Ended" value={inactiveLeasesCount} hint="moved out" icon="history" tone="neutral" />
-        <StatCard label="Properties" value={propertiesCount} hint="with a lease" icon="apartment" tone="neutral" />
+      <StatGrid cols={3}>
+        <StatCard label="Leases" value={totalLeases} tone="primary" />
+        <StatCard label="Active" value={activeLeasesCount} tone="positive" />
+        <StatCard label="Ended" value={inactiveLeasesCount} tone="neutral" />
       </StatGrid>
 
       {/* Filter & Controls Bar */}
-      <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-3 md:flex-row md:items-center">
+      <div className="flex flex-col items-stretch justify-between gap-3 rounded-xl border border-outline-variant/50 bg-surface-container p-3 md:flex-row md:items-center">
         {/* Search & Property Select */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-xl">
           <div className="relative flex-1">

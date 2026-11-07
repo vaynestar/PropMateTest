@@ -69,7 +69,7 @@ export default function PropertiesClient({
           icon="domain"
           tone="primary"
         />
-        <StatCard label="Units" value={totalUnits} hint="across all properties" icon="meeting_room" tone="neutral" />
+        <StatCard label="Units" value={totalUnits} hint="across all properties" tone="neutral" />
         <StatCard
           label="Occupancy"
           value={`${avgOccupancyRate}%`}
@@ -92,7 +92,7 @@ export default function PropertiesClient({
       </StatGrid>
 
       {/* Control Bar: Search, Type Filter & Add Property Action */}
-      <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-3 md:flex-row md:items-center">
+      <div className="flex flex-col items-stretch justify-between gap-3 rounded-xl border border-outline-variant/50 bg-surface-container p-3 md:flex-row md:items-center">
         {/* Search Input */}
         <div className="relative flex-1 max-w-md">
           <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">

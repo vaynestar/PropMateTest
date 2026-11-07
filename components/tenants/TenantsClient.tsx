@@ -89,34 +89,25 @@ export default function TenantsClient({
   const totalTenants = scopedTenants.length;
   const activeLeaseholders = scopedTenants.filter((x) => x.tenant_leases.length > 0).length;
   const unassignedTenants = totalTenants - activeLeaseholders;
-  const propertiesCovered =
-    selectedPropertyId === "ALL"
-      ? new Set(
-          initialTenants.flatMap((x) => x.tenant_leases.map((l) => l.unit.property_id))
-        ).size
-      : 1;
-
   // Residents with no unit at all — invisible while a property filter is on.
   const withoutUnitCount = initialTenants.filter((x) => x.tenant_leases.length === 0).length;
   const hiddenUnassignedCount = selectedPropertyId === "ALL" ? 0 : withoutUnitCount;
 
   return (
     <div className="space-y-5">
-      <StatGrid>
-        <StatCard label="Tenants" value={totalTenants} hint="with a login" icon="groups" tone="primary" />
-        <StatCard label="With a unit" value={activeLeaseholders} hint="in this property" icon="home_pin" tone="positive" />
-        <StatCard label="No unit yet" value={withoutUnitCount} hint="needs a lease" icon="person_outline" tone={withoutUnitCount > 0 ? "warning" : "neutral"} />
+      <StatGrid cols={3}>
+        <StatCard label="Tenants" value={totalTenants} tone="primary" />
+        <StatCard label="With a unit" value={activeLeaseholders} tone="positive" />
         <StatCard
-          label="Properties"
-          value={propertiesCovered}
-          hint={selectedPropertyId === "ALL" ? "they live across" : "in view"}
-          icon="apartment"
-          tone="neutral"
+          label="No unit yet"
+          value={withoutUnitCount}
+          hint={withoutUnitCount > 0 ? "needs a lease" : undefined}
+          tone={withoutUnitCount > 0 ? "warning" : "neutral"}
         />
       </StatGrid>
 
       {/* Filter & Controls Bar */}
-      <div className="flex flex-col items-stretch justify-between gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container p-3 md:flex-row md:items-center">
+      <div className="flex flex-col items-stretch justify-between gap-3 rounded-xl border border-outline-variant/50 bg-surface-container p-3 md:flex-row md:items-center">
         {/* Search & Property Select */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-xl">
           <select
@@ -188,7 +179,7 @@ export default function TenantsClient({
       {/* A tenant with no unit belongs to no property, so a property filter hides
           them — including one just created. Say so instead of losing them. */}
       {hiddenUnassignedCount > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline-variant/60 bg-gradient-to-br from-white/[0.06] via-surface-container to-surface-container px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-outline-variant/50 bg-surface-container px-4 py-3">
           <p className="text-xs text-on-surface-variant">
             <span className="font-semibold text-white">
               {hiddenUnassignedCount} tenant{hiddenUnassignedCount === 1 ? "" : "s"}

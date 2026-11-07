@@ -39,10 +39,16 @@ function formatDate(date: Date) {
   return dayMonth(date, true);
 }
 
+/**
+ * Only the destinations the bottom tab bar does NOT already carry.
+ *
+ * This was six tiles, and Invoices, Helpdesk and Facilities were repeated
+ * about 200px lower in the tab bar fixed to the bottom of the same screen —
+ * a grid of big icon chips whose only job was to duplicate the navigation.
+ * These three live under "More", so they are worth a shortcut; the rest are
+ * one thumb-reach away already.
+ */
 const QUICK_ACTIONS = [
-  { label: "Invoices", icon: "receipt_long", href: "/resident/invoices" },
-  { label: "Helpdesk", icon: "build_circle", href: "/resident/maintenance" },
-  { label: "Facilities", icon: "pool", href: "/resident/facilities" },
   { label: "Visitors", icon: "person_search", href: "/resident/visitors" },
   { label: "Notices", icon: "campaign", href: "/resident/announcements" },
   { label: "My Unit", icon: "apartment", href: "/resident/unit" },
@@ -160,23 +166,19 @@ export default async function ResidentDashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-3 sm:grid-cols-6 gap-stack-sm">
+      {/* One quiet row, not a wall of chips: the icon sits inline at text
+          size instead of inside a 48px tinted square. */}
+      <section className="grid grid-cols-3 gap-stack-sm">
         {QUICK_ACTIONS.map((action) => (
           <Link
             key={action.label}
             href={action.href}
-            className="pressable glass-card rounded-xl px-1.5 py-stack-md flex flex-col items-center justify-center gap-2 hover:bg-surface-container-high transition-colors group"
+            className="pressable flex items-center justify-center gap-2 rounded-xl border border-outline-variant/50 bg-surface-container px-2 py-3 transition-colors hover:border-outline hover:bg-surface-container-high"
           >
-            <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center border border-primary/25 group-hover:bg-primary/25 transition-colors">
-              <span className="material-symbols-outlined text-primary text-[24px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                {action.icon}
-              </span>
-            </div>
-            {/* truncate in a six-column row cut "Invoices" to "Invo..." at
-                tablet width (R13). It wraps instead. */}
-            <span className="font-label-sm text-label-sm text-on-surface text-center w-full leading-tight break-words">
-              {action.label}
+            <span className="material-symbols-outlined shrink-0 text-[18px] text-on-surface-variant">
+              {action.icon}
             </span>
+            <span className="truncate text-xs font-medium text-on-surface">{action.label}</span>
           </Link>
         ))}
       </section>
