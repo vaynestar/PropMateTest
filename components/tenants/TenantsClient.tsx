@@ -147,7 +147,10 @@ export default function TenantsClient({
         </div>
 
         {/* Lease Status Pills & Add Button */}
-        <ScrollHint><div className="flex items-center gap-2">
+        {/* Two rows on a phone: the filter pills scroll sideways on their own,
+            and the action sits under them, reachable without a swipe. */}
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+          <ScrollHint className="min-w-0 xl:shrink-0"><div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 shrink-0 bg-surface-container-high/60 p-1 rounded-xl border border-outline-variant/40">
             {[
               { id: "ALL", label: "All" },
@@ -169,15 +172,17 @@ export default function TenantsClient({
             ))}
           </div>
 
+          </div></ScrollHint>
+
           <button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center gap-2 transition-all shadow-md pressable shrink-0"
+            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex w-full items-center justify-center gap-2 transition-all shadow-md pressable xl:w-auto xl:shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">person_add</span>
-            <span>Add Tenant</span>
+            <span>Add tenant</span>
           </button>
-        </div></ScrollHint>
+        </div>
       </div>
 
       {/* A tenant with no unit belongs to no property, so a property filter hides

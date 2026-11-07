@@ -719,7 +719,12 @@ export default function UnitsClient({
           />
         </div>
 
-        <ScrollHint><div className="flex items-center gap-2">
+        {/* Two rows on a phone: the status chips scroll sideways on their own,
+            and the actions sit under them. Previously all three shared one
+            scrolling strip, so Collapse all and Add unit were off-screen and
+            had to be swiped to. */}
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+          <ScrollHint className="min-w-0 xl:shrink-0"><div className="flex items-center gap-2">
           <div
             role="group"
             aria-label="Filter by status"
@@ -745,32 +750,35 @@ export default function UnitsClient({
               </button>
             ))}
           </div>
+          </div></ScrollHint>
 
-          {allFloors.length > 1 && (
+          <div className="flex items-center gap-2">
+            {allFloors.length > 1 && (
+              <button
+                type="button"
+                onClick={toggleAllFloors}
+                className="pressable flex flex-1 items-center justify-center gap-1 rounded-lg border border-outline-variant/60 bg-surface-container-high px-2.5 py-2 text-xs font-semibold text-on-surface transition-colors hover:text-white xl:flex-none xl:shrink-0"
+              >
+                <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
+                  {allCollapsed ? "unfold_more" : "unfold_less"}
+                </span>
+                {allCollapsed ? "Expand all" : "Collapse all"}
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={toggleAllFloors}
-              className="pressable flex shrink-0 items-center gap-1 rounded-lg border border-outline-variant/60 bg-surface-container-high px-2.5 py-2 text-xs font-semibold text-on-surface transition-colors hover:text-white"
+              onClick={() => setIsAddModalOpen(true)}
+              disabled={!activePropertyId}
+              className="pressable flex flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-md transition-colors hover:bg-primary/90 disabled:opacity-50 xl:flex-none xl:shrink-0"
             >
-              <span className="material-symbols-outlined text-[16px]" aria-hidden="true">
-                {allCollapsed ? "unfold_more" : "unfold_less"}
+              <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
+                add
               </span>
-              {allCollapsed ? "Expand all" : "Collapse all"}
+              <span>Add unit</span>
             </button>
-          )}
-
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            disabled={!activePropertyId}
-            className="pressable flex shrink-0 items-center gap-2 rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-md transition-colors hover:bg-primary/90 disabled:opacity-50"
-          >
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-              add
-            </span>
-            <span>Add unit</span>
-          </button>
-        </div></ScrollHint>
+          </div>
+        </div>
       </div>
 
       <div className="space-y-5">
