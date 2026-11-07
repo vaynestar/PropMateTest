@@ -519,9 +519,31 @@ export default function AdminBookingList({
             return (
               <div
                 key={b.booking_id}
-                className="glass-card rounded-xl p-5 flex flex-col justify-between border border-outline-variant/30 hover:border-primary/50 transition-all shadow-md group"
+                className="glass-card relative overflow-hidden rounded-xl p-5 flex flex-col justify-between border border-outline-variant/30 hover:border-primary/50 transition-all shadow-md group"
               >
-                <div>
+                {/*
+                  The facility's own photo as a background wash: 30% opacity,
+                  masked so it is strongest at the top of the card and gone by
+                  the time it reaches the dense detail rows. The mask does the
+                  fading rather than a tinted overlay, so the opacity stays an
+                  honest 30% instead of being darkened twice.
+                */}
+                {b.facility?.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={b.facility.image_url}
+                    alt=""
+                    aria-hidden="true"
+                    loading="lazy"
+                    className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover opacity-30"
+                    style={{
+                      maskImage: "linear-gradient(to bottom, #000 0%, transparent 78%)",
+                      WebkitMaskImage: "linear-gradient(to bottom, #000 0%, transparent 78%)",
+                    }}
+                  />
+                )}
+
+                <div className="relative">
                   {/* Standardized Booking ID at Top + Status Badge */}
                   <div className="flex items-center justify-between gap-2 mb-2.5 pb-2 border-b border-outline-variant/20">
                     <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-surface-container-high text-on-surface-variant border border-outline-variant/40 tracking-wider">
@@ -614,7 +636,7 @@ export default function AdminBookingList({
 
                 {/* Card Action Buttons (Active Bookings Only) */}
                 {activeTab === "active" && (
-                  <div className="mt-4 pt-3 border-t border-outline-variant/20 flex gap-2">
+                  <div className="relative mt-4 pt-3 border-t border-outline-variant/20 flex gap-2">
                     {!isCancelled && !isCompleted && (
                       <button
                         type="button"
@@ -631,7 +653,7 @@ export default function AdminBookingList({
 
                 {/* Past Bookings Footer Notice */}
                 {activeTab === "past" && (
-                  <div className="mt-4 pt-3 border-t border-outline-variant/20 text-center text-on-surface-variant text-[11px]">
+                  <div className="relative mt-4 pt-3 border-t border-outline-variant/20 text-center text-on-surface-variant text-[11px]">
                     {isCompleted && <span className="text-on-surface-variant">Took place as booked</span>}
                     {isCancelled && <span className="text-rose-300/80">🚫 Booking cancelled</span>}
                   </div>

@@ -89,6 +89,10 @@ export default async function AdminBookingsPage() {
       ? {
           facility_id: b.facility.facility_id,
           facility_name: b.facility.facility_name,
+          // The photo the resident booking card already uses. The serializer
+          // picks fields one by one, so it had to be added here to reach the
+          // card as a background wash.
+          image_url: b.facility.image_url,
           property: b.facility.property
             ? {
                 property_id: b.facility.property.property_id,
