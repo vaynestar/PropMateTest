@@ -9,6 +9,31 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 import { updateTicketAction } from "@/app/admin/maintenance/actions";
 import { dayMonth } from "@/lib/short-date";
 
+/**
+ * The marker on a ticket that is past its turnaround target, at the start of
+ * the row. Colour is the ticket's PRIORITY, so the flag says two things at
+ * once: this one is late, and this is how much that matters.
+ *
+ * The rail is `border-l-2` on the first cell, transparent when the ticket is
+ * on time, so every row still lines up.
+ *
+ * Deliberately no full-row tint: 9 of the 14 tickets in this property are
+ * past target, and shading two thirds of a table makes the shading mean
+ * nothing. The rail carries it.
+ */
+const PRIORITY_FLAG: Record<string, { rail: string; icon: string }> = {
+  Urgent: { rail: "border-rose-400", icon: "text-rose-300" },
+  High: { rail: "border-amber-400", icon: "text-amber-300" },
+  Medium: { rail: "border-primary", icon: "text-primary" },
+  // Not `on-surface-variant` (#cbc3d7): that is a lavender grey, near enough
+  // to the primary violet (#d0bcff) that Low and Medium read as the same
+  // colour at 15px. Slate is unmistakably the quiet one.
+  Low: { rail: "border-slate-500", icon: "text-slate-400" },
+};
+const flagFor = (priority: string) => PRIORITY_FLAG[priority] ?? PRIORITY_FLAG.Low;
+const flagTitle = (t: { openFor?: string | null; slaHours?: number; priority: string }) =>
+  `Open ${t.openFor ?? ""} — past the ${t.slaHours}-hour target for ${t.priority} priority`;
+
 type PropertyItem = {
   property_id: string;
   property_name: string;
@@ -167,10 +192,23 @@ export default function AdminTicketTable({
                   key={t.ticket_id}
                   type="button"
                   onClick={() => setDetailTicketId(t.ticket_id)}
-                  className="pressable w-full px-4 py-3 text-left transition-colors hover:bg-surface-container-low/50"
+                  className={
+                    "pressable w-full border-l-2 px-4 py-3 text-left transition-colors hover:bg-surface-container-low/50 " +
+                    (t.slaBreached ? flagFor(t.priority).rail : "border-transparent")
+                  }
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <span className="min-w-0 text-sm font-semibold leading-snug text-white">
+                    <span className="flex min-w-0 items-start gap-1.5 text-sm font-semibold leading-snug text-white">
+                      {t.slaBreached && (
+                        <span
+                          className={`material-symbols-outlined mt-px shrink-0 text-[15px] leading-none ${flagFor(t.priority).icon}`}
+                          title={flagTitle(t)}
+                          aria-label={flagTitle(t)}
+                          role="img"
+                        >
+                          timer_off
+                        </span>
+                      )}
                       {t.title}
                     </span>
                     <span
@@ -280,8 +318,26 @@ export default function AdminTicketTable({
                       onClick={() => setDetailTicketId(t.ticket_id)}
                       className={"cursor-pointer " + TABLE.tr}
                     >
-                      <td className={TABLE.td + " font-mono text-xs text-on-surface-variant"}>
-                        #{t.ticket_id.split("-")[0].toUpperCase()}
+                      <td
+                        className={
+                          TABLE.td +
+                          " border-l-2 font-mono text-xs text-on-surface-variant " +
+                          (t.slaBreached ? flagFor(t.priority).rail : "border-transparent")
+                        }
+                      >
+                        <span className="flex items-center gap-1.5">
+                          {t.slaBreached && (
+                            <span
+                              className={`material-symbols-outlined shrink-0 text-[15px] leading-none ${flagFor(t.priority).icon}`}
+                              title={flagTitle(t)}
+                              aria-label={flagTitle(t)}
+                              role="img"
+                            >
+                              timer_off
+                            </span>
+                          )}
+                          #{t.ticket_id.split("-")[0].toUpperCase()}
+                        </span>
                       </td>
                       <td className={TABLE.td}>
                         {isCommonArea ? (

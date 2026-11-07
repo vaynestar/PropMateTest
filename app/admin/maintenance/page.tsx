@@ -83,10 +83,13 @@ export default async function MaintenancePage() {
   const ticketsForClient = tickets.map((t: any) => ({
     ...t,
     messageCount: t._count?.comments ?? 0,
-    // User, 2026-11-07: the SLA badge is not wanted - "it is best just
-    // display directly how long is the ticket being opened". Formatted on
+    // The age is what the user wanted on every row ("just display directly
+    // how long is the ticket being opened"); the breach flag survives as the
+    // leading marker on the row, coloured by priority. Both are formatted on
     // the server so the browser never recomputes Date.now() and desyncs.
     openFor: isUnresolved(t.status) ? durationSince(t.created_at) : null,
+    slaBreached: isBreached(t),
+    slaHours: slaHours(t.priority),
     cost: t.cost === null || t.cost === undefined ? null : Number(t.cost),
     unit: t.unit
       ? {
@@ -191,10 +194,13 @@ export default async function MaintenancePage() {
           icon="person_off"
           tone={unassignedCount > 0 ? "warning" : "neutral"}
         />
+        {/* The hint names the marker, so the number is findable: this tile
+            used to say nine tickets were past target and nothing in the list
+            said which nine. */}
         <StatCard
           label="Past SLA"
           value={breachedCount}
-          hint="open beyond target"
+          hint="flagged in the list"
           icon="timer_off"
           tone={breachedCount > 0 ? "critical" : "positive"}
           footer={{ label: "Closed this month", value: resolvedThisMonth, tone: "positive" }}
