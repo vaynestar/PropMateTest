@@ -320,7 +320,7 @@ export default function AdminAnnouncementList({
             className="btn-primary px-4 py-2.5 rounded-xl text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shrink-0 pressable"
           >
             <span className="material-symbols-outlined text-[18px]">add_circle</span>
-            <span>New Announcement</span>
+            <span>New announcement</span>
           </button>
         </div>
 

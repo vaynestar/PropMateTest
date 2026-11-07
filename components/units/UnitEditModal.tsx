@@ -240,7 +240,7 @@ export default function UnitEditModal({
             ) : (
               <>
                 <span className="material-symbols-outlined text-[16px]">save</span>
-                <span>Save Changes</span>
+                <span>Save changes</span>
               </>
             )}
           </button>

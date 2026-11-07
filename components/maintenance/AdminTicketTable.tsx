@@ -401,7 +401,7 @@ export default function AdminTicketTable({
             <div className="p-4 border-b border-outline-variant/40 flex justify-between items-center bg-surface-container-low">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-primary text-[20px]">edit_document</span>
-                <h3 className="font-title-lg text-title-lg text-on-surface">Manage Ticket</h3>
+                <h3 className="font-title-lg text-title-lg text-on-surface">Manage ticket</h3>
                 <span className="font-mono text-xs px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant font-semibold">
                   #{editingTicket.ticket_id.split("-")[0].toUpperCase()}
                 </span>

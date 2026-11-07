@@ -265,9 +265,9 @@ export default function EditInvoiceItemsModal({
               <table className="w-full text-left text-xs whitespace-nowrap">
                 <thead className="bg-surface-container/60 border-b border-outline-variant/40 text-on-surface-variant font-semibold">
                   <tr>
-                    <th className="px-4 py-2.5">Item Description</th>
+                    <th className="px-4 py-2.5">Item description</th>
                     <th className="px-4 py-2.5 text-center">Qty</th>
-                    <th className="px-4 py-2.5 text-right">Unit Price</th>
+                    <th className="px-4 py-2.5 text-right">Unit price</th>
                     <th className="px-4 py-2.5 text-right">Subtotal</th>
                     <th className="px-4 py-2.5 text-center">Action</th>
                   </tr>

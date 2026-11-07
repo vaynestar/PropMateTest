@@ -69,10 +69,6 @@ export default async function ResidentInvoicesPage() {
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-on-surface flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-[26px]">receipt_long</span>
-          My Invoices
-        </h1>
         <p className="text-sm text-on-surface-variant">Everything billed to your unit, newest first.</p>
       </section>
 

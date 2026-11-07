@@ -162,7 +162,7 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
       {/* Top Defaulters Table */}
       <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
         <div className="pb-3 border-b border-outline-variant/30">
-          <h3 className="text-sm font-bold text-white">Top Outstanding Accounts</h3>
+          <h3 className="text-sm font-bold text-white">Top outstanding accounts</h3>
           <p className="text-[11px] text-on-surface-variant">Units with the highest accumulated overdue balances</p>
         </div>
 
@@ -173,9 +173,9 @@ export default function FinancialsReportView({ data }: FinancialsReportViewProps
                 <th className="px-4 py-2.5">Unit</th>
                 <th className="px-4 py-2.5">Resident</th>
                 <th className="px-4 py-2.5">Property</th>
-                <th className="px-4 py-2.5">Unpaid Invoices</th>
-                <th className="px-4 py-2.5">Longest Overdue</th>
-                <th className="px-4 py-2.5 text-right">Amount Owed</th>
+                <th className="px-4 py-2.5">Unpaid invoices</th>
+                <th className="px-4 py-2.5">Longest overdue</th>
+                <th className="px-4 py-2.5 text-right">Amount owed</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/30">

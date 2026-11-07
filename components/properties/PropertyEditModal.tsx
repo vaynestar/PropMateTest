@@ -239,7 +239,7 @@ export default function PropertyEditModal({ property, isOpen, onClose }: Propert
             ) : (
               <>
                 <span className="material-symbols-outlined text-[16px]">save</span>
-                <span>Save Changes</span>
+                <span>Save changes</span>
               </>
             )}
           </button>

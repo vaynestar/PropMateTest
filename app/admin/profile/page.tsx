@@ -24,7 +24,7 @@ export default async function AdminProfilePage() {
             <div className="w-8 h-8 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-primary">
               <span className="material-symbols-outlined text-[20px]">account_circle</span>
             </div>
-            <h1 className="text-xl font-bold text-white tracking-tight">Administrator Profile</h1>
+            <h1 className="text-xl font-bold text-white tracking-tight">Administrator profile</h1>
           </div>
           <p className="text-xs text-on-surface-variant mt-1">
             Manage your account credentials, security access, and system identity

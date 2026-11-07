@@ -78,15 +78,15 @@ export default async function LeaseChargesPage({ params }: { params: Promise<{ i
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 glass-card rounded-xl p-0 overflow-hidden">
           <div className="px-6 py-4 border-b border-outline-variant/30 bg-surface-container-low">
-            <h2 className="font-title-md text-title-md text-on-surface">Recurring Charges</h2>
+            <h2 className="font-title-md text-title-md text-on-surface">Recurring charges</h2>
           </div>
           <ScrollHint>
             <table className="w-full text-left text-sm whitespace-nowrap">
               <thead className="bg-surface-container/50 border-b border-outline-variant text-on-surface-variant">
                 <tr>
-                  <th className="px-6 py-3 font-medium">Charge Name</th>
+                  <th className="px-6 py-3 font-medium">Charge name</th>
                   <th className="px-6 py-3 font-medium text-center">Quantity</th>
-                  <th className="px-6 py-3 font-medium text-right">Unit Price</th>
+                  <th className="px-6 py-3 font-medium text-right">Unit price</th>
                   <th className="px-6 py-3 font-medium text-right">Total</th>
                   <th className="px-6 py-3 font-medium text-right">Action</th>
                 </tr>

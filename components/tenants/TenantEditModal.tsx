@@ -44,7 +44,7 @@ export default function TenantEditModal({ tenant, isOpen, onClose }: TenantEditM
               <span className="material-symbols-outlined text-[20px]">manage_accounts</span>
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Edit Resident Details</h2>
+              <h2 className="text-base font-bold text-white">Edit resident</h2>
               <p className="text-xs text-on-surface-variant">Their contact details, and a new password if they are locked out.</p>
             </div>
           </div>
@@ -150,7 +150,7 @@ export default function TenantEditModal({ tenant, isOpen, onClose }: TenantEditM
             ) : (
               <>
                 <span className="material-symbols-outlined text-[16px]">save</span>
-                <span>Save Changes</span>
+                <span>Save changes</span>
               </>
             )}
           </button>

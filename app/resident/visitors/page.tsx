@@ -78,10 +78,6 @@ export default async function ResidentVisitorsPage() {
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-on-surface flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-[26px]">badge</span>
-          Visitors
-        </h1>
         <p className="text-sm text-on-surface-variant">
           Create a pass before your guest arrives. The guard scans its QR code at the gate.
         </p>

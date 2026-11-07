@@ -60,7 +60,7 @@ export default function TenantEditForm({ tenant }: { tenant: Tenant }) {
           />
           <div className="glass-card relative w-full max-w-lg rounded-xl overflow-hidden animate-slide-in max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-outline-variant/30">
-              <h2 className="font-title-lg text-title-lg text-on-surface">Edit Tenant</h2>
+              <h2 className="font-title-lg text-title-lg text-on-surface">Edit tenant</h2>
               <button 
                 onClick={() => setIsOpen(false)}
                 disabled={pending}
@@ -148,7 +148,7 @@ export default function TenantEditForm({ tenant }: { tenant: Tenant }) {
 
               <div className="mt-8 pt-6 border-t border-outline-variant/30 flex flex-col items-start gap-4">
                 <div>
-                  <h3 className="text-sm font-bold text-on-surface">Reset Password</h3>
+                  <h3 className="text-sm font-bold text-on-surface">Reset password</h3>
                   <p className="text-xs text-on-surface-variant mt-1">
                     If the tenant forgot their password, you can reset it to a temporary default password.
                   </p>

@@ -461,7 +461,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
                 className="px-3 py-1.5 rounded-lg bg-surface-container-high border border-outline-variant hover:border-primary text-xs text-white font-medium flex items-center gap-1 transition-colors"
               >
                 <span className="material-symbols-outlined text-[15px]">refresh</span>
-                <span>Retry Camera</span>
+                <span>Retry camera</span>
               </button>
             </div>
           )}
@@ -634,7 +634,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
               <span className="material-symbols-outlined text-[18px] text-primary">
                 qr_code_scanner
               </span>
-              <span>Scan Next Visitor</span>
+              <span>Scan next visitor</span>
             </button>
             <button
               type="button"
@@ -664,7 +664,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
               }`}
             >
               <span className="material-symbols-outlined text-[17px]">photo_camera</span>
-              <span>Live Camera</span>
+              <span>Live camera</span>
             </button>
             <button
               type="button"
@@ -680,7 +680,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
               }`}
             >
               <span className="material-symbols-outlined text-[17px]">cloud_upload</span>
-              <span>Upload Image</span>
+              <span>Upload image</span>
             </button>
           </div>
 
@@ -733,7 +733,7 @@ export default function QRScanner({ onClose }: QRScannerProps) {
                     </div>
                     <span className="text-xs text-primary font-medium flex items-center gap-1">
                       <span className="material-symbols-outlined text-[16px]">image</span>
-                      <span>Change Image</span>
+                      <span>Change image</span>
                     </span>
                   </div>
                 ) : (

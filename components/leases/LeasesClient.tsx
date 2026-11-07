@@ -134,7 +134,7 @@ export default function LeasesClient({
             className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center gap-2 transition-all shadow-md pressable shrink-0"
           >
             <span className="material-symbols-outlined text-[18px]">add</span>
-            <span>Create Lease</span>
+            <span>Create lease</span>
           </button>
         </div>
       </div>

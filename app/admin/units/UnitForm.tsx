@@ -60,7 +60,7 @@ export default function UnitForm({
               onChange={() => setMode("single")}
               className="w-4 h-4 text-primary bg-surface-container-high border-outline-variant focus:ring-primary focus:ring-2"
             />
-            <span className="text-sm text-on-surface group-hover:text-primary transition-colors">Single Unit</span>
+            <span className="text-sm text-on-surface group-hover:text-primary transition-colors">Single unit</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer group">
             <input 
@@ -71,7 +71,7 @@ export default function UnitForm({
               onChange={() => setMode("batch")}
               className="w-4 h-4 text-primary bg-surface-container-high border-outline-variant focus:ring-primary focus:ring-2"
             />
-            <span className="text-sm text-on-surface group-hover:text-primary transition-colors">Batch Generation</span>
+            <span className="text-sm text-on-surface group-hover:text-primary transition-colors">Batch generation</span>
           </label>
         </div>
 
@@ -95,7 +95,7 @@ export default function UnitForm({
           </div>
 
           <div className="space-y-1 lg:col-span-1">
-            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Floor Number</label>
+            <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Floor number</label>
             <input
               name="floor_number"
               type="number"
@@ -120,7 +120,7 @@ export default function UnitForm({
         {mode === "single" ? (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low/50">
             <div className="space-y-1 lg:col-span-1">
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Unit Number</label>
+              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Unit number</label>
               <input
                 name="unit_number"
                 placeholder="e.g. A-12-03"
@@ -132,7 +132,7 @@ export default function UnitForm({
         ) : (
           <div className="grid gap-4 grid-cols-1 sm:grid-cols-3 p-4 rounded-xl border border-outline-variant/30 bg-surface-container-low/50">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Unit Prefix</label>
+              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Unit prefix</label>
               <input
                 name="unit_prefix"
                 placeholder="e.g. A-12-"
@@ -141,7 +141,7 @@ export default function UnitForm({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Start Number</label>
+              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">Start number</label>
               <input
                 name="start_number"
                 type="text"
@@ -151,7 +151,7 @@ export default function UnitForm({
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">End Number</label>
+              <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider">End number</label>
               <input
                 name="end_number"
                 type="text"

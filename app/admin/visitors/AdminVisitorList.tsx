@@ -498,7 +498,7 @@ export default function AdminVisitorList({
                       className="flex-1 bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 hover:bg-cyan-500/25 py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 pressable"
                     >
                       <span className="material-symbols-outlined text-[16px]">logout</span>
-                      <span>Mark Checked Out</span>
+                      <span>Mark checked out</span>
                     </button>
                   ) : (
                     <div className="flex-1 py-2 text-center text-on-surface-variant text-xs font-medium opacity-60">

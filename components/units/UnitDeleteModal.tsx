@@ -75,7 +75,7 @@ export default function UnitDeleteModal({ unit, isOpen, onClose }: UnitDeleteMod
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-start gap-2.5">
               <span className="material-symbols-outlined text-amber-400 text-[18px] shrink-0 mt-0.5">warning</span>
               <div>
-                <strong className="font-semibold block">Active Lease Detected</strong>
+                <strong className="font-semibold block">Active lease detected</strong>
                 <span>This unit currently has an active tenant agreement. Deleting the unit will fail until the lease is terminated.</span>
               </div>
             </div>
@@ -114,7 +114,7 @@ export default function UnitDeleteModal({ unit, isOpen, onClose }: UnitDeleteMod
             ) : (
               <>
                 <span className="material-symbols-outlined text-[16px]">delete</span>
-                <span>Confirm Delete</span>
+                <span>Confirm delete</span>
               </>
             )}
           </button>

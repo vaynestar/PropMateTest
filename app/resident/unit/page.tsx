@@ -67,19 +67,18 @@ export default async function ResidentUnitPage() {
   const monthlyTotal = recurring.reduce((sum, c) => sum + Number(c.amount) * Number(c.quantity), 0);
 
   const facts = [
-    { icon: "category", label: "Unit type", value: unit.unit_type },
-    { icon: "stairs", label: "Floor", value: `Level ${unit.floor_number}` },
-    { icon: "square_foot", label: "Built-up", value: `${Number(unit.area_sqft).toLocaleString("en-MY")} sq ft` },
+    { label: "Unit type", value: unit.unit_type },
+    { label: "Floor", value: `Level ${unit.floor_number}` },
+    { label: "Built-up", value: `${Number(unit.area_sqft).toLocaleString("en-MY")} sq ft` },
     // The monthly figure has its own card below, with the breakdown; a tile
     // repeating the total only truncated it.
-    ...(recurring.length ? [] : [{ icon: "payments", label: "Monthly charges", value: "Not set up yet" }]),
+    ...(recurring.length ? [] : [{ label: "Monthly charges", value: "Not set up yet" }]),
   ];
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl mx-auto w-full">
       <section className="relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/25 via-surface-container to-surface-container p-5">
         <span aria-hidden className="material-symbols-outlined absolute -right-4 -bottom-6 text-[140px] text-primary/10">apartment</span>
-        <p className="text-[11px] uppercase tracking-widest font-semibold text-on-surface-variant">My home</p>
         <h1 className="text-4xl font-bold text-on-surface tracking-tight mt-1">{unit.unit_number}</h1>
         <p className="text-base font-semibold text-on-surface/90 mt-1">{p.property_name}</p>
         <p className="text-xs text-on-surface-variant mt-2 flex items-start gap-1 max-w-[85%]">
@@ -132,18 +131,21 @@ export default async function ResidentUnitPage() {
         </section>
       )}
 
-      <section className="grid grid-cols-2 gap-3">
-        {facts.map((f) => (
-          <div key={f.label} className="glass-card rounded-2xl p-4 border border-outline-variant/40 flex items-center gap-3">
-            <span className="w-10 h-10 rounded-xl bg-primary/15 text-primary flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined">{f.icon}</span>
-            </span>
-            <div className="min-w-0">
-              <p className="text-[11px] text-on-surface-variant">{f.label}</p>
-              <p className="text-sm font-bold text-on-surface break-words leading-tight">{f.value}</p>
+      {/* Three facts about a flat do not need three cards, each with a
+          48px tinted icon square — and at two columns the third sat alone
+          beside a hole. One card, hairline-separated, reading like a spec
+          sheet. */}
+      <section className="glass-card rounded-xl">
+        <dl className="divide-y divide-outline-variant/40">
+          {facts.map((f) => (
+            <div key={f.label} className="flex items-baseline justify-between gap-4 px-4 py-3">
+              <dt className="text-xs text-on-surface-variant">{f.label}</dt>
+              <dd className="min-w-0 break-words text-right text-sm font-semibold text-on-surface">
+                {f.value}
+              </dd>
             </div>
-          </div>
-        ))}
+          ))}
+        </dl>
       </section>
 
       <section className="flex flex-col gap-2">

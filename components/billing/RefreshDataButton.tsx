@@ -32,7 +32,7 @@ export default function RefreshDataButton() {
       >
         refresh
       </span>
-      <span>{isPending ? "Refreshing..." : refreshed ? "Refreshed!" : "Refresh Data"}</span>
+      <span>{isPending ? "Refreshing…" : refreshed ? "Refreshed" : "Refresh"}</span>
     </button>
   );
 }

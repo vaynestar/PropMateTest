@@ -7,7 +7,7 @@ import RaiseTicketButton from "@/components/maintenance/RaiseTicketButton";
 import CategoryMasterManager from "@/components/maintenance/CategoryMasterManager";
 import BarList from "@/components/dashboard/BarList";
 import { PageHeader, SectionCard, StatCard, StatGrid } from "@/components/admin/ui";
-import { colourFor } from "@/lib/chart-colours";
+import { ageColourFor, colourFor } from "@/lib/chart-colours";
 import prisma from "@/lib/prisma";
 import { getActivePropertyId } from "@/lib/property-context.server";
 import { getOperationalSettings } from "@/lib/settings";
@@ -203,13 +203,7 @@ export default async function MaintenancePage() {
           <BarList rows={byStatus} colourOf={colourFor} emptyText="No tickets yet." />
         </SectionCard>
         <SectionCard title="How long they have waited" subtitle="Open tickets by age" icon="hourglass_top">
-          <BarList
-            rows={ageing}
-            colourOf={(l) =>
-              l === "Over a week" ? "#fb7185" : l === "4-7 days" ? "#fbbf24" : l === "1-3 days" ? "#8b5cf6" : "#34d399"
-            }
-            emptyText="Nothing open."
-          />
+          <BarList rows={ageing} colourOf={ageColourFor} emptyText="Nothing open." />
         </SectionCard>
       </div>
 

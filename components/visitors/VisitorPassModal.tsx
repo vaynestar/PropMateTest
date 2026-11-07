@@ -101,7 +101,7 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
         <div className="flex flex-col items-center gap-1 mb-3">
           <div className="px-3 py-0.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-[10px] font-semibold tracking-wider uppercase flex items-center gap-1.5">
             <span className="material-symbols-outlined text-[13px]">badge</span>
-            <span>Digital Access Pass</span>
+            <span>Digital access pass</span>
           </div>
           <h3 className="text-lg font-bold text-white tracking-tight mt-1">
             {visitor.visitor_name}
@@ -189,7 +189,7 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
               className="btn-primary py-2.5 rounded-xl text-white font-semibold text-xs flex items-center justify-center gap-1.5 shadow-lg transition-all pressable"
             >
               <span className="material-symbols-outlined text-[16px]">print</span>
-              <span>Print Pass Slip</span>
+              <span>Print pass slip</span>
             </button>
 
             <button

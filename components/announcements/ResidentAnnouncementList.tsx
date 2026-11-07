@@ -118,7 +118,7 @@ export default function ResidentAnnouncementList({
               onClick={() => setReadingItem(urgentAnnouncement)}
               className="px-4 py-2 rounded-xl bg-rose-500 hover:bg-rose-600 text-white text-xs font-bold shrink-0 shadow-md transition-colors flex items-center gap-1.5 self-end sm:self-center pressable"
             >
-              <span>View Notice</span>
+              <span>View notice</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
           </div>
@@ -277,7 +277,7 @@ export default function ResidentAnnouncementList({
                       onClick={() => setReadingItem(item)}
                       className="px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-bold text-xs flex items-center gap-1 transition-colors pressable"
                     >
-                      <span>Read More</span>
+                      <span>Read more</span>
                       <span className="material-symbols-outlined text-[14px]">chevron_right</span>
                     </button>
                   </div>

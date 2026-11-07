@@ -213,7 +213,7 @@ export default function AdminLeaseFormModal({
             ) : (
               <>
                 <span className="material-symbols-outlined text-[16px]">verified</span>
-                <span>Create Lease</span>
+                <span>Create lease</span>
               </>
             )}
           </button>

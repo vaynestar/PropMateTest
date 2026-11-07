@@ -164,7 +164,7 @@ export default function AdminRaiseTicketForm({
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">meeting_room</span>
-            <span>Specific Unit</span>
+            <span>Specific unit</span>
           </button>
           <button
             type="button"

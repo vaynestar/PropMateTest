@@ -45,7 +45,7 @@ export default function TenantDeleteModal({ tenant, isOpen, onClose }: TenantDel
               <span className="material-symbols-outlined text-[20px]">person_remove</span>
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white">Delete Tenant Account</h2>
+              <h2 className="text-sm font-bold text-white">Delete tenant account</h2>
               <p className="text-[11px] text-rose-300/80">Permanent removal of resident profile</p>
             </div>
           </div>
@@ -75,7 +75,7 @@ export default function TenantDeleteModal({ tenant, isOpen, onClose }: TenantDel
             <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex items-start gap-2.5">
               <span className="material-symbols-outlined text-amber-400 text-[18px] shrink-0 mt-0.5">warning</span>
               <div>
-                <strong className="font-semibold block">Attached Leases Detected</strong>
+                <strong className="font-semibold block">Attached leases detected</strong>
                 <span>This resident has {leaseCount} active or past lease agreements attached. Deleting the account is restricted by database foreign keys.</span>
               </div>
             </div>
@@ -114,7 +114,7 @@ export default function TenantDeleteModal({ tenant, isOpen, onClose }: TenantDel
             ) : (
               <>
                 <span className="material-symbols-outlined text-[16px]">delete</span>
-                <span>Confirm Delete</span>
+                <span>Confirm delete</span>
               </>
             )}
           </button>

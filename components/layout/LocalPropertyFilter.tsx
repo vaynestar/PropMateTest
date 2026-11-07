@@ -50,7 +50,7 @@ export default function LocalPropertyFilter({
           disabled={isPending}
           className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-1.5 text-on-surface text-sm outline-none focus:border-primary disabled:opacity-50"
         >
-          <option value="">All Properties</option>
+          <option value="">All properties</option>
           {properties.map((p) => (
             <option key={p.property_id} value={p.property_id}>
               {p.property_name} ({p.property_type})

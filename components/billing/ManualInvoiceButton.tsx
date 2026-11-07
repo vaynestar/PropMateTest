@@ -52,7 +52,7 @@ export default function ManualInvoiceButton() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-surface-container rounded-2xl w-full max-w-md overflow-hidden shadow-2xl flex flex-col animate-slide-up max-h-[90dvh] overflow-y-auto">
             <div className="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
-              <h2 className="text-xl font-bold text-on-surface">Manual Invoice</h2>
+              <h2 className="text-xl font-bold text-on-surface">Manual invoice</h2>
               <button onClick={() => setModalOpen(false)} className="text-on-surface-variant hover:text-on-surface p-1">
                 <span className="material-symbols-outlined">close</span>
               </button>
@@ -60,7 +60,7 @@ export default function ManualInvoiceButton() {
             
             <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
               <div className="flex flex-col gap-1">
-                <label className="font-label-md text-on-surface-variant">Select Tenant</label>
+                <label className="font-label-md text-on-surface-variant">Select tenant</label>
                 <select name="lease_id" required className="px-4 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-on-surface focus:border-primary outline-none">
                   <option value="">-- Choose Tenant --</option>
                   {leases.map(l => (
@@ -71,7 +71,7 @@ export default function ManualInvoiceButton() {
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="font-label-md text-on-surface-variant">Billing Month</label>
+                <label className="font-label-md text-on-surface-variant">Billing month</label>
                 <input 
                   type="month" 
                   name="month" 

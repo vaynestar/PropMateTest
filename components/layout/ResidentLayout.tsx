@@ -103,9 +103,14 @@ export default function ResidentLayout({
           </Link>
           {/* Said "Welcome Home" on every page, and the home page repeated it
               directly below (R19). It names where you are instead. */}
-          <p className="font-headline-md text-headline-md font-bold text-on-surface flex-1 text-center md:flex-none md:text-left truncate px-2">
+          {/* The page's H1, not a paragraph. Every resident page used to
+              repeat this title as its own H1 with a purple icon directly
+              below it, so each screen opened with the same word twice. The
+              bar is where it is actually read, so the heading lives here and
+              the pages keep only their one-line description. */}
+          <h1 className="font-headline-md text-headline-md font-bold text-on-surface flex-1 text-center md:flex-none md:text-left truncate px-2">
             {pageTitle}
-          </p>
+          </h1>
           <div className="flex items-center gap-3">
             {/* Was a bell-shaped button with no handler: it looked tappable and
                 did nothing. */}

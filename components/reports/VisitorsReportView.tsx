@@ -175,10 +175,10 @@ export default function VisitorsReportView({ data }: VisitorsReportViewProps) {
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-lowest text-on-surface-variant text-[10px] tracking-wider border-b border-outline-variant/60">
               <tr>
-                <th className="px-4 py-2.5">Visitor Name</th>
+                <th className="px-4 py-2.5">Visitor name</th>
                 <th className="px-4 py-2.5">Type</th>
                 <th className="px-4 py-2.5">IC / ID</th>
-                <th className="px-4 py-2.5">Vehicle Plate</th>
+                <th className="px-4 py-2.5">Vehicle plate</th>
                 <th className="px-4 py-2.5">Destination</th>
                 <th className="px-4 py-2.5 text-right">Check-In Time</th>
               </tr>

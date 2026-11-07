@@ -163,7 +163,7 @@ export default function AdminLeaseEditModal({
             ) : (
               <>
                 <span className="material-symbols-outlined text-[16px]">save</span>
-                <span>Save Lease Terms</span>
+                <span>Save lease terms</span>
               </>
             )}
           </button>

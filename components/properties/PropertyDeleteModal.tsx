@@ -45,7 +45,7 @@ export default function PropertyDeleteModal({ property, isOpen, onClose }: Prope
               <span className="material-symbols-outlined text-[20px]">delete_forever</span>
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white">Delete Property</h2>
+              <h2 className="text-sm font-bold text-white">Delete property</h2>
               <p className="text-[11px] text-rose-300/80">Permanent removal of strata record</p>
             </div>
           </div>
@@ -114,7 +114,7 @@ export default function PropertyDeleteModal({ property, isOpen, onClose }: Prope
             ) : (
               <>
                 <span className="material-symbols-outlined text-[16px]">delete</span>
-                <span>Confirm Delete</span>
+                <span>Confirm delete</span>
               </>
             )}
           </button>

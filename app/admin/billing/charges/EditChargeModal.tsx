@@ -156,7 +156,7 @@ export default function EditChargeModal({
           {/* Active / Inactive Status Toggle Switch */}
           <div className="flex items-center justify-between p-3 rounded-lg bg-surface-container-high border border-outline-variant/60">
             <div>
-              <div className="text-xs font-bold text-on-surface">Charge Status</div>
+              <div className="text-xs font-bold text-on-surface">Charge status</div>
               <div className="text-[11px] text-on-surface-variant">
                 {isActive ? "Active (Available for tenant billing)" : "Inactive (Hidden from new billing setups)"}
               </div>

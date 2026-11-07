@@ -101,9 +101,6 @@ export default async function ResidentFacilitiesPage() {
   return (
     <div className="space-y-6">
       <section className="flex flex-col gap-1 w-full min-w-0">
-        <h1 className="font-headline-md text-headline-md md:text-headline-lg font-bold text-on-surface">
-          Book a facility
-        </h1>
         <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
           Shared facilities in your building. Pick a date and time, and the slot is yours.
         </p>

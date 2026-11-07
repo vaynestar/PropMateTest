@@ -104,7 +104,7 @@ export default function GenerateInvoicesButton() {
         >
           autorenew
         </span>
-        {loading && !modalOpen ? "Loading..." : "Generate Monthly Invoices"}
+        {loading && !modalOpen ? "Loading..." : "Generate invoices"}
       </button>
 
       {modalOpen && (
@@ -112,7 +112,8 @@ export default function GenerateInvoicesButton() {
           <div className="bg-surface-container rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col animate-slide-up max-h-[85vh]">
             <div className="p-6 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-low">
               <div>
-                <h2 className="text-xl font-bold text-on-surface">Generate Monthly Bills</h2>
+                {/* The button says invoices; the dialog it opens said bills. */}
+                <h2 className="text-xl font-bold text-on-surface">Generate invoices</h2>
                 {propertyName && (
                   <p className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-primary">
                     <span className="material-symbols-outlined text-[18px]">domain</span>

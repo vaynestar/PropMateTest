@@ -135,10 +135,6 @@ export default async function ResidentMaintenancePage() {
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-on-surface flex items-center gap-2">
-          <span className="material-symbols-outlined text-primary text-[26px]">build_circle</span>
-          Helpdesk
-        </h1>
         <p className="text-sm text-on-surface-variant">
           Report a problem in your unit or a common area, and follow it until it&apos;s fixed.
         </p>

@@ -219,7 +219,7 @@ export default function PropertyFormModal({ isOpen, onClose }: PropertyFormModal
             ) : (
               <>
                 <span className="material-symbols-outlined text-[16px]">add_business</span>
-                <span>Add Property</span>
+                <span>Add property</span>
               </>
             )}
           </button>

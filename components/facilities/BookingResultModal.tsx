@@ -90,7 +90,7 @@ export default function BookingResultModal({
 
             {(startTime || endTime) && (
               <div className="flex justify-between items-center pt-1 border-t border-outline-variant/30">
-                <span className="text-on-surface-variant font-medium">Time Slot</span>
+                <span className="text-on-surface-variant font-medium">Time slot</span>
                 <span className="font-mono font-bold text-emerald-400">
                   {startTime} {endTime ? `– ${endTime}` : ""}
                 </span>

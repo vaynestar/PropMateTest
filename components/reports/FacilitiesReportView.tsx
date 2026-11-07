@@ -150,7 +150,7 @@ export default function FacilitiesReportView({ data }: FacilitiesReportViewProps
       {/* Amenity Breakdown Table */}
       <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60">
         <div className="pb-3 border-b border-outline-variant/30">
-          <h3 className="text-sm font-bold text-white">Amenity Performance Summary</h3>
+          <h3 className="text-sm font-bold text-white">Amenity performance</h3>
           <p className="text-[11px] text-on-surface-variant">Detailed reservation count and hours per facility</p>
         </div>
 
@@ -158,10 +158,10 @@ export default function FacilitiesReportView({ data }: FacilitiesReportViewProps
           <table className="w-full text-left text-xs">
             <thead className="bg-surface-container-lowest text-on-surface-variant text-[10px] tracking-wider border-b border-outline-variant/60">
               <tr>
-                <th className="px-4 py-2.5">Amenity Name</th>
-                <th className="px-4 py-2.5">Total Bookings</th>
-                <th className="px-4 py-2.5">Cumulative Hours</th>
-                <th className="px-4 py-2.5 text-right">Utilization Share</th>
+                <th className="px-4 py-2.5">Amenity name</th>
+                <th className="px-4 py-2.5">Total bookings</th>
+                <th className="px-4 py-2.5">Cumulative hours</th>
+                <th className="px-4 py-2.5 text-right">Utilisation share</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline-variant/30">

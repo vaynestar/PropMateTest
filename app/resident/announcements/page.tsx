@@ -26,10 +26,6 @@ export default async function ResidentAnnouncementsPage() {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[28px]">campaign</span>
-            <span>Notice Board & Circulars</span>
-          </h1>
           <p className="text-on-surface-variant text-sm mt-1">
             Community announcements, service disruptions, and management circulars
           </p>
@@ -54,10 +50,6 @@ export default async function ResidentAnnouncementsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-            <span className="material-symbols-outlined text-primary text-[28px]">campaign</span>
-            <span>Community Notice Board</span>
-          </h1>
           <p className="text-on-surface-variant text-sm mt-1">
             Official announcements, emergency advisories, and circulars for {propertyName}
           </p>

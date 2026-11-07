@@ -58,7 +58,7 @@ export default function AdminLeaseEditForm({ lease }: { lease: Lease }) {
           <div className="glass-card relative w-full max-w-lg rounded-xl overflow-hidden animate-slide-in max-h-[90dvh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-outline-variant/30">
               <div>
-                <h2 className="font-title-lg text-title-lg text-on-surface">Edit Lease Details</h2>
+                <h2 className="font-title-lg text-title-lg text-on-surface">Edit lease</h2>
                 <p className="text-xs text-on-surface-variant mt-0.5 font-mono">
                   {lease.unit.property.property_name} — Unit {lease.unit.unit_number}
                 </p>
@@ -85,7 +85,7 @@ export default function AdminLeaseEditForm({ lease }: { lease: Lease }) {
                     <p className="text-xs text-on-surface-variant/80">{lease.tenant.user_email}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-on-surface-variant">Current Status</p>
+                    <p className="text-xs text-on-surface-variant">Current status</p>
                     <span className="inline-block px-2.5 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary mt-1">
                       {lease.status || "Active"}
                     </span>
@@ -113,7 +113,7 @@ export default function AdminLeaseEditForm({ lease }: { lease: Lease }) {
                     <label htmlFor={`move_out_date-${lease.lease_id}`} className="font-label-md text-label-md text-on-surface-variant">
                       Move-out Date (Optional)
                     </label>
-                    <span className="text-[11px] text-primary-fixed">Auto Status Trigger</span>
+                    <span className="text-[11px] text-primary-fixed">Auto status trigger</span>
                   </div>
                   <input
                     id={`move_out_date-${lease.lease_id}`}

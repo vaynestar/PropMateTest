@@ -47,7 +47,7 @@ export default function AddLeaseChargeForm({
   if (activeCharges.length === 0) {
     return (
       <div className="glass-card rounded-xl p-6 self-start">
-        <h2 className="font-title-md text-title-md text-on-surface mb-2">Add Charge</h2>
+        <h2 className="font-title-md text-title-md text-on-surface mb-2">Add charge</h2>
         <p className="text-xs text-on-surface-variant">
           No active Master Charges found. Please create charges in <strong className="text-primary">Billing &gt; Charge Master</strong> first.
         </p>
@@ -57,7 +57,7 @@ export default function AddLeaseChargeForm({
 
   return (
     <div className="glass-card rounded-xl p-6 self-start relative overflow-hidden">
-      <h2 className="font-title-md text-title-md text-on-surface mb-4">Add Charge</h2>
+      <h2 className="font-title-md text-title-md text-on-surface mb-4">Add charge</h2>
 
       {isSuccess && (
         <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-center gap-2 animate-slide-in">

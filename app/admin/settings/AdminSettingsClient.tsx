@@ -265,7 +265,7 @@ export default function AdminSettingsClient({ settings, storageStatus, sampleInv
           <div className="space-y-4">
             <div className="pb-3 border-b border-outline-variant/30 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-bold text-white">Invoice Document</h3>
+                <h3 className="text-sm font-bold text-white">Invoice document</h3>
                 <p className="text-[11px] text-on-surface-variant">
                   Wording printed on every invoice - the preview residents see and the PDF they download. Changes apply to all invoices, old and new.
                 </p>

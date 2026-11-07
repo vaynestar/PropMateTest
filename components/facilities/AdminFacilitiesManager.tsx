@@ -602,7 +602,7 @@ export default function AdminFacilitiesManager({
             onChange={(e) => setBookableFilter(e.target.value)}
             className="w-full rounded-xl bg-surface-container-high border border-outline-variant px-3 py-2 text-xs text-on-surface outline-none focus:border-primary"
           >
-            <option value="ALL">All Booking Rules</option>
+            <option value="ALL">All booking rules</option>
             <option value="BOOKABLE">Residents can book</option>
             <option value="NON_BOOKABLE">Not bookable (lifts, corridors)</option>
           </select>
@@ -712,7 +712,7 @@ export default function AdminFacilitiesManager({
                 {dateFilterShortcut === "CUSTOM" && (
                   <div className="space-y-2 pt-1">
                     <div className="space-y-1">
-                      <span className="text-[10px] text-on-surface-variant">Start Date</span>
+                      <span className="text-[10px] text-on-surface-variant">Start date</span>
                       <input
                         type="date"
                         value={customStartDate}
@@ -721,7 +721,7 @@ export default function AdminFacilitiesManager({
                       />
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[10px] text-on-surface-variant">End Date</span>
+                      <span className="text-[10px] text-on-surface-variant">End date</span>
                       <input
                         type="date"
                         value={customEndDate}

@@ -117,7 +117,7 @@ export default function MaintenanceReportView({ data }: MaintenanceReportViewPro
         {/* Priority & Urgency Distribution (1 Col) */}
         <div className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60 flex flex-col justify-between">
           <div className="pb-3 border-b border-outline-variant/30">
-            <h3 className="text-sm font-bold text-white">Priority Distribution</h3>
+            <h3 className="text-sm font-bold text-white">Priority distribution</h3>
             <p className="text-[11px] text-on-surface-variant">Urgency level breakdown</p>
           </div>
 

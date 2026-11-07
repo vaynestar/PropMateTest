@@ -86,7 +86,7 @@ export default function PasswordForm() {
         ) : (
           <>
             <span className="material-symbols-outlined text-[16px]">lock_reset</span>
-            <span>Update Password</span>
+            <span>Update password</span>
           </>
         )}
       </button>

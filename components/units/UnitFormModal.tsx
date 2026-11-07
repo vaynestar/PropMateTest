@@ -91,7 +91,7 @@ export default function UnitFormModal({
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">add</span>
-              <span>Single Unit</span>
+              <span>Single unit</span>
             </button>
             <button
               type="button"
@@ -103,7 +103,7 @@ export default function UnitFormModal({
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">dynamic_feed</span>
-              <span>Batch Generate</span>
+              <span>Batch generate</span>
             </button>
           </div>
 

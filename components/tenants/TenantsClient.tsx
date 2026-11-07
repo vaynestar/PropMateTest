@@ -331,7 +331,7 @@ export default function TenantsClient({
               <span className="material-symbols-outlined text-[28px] opacity-40">person_off</span>
             </div>
             <div>
-              <h4 className="text-sm font-bold text-white">No Residents Found</h4>
+              <h4 className="text-sm font-bold text-white">No residents found</h4>
               <p className="text-xs text-on-surface-variant mt-0.5">
                 {searchQuery || selectedPropertyId !== "ALL" || leaseFilter !== "ALL"
                   ? "No resident accounts match your filter criteria."
