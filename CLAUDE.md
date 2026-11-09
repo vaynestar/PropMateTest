@@ -38,4 +38,17 @@
      differ: the disk files stay newest-first, the Knotpad notes are append-order.
    - Run `npx next build` to guarantee 0 errors.
    - Commit & push: `git add . && git commit -m "feat/fix: DEV-NN ..." && git push origin main`.
+5. **Two chats share this project — tell the other one (user, 2026-11-09).**
+   The **report chat** owns the Major Project report and notes **14, 16–22**; this chat owns the
+   code, `05_Changelog.md` and `12 Data Change Log`. **Never edit the other's notes.**
+   The channel between them is **`23 Dev → Report Handover`** (Knotpad + disk) — *append* a dated
+   entry, never rewrite an earlier one. Write there only when the work has a report consequence:
+   - a change that **invalidates screenshots** or recorded UAT evidence;
+   - a **requirement that does not match the build**, in either direction;
+   - something **built that is deliberately staying out of the report**, and why;
+   - a **data change** that alters what a participant or moderator will see;
+   - an error found **in the report's own instruments** (UAT checklist, task scripts, criteria).
+
+   Routine DEV-NN work with no report consequence does *not* belong there — that is what the
+   changelog is for.
 
