@@ -6,12 +6,15 @@ import { SystemSettings } from "@/lib/settings";
 import { saveSettingsAction } from "./actions";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
 import { ViewerButton } from "@/components/ui/MediaViewer";
+import AdminAccountsPanel, { type AdminRow } from "./AdminAccountsPanel";
 
 interface AdminSettingsClientProps {
   settings: SystemSettings;
   storageStatus: { configured: boolean; bucket: string | null };
   /** Most recent invoice, to preview the invoice wording on (DEV-191). */
   sampleInvoice: { id: string; no: string } | null;
+  admins: AdminRow[];
+  currentUserId: string;
 }
 
 const SETTINGS_TABS = [
@@ -21,9 +24,16 @@ const SETTINGS_TABS = [
   { id: "helpdesk", label: "Helpdesk & SLA", icon: "support_agent" },
   { id: "visitors", label: "Visitors & Security", icon: "badge" },
   { id: "storage", label: "Cloud & Storage", icon: "cloud" },
+  { id: "accounts", label: "Administrators", icon: "manage_accounts" },
 ];
 
-export default function AdminSettingsClient({ settings, storageStatus, sampleInvoice }: AdminSettingsClientProps) {
+export default function AdminSettingsClient({
+  settings,
+  storageStatus,
+  sampleInvoice,
+  admins,
+  currentUserId,
+}: AdminSettingsClientProps) {
   const [activeTab, setActiveTab] = useState("general");
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -107,7 +117,18 @@ export default function AdminSettingsClient({ settings, storageStatus, sampleInv
       </div></ScrollHint>
 
       {/* Settings Form Container */}
-      <form onSubmit={handleSubmit} className="p-6 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-lg space-y-6">
+      {activeTab === "accounts" && (
+        <div className="p-6 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-lg">
+          <AdminAccountsPanel admins={admins} currentUserId={currentUserId} />
+        </div>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        className={`p-6 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-lg space-y-6 ${
+          activeTab === "accounts" ? "hidden" : ""
+        }`}
+      >
         {/* TAB 1: GENERAL & PROPERTY */}
         {activeTab === "general" && (
           <div className="space-y-4">

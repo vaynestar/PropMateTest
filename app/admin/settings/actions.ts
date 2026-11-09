@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireUser } from "@/lib/auth";
+import { hashPassword, requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { updateSystemParameters } from "@/lib/settings";
 import { INVOICE_TEXT_KEYS, INVOICE_TEXT_LIMITS, MAX_TERMS, cleanInvoiceText } from "@/lib/invoice-document";
@@ -107,4 +107,90 @@ export async function saveSettingsAction(formData: FormData) {
   revalidatePath("/print/invoice/[id]", "page");
 
   return res;
+}
+
+/* --------------------------------------------------------------------------
+ * Administrator accounts.
+ *
+ * Until now the only way to add an administrator was a database script: the
+ * Tenants screen hardcodes `role: "Resident"`, so it can never create one.
+ *
+ * This lives behind the admin session on purpose. A public "register as
+ * admin" page would let anyone reach every property's residents, because
+ * administrators in PropMate are global and not bound to one property.
+ * -------------------------------------------------------------------------- */
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+export async function createAdminAccount(_state: any, formData: FormData) {
+  try {
+    const me = await requireUser(["Admin"]);
+
+    const name = String(formData.get("user_name") ?? "").trim();
+    const email = String(formData.get("user_email") ?? "").trim().toLowerCase();
+    const phone = String(formData.get("phone_number") ?? "").trim();
+    const password = String(formData.get("password") ?? "");
+
+    if (name.length < 2) return { error: "Enter the administrator's full name." };
+    if (!EMAIL_RE.test(email)) return { error: "Enter a valid email address — it is their login." };
+    if (password.length < 6) return { error: "Password: minimum 6 characters." };
+
+    const clash = await prisma.user.findFirst({ where: { user_email: email }, select: { user_id: true } });
+    if (clash) return { error: "That email already has an account." };
+
+    await prisma.user.create({
+      data: {
+        user_name: name,
+        user_email: email,
+        phone_number: phone || null,
+        password_hash: hashPassword(password),
+        role: "Admin",
+        is_active: true,
+        created_by: me.userId,
+      },
+    });
+
+    revalidatePath("/admin/settings");
+    return { success: `${name} can now sign in.` };
+  } catch {
+    return { error: "Couldn't create the account. Check your connection and try again." };
+  }
+}
+
+/**
+ * Deactivate rather than delete. An administrator is referenced by
+ * `created_by` / `modified_by` on properties, units, leases, invoices and
+ * tickets, so deleting one would break those references and take the audit
+ * trail with it. `is_active: false` already blocks sign-in (app/login/actions.ts)
+ * and already removes them from the ticket assignee list.
+ */
+export async function setAdminActive(userId: string, active: boolean) {
+  try {
+    const me = await requireUser(["Admin"]);
+    if (userId === me.userId) {
+      return { error: "You cannot deactivate the account you are signed in with." };
+    }
+
+    const target = await prisma.user.findFirst({
+      where: { user_id: userId, role: "Admin" },
+      select: { user_id: true },
+    });
+    if (!target) return { error: "That administrator no longer exists." };
+
+    if (!active) {
+      const others = await prisma.user.count({
+        where: { role: "Admin", is_active: true, user_id: { not: userId } },
+      });
+      if (others === 0) return { error: "This is the last active administrator — the system would lock everyone out." };
+    }
+
+    await prisma.user.update({
+      where: { user_id: userId },
+      data: { is_active: active, modified_by: me.userId },
+    });
+    revalidatePath("/admin/settings");
+    return { success: active ? "Reactivated." : "Deactivated — they can no longer sign in." };
+  } catch {
+    return { error: "Couldn't update that administrator." };
+  }
 }
