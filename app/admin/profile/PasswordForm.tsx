@@ -10,7 +10,7 @@ export default function PasswordForm() {
     <form action={formAction} className="flex flex-col gap-4">
       <div className="space-y-1.5">
         <label htmlFor="currentPassword" className="text-xs font-semibold text-white">
-          Current Password *
+          Current password *
         </label>
         <input
           id="currentPassword"
@@ -26,7 +26,7 @@ export default function PasswordForm() {
       <div className="space-y-1.5">
         <div className="flex items-baseline justify-between">
           <label htmlFor="newPassword" className="text-xs font-semibold text-white">
-            New Password *
+            New password *
           </label>
           <span className="text-[11px] text-on-surface-variant">Minimum 6 characters</span>
         </div>
@@ -45,7 +45,7 @@ export default function PasswordForm() {
       <div className="space-y-1.5">
         <div className="flex items-baseline justify-between">
           <label htmlFor="confirmPassword" className="text-xs font-semibold text-white">
-            Confirm Password *
+            Confirm password *
           </label>
           <span className="text-[11px] text-on-surface-variant">Must match the new password</span>
         </div>

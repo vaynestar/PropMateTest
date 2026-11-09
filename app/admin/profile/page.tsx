@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import PasswordForm from "./PasswordForm";
+import ContactForm from "./ContactForm";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function AdminProfilePage() {
             <h1 className="text-xl font-bold text-white tracking-tight">Administrator profile</h1>
           </div>
           <p className="text-xs text-on-surface-variant mt-1">
-            Manage your account credentials, security access, and system identity
+            Your account details, and the password you sign in with.
           </p>
         </div>
       </div>
@@ -51,21 +52,21 @@ export default async function AdminProfilePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
           <div className="p-3.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/40 space-y-1">
             <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block">
-              Official Name
+              Full name
             </span>
             <span className="text-sm font-semibold text-white">{user.user_name}</span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/40 space-y-1">
             <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block">
-              Login Email Address
+              Login email
             </span>
             <span className="text-sm font-semibold text-white">{user.user_email}</span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/40 space-y-1">
             <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block">
-              Contact Phone
+              Contact phone
             </span>
             <span className="text-sm font-semibold text-white">
               {user.phone_number || "Not configured"}
@@ -74,11 +75,28 @@ export default async function AdminProfilePage() {
 
           <div className="p-3.5 rounded-xl bg-surface-container-high/60 border border-outline-variant/40 space-y-1">
             <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider block">
-              Account Role
+              Role
             </span>
             <span className="text-sm font-semibold text-white">{user.role}</span>
           </div>
         </div>
+      </div>
+
+      {/* FR-18 names Administrator as well as Resident and promises both can
+          "view and update their profile details" — but every field above is
+          read-only, so the only editable thing on this page was the password.
+          Mirrors the resident profile: contact details here, identity locked. */}
+      <div className="p-6 rounded-2xl bg-surface-container border border-outline-variant/60 space-y-5">
+        <div className="border-b border-outline-variant/30 pb-3">
+          <h2 className="text-sm font-bold text-white flex items-center gap-2">
+            <span className="material-symbols-outlined text-primary text-[18px]">contact_phone</span>
+            Contact details
+          </h2>
+          <p className="text-xs text-on-surface-variant mt-0.5">
+            To change your name or login email, ask another administrator.
+          </p>
+        </div>
+        <ContactForm phone={user.phone_number ?? ""} />
       </div>
 
       {/* Security & Password Card */}
@@ -86,10 +104,10 @@ export default async function AdminProfilePage() {
         <div className="border-b border-outline-variant/30 pb-3">
           <h2 className="text-sm font-bold text-white flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[18px]">lock</span>
-            Account Security & Authentication
+            Password
           </h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Update your administrator password for the PropMate management portal
+            You&apos;ll need your current password to set a new one.
           </p>
         </div>
 
