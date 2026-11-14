@@ -287,11 +287,34 @@ export async function generateInvoicesForLeases(
     where: { invoice_no: { startsWith: invoiceNoPrefix } },
   });
 
+  /*
+   * Which of these leases is already billed for this month (DEV-221).
+   *
+   * There was no such check: `existingCount` only continued the invoice
+   * NUMBER sequence. Running the same month twice - two people on the same
+   * property, or one person clicking twice - silently wrote a second invoice
+   * for every lease, and the tenant owed it twice.
+   */
+  const alreadyBilled = new Set(
+    (
+      await prisma.invoice.findMany({
+        where: { lease_id: { in: leaseIds }, invoice_no: { startsWith: invoiceNoPrefix } },
+        select: { lease_id: true },
+      })
+    ).map((i) => i.lease_id)
+  );
+
   let counter = existingCount;
   let created = 0;
   const skipped: { lease_id: string; label: string }[] = [];
+  const duplicates: { lease_id: string; label: string }[] = [];
 
   for (const lease of leases) {
+    if (alreadyBilled.has(lease.lease_id)) {
+      duplicates.push({ lease_id: lease.lease_id, label: `Unit ${lease.unit.unit_number}` });
+      continue;
+    }
+
     let detailsInput = [];
     let totalAmount = 0;
 
@@ -366,14 +389,30 @@ export async function generateInvoicesForLeases(
    * nobody found out until the money did not arrive.
    */
   const names = skipped.map((s) => s.label).join(", ");
-  const message =
-    skipped.length === 0
-      ? `Generated ${created} invoice(s) for ${invoiceNoPrefix}.`
-      : created === 0
-      ? `No invoices generated. ${skipped.length} lease(s) have no charges set up and no monthly rent on the unit: ${names}. Add their recurring charges first.`
-      : `Generated ${created} of ${leases.length} invoice(s) for ${invoiceNoPrefix}. ${skipped.length} skipped - no charges set up and no monthly rent: ${names}.`;
+  const dupNames = duplicates.map((d) => d.label).join(", ");
 
-  return { generated: created, skipped: skipped.length, skippedLeases: skipped, message };
+  const parts: string[] = [];
+  if (created > 0) parts.push(`Generated ${created} invoice(s) for ${invoiceNoPrefix}.`);
+  if (duplicates.length > 0) {
+    parts.push(
+      `${duplicates.length} already billed for ${invoiceNoPrefix} and were left alone: ${dupNames}. Pick another month, or another tenant.`
+    );
+  }
+  if (skipped.length > 0) {
+    parts.push(
+      `${skipped.length} skipped - no charges set up and no monthly rent: ${names}. Add their recurring charges first.`
+    );
+  }
+  if (parts.length === 0) parts.push(`Nothing to generate for ${invoiceNoPrefix}.`);
+
+  return {
+    generated: created,
+    skipped: skipped.length,
+    skippedLeases: skipped,
+    duplicates: duplicates.length,
+    duplicateLeases: duplicates,
+    message: parts.join(" "),
+  };
 }
 
 export async function markInvoicePaid(invoiceId: string, modifiedBy?: string) {
