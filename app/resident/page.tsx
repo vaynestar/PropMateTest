@@ -1,4 +1,5 @@
 import Link from "next/link";
+import InstallApp from "@/components/pwa/InstallApp";
 import { getFacilityAccentColor } from "@/lib/facility-colors";
 import { shortDate } from "@/lib/short-date";
 import { getSessionUser } from "@/lib/auth";
@@ -182,6 +183,10 @@ export default async function ResidentDashboardPage() {
           </Link>
         ))}
       </section>
+
+      {/* Renders nothing once installed, or where the browser offers no
+          route to install at all. */}
+      <InstallApp />
 
       {bookings.length > 0 && (
         <section className="flex flex-col gap-stack-sm min-w-0 w-full max-w-full">
