@@ -6,7 +6,9 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getSessionUser();
     if (!user || user.role !== "Admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      // 403, like every other admin-only handler: the caller is signed in,
+      // they are simply not allowed (QC case S16).
+      return NextResponse.json({ error: "Forbidden: Admin access required" }, { status: 403 });
     }
 
     const leases = await getAllLeases();

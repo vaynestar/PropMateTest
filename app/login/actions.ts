@@ -18,7 +18,12 @@ export async function loginAction(
     return { error: "Please enter both email and password." };
   }
 
-  const user = await prisma.user.findUnique({ where: { user_email: email } });
+  // The hash is omitted on the client by default (lib/prisma.ts); signing in
+  // is one of the few places that needs it.
+  const user = await prisma.user.findUnique({
+    where: { user_email: email },
+    omit: { password_hash: false },
+  });
   if (!user || !user.is_active || !verifyPassword(password, user.password_hash)) {
     return { error: "Invalid email or password." };
   }

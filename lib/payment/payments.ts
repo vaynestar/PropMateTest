@@ -89,6 +89,8 @@ export const SUBMISSION_FIELDS = {
 
 // ---------------------------------------------------------------- evidence
 
+const ALREADY_SENT = "You've already sent proof for this invoice. The office is checking it.";
+
 export async function submitPaymentEvidence(input: {
   invoiceId: string;
   userId: string;
@@ -104,7 +106,7 @@ export async function submitPaymentEvidence(input: {
     where: { invoice_id: invoice.invoice_id, payment_method: MANUAL_METHOD, transaction_status: "Pending" },
     select: { transaction_id: true },
   });
-  if (waiting) throw new Error("You've already sent proof for this invoice. The office is checking it.");
+  if (waiting) throw new Error(ALREADY_SENT);
 
   const reference = input.reference.trim();
   if (reference.length < 4 || reference.length > 60) {
@@ -116,11 +118,12 @@ export async function submitPaymentEvidence(input: {
   }
 
   if (!input.file || input.file.size === 0) throw new Error("Attach your receipt or transfer screenshot.");
-  if (input.file.size > PROOF_MAX_BYTES) throw new Error(FILE_TOO_LARGE_MESSAGE);
-  const mime = sniffProofType(input.file.bytes);
+  const file = input.file;
+  if (file.size > PROOF_MAX_BYTES) throw new Error(FILE_TOO_LARGE_MESSAGE);
+  const mime = sniffProofType(file.bytes);
   if (!mime) throw new Error(typeMessage(IMAGE_OR_PDF));
 
-  const safeName = (input.file.name || "receipt").replace(/[^\w.\- ]+/g, "_").slice(0, 120);
+  const safeName = (file.name || "receipt").replace(/[^\w.\- ]+/g, "_").slice(0, 120);
 
   /*
    * Receipts go to Firebase Storage. Without Firebase configured (a local
@@ -132,7 +135,7 @@ export async function submitPaymentEvidence(input: {
     proofPath = (
       await storeFile({
         folder: await getStorageFolder("payment_receipt"),
-        bytes: input.file.bytes,
+        bytes: file.bytes,
         allowed: IMAGE_OR_PDF,
         label: `${invoice.invoice_no}-${invoice.lease.unit.unit_number}`,
       })
@@ -140,27 +143,51 @@ export async function submitPaymentEvidence(input: {
   }
 
   try {
-    return await prisma.paymentTransaction.create({
-      data: {
-        invoice_id: invoice.invoice_id,
-        transaction_type: "Payment",
-        payment_date: dbDate(input.paidOn),
-        transaction_amount: invoice.total_amount,
-        payment_method: MANUAL_METHOD,
-        reference_number: reference,
-        transaction_status: "Pending",
-        proof_path: proofPath,
-        proof_data: proofPath ? null : Buffer.from(input.file.bytes),
-        proof_mime: mime,
-        proof_filename: safeName,
-        proof_size: input.file.size,
-        created_by: input.userId,
+    /*
+     * The "already sent proof" check above is a read, and a read cannot stop a
+     * race (QC case C03). Two taps on Send a moment apart both found the
+     * invoice clear and both wrote a receipt, so the office saw the same
+     * payment twice and could approve it twice.
+     *
+     * The check and the insert now run as one serialisable transaction:
+     * PostgreSQL aborts the loser, and the resident is told what the first
+     * request already did rather than shown a database error.
+     */
+    return await prisma.$transaction(
+      async (tx) => {
+        const clash = await tx.paymentTransaction.findFirst({
+          where: { invoice_id: invoice.invoice_id, payment_method: MANUAL_METHOD, transaction_status: "Pending" },
+          select: { transaction_id: true },
+        });
+        if (clash) throw new Error(ALREADY_SENT);
+        return tx.paymentTransaction.create({
+          data: {
+            invoice_id: invoice.invoice_id,
+            transaction_type: "Payment",
+            payment_date: dbDate(input.paidOn),
+            transaction_amount: invoice.total_amount,
+            payment_method: MANUAL_METHOD,
+            reference_number: reference,
+            transaction_status: "Pending",
+            proof_path: proofPath,
+            proof_data: proofPath ? null : Buffer.from(file.bytes),
+            proof_mime: mime,
+            proof_filename: safeName,
+            proof_size: file.size,
+            created_by: input.userId,
+          },
+          select: { transaction_id: true },
+        });
       },
-      select: { transaction_id: true },
-    });
+      { isolationLevel: "Serializable" }
+    );
   } catch (error) {
     // No row to point at it - don't leave an orphan file in the bucket.
     await removeFile(proofPath).catch(() => {});
+    // P2034: the transaction lost a write conflict, i.e. the other tap won.
+    if (error && typeof error === "object" && (error as { code?: string }).code === "P2034") {
+      throw new Error(ALREADY_SENT);
+    }
     throw error;
   }
 }

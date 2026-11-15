@@ -3,14 +3,22 @@ import { RENT_CHARGE_NAME } from "@/lib/charge-type";
 
 import prisma from "@/lib/prisma";
 
-type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
+/**
+ * The tenant arrives without `password_hash`: the client omits it everywhere
+ * (lib/prisma.ts, DEV-224), so the type says so too.
+ */
+type WithoutHash<T extends { lease: { tenant: unknown } }> = Omit<T, "lease"> & {
+  lease: Omit<T["lease"], "tenant"> & { tenant: Omit<T["lease"]["tenant"], "password_hash"> };
+};
+
+type InvoiceWithRelations = WithoutHash<Prisma.InvoiceGetPayload<{
   include: {
     lease: { include: { unit: { include: { property: true } }; tenant: true } };
     details: { include: { charge: true } };
     modifier: { select: { user_name: true; user_email: true } };
     creator: { select: { user_name: true } };
   };
-}>;
+}>>;
 
 /*
  * Which month a billing run belongs to, read in UTC (DEV-224).

@@ -1,7 +1,20 @@
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
 
-type TicketWithRelations = Prisma.TicketGetPayload<{
+/**
+ * The tenant arrives without `password_hash`: the client omits it everywhere
+ * (lib/prisma.ts, DEV-224), so the type says so too.
+ */
+type WithoutHash<T extends { lease: { tenant: unknown } | null }> = Omit<T, "lease"> &
+  (T["lease"] extends null ? { lease: null } : {
+    lease:
+      | null
+      | (Omit<NonNullable<T["lease"]>, "tenant"> & {
+          tenant: Omit<NonNullable<T["lease"]>["tenant"], "password_hash">;
+        });
+  });
+
+type TicketWithRelations = WithoutHash<Prisma.TicketGetPayload<{
   include: {
     property: true;
     unit: { include: { property: true } };
@@ -9,7 +22,7 @@ type TicketWithRelations = Prisma.TicketGetPayload<{
     reporter: { select: { user_name: true; user_email: true; phone_number: true } };
     _count: { select: { comments: true } };
   };
-}>;
+}>>;
 
 const VALID_PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 const VALID_STATUSES = ["Open", "In Progress", "Pending Parts", "KIV", "Resolved", "Closed"];
