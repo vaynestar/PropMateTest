@@ -130,53 +130,53 @@ export async function createBooking(input: BookingInput, createdBy?: string) {
   }
 
   /*
-   * The overlap check and the booking are one transaction (QC case RG06).
+   * The overlap check and the booking are one transaction, and requests for the
+   * same facility on the same day take a lock before they read (QC case RG06).
    *
-   * They used to be two statements. Two requests a moment apart - the resident
-   * tapping Confirm twice, or two residents on the same slot - both found the
-   * slot free and both got a confirmed booking, so the hall was double-booked
-   * and only the function room's own diary showed it. A serialisable
-   * transaction makes PostgreSQL abort the loser, which is then told the slot
-   * has gone, exactly as if it had read the clash.
+   * They used to be two plain statements: two requests a moment apart - the
+   * resident tapping Confirm twice, or two residents after the same slot - both
+   * read the slot as free and both got a confirmed booking, so the hall was
+   * double-booked and nothing in the app said so.
+   *
+   * The first attempt at this used SERIALIZABLE, and QC case C02 caught what
+   * that costs: two people booking BACK-TO-BACK slots at the same instant
+   * conflict on the range they both read, so PostgreSQL aborted one and a
+   * perfectly legal booking was refused as a clash. An advisory lock keyed on
+   * the facility and the day serialises only the requests that could actually
+   * collide, and leaves every other booking in the building untouched.
    */
-  try {
-    return await prisma.$transaction(
-      async (tx) => {
-        const overlapping = await tx.booking.findFirst({
-          where: {
-            facility_id: input.facility_id,
-            booking_date: requestedDate,
-            booking_status: { not: "Cancelled" },
-            start_time: { lt: endDt },
-            end_time: { gt: startDt },
-          },
-        });
-        if (overlapping) throw new Error(SLOT_TAKEN);
-        return tx.booking.create({
-          data: {
-            facility_id: input.facility_id,
-            user_id: input.user_id,
-            lease_id: input.lease_id,
-            booking_date: requestedDate,
-            start_time: startDt,
-            end_time: endDt,
-            purpose: input.purpose,
-            // Was hardcoded "Reserved", a name no filter or KPI in the app knew.
-            booking_status: input.booking_status ?? "Confirmed",
-            pax_count: input.pax_count && input.pax_count > 0 ? input.pax_count : 1,
-            created_by: createdBy,
-          },
-        });
-      },
-      { isolationLevel: "Serializable" }
+  const lockKey = `booking:${input.facility_id}:${day}`;
+  return prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
+      const overlapping = await tx.booking.findFirst({
+        where: {
+          facility_id: input.facility_id,
+          booking_date: requestedDate,
+          booking_status: { not: "Cancelled" },
+          start_time: { lt: endDt },
+          end_time: { gt: startDt },
+        },
+      });
+      if (overlapping) throw new Error(SLOT_TAKEN);
+      return tx.booking.create({
+        data: {
+          facility_id: input.facility_id,
+          user_id: input.user_id,
+          lease_id: input.lease_id,
+          booking_date: requestedDate,
+          start_time: startDt,
+          end_time: endDt,
+          purpose: input.purpose,
+          // Was hardcoded "Reserved", a name no filter or KPI in the app knew.
+          booking_status: input.booking_status ?? "Confirmed",
+          pax_count: input.pax_count && input.pax_count > 0 ? input.pax_count : 1,
+          created_by: createdBy,
+        },
+      });
+    },
+      { timeout: 15000 }
     );
-  } catch (error) {
-    // P2034: this request lost the write conflict, so the other one has the slot.
-    if (error && typeof error === "object" && (error as { code?: string }).code === "P2034") {
-      throw new Error(SLOT_TAKEN);
-    }
-    throw error;
-  }
 }
 
 export async function cancelBooking(bookingId: string, modifiedBy?: string) {

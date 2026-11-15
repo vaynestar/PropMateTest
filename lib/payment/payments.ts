@@ -149,12 +149,15 @@ export async function submitPaymentEvidence(input: {
      * invoice clear and both wrote a receipt, so the office saw the same
      * payment twice and could approve it twice.
      *
-     * The check and the insert now run as one serialisable transaction:
-     * PostgreSQL aborts the loser, and the resident is told what the first
-     * request already did rather than shown a database error.
+     * Check and insert now run in one transaction, behind a lock on this
+     * invoice: the second tap waits, re-reads, and is told the office already
+     * has the first one. The lock is per invoice, so two residents paying
+     * different bills never wait for each other - which is what SERIALIZABLE
+     * would have cost us (see the adjacent-slot case in booking-management.ts).
      */
     return await prisma.$transaction(
       async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`proof:${invoice.invoice_id}`}))`;
         const clash = await tx.paymentTransaction.findFirst({
           where: { invoice_id: invoice.invoice_id, payment_method: MANUAL_METHOD, transaction_status: "Pending" },
           select: { transaction_id: true },
@@ -179,15 +182,11 @@ export async function submitPaymentEvidence(input: {
           select: { transaction_id: true },
         });
       },
-      { isolationLevel: "Serializable" }
+      { timeout: 15000 }
     );
   } catch (error) {
     // No row to point at it - don't leave an orphan file in the bucket.
     await removeFile(proofPath).catch(() => {});
-    // P2034: the transaction lost a write conflict, i.e. the other tap won.
-    if (error && typeof error === "object" && (error as { code?: string }).code === "P2034") {
-      throw new Error(ALREADY_SENT);
-    }
     throw error;
   }
 }
