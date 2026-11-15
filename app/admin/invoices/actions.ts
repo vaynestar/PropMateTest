@@ -53,7 +53,8 @@ export async function manualGenerateInvoiceAction(formData: FormData) {
   
   if (!leaseId || !monthStr) throw new Error("Missing lease or month");
   const [year, month] = monthStr.split("-").map(Number);
-  const targetDate = new Date(year, month - 1, 1);
+  // UTC, to match how the billing month is read (DEV-224).
+  const targetDate = new Date(Date.UTC(year, month - 1, 1));
 
   const result = await generateInvoicesForLeases([leaseId], user.userId, targetDate);
   revalidatePath("/admin/billing");

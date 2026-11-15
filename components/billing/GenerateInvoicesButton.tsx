@@ -47,7 +47,9 @@ export default function GenerateInvoicesButton() {
     setFetchingLeases(true);
     try {
       const [year, month] = monthStr.split('-').map(Number);
-      const d = new Date(year, month - 1, 1);
+      // UTC midnight: a month built at local midnight arrives at the server as
+      // the previous month for any browser ahead of UTC (DEV-224).
+      const d = new Date(Date.UTC(year, month - 1, 1));
       const { leases: data, propertyName: name } = await getEligibleLeasesAction(d.toISOString());
       setLeases(data);
       setPropertyName(name);
@@ -97,7 +99,7 @@ export default function GenerateInvoicesButton() {
     setLoading(true);
     try {
       const [year, month] = targetMonth.split('-').map(Number);
-      const d = new Date(year, month - 1, 1);
+      const d = new Date(Date.UTC(year, month - 1, 1));
       const outcome = await generateInvoicesAction(Array.from(selectedLeaseIds), d.toISOString());
       setResult(outcome);
       router.refresh();

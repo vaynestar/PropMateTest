@@ -12,23 +12,21 @@ type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   };
 }>;
 
+/*
+ * Which month a billing run belongs to, read in UTC (DEV-224).
+ *
+ * The caller hands over an instant. Read with getMonth() it meant "the month
+ * on the SERVER's clock", and the dialog builds its month at local midnight -
+ * so an administrator in Malaysia asking for September sent
+ * 2026-08-31T16:00:00Z and Vercel, which runs in UTC, billed August. The
+ * duplicate guard then looked at August too, found it clear, and wrote a
+ * second set of invoices for a month the office had already billed.
+ *
+ * The same reasoning as the @db.Date rule and the booking-time fix in DEV-207:
+ * one timezone for the stored calendar day, and that timezone is UTC.
+ */
 function currentMonthKey(date = new Date()) {
-  const y = date.getFullYear();
-  const m = date.getMonth();
-  return { y, m };
-}
-
-function startOfMonth(date = new Date()) {
-  const d = new Date(date);
-  d.setDate(1);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function addMonths(date: Date, months: number) {
-  const d = new Date(date);
-  d.setMonth(d.getMonth() + months);
-  return d;
+  return { y: date.getUTCFullYear(), m: date.getUTCMonth() };
 }
 
 export async function listInvoices(propertyId?: string): Promise<InvoiceWithRelations[]> {
@@ -137,8 +135,9 @@ export async function getEligibleLeasesForInvoicing(
   propertyId?: string | null
 ) {
   const d = new Date(targetDate);
-  const monthStart = new Date(d.getFullYear(), d.getMonth(), 1, 0, 0, 0, 0);
-  const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1, 0, 0, 0, 0);
+  // UTC, to agree with currentMonthKey and with invoice_date's @db.Date day.
+  const monthStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+  const monthEnd = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
 
   const leases = await prisma.tenantLease.findMany({
     where: {
@@ -249,7 +248,6 @@ export async function generateInvoicesForLeases(
   });
 
   const { y, m } = currentMonthKey(targetDate);
-  const monthStart = startOfMonth(new Date(y, m, 1));
 
   /*
    * Settings -> Billing decides both dates (DEV-206). The invoice is dated the
