@@ -1,8 +1,9 @@
 import { UNIT_STATUSES, unitStatus } from "@/lib/unit-status";
+import { VISITOR_STATUSES, normaliseVisitorStatus } from "@/lib/visitor-status";
 
 type StatusBadgeProps = {
   status: string;
-  variant?: "ticket" | "invoice" | "unit" | "lease";
+  variant?: "ticket" | "invoice" | "unit" | "lease" | "visitor";
 };
 
 const ticketStyles: Record<string, string> = {
@@ -58,6 +59,24 @@ const leaseStyles: Record<string, { cls: string; icon: string }> = {
 };
 
 export default function StatusBadge({ status, variant }: StatusBadgeProps) {
+  // Visitor passes have their own vocabulary in lib/visitor-status.ts: the
+  // stored value is "Approved" but a guard reads "Expected". Without this the
+  // badge fell through to the ticket map and printed the raw column.
+  if (variant === "visitor") {
+    const key = normaliseVisitorStatus(status);
+    const meta = key ? VISITOR_STATUSES[key] : null;
+    return (
+      <span
+        className={`px-2.5 py-1 rounded-md text-xs border font-medium whitespace-nowrap shrink-0 ${
+          meta?.chip ??
+          "bg-surface-container-highest text-on-surface-variant border-outline-variant"
+        }`}
+      >
+        {meta?.label ?? status}
+      </span>
+    );
+  }
+
   if (variant === "lease" || leaseStyles[status]) {
     const info = leaseStyles[status] || {
       cls: "bg-surface-container-highest text-on-surface-variant border-outline-variant",

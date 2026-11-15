@@ -11,7 +11,24 @@ export default function GenerateInvoicesButton() {
   const [loading, setLoading] = useState(false);
   const [fetchingLeases, setFetchingLeases] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const closeModal = useCallback(() => setModalOpen(false), []);
+  /**
+   * The outcome of the last run. It used to be handed to `alert()`, which put
+   * the one message that matters - which units were skipped as already billed,
+   * and why - into a browser dialog the product has no control over, gone the
+   * moment it is dismissed. It belongs in the dialog that started the run.
+   */
+  const [result, setResult] = useState<{
+    generated: number;
+    skipped?: number;
+    duplicates?: number;
+    duplicateLeases?: { lease_id: string; label: string }[];
+    skippedLeases?: { lease_id: string; label: string }[];
+    message: string;
+  } | null>(null);
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    setResult(null);
+  }, []);
   const [leases, setLeases] = useState<any[]>([]);
   // Which building this run bills. Resolved on the server from the same cookie
   // the top-bar switcher writes, so the dialog cannot disagree with the page.
@@ -48,6 +65,7 @@ export default function GenerateInvoicesButton() {
   };
 
   const handleOpen = async () => {
+    setResult(null);
     setModalOpen(true);
     await fetchLeases(targetMonth);
   };
@@ -80,9 +98,8 @@ export default function GenerateInvoicesButton() {
     try {
       const [year, month] = targetMonth.split('-').map(Number);
       const d = new Date(year, month - 1, 1);
-      const result = await generateInvoicesAction(Array.from(selectedLeaseIds), d.toISOString());
-      alert(result.message);
-      setModalOpen(false);
+      const outcome = await generateInvoicesAction(Array.from(selectedLeaseIds), d.toISOString());
+      setResult(outcome);
       router.refresh();
     } catch (e: any) {
       alert(`Error generating invoices: ${e.message}`);
@@ -134,13 +151,61 @@ export default function GenerateInvoicesButton() {
                   {propertyName ? " in this property" : ""}. Switch property in the top bar to bill another building.
                 </p>
               </div>
-              <button onClick={() => setModalOpen(false)} className="text-on-surface-variant hover:text-on-surface p-1">
+              <button onClick={closeModal} className="text-on-surface-variant hover:text-on-surface p-1">
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
             
             <div className="p-6 overflow-y-auto flex-1">
-              {fetchingLeases ? (
+              {result ? (
+                <div className="flex flex-col gap-4">
+                  <div
+                    className={`flex items-start gap-3 rounded-xl border p-4 ${
+                      result.generated > 0
+                        ? "border-emerald-500/40 bg-emerald-500/10"
+                        : "border-amber-500/40 bg-amber-500/10"
+                    }`}
+                  >
+                    <span
+                      className={`material-symbols-outlined text-[22px] ${
+                        result.generated > 0 ? "text-emerald-300" : "text-amber-300"
+                      }`}
+                    >
+                      {result.generated > 0 ? "task_alt" : "info"}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-white">
+                        {result.generated > 0
+                          ? `${result.generated} invoice${result.generated === 1 ? "" : "s"} generated`
+                          : "No invoices were generated"}
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-on-surface-variant">{result.message}</p>
+                    </div>
+                  </div>
+
+                  {(result.duplicates ?? 0) > 0 && (
+                    <div className="rounded-xl border border-outline-variant/60 bg-surface-container-high p-4">
+                      <p className="text-xs font-bold uppercase tracking-wide text-amber-300">
+                        Already billed for this month
+                      </p>
+                      <ul className="mt-2 flex flex-wrap gap-2">
+                        {(result.duplicateLeases ?? []).map((d) => (
+                          <li
+                            key={d.lease_id}
+                            className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-xs font-semibold text-amber-200"
+                          >
+                            {d.label}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-2 text-xs text-on-surface-variant">
+                        These tenancies were left alone so nobody is billed twice. Pick another month, or another
+                        tenant.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : fetchingLeases ? (
                 <div className="flex flex-col items-center justify-center py-10 gap-3 text-primary">
                   <span className="material-symbols-outlined animate-spin text-[36px]">progress_activity</span>
                   <span className="text-xs font-semibold text-on-surface-variant">Checking eligible leases for {targetMonth}...</span>
@@ -252,12 +317,12 @@ export default function GenerateInvoicesButton() {
 
             <div className="p-6 border-t border-outline-variant/30 bg-surface-container-low flex justify-end gap-3">
               <button
-                onClick={() => setModalOpen(false)}
+                onClick={closeModal}
                 className="btn-outline px-6 py-2"
               >
-                Cancel
+                {result ? "Close" : "Cancel"}
               </button>
-              {billableLeases.length > 0 && (
+              {!result && billableLeases.length > 0 && (
                 <button
                   onClick={handleGenerate}
                   disabled={loading || selectedLeaseIds.size === 0}

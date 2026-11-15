@@ -330,7 +330,7 @@ export default function AdminVisitorList({
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <StatusBadge status={v.status || "Pending"} />
+                    <StatusBadge status={v.status || "Pending"} variant="visitor" />
                     <button
                       type="button"
                       onClick={() => setViewingPassVisitor(v)}
@@ -470,7 +470,7 @@ export default function AdminVisitorList({
                         <span>Decline</span>
                       </button>
                     </>
-                  ) : v.status === "Approved" ? (
+                  ) : normaliseVisitorStatus(v.status) === "Approved" ? (
                     <>
                       <button
                         type="button"
@@ -582,7 +582,7 @@ export default function AdminVisitorList({
                     )}
                   </td>
                   <td className={TABLE.td}>
-                    <StatusBadge status={v.status || "Pending"} />
+                    <StatusBadge status={v.status || "Pending"} variant="visitor" />
                   </td>
                   <td className={TABLE.td + " text-right"}>
                     <div className="flex items-center justify-end gap-1.5">
@@ -622,7 +622,7 @@ export default function AdminVisitorList({
                             Decline
                           </button>
                         </>
-                      ) : v.status === "Approved" ? (
+                      ) : normaliseVisitorStatus(v.status) === "Approved" ? (
                         <button
                           onClick={() => handleUpdateStatus(v.visitor_id, "Checked In")}
                           className="px-3 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold hover:bg-emerald-500/30"

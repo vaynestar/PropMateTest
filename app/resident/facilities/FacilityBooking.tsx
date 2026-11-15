@@ -490,8 +490,9 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
       )}
       
       {clash && clash !== "out_of_bounds" && clash !== "max_exceeded" && (
-        <div className="rounded-lg bg-error-container/10 border border-error-container/40 px-4 py-3">
-          <span className="font-label-md text-label-md text-error-container">
+        <div className="flex items-start gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3">
+          <span className="material-symbols-outlined text-[18px] text-rose-300">event_busy</span>
+          <span className="font-label-md text-label-md text-rose-200">
             This time slot has been booked by others. Please try again.
           </span>
         </div>
