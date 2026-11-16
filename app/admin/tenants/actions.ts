@@ -104,9 +104,16 @@ export async function updateTenant(state: any, formData: FormData) {
     const user_name = String(formData.get("user_name")).trim();
     const user_email = String(formData.get("user_email")).trim();
     const phone_number = String(formData.get("phone_number") || "").trim();
+    // The edit form offers "Reset Password (Optional)". It used to be submitted
+    // and dropped here, so the office believed it had given a resident a new
+    // password while nothing had changed. Blank still means "leave it alone".
+    const newPassword = String(formData.get("password") || "");
 
     if (!user_id) throw new Error("User ID is required.");
     if (!phone_number) throw new Error("Phone number is compulsory.");
+    if (newPassword && newPassword.length < 6) {
+      throw new Error("A new password must be at least 6 characters.");
+    }
 
     // Check if new email is already taken by another user
     const existingUser = await prisma.user.findUnique({
@@ -122,13 +129,19 @@ export async function updateTenant(state: any, formData: FormData) {
         user_name,
         user_email,
         phone_number,
+        ...(newPassword ? { password_hash: hashPassword(newPassword) } : {}),
         modified_by: adminUser.userId
       }
     });
 
     revalidatePath("/admin/tenants");
     revalidatePath("/admin/leases");
-    return { success: true, message: "Tenant updated successfully!" };
+    return {
+      success: true,
+      message: newPassword
+        ? "Tenant updated, and their password was changed."
+        : "Tenant updated successfully!",
+    };
   } catch (error: any) {
     return { error: error.message || "Failed to update tenant" };
   }
@@ -138,8 +151,10 @@ export async function resetTenantPassword(user_id: string) {
   try {
     const adminUser = await requireUser(["Admin"]);
     
-    // Generate a secure default password. In a real app, send an email.
-    const newPassword = "Password123!";
+    // This used to reset every account to the same hardcoded "Password123!",
+    // which is a known password on every resident whose password was ever
+    // reset. Generate a unique one and return it once, as adding a tenant does.
+    const newPassword = generateTempPassword();
     const password_hash = hashPassword(newPassword);
 
     await prisma.user.update({
