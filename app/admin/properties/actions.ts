@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
-import { createProperty, updateProperty, deleteProperty } from "@/lib/property-management";
+import {
+  createProperty,
+  updateProperty,
+  deleteProperty,
+  setPropertyArchived,
+} from "@/lib/property-management";
 
 export async function addProperty(state: any, formData: FormData) {
   try {
@@ -65,5 +70,29 @@ export async function removeProperty(state: any, formData: FormData) {
     return { success: true, message: "Property deleted successfully!" };
   } catch (error: any) {
     return { error: error.message || "Failed to delete property. Check if there are active units linked." };
+  }
+}
+
+/**
+ * Archive or restore a property. FR-01 asks for archiving, and it is the only
+ * way a building with units, tenancies and invoices can leave the register:
+ * deleting it is refused by the database as soon as anything hangs off it.
+ */
+export async function archiveProperty(state: any, formData: FormData) {
+  try {
+    const user = await requireUser(["Admin"]);
+    const propertyId = String(formData.get("property_id") || "");
+    if (!propertyId) throw new Error("Property ID is required");
+    const archived = String(formData.get("archived") || "true") === "true";
+
+    await setPropertyArchived(propertyId, archived, user.userId);
+    revalidatePath("/admin/properties");
+    revalidatePath("/admin");
+    return {
+      success: true,
+      message: archived ? "Property archived." : "Property restored.",
+    };
+  } catch (error: any) {
+    return { error: error.message || "Failed to archive property" };
   }
 }

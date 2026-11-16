@@ -25,9 +25,16 @@ type PropertyInput = {
   total_units: number | string;
 };
 
+/**
+ * Every picker, switcher and report shows the buildings the office still
+ * manages. An archived one stays in the database and stays readable on the
+ * Properties page, but it is not somewhere new work can be filed.
+ */
+export const LIVE_PROPERTIES = { is_archived: false } as const;
+
 export async function listProperties() {
   return prisma.propertyMaster.findMany({
-    orderBy: { created_at: "desc" },
+    orderBy: [{ is_archived: "asc" }, { created_at: "desc" }],
     include: {
       _count: {
         select: {
@@ -85,4 +92,26 @@ export async function updateProperty(
 
 export async function deleteProperty(propertyId: string) {
   return prisma.propertyMaster.delete({ where: { property_id: propertyId } });
+}
+
+/**
+ * Archiving is the ordinary way a building leaves the register: deleting one
+ * would take its units, tenancies and invoices with it, which is why the
+ * delete fails as soon as a property has any. An archived property keeps all
+ * of that and simply stops being offered.
+ */
+export async function setPropertyArchived(
+  propertyId: string,
+  archived: boolean,
+  modifiedBy?: string
+) {
+  return prisma.propertyMaster.update({
+    where: { property_id: propertyId },
+    data: {
+      is_archived: archived,
+      // A building nobody manages cannot be the default one.
+      ...(archived ? { is_default: false } : {}),
+      modified_by: modifiedBy,
+    },
+  });
 }

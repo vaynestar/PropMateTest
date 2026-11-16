@@ -17,6 +17,7 @@ export default async function AdminVisitorsPage() {
   const [visitors, properties, leases, ops] = await Promise.all([
     getAllVisitors(propertyId),
     prisma.propertyMaster.findMany({
+      where: { is_archived: false },
       select: { property_id: true, property_name: true, is_default: true },
       orderBy: { created_at: "asc" },
     }),

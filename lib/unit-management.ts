@@ -117,6 +117,7 @@ export async function listUnits(propertyId?: string): Promise<UnitWithDetails[]>
 
 export async function listPropertiesForUnits() {
   return prisma.propertyMaster.findMany({
+    where: { is_archived: false },
     select: {
       property_id: true,
       property_name: true,

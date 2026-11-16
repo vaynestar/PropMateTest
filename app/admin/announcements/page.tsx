@@ -19,6 +19,7 @@ export default async function AdminAnnouncementsPage({
 
   // Fetch all managed properties
   const properties = await prisma.propertyMaster.findMany({
+    where: { is_archived: false },
     select: { property_id: true, property_name: true, is_default: true },
     orderBy: { property_name: "asc" },
   });

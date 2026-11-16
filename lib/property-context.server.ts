@@ -20,6 +20,7 @@ export async function getActivePropertyId(
   const [jar, properties] = await Promise.all([
     cookies(),
     prisma.propertyMaster.findMany({
+      where: { is_archived: false },
       select: { property_id: true, is_default: true },
       orderBy: { created_at: "asc" },
     }),

@@ -52,6 +52,7 @@ export async function getReportsData(propertyId: string = "ALL", dateRange: Date
   // -------------------------------------------------------------
   const [properties, allUnits] = await Promise.all([
     prisma.propertyMaster.findMany({
+      where: { is_archived: false },
       select: { property_id: true, property_name: true },
       orderBy: { property_name: "asc" },
     }),

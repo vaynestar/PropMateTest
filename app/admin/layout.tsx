@@ -20,6 +20,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
 
   const [properties, notifications] = await Promise.all([
     prisma.propertyMaster.findMany({
+      where: { is_archived: false },
       select: { property_id: true, property_name: true, is_default: true },
       orderBy: { created_at: "asc" },
     }),

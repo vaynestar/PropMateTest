@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import SetDefaultPropertyButton from "@/app/admin/properties/SetDefaultPropertyButton";
+import ArchivePropertyButton from "@/app/admin/properties/ArchivePropertyButton";
 
 export interface PropertyData {
   property_id: string;
@@ -14,6 +15,7 @@ export interface PropertyData {
   country: string;
   total_units: number;
   is_default?: boolean;
+  is_archived?: boolean;
   _count: {
     units: number;
     facilities?: number;
@@ -41,6 +43,8 @@ export default function PropertyCard({
   const occupancyRate = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
   const facilityCount = property._count?.facilities ?? 0;
 
+  const archived = property.is_archived === true;
+
   const typeIcon =
     property.property_type?.toLowerCase().includes("condo")
       ? "apartment"
@@ -53,7 +57,9 @@ export default function PropertyCard({
   return (
     <div
       className={`min-w-0 rounded-2xl p-5 bg-surface-container border transition-all duration-200 flex flex-col justify-between gap-4 group ${
-        isActiveDefault
+        archived
+          ? "border-outline-variant/40 opacity-70 hover:opacity-100"
+          : isActiveDefault
           ? "border-amber-500/40 bg-surface-container shadow-[0_0_25px_rgba(245,158,11,0.08)]"
           : "border-outline-variant/60 hover:border-outline-variant hover:bg-surface-container-high/40"
       }`}
@@ -86,10 +92,17 @@ export default function PropertyCard({
           </div>
 
           <div className="shrink-0">
-            <SetDefaultPropertyButton
-              propertyId={property.property_id}
-              isDefault={isActiveDefault}
-            />
+            {archived ? (
+              <div className="flex items-center gap-1.5 rounded-full border border-outline-variant/60 bg-surface-container-high px-2.5 py-1 text-xs font-semibold text-on-surface-variant">
+                <span className="material-symbols-outlined text-[15px]">inventory_2</span>
+                <span>Archived</span>
+              </div>
+            ) : (
+              <SetDefaultPropertyButton
+                propertyId={property.property_id}
+                isDefault={isActiveDefault}
+              />
+            )}
           </div>
         </div>
 
@@ -155,15 +168,25 @@ export default function PropertyCard({
           Edit
         </button>
 
-        {/* Delete Button */}
-        <button
-          type="button"
-          onClick={() => onDelete(property)}
-          className="pressable flex items-center justify-center gap-1 rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/25"
-        >
-          <span className="material-symbols-outlined text-[15px]">delete</span>
-          Delete
-        </button>
+        {/* Archive / Restore: the ordinary way a building leaves the register */}
+        <ArchivePropertyButton
+          propertyId={property.property_id}
+          propertyName={property.property_name}
+          isArchived={archived}
+          unitCount={totalUnits}
+        />
+
+        {/* Delete stays for a property created by mistake, with nothing on it */}
+        {totalUnits === 0 && (
+          <button
+            type="button"
+            onClick={() => onDelete(property)}
+            className="pressable flex items-center justify-center gap-1 rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/25"
+          >
+            <span className="material-symbols-outlined text-[15px]">delete</span>
+            Delete
+          </button>
+        )}
       </div>
     </div>
   );

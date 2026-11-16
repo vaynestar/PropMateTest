@@ -22,6 +22,10 @@ export default function PropertiesClient({
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingProperty, setEditingProperty] = useState<PropertyData | null>(null);
   const [deletingProperty, setDeletingProperty] = useState<PropertyData | null>(null);
+  // Archived buildings are out of the way by default; they are still here to
+  // read and to restore.
+  const [showArchived, setShowArchived] = useState(false);
+  const archivedCount = initialProperties.filter((p) => p.is_archived).length;
 
   // Filtered properties
   const filteredProperties = useMemo(() => {
@@ -38,19 +42,20 @@ export default function PropertiesClient({
         p.property_type.toLowerCase() === selectedType.toLowerCase() ||
         p.property_type.toLowerCase().includes(selectedType.toLowerCase());
 
-      return matchesSearch && matchesType;
+      return matchesSearch && matchesType && (showArchived ? true : !p.is_archived);
     });
-  }, [initialProperties, searchQuery, selectedType]);
+  }, [initialProperties, searchQuery, selectedType, showArchived]);
 
-  // Aggregate Portfolio KPIs
-  const totalProperties = initialProperties.length;
-  const totalUnits = initialProperties.reduce((acc, p) => acc + (p._count?.units || 0), 0);
-  const totalOccupied = initialProperties.reduce((acc, p) => {
+  // Aggregate Portfolio KPIs: the buildings still being managed.
+  const live = initialProperties.filter((p) => !p.is_archived);
+  const totalProperties = live.length;
+  const totalUnits = live.reduce((acc, p) => acc + (p._count?.units || 0), 0);
+  const totalOccupied = live.reduce((acc, p) => {
     const occupied = p.units ? p.units.filter((u) => u.status === "Occupied").length : 0;
     return acc + occupied;
   }, 0);
   const avgOccupancyRate = totalUnits > 0 ? Math.round((totalOccupied / totalUnits) * 100) : 0;
-  const emptyProperties = initialProperties.filter((p) => (p._count?.units ?? 0) === 0).length;
+  const emptyProperties = live.filter((p) => (p._count?.units ?? 0) === 0).length;
   const activeDefaultProperty = initialProperties.find((p) => p.property_id === activePropertyId);
 
   // Available unique property types for filter pills
@@ -147,6 +152,21 @@ export default function PropertiesClient({
               </button>
             ))}
           </div>
+
+          {archivedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowArchived((v) => !v)}
+              className={`inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl border px-3 text-xs font-semibold transition-all pressable ${
+                showArchived
+                  ? "border-outline-variant bg-surface-variant text-white"
+                  : "border-outline-variant/60 bg-surface-container-high text-on-surface-variant hover:text-white"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">inventory_2</span>
+              {showArchived ? "Hide archived" : `Archived ${archivedCount}`}
+            </button>
+          )}
 
           </div></ScrollHint>
 
