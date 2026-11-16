@@ -346,6 +346,7 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
         selectedDate={date}
         onSelectDate={(newDate) => setDate(newDate)}
         operationDays={facility.operation_days}
+        slotBlocked={!!clash || end <= start}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">

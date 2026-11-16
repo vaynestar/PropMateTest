@@ -19,6 +19,12 @@ interface BookingCalendarDatePickerProps {
   operationDays?: string; // "1,2,3,4,5,6,7"
   minDate?: Date;
   maxDaysCount?: number;
+  /**
+   * Whether the time currently chosen below can actually be booked. The banner
+   * used to read "Available Slot" on every open date, so it contradicted the
+   * clash message a few lines under it (DEV-232).
+   */
+  slotBlocked?: boolean;
 }
 
 export default function BookingCalendarDatePicker({
@@ -27,6 +33,7 @@ export default function BookingCalendarDatePicker({
   operationDays = "1,2,3,4,5,6,7",
   minDate = new Date(),
   maxDaysCount = 90,
+  slotBlocked = false,
 }: BookingCalendarDatePickerProps) {
   const [viewMode, setViewMode] = useState<"strip" | "calendar">("calendar");
 
@@ -315,7 +322,11 @@ export default function BookingCalendarDatePicker({
 
       {/* Selected Date Summary Banner */}
       {selectedDateObj && (
-        <div className="p-3 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-between">
+        <div
+          className={`p-3 rounded-xl border flex items-center justify-between ${
+            slotBlocked ? "bg-rose-500/10 border-rose-500/30" : "bg-primary/10 border-primary/30"
+          }`}
+        >
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-primary text-[18px]">event</span>
             <span className="text-xs text-on-surface font-medium">
@@ -331,9 +342,15 @@ export default function BookingCalendarDatePicker({
             </span>
           </div>
 
-          <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
-            Available Slot
-          </span>
+          {slotBlocked ? (
+            <span className="text-[11px] text-rose-300 font-bold bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/30">
+              Slot Unavailable
+            </span>
+          ) : (
+            <span className="text-[11px] text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">
+              Available Slot
+            </span>
+          )}
         </div>
       )}
     </div>
