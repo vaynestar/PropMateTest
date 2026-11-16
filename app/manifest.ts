@@ -17,6 +17,14 @@ export default function manifest(): MetadataRoute.Manifest {
         type: "image/png",
         purpose: "any",
       },
+      // Chrome wants a 512 icon it can use for anything, not only a maskable
+      // one; with maskable alone the installability check can refuse.
+      {
+        src: "/logo.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "any",
+      },
       {
         src: "/logo.png",
         sizes: "512x512",

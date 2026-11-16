@@ -476,7 +476,7 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
 
       {clash === "out_of_bounds" && (
         <div className="rounded-lg bg-error-container/10 border border-error-container/40 px-4 py-3">
-          <span className="font-label-md text-label-md text-error-container">
+          <span className="font-label-md text-label-md text-on-error-container">
             Booking must be within operating hours ({facility.open_time} - {facility.close_time}).
           </span>
         </div>
@@ -484,7 +484,7 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
 
       {clash === "max_exceeded" && (
         <div className="rounded-lg bg-error-container/10 border border-error-container/40 px-4 py-3">
-          <span className="font-label-md text-label-md text-error-container">
+          <span className="font-label-md text-label-md text-on-error-container">
             Maximum booking duration allowed is {facility.max_booking_hours} hours.
           </span>
         </div>
@@ -501,7 +501,7 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
 
       {state?.error && (
         <div className="rounded-lg bg-error-container/10 border border-error-container/40 px-4 py-3">
-          <span className="font-label-md text-label-md text-error-container">
+          <span className="font-label-md text-label-md text-on-error-container">
             {state.error}
           </span>
         </div>

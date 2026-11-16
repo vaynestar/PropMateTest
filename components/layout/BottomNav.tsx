@@ -151,7 +151,7 @@ export default function BottomNav({
                 >
                   <button
                     type="submit"
-                    className="pressable w-full flex items-center gap-3 px-4 py-3 rounded-lg text-error-container border border-error-container/30 hover:bg-error-container/10 transition-all font-label-md text-label-md"
+                    className="pressable w-full flex items-center gap-3 px-4 py-3 rounded-lg text-on-error-container border border-error-container/30 hover:bg-error-container/10 transition-all font-label-md text-label-md"
                   >
                     <span className="material-symbols-outlined text-[18px]">
                       logout

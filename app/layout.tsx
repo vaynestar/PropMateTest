@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
+import PwaBoot from "@/components/pwa/PwaBoot";
 import "./globals.css";
 
 const inter = Inter({
@@ -57,6 +58,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body className="min-h-full bg-surface text-on-surface font-body-md text-body-md">
+        <PwaBoot />
         {children}
       </body>
     </html>

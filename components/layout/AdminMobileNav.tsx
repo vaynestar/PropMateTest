@@ -138,7 +138,7 @@ export function AdminMenuButton() {
             <form action={logoutAction} className="px-4 pt-4 border-t border-outline-variant/50">
               <button
                 type="submit"
-                className="pressable w-full flex items-center justify-center gap-2 py-3 rounded-lg text-error-container border border-error-container/30 hover:bg-error-container/10 transition-all font-label-md text-label-md"
+                className="pressable w-full flex items-center justify-center gap-2 py-3 rounded-lg text-on-error-container border border-error-container/30 hover:bg-error-container/10 transition-all font-label-md text-label-md"
               >
                 <span className="material-symbols-outlined text-[18px]">
                   logout
