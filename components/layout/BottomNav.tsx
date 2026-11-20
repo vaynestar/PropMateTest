@@ -113,8 +113,38 @@ export default function BottomNav({
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
+            {/*
+              A grid of tiles when every item is a single destination - the
+              resident's Visitors, Notices, My Unit and Profile. Four equal
+              targets read at a glance, where a vertical list has to be
+              scanned, and half the resident portal lives behind this sheet
+              (user, 2026-11-20).
+
+              The admin's More items carry `children`, which a tile cannot
+              show, so that case keeps the list it has always had.
+            */}
+            {more.length > 0 && more.every((item) => !item.children?.length) ? (
+              <div className="grid grid-cols-2 gap-3 px-4 pb-4 pt-2">
+                {more.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setSheetOpen(false)}
+                    className={`pressable flex min-h-[104px] flex-col justify-center gap-2.5 rounded-2xl border p-4 transition-colors ${
+                      isActive(item.href)
+                        ? "border-primary/60 bg-primary/10 text-primary"
+                        : "border-outline-variant/60 bg-surface-container text-on-surface hover:bg-surface-container-high"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[24px] text-primary">{item.icon}</span>
+                    <span className="font-label-md text-label-md font-semibold">{item.label}</span>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+
             <div className="px-4 pb-8 pt-2 flex flex-col gap-1">
-              {more.map((item) => (
+              {(more.length > 0 && more.every((item) => !item.children?.length) ? [] : more).map((item) => (
                 <div key={item.href} className="flex flex-col gap-1">
                   <Link
                     href={item.href}

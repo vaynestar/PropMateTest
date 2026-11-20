@@ -342,6 +342,28 @@ export default async function ResidentDashboardPage() {
                 {announcement.content}
               </p>
             </div>
+
+            {/*
+              The notice board already shows a notice's photo
+              (ResidentAnnouncementList), and the upcoming-booking cards above
+              already show the facility's. This card did not, so the one notice
+              a resident is most likely to read was the only place the picture
+              was missing (user, 2026-11-20).
+
+              A thumbnail rather than a banner: the card is a row, and a wide
+              image here would push the title and the date off a phone.
+              Written as a plain <img> for the same reason as DEV-188 - a CSS
+              background never painted on the user's iPhone.
+            */}
+            {announcement.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={announcement.image_url}
+                alt=""
+                loading="lazy"
+                className="h-16 w-16 shrink-0 self-center rounded-xl border border-outline-variant/40 object-cover"
+              />
+            )}
           </Link>
         </section>
       )}

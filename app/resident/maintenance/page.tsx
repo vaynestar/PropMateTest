@@ -136,7 +136,7 @@ export default async function ResidentMaintenancePage() {
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-1">
         <p className="text-sm text-on-surface-variant">
-          Report a problem in your unit or a common area, and follow it until it&apos;s fixed.
+          Report a problem and follow it until it&apos;s fixed.
         </p>
       </section>
 

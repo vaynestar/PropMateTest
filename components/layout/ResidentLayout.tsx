@@ -12,14 +12,23 @@ import BackToTop from "./BackToTop";
 import type { NotificationItem } from "@/lib/notifications";
 
 const PRIMARY: NavItem[] = [
+  /*
+   * The words residents use, not the office's (user, 2026-11-20). "Helpdesk"
+   * is what a call centre is called; the page itself says "report a problem in
+   * your unit". "Invoices" is the accounting word for what a resident calls a
+   * bill. "Book" is the verb they came to do.
+   *
+   * Labels only - every href is untouched, so no deep link, QR code, bookmark
+   * or figure caption breaks.
+   */
   { label: "Home", href: "/resident", icon: "home" },
-  { label: "Invoices", href: "/resident/invoices", icon: "receipt_long" },
-  { label: "Helpdesk", href: "/resident/maintenance", icon: "build_circle" },
-  { label: "Facilities", href: "/resident/facilities", icon: "pool" },
+  { label: "Bills", href: "/resident/invoices", icon: "receipt_long" },
+  { label: "Repairs", href: "/resident/maintenance", icon: "build_circle" },
+  { label: "Book", href: "/resident/facilities", icon: "pool" },
 ];
 
 const MORE: NavItem[] = [
-  { label: "Notice Board", href: "/resident/announcements", icon: "campaign" },
+  { label: "Notices", href: "/resident/announcements", icon: "campaign" },
   { label: "Visitors", href: "/resident/visitors", icon: "person_search" },
   { label: "My Unit", href: "/resident/unit", icon: "apartment" },
   { label: "Profile", href: "/resident/profile", icon: "person" },

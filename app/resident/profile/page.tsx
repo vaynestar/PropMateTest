@@ -93,7 +93,7 @@ export default async function ResidentProfilePage() {
         </dl>
         <p className="text-xs text-on-surface-variant flex items-center gap-1">
           <span className="material-symbols-outlined text-[15px]">lock</span>
-          To change your name, email or IC, please contact the management office.
+          Name, email and IC are set by the office.
         </p>
       </section>
 
