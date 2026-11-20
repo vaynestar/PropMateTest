@@ -318,6 +318,61 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
     [slots, facility.facility_id, date]
   );
 
+  /*
+   * One-hour slots across the opening hours, with the taken ones shown as
+   * taken BEFORE the resident chooses.
+   *
+   * The dropdowns below still exist, because a three-hour function room
+   * booking cannot be made from a grid of single hours. But the common case
+   * is "give me an hour", and until now the only way to discover that 10am
+   * was gone was to pick it and be refused - which reads as the system being
+   * broken rather than the slot being busy (the DEV-232 complaint, one layer
+   * further back).
+   *
+   * An hour in the past on today's date is spent, so it is offered as taken
+   * too: residents booking on the day of their UAT slot would otherwise pick
+   * a morning hour at lunchtime and be refused by the server.
+   */
+  const quickSlots = useMemo(() => {
+    /*
+     * The building's clock, not the viewer's. getHours() reads the device's
+     * timezone, so a resident travelling would have seen the wrong hours
+     * greyed out - the same mistake the booking code already had to fix once
+     * (R23/D-25, lib/booking-time.ts).
+     */
+    const kl = new Date().toLocaleString("en-GB", {
+      timeZone: "Asia/Kuala_Lumpur",
+      year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", hour12: false,
+    });
+    const [dmy, hm] = kl.split(", ");
+    const [dd, mm, yyyy] = dmy.split("/");
+    const todayIso = `${yyyy}-${mm}-${dd}`;
+    const [hh, mi] = hm.split(":").map(Number);
+    const nowMin = hh * 60 + mi;
+    const out: { from: number; label: string; taken: boolean; past: boolean }[] = [];
+    for (let m = DAY_START; m + 60 <= DAY_END; m += 60) {
+      out.push({
+        from: m,
+        label: fmt(m),
+        taken: dayBookings.some((b) => m < b.end_min && m + 60 > b.start_min),
+        past: date === todayIso && m < nowMin,
+      });
+    }
+    return out;
+  }, [DAY_START, DAY_END, dayBookings, date]);
+
+  const pickHour = (from: number) => {
+    const sh = Math.floor(from / 60);
+    const eh = Math.floor((from + 60) / 60);
+    setStartDisplayHour(sh % 12 || 12);
+    setStartMin(from % 60);
+    setStartPeriod(sh >= 12 ? "PM" : "AM");
+    setEndDisplayHour(eh % 12 || 12);
+    setEndMin((from + 60) % 60);
+    setEndPeriod(eh >= 12 ? "PM" : "AM");
+  };
+
   const clash = useMemo(() => {
     if (end <= start) return null;
     if (facility.max_booking_hours && (end - start) > facility.max_booking_hours * 60) return "max_exceeded";
@@ -348,6 +403,40 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
         operationDays={facility.operation_days}
         slotBlocked={!!clash || end <= start}
       />
+
+      {/* Pick an hour. Taken ones cannot be chosen, so a clash cannot happen. */}
+      <div>
+        <p className="mb-2 text-xs font-semibold text-on-surface-variant">Pick an hour</p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {quickSlots.map((s) => {
+            const unavailable = s.taken || s.past;
+            const chosen = !unavailable && start === s.from && end === s.from + 60;
+            return (
+              <button
+                key={s.from}
+                type="button"
+                disabled={unavailable}
+                onClick={() => pickHour(s.from)}
+                aria-label={
+                  s.taken ? `${s.label}, already booked` : s.past ? `${s.label}, already passed` : `Book ${s.label}`
+                }
+                className={`pressable min-h-[44px] rounded-xl border text-sm transition-colors ${
+                  unavailable
+                    ? "cursor-not-allowed border-outline-variant/40 bg-surface-container/50 text-on-surface-variant/50 line-through"
+                    : chosen
+                      ? "border-primary bg-primary/20 font-bold text-on-surface"
+                      : "border-outline-variant bg-surface-container text-on-surface hover:border-primary/60"
+                }`}
+              >
+                {s.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 text-[11px] text-on-surface-variant">
+          Crossed out means already taken. For a longer booking, set the times below.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">
         <div className="flex flex-col gap-2 border border-outline-variant/30 rounded-lg p-3 md:p-4 bg-surface-container/50 min-w-0">

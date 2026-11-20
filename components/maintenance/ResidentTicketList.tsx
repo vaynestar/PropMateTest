@@ -23,6 +23,27 @@ export type ResidentTicket = {
 
 const DONE = new Set(["Resolved", "Closed"]);
 
+/*
+ * Where a request has got to, in three words the resident understands.
+ *
+ * A status badge alone says what state the row is in but not how far along it
+ * is: "In Progress" and "Pending Parts" are both somewhere in the middle, and
+ * neither tells you whether anyone has actually been assigned. The office's
+ * six internal statuses fold onto three stages.
+ *
+ * Shown on active requests only. A resolved one says Resolved on its badge
+ * and does not need a finished bar underneath repeating it.
+ */
+const STAGES = ["Received", "Assigned", "Fixed"] as const;
+const STAGE_OF: Record<string, number> = {
+  Open: 0,
+  "In Progress": 1,
+  "Pending Parts": 1,
+  KIV: 1,
+  Resolved: 2,
+  Closed: 2,
+};
+
 const STRIPE: Record<string, string> = {
   Open: "bg-sky-400",
   "In Progress": "bg-primary",
@@ -120,6 +141,34 @@ export default function ResidentTicketList({ tickets }: { tickets: ResidentTicke
               </div>
 
               <p className={`text-sm text-on-surface/80 ${expanded ? "whitespace-pre-wrap" : "line-clamp-2"}`}>{t.description}</p>
+
+              {!DONE.has(t.status) && (
+                <div aria-label={`Progress: ${STAGES[STAGE_OF[t.status] ?? 0]}`}>
+                  <div className="flex items-center gap-1.5">
+                    {STAGES.map((stage, i) => (
+                      <span
+                        key={stage}
+                        aria-hidden
+                        className={`h-1 flex-1 rounded-full ${i <= (STAGE_OF[t.status] ?? 0) ? "bg-sky-400" : "bg-outline-variant/50"}`}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-1.5 flex justify-between text-[10px]">
+                    {STAGES.map((stage, i) => (
+                      <span
+                        key={stage}
+                        className={
+                          i === (STAGE_OF[t.status] ?? 0)
+                            ? "font-bold text-sky-300"
+                            : "text-on-surface-variant"
+                        }
+                      >
+                        {stage}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {t.photos.length > 0 && (
                 <div className="flex gap-2">
