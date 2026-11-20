@@ -8,6 +8,16 @@ import { loginAction } from "./actions";
 function LoginForm() {
   const [state, formAction, pending] = useActionState(loginAction, {});
   const [showPassword, setShowPassword] = useState(false);
+  /*
+   * React 19 resets a form once its action finishes, so an UNCONTROLLED email
+   * and password were both wiped by a failed sign-in and had to be typed
+   * again — on a phone, for a wrong keystroke. Holding them in state keeps
+   * what the person typed so they can fix the one character that was wrong
+   * (user, 2026-11-20). Both roles sign in here, so this fixes admin and
+   * resident at once.
+   */
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect") || "";
 
@@ -37,6 +47,8 @@ function LoginForm() {
             placeholder="admin@propmate.com"
             type="email"
             autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
@@ -57,6 +69,8 @@ function LoginForm() {
             placeholder="••••••••"
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
           <button
