@@ -202,6 +202,47 @@ export async function submitPaymentEvidence(input: {
   }
 }
 
+/**
+ * A resident takes back a proof the office has not looked at yet.
+ *
+ * Until now a wrong receipt, or the wrong reference typed in a hurry, could
+ * only be fixed by telephoning the office: the form was replaced by "the
+ * office is checking it" and there was no way back (user, 2026-11-20).
+ *
+ * Only a Pending submission can be withdrawn, so this can never undo a
+ * decision an administrator has already made. The row is kept and marked
+ * Withdrawn rather than deleted — the payment history is an audit trail, and
+ * "they sent it and took it back" is part of the story. Because the admin
+ * queue selects Pending only, a withdrawn proof leaves that queue by itself.
+ */
+export async function withdrawPaymentEvidence(input: { transactionId: string; userId: string }) {
+  if (!isUuid(input.transactionId)) throw new Error("Payment not found.");
+
+  const tx = await prisma.paymentTransaction.findUnique({
+    where: { transaction_id: input.transactionId },
+    select: {
+      transaction_id: true,
+      invoice_id: true,
+      transaction_status: true,
+      payment_method: true,
+      invoice: { select: { lease: { select: { user_id: true } } } },
+    },
+  });
+  // Same answer for "no such payment" and "not yours", so one resident cannot
+  // probe for another's transaction ids.
+  if (!tx || tx.invoice.lease.user_id !== input.userId) throw new Error("Payment not found.");
+  if (tx.payment_method !== MANUAL_METHOD) throw new Error("Payment not found.");
+  if (tx.transaction_status !== "Pending") {
+    throw new Error("The office has already reviewed this one, so it can't be taken back.");
+  }
+
+  await prisma.paymentTransaction.update({
+    where: { transaction_id: tx.transaction_id },
+    data: { transaction_status: "Withdrawn", modified_by: input.userId },
+  });
+  return { invoiceId: tx.invoice_id };
+}
+
 export async function reviewPaymentEvidence(input: {
   transactionId: string;
   adminId: string;

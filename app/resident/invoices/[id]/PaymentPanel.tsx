@@ -5,7 +5,7 @@ import { ViewerButton } from "@/components/ui/MediaViewer";
 import { fitUploadLimit, formatMb } from "@/lib/client/shrink-upload";
 import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import { useRouter } from "next/navigation";
-import { payOnlineAction, type PaymentActionState } from "./actions";
+import { payOnlineAction, withdrawProofAction, type PaymentActionState } from "./actions";
 
 const MAX_BYTES = 4 * 1024 * 1024;
 
@@ -42,12 +42,37 @@ export default function PaymentPanel({
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileNote, setFileNote] = useState<string | null>(null);
   // The file actually sent - the picked one, or its shrunk copy.
   const [readyFile, setReadyFile] = useState<File | null>(null);
   const [shrinking, setShrinking] = useState(false);
+  /** Object URL of the picked image, so the resident can see what they chose. */
+  const [preview, setPreview] = useState<string | null>(null);
+  const [withdrawing, setWithdrawing] = useState(false);
+
+  const clearFile = () => {
+    setPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return null;
+    });
+    setReadyFile(null);
+    setFileNote(null);
+    setError(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const onWithdraw = async () => {
+    if (!submission) return;
+    setWithdrawing(true);
+    setError(null);
+    const res = await withdrawProofAction(invoiceId, submission.transactionId);
+    setWithdrawing(false);
+    if (res?.error) return setError(res.error);
+    router.refresh();
+  };
   const [onlineState, payOnline, paying] = useActionState<PaymentActionState, FormData>(
     payOnlineAction.bind(null, invoiceId),
     null
@@ -108,6 +133,15 @@ export default function PaymentPanel({
       return setFileNote(null);
     }
     setReadyFile(ready);
+    /*
+     * Show the resident what they actually picked. iOS drew a black square in
+     * its own file input, so there was no way to tell a correct receipt from
+     * the wrong photo until after it had been sent (user, 2026-11-20).
+     */
+    setPreview((old) => {
+      if (old) URL.revokeObjectURL(old);
+      return ready.type.startsWith("image/") ? URL.createObjectURL(ready) : null;
+    });
     setFileNote(
       fitted.shrunk
         ? `${f.name} · compressed ${formatMb(f.size)} → ${formatMb(fitted.file.size)}`
@@ -129,8 +163,7 @@ export default function PaymentPanel({
         setError(body.error ?? "Couldn't send your proof. Please try again.");
       } else {
         formRef.current?.reset();
-        setFileNote(null);
-        setReadyFile(null);
+        clearFile();
         router.refresh();
       }
     } catch {
@@ -190,6 +223,24 @@ export default function PaymentPanel({
                 </>
               )}
             </p>
+            {/*
+              * Sent the wrong receipt, or mistyped the reference? Until now the
+              * only way back was to telephone the office. The office has not
+              * looked at it yet, so taking it back costs nothing.
+              */}
+            <button
+              type="button"
+              onClick={onWithdraw}
+              disabled={withdrawing}
+              className="pressable mt-1 w-full rounded-xl border border-outline-variant/60 bg-surface-container-high px-3 py-2.5 text-xs font-semibold text-on-surface disabled:opacity-60"
+            >
+              {withdrawing ? "Taking it back…" : "Take it back and send again"}
+            </button>
+            {error && (
+              <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+                {error}
+              </p>
+            )}
           </div>
         ) : (
           <>
@@ -229,15 +280,49 @@ export default function PaymentPanel({
               <label className="flex flex-col gap-1">
                 <span className="text-[11px] font-semibold text-on-surface-variant">Receipt or screenshot · optional</span>
                 <input
+                  ref={fileRef}
                   type="file"
                   name="file"
                   accept="image/jpeg,image/png,application/pdf"
                   onChange={onFile}
                   className="rounded-lg border border-dashed border-outline-variant bg-surface-container px-3 py-2.5 text-xs text-on-surface-variant file:mr-3 file:rounded-md file:border-0 file:bg-primary/15 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary"
                 />
-                <span className="text-[11px] text-on-surface-variant">
-                  {fileNote ?? "You can send without one — the office checks your reference against the bank."}
-                </span>
+                {readyFile ? (
+                  /*
+                   * What they picked, before it is sent. iOS showed a black
+                   * square in its own control, so the wrong photo could not be
+                   * spotted until the office already had it.
+                   */
+                  <div className="mt-1 flex items-center gap-3 rounded-lg border border-outline-variant/60 bg-surface-container p-2">
+                    {preview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={preview}
+                        alt={`Receipt you picked: ${readyFile.name}`}
+                        className="h-14 w-14 shrink-0 rounded-md object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-surface-container-high">
+                        <span className="material-symbols-outlined text-[22px] text-on-surface-variant">picture_as_pdf</span>
+                      </span>
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12px] font-medium text-on-surface">{readyFile.name}</span>
+                      <span className="block text-[11px] text-on-surface-variant">{formatMb(readyFile.size)}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearFile}
+                      className="pressable shrink-0 rounded-lg border border-outline-variant/60 bg-surface-container-high px-3 py-2 text-[12px] font-semibold text-on-surface"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <span className="text-[11px] text-on-surface-variant">
+                    {fileNote ?? "You can send without one — the office checks your reference against the bank."}
+                  </span>
+                )}
               </label>
 
               {error && (
