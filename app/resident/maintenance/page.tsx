@@ -129,6 +129,7 @@ export default async function ResidentMaintenancePage() {
       isCommonArea,
       photos: t.attachments.filter((a) => !a.comment_id).map((a) => ({ id: a.attachment_id, name: a.file_name })),
       messages: t._count.comments,
+      assignedTo: t.assignee?.user_name ?? null,
     };
   });
 

@@ -144,11 +144,12 @@ export default function NotificationCenter({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="relative flex h-11 w-11 items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-variant rounded-full transition-all"
-        aria-label="Notifications"
+        aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+        aria-expanded={isOpen}
       >
         <span className="material-symbols-outlined text-[22px]">notifications</span>
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-surface animate-pulse">
+          <span className="absolute top-1 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-surface">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -157,7 +158,7 @@ export default function NotificationCenter({
       {/* Notification Dropdown Popover */}
       {isOpen && (
         <>
-          <div className="absolute right-0 top-12 z-50 max-h-[70dvh] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl bg-surface-container border border-outline-variant/80 shadow-2xl sm:w-96 animate-in fade-in slide-in-from-top-2">
+          <div className="absolute right-0 top-12 z-50 max-h-[70dvh] w-[calc(100vw-1.5rem)] overflow-y-auto rounded-2xl bg-surface-container border border-outline-variant/80 shadow-2xl sm:w-96 animate-in fade-in slide-in-from-top-2">
             {/* Popover Header */}
             <div className="p-4 border-b border-outline-variant/40 flex items-center justify-between bg-surface-container-high/50">
               <div className="flex items-center gap-2">
@@ -169,15 +170,25 @@ export default function NotificationCenter({
                   </span>
                 )}
               </div>
-              {unreadCount > 0 && (
+              <div className="-my-2 -mr-2 flex items-center gap-1">
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleMarkAllRead}
+                    className="flex h-9 items-center rounded-lg px-2 text-[11px] font-semibold text-primary hover:bg-primary/10 hover:underline"
+                  >
+                    Mark all read
+                  </button>
+                )}
                 <button
                   type="button"
-                  onClick={handleMarkAllRead}
-                  className="-my-2 -mr-2 flex h-9 items-center rounded-lg px-2 text-[11px] font-semibold text-primary hover:bg-primary/10 hover:underline"
+                  onClick={() => setIsOpen(false)}
+                  aria-label="Close notifications"
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-variant hover:text-white"
                 >
-                  Mark all read
+                  <span className="material-symbols-outlined text-[18px]">close</span>
                 </button>
-              )}
+              </div>
             </div>
 
             {/* Quick Filter Pills */}

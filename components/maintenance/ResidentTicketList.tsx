@@ -19,6 +19,8 @@ export type ResidentTicket = {
   isCommonArea: boolean;
   photos: { id: string; name: string }[];
   messages: number;
+  /** Who the office put on it, once they have. */
+  assignedTo: string | null;
 };
 
 const DONE = new Set(["Resolved", "Closed"]);
@@ -168,6 +170,17 @@ export default function ResidentTicketList({ tickets }: { tickets: ResidentTicke
                     ))}
                   </div>
                 </div>
+              )}
+
+              {t.assignedTo && (
+                /* "Assigned" with nobody named is not much of an answer. */
+                <p className="flex items-center gap-1.5 text-[11px]">
+                  <span className="material-symbols-outlined text-[14px] text-sky-300">engineering</span>
+                  <span className="text-on-surface-variant">
+                    {DONE.has(t.status) ? "Fixed by " : "Handled by "}
+                    <span className="font-semibold text-on-surface">{t.assignedTo}</span>
+                  </span>
+                </p>
               )}
 
               {t.photos.length > 0 && (

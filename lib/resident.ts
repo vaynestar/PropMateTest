@@ -108,6 +108,12 @@ export async function getResidentTickets(userId: string) {
       lease: { include: { unit: true } },
       attachments: { select: { attachment_id: true, file_name: true, comment_id: true }, orderBy: { created_at: "asc" } },
       _count: { select: { comments: true } },
+      /*
+       * Who is handling it. The column and the relation were already there;
+       * nothing showed them to the resident, so "Assigned" was a word with
+       * no name behind it (user, 2026-11-21).
+       */
+      assignee: { select: { user_name: true } },
     },
   });
 }

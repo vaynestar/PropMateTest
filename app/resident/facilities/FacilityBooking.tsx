@@ -107,6 +107,20 @@ export default function FacilityBooking({
   slots: Slot[];
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = facilities.find((f) => f.facility_id === selectedId) ?? null;
+
+  // Escape closes it, and the page behind must not scroll while it is open.
+  useEffect(() => {
+    if (!selectedId) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setSelectedId(null); };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [selectedId]);
 
   return (
     <div className="space-y-6 min-w-0 w-full max-w-full">
@@ -183,16 +197,46 @@ export default function FacilityBooking({
                 </div>
               </button>
 
-              {/* Expanded Booking Calendar Details (Spans 2 columns) */}
-              {active && (
-                <div className="col-span-1 sm:col-span-2 w-full animate-in fade-in slide-in-from-top-4 duration-300">
-                  <BookingCard facility={f} slots={slots} />
-                </div>
-              )}
             </Fragment>
           );
         })}
       </div>
+
+      {/*
+        The booking form as a dialog, not an inline panel.
+        Expanding in place pushed every other facility down the page and, at
+        phone width, left the calendar below the fold with the only way out a
+        second tap on a card that had scrolled away.
+      */}
+      {selected && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Book ${selected.facility_name}`}
+          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center"
+        >
+          <button
+            type="button"
+            aria-label="Close booking"
+            onClick={() => setSelectedId(null)}
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+          />
+          <div className="relative z-10 w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-outline-variant/60 bg-surface-container-lowest p-4 pb-8 sm:p-5 animate-in fade-in slide-in-from-bottom-4 duration-200">
+            <div className="sticky top-0 -mx-4 -mt-4 mb-3 flex items-center justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-lowest/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
+              <p className="min-w-0 truncate text-sm font-bold text-on-surface">Book {selected.facility_name}</p>
+              <button
+                type="button"
+                onClick={() => setSelectedId(null)}
+                aria-label="Close"
+                className="pressable flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-variant hover:text-white"
+              >
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+            <BookingCard facility={selected} slots={slots} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
