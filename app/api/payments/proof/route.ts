@@ -27,7 +27,16 @@ export async function POST(req: NextRequest) {
   try {
     form = await req.formData();
   } catch {
-    return NextResponse.json({ error: "Couldn't read the upload. Please try again." }, { status: 400 });
+    /*
+     * The body arrived truncated or malformed - almost always a photo whose
+     * bytes the phone could not finish sending. The old wording, "Couldn't
+     * read the upload", described our problem and gave the resident nothing to
+     * do about it. Since the receipt is optional, say what actually helps.
+     */
+    return NextResponse.json(
+      { error: "Your photo didn't finish uploading. Try again, or send without a photo — the reference is enough." },
+      { status: 400 }
+    );
   }
 
   const invoiceId = String(form.get("invoiceId") ?? "");

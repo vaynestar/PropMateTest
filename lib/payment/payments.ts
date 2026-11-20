@@ -117,13 +117,24 @@ export async function submitPaymentEvidence(input: {
     throw new Error("Enter the date you paid - today or earlier.");
   }
 
-  if (!input.file || input.file.size === 0) throw new Error("Attach your receipt or transfer screenshot.");
-  const file = input.file;
-  if (file.size > PROOF_MAX_BYTES) throw new Error(FILE_TOO_LARGE_MESSAGE);
-  const mime = sniffProofType(file.bytes);
-  if (!mime) throw new Error(typeMessage(IMAGE_OR_PDF));
-
-  const safeName = (file.name || "receipt").replace(/[^\w.\- ]+/g, "_").slice(0, 120);
+  /*
+   * The receipt is OPTIONAL (user, 2026-11-20). Residents on iPhones were
+   * blocked by an upload that failed before the bytes ever reached us, and the
+   * transfer reference is what the office matches against the bank statement
+   * anyway - the image is corroboration, not the evidence itself. A proof with
+   * no file is still a Pending submission the office must review.
+   *
+   * When a file IS sent, every rule below is exactly as it was.
+   */
+  const file = input.file && input.file.size > 0 ? input.file : null;
+  let mime: string | null = null;
+  let safeName: string | null = null;
+  if (file) {
+    if (file.size > PROOF_MAX_BYTES) throw new Error(FILE_TOO_LARGE_MESSAGE);
+    mime = sniffProofType(file.bytes);
+    if (!mime) throw new Error(typeMessage(IMAGE_OR_PDF));
+    safeName = (file.name || "receipt").replace(/[^\w.\- ]+/g, "_").slice(0, 120);
+  }
 
   /*
    * Receipts go to Firebase Storage. Without Firebase configured (a local
@@ -131,7 +142,7 @@ export async function submitPaymentEvidence(input: {
    * development still works.
    */
   let proofPath: string | null = null;
-  if (firebaseStorageConfigured()) {
+  if (file && firebaseStorageConfigured()) {
     proofPath = (
       await storeFile({
         folder: await getStorageFolder("payment_receipt"),
@@ -173,10 +184,10 @@ export async function submitPaymentEvidence(input: {
             reference_number: reference,
             transaction_status: "Pending",
             proof_path: proofPath,
-            proof_data: proofPath ? null : Buffer.from(file.bytes),
+            proof_data: file && !proofPath ? Buffer.from(file.bytes) : null,
             proof_mime: mime,
             proof_filename: safeName,
-            proof_size: file.size,
+            proof_size: file ? file.size : null,
             created_by: input.userId,
           },
           select: { transaction_id: true },

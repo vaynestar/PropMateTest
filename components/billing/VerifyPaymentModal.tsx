@@ -60,6 +60,7 @@ export default function VerifyPaymentModal({
   }, [onClose]);
 
   const proofUrl = `/api/payments/proof/${submission.transaction_id}`;
+  const hasFile = Boolean(submission.proof_mime);
   const isImage = submission.proof_mime?.startsWith("image/");
 
   const decide = (decision: "approve" | "reject") => {
@@ -108,7 +109,21 @@ export default function VerifyPaymentModal({
 
         <div className="grid gap-4 overflow-y-auto p-5 md:grid-cols-[1fr_16rem]">
           <div className="flex min-h-[16rem] items-center justify-center overflow-hidden rounded-xl border border-outline-variant/40 bg-surface-container-lowest">
-            {isImage ? (
+            {!hasFile ? (
+              /*
+               * The receipt became optional on 2026-11-20, so a submission can
+               * legitimately carry no file. Without this branch the PDF icon
+               * below was shown for a file that does not exist, and "Open full
+               * size" pointed at a 404.
+               */
+              <div className="flex flex-col items-center gap-2 p-6 text-center">
+                <span className="material-symbols-outlined text-[40px] text-on-surface-variant">receipt_long</span>
+                <span className="text-sm font-semibold text-on-surface">No receipt attached</span>
+                <span className="max-w-[18rem] text-xs text-on-surface-variant">
+                  Check the reference against the bank statement before approving.
+                </span>
+              </div>
+            ) : isImage ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={proofUrl} alt={`Payment proof for ${invoiceNo}`} className="max-h-[60dvh] w-full object-contain" />
             ) : (
@@ -139,13 +154,15 @@ export default function VerifyPaymentModal({
               </div>
             </dl>
 
-            <ViewerButton
-              items={[{ src: proofUrl, title: "Payment receipt", kind: "doc" }]}
-              className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
-            >
-              <span className="material-symbols-outlined text-[16px]">open_in_full</span>
-              Open full size
-            </ViewerButton>
+            {hasFile && (
+              <ViewerButton
+                items={[{ src: proofUrl, title: "Payment receipt", kind: "doc" }]}
+                className="inline-flex items-center gap-1 font-semibold text-primary hover:underline"
+              >
+                <span className="material-symbols-outlined text-[16px]">open_in_full</span>
+                Open full size
+              </ViewerButton>
+            )}
 
             <p className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-2.5 leading-relaxed text-amber-200/90">
               Check the amount and reference against your bank statement before approving.

@@ -76,7 +76,38 @@ export default function PaymentPanel({
       input.value = "";
       return setFileNote(null);
     }
-    setReadyFile(fitted.file);
+
+    /*
+     * Read the bytes NOW, not when the form is submitted.
+     *
+     * A File from the iOS photo picker is a live handle, not data: iOS hands
+     * back a reference and transcodes HEIC to JPEG lazily. By the time fetch()
+     * streams the body, that handle can fail - Safari has already promised a
+     * Content-Length, sends fewer bytes, and the server cannot parse the
+     * multipart. The resident saw "Couldn't read the upload", which told them
+     * nothing, on a file that was well under the size limit.
+     *
+     * Two iPhones hit this on 19-20 Nov 2026 (0.1 MB and 3.1 MB). The same
+     * sizes upload fine through Chrome, Edge and WebKit on a desktop, so the
+     * route itself is sound. Materialising the bytes here removes the
+     * dependency on a handle that may already be stale, and - just as
+     * important - a photo that cannot be read now fails HERE, where we can say
+     * something useful, instead of after a failed upload.
+     */
+    let ready = fitted.file;
+    try {
+      const bytes = await fitted.file.arrayBuffer();
+      if (bytes.byteLength === 0) throw new Error("empty");
+      ready = new File([bytes], fitted.file.name, {
+        type: fitted.file.type || "application/octet-stream",
+        lastModified: fitted.file.lastModified,
+      });
+    } catch {
+      setError("That photo couldn't be opened. Take a new one, or pick a different file — or send without a photo.");
+      input.value = "";
+      return setFileNote(null);
+    }
+    setReadyFile(ready);
     setFileNote(
       fitted.shrunk
         ? `${f.name} · compressed ${formatMb(f.size)} → ${formatMb(fitted.file.size)}`
@@ -196,16 +227,17 @@ export default function PaymentPanel({
               </div>
 
               <label className="flex flex-col gap-1">
-                <span className="text-[11px] font-semibold text-on-surface-variant">Receipt or screenshot</span>
+                <span className="text-[11px] font-semibold text-on-surface-variant">Receipt or screenshot · optional</span>
                 <input
                   type="file"
                   name="file"
-                  required
                   accept="image/jpeg,image/png,application/pdf"
                   onChange={onFile}
                   className="rounded-lg border border-dashed border-outline-variant bg-surface-container px-3 py-2.5 text-xs text-on-surface-variant file:mr-3 file:rounded-md file:border-0 file:bg-primary/15 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-primary"
                 />
-                <span className="text-[11px] text-on-surface-variant">{fileNote ?? "JPG, JPEG, PNG or PDF, up to 4 MB"}</span>
+                <span className="text-[11px] text-on-surface-variant">
+                  {fileNote ?? "You can send without one — the office checks your reference against the bank."}
+                </span>
               </label>
 
               {error && (
