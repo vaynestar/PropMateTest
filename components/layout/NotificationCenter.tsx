@@ -46,10 +46,13 @@ const COPY: Record<
       { id: "ALL", label: "All" },
       { id: "URGENT", label: "Needs action" },
       { id: "BILLING", label: "Bills" },
-      { id: "TICKET", label: "Helpdesk" },
+      /* Same words as the tabs below (ResidentLayout): a resident should not
+         have to learn that "Helpdesk" here is "Repairs" there, or that
+         "Guests" is the Visitors page. */
+      { id: "TICKET", label: "Repairs" },
       { id: "BOOKING", label: "Bookings" },
       { id: "NOTICE", label: "Notices" },
-      { id: "VISITOR", label: "Guests" },
+      { id: "VISITOR", label: "Visitors" },
     ],
   },
 };

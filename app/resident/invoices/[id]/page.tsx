@@ -94,10 +94,42 @@ export default async function ResidentInvoicePage({
    */
   const overdue = invoiceState(invoice, checking) === "overdue";
 
+  /*
+   * Preview and Download (DEV-191; Adobe red at the user's request,
+   * 2026-09-22, because people look for that colour when they want a PDF).
+   *
+   * On an UNPAID bill they were the two biggest, loudest controls on the
+   * screen - a red download shouting over the thing the resident came to do,
+   * which is pay (user, 2026-11-20: "invoice all didnt improve"). The colour
+   * stays; the placement and the weight do not. On an unpaid bill they move
+   * below the payment panel and shrink to a quiet row. On a settled one,
+   * where the document IS the point, they stay where they were.
+   */
+  const docActions = (
+    <div className="grid grid-cols-2 gap-2">
+      <ViewerButton
+        items={[{ src: `/print/invoice/${invoice.invoice_id}`, title: `Invoice ${invoice.invoice_no}`, kind: "doc", download: pdf }]}
+        className={`pressable flex items-center justify-center gap-2 rounded-lg border border-sky-400/50 bg-sky-500/15 font-semibold text-sky-200 transition-colors hover:bg-sky-500/25 ${
+          isUnpaid ? "py-2 text-xs" : "py-2.5 text-sm"
+        }`}
+      >
+        <span className="material-symbols-outlined text-[16px]">visibility</span>
+        Preview
+      </ViewerButton>
+      <DownloadButton
+        url={pdf.url}
+        filename={pdf.filename}
+        className={`pressable flex w-full items-center justify-center gap-2 rounded-lg border border-[#e0301e]/60 bg-[#e0301e]/90 font-semibold text-white transition-colors hover:bg-[#e0301e] disabled:opacity-60 ${
+          isUnpaid ? "py-2 text-xs" : "py-2.5 text-sm"
+        }`}
+      />
+    </div>
+  );
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-stack-lg">
       <Link href="/resident/invoices" className="text-xs font-semibold text-primary hover:underline">
-        ← All invoices
+        ← All bills
       </Link>
 
       <section className="glass-card flex flex-col gap-4 rounded-xl p-5">
@@ -149,28 +181,12 @@ export default async function ResidentInvoicePage({
           </li>
         </ul>
 
-        {/* Preview and download are separate (DEV-191). */}
-        <div className="grid grid-cols-2 gap-2">
-          <ViewerButton
-            items={[{ src: `/print/invoice/${invoice.invoice_id}`, title: `Invoice ${invoice.invoice_no}`, kind: "doc", download: pdf }]}
-            className="pressable flex items-center justify-center gap-2 rounded-lg border border-sky-400/50 bg-sky-500/15 py-2.5 text-sm font-semibold text-sky-200 transition-colors hover:bg-sky-500/25"
-          >
-            <span className="material-symbols-outlined text-[18px]">visibility</span>
-            Preview
-          </ViewerButton>
-          <DownloadButton
-            url={pdf.url}
-            filename={pdf.filename}
-            /* Adobe red: people look for that colour when they want the PDF
-               (user, 2026-09-22). */
-            className="pressable flex w-full items-center justify-center gap-2 rounded-lg border border-[#e0301e]/60 bg-[#e0301e]/90 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#e0301e] disabled:opacity-60"
-          />
-        </div>
+        {!isUnpaid && docActions}
       </section>
 
       {isUnpaid && (
         <section className="glass-card flex flex-col gap-3 rounded-xl p-5">
-          <h2 className="text-base font-semibold text-on-surface">Pay this invoice</h2>
+          <h2 className="text-base font-semibold text-on-surface">Pay this bill</h2>
           <PaymentPanel
             invoiceId={invoice.invoice_id}
             amountLabel={rm(total)}
@@ -180,6 +196,16 @@ export default async function ResidentInvoicePage({
             onlineEnabled={onlinePaymentsEnabled()}
           />
         </section>
+      )}
+
+      {/* The document, after the thing they came to do. */}
+      {isUnpaid && (
+        <div className="-mt-2">
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
+            The invoice itself
+          </p>
+          {docActions}
+        </div>
       )}
 
       {transactions.length > 0 && (

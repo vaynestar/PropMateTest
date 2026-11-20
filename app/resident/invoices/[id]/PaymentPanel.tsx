@@ -221,7 +221,7 @@ export default function PaymentPanel({
 
       {/* Proof */}
       <div className="rounded-xl border border-outline-variant/50 bg-surface-container-high/30 p-4">
-        <h3 className="text-sm font-semibold text-on-surface">2 · Send your proof</h3>
+        <h3 className="text-sm font-semibold text-on-surface">2 · Send your receipt</h3>
 
         {waiting ? (
           <div role="status" className="mt-2 flex flex-col gap-2 text-xs">
@@ -276,37 +276,6 @@ export default function PaymentPanel({
             )}
 
             <form ref={formRef} onSubmit={onSubmit} className="mt-3 flex flex-col gap-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex flex-col gap-1">
-                  <span className="text-[11px] font-semibold text-on-surface-variant">Date you paid</span>
-                  <input
-                    type="date"
-                    name="paidOn"
-                    required
-                    max={today}
-                    defaultValue={today}
-                    className="rounded-lg border border-outline-variant bg-surface-container px-3 py-2.5 text-sm text-on-surface outline-none focus:border-primary [color-scheme:dark]"
-                  />
-                </label>
-                <label className="flex flex-col gap-1">
-                  {/*
-                    "Transfer reference" is the bank's phrase, not the
-                    resident's, and it was the field most likely to stall
-                    someone. An example beats a description.
-                  */}
-                  <span className="text-[11px] font-semibold text-on-surface-variant">Reference number</span>
-                  <input
-                    name="reference"
-                    required
-                    minLength={4}
-                    maxLength={60}
-                    placeholder="e.g. 1234567890"
-                    className="rounded-lg border border-outline-variant bg-surface-container px-3 py-2.5 text-sm text-on-surface outline-none focus:border-primary"
-                  />
-                  <span className="text-[11px] text-on-surface-variant">The number on your transfer receipt.</span>
-                </label>
-              </div>
-
               <label className="flex flex-col gap-1">
                 <span className="text-[11px] font-semibold text-on-surface-variant">Receipt or screenshot · optional</span>
                 <input
@@ -355,6 +324,37 @@ export default function PaymentPanel({
                 )}
               </label>
 
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex flex-col gap-1">
+                  <span className="text-[11px] font-semibold text-on-surface-variant">Date you paid</span>
+                  <input
+                    type="date"
+                    name="paidOn"
+                    required
+                    max={today}
+                    defaultValue={today}
+                    className="rounded-lg border border-outline-variant bg-surface-container px-3 py-2.5 text-sm text-on-surface outline-none focus:border-primary [color-scheme:dark]"
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  {/*
+                    "Transfer reference" is the bank's phrase, not the
+                    resident's, and it was the field most likely to stall
+                    someone. An example beats a description.
+                  */}
+                  <span className="text-[11px] font-semibold text-on-surface-variant">Reference number</span>
+                  <input
+                    name="reference"
+                    required
+                    minLength={4}
+                    maxLength={60}
+                    placeholder="e.g. 1234567890"
+                    className="rounded-lg border border-outline-variant bg-surface-container px-3 py-2.5 text-sm text-on-surface outline-none focus:border-primary"
+                  />
+                  <span className="text-[11px] text-on-surface-variant">The number on your transfer receipt.</span>
+                </label>
+              </div>
+
               {error && (
                 <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
                   {error}
@@ -367,7 +367,7 @@ export default function PaymentPanel({
                 className="btn-primary pressable flex w-full items-center justify-center gap-2 rounded-lg py-3 font-label-md text-label-md disabled:opacity-60"
               >
                 <span className="material-symbols-outlined text-[18px]">{sending ? "progress_activity" : "upload"}</span>
-                {shrinking ? "Compressing…" : sending ? "Sending…" : rejected ? "Send new proof" : "Send proof of payment"}
+                {shrinking ? "Compressing…" : sending ? "Sending…" : rejected ? "Send it again" : "Send receipt"}
               </button>
             </form>
           </>
