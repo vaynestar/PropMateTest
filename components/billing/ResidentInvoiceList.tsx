@@ -29,7 +29,17 @@ const STATE: Record<ResidentInvoiceRow["state"], { label: string; chip: string; 
  * paid), and the due date - red with days late when overdue.
  */
 export default function ResidentInvoiceList({ rows }: { rows: ResidentInvoiceRow[] }) {
-  const toPay = rows.filter((r) => r.state === "overdue" || r.state === "unpaid" || r.state === "checking");
+  /*
+   * Within "To pay", a bill whose receipt is already with the office needs
+   * nothing from the resident, so it should not compete with one that does.
+   * RES-1..RES-5 hold both at once during UAT, and the task sheet had to name
+   * a due date to tell them apart - that was the list failing, not the
+   * instructions. Actionable first, "being checked" after.
+   */
+  const needsAction = (s: ResidentInvoiceRow["state"]) => s === "overdue" || s === "unpaid";
+  const toPay = rows
+    .filter((r) => needsAction(r.state) || r.state === "checking")
+    .sort((a, b) => Number(needsAction(b.state)) - Number(needsAction(a.state)));
   const paid = rows.filter((r) => r.state === "paid" || r.state === "voided");
   const [tab, setTab] = useState<"pay" | "paid" | "all">(toPay.length ? "pay" : "all");
   const shown = tab === "pay" ? toPay : tab === "paid" ? paid : rows;
@@ -97,11 +107,32 @@ export default function ResidentInvoiceList({ rows }: { rows: ResidentInvoiceRow
                   Due {r.due}
                   {r.state === "overdue" && ` · ${r.daysLate} day${r.daysLate === 1 ? "" : "s"} late`}
                 </span>
+                {/* "Pay this" sits below on an actionable card, so this would
+                    otherwise read "View & pay" directly above it. */}
                 <span className="flex items-center gap-0.5 font-bold text-primary">
-                  {r.state === "overdue" || r.state === "unpaid" ? "View & pay" : "View"}
+                  View
                   <span className="material-symbols-outlined text-[16px]">chevron_right</span>
                 </span>
               </div>
+
+              {/*
+                The bill that wants doing carries the only button on the card,
+                so "which one do I pay?" answers itself. A span styled as a
+                button, not a nested <button> or <a>: the whole card is already
+                a link, and nesting either inside it is invalid and swallows
+                the tap on some phones.
+              */}
+              {needsAction(r.state) && (
+                <span className="mt-0.5 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-primary text-sm font-bold text-on-primary">
+                  Pay this
+                </span>
+              )}
+
+              {r.state === "checking" && (
+                <span className="text-[11px] text-on-surface-variant">
+                  You sent a receipt. Nothing to do until the office confirms it.
+                </span>
+              )}
             </Link>
           );
         })}
