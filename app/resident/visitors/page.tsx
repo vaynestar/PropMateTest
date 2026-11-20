@@ -79,7 +79,7 @@ export default async function ResidentVisitorsPage() {
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-1">
         <p className="text-sm text-on-surface-variant">
-          Create a pass before your guest arrives. The guard scans its QR code at the gate.
+          The guard scans this at the gate.
         </p>
       </section>
 

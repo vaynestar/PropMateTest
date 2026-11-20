@@ -69,7 +69,7 @@ export default async function ResidentInvoicesPage() {
   return (
     <div className="flex flex-col gap-5">
       <section className="flex flex-col gap-1">
-        <p className="text-sm text-on-surface-variant">Everything billed to your unit, newest first.</p>
+        <p className="text-sm text-on-surface-variant">Newest first.</p>
       </section>
 
       <section

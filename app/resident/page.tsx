@@ -49,10 +49,20 @@ function formatDate(date: Date) {
  * These three live under "More", so they are worth a shortcut; the rest are
  * one thumb-reach away already.
  */
+/*
+ * Verbs, not nouns (user, 2026-11-20). A resident opens the app to DO
+ * something - report the dripping tap, book the hall, let a guest in. The
+ * three nouns here named places to go and left the two commonest jobs,
+ * reporting a problem and making a booking, three taps away.
+ *
+ * Notices lost its chip: the latest notice is already shown in full further
+ * down this page, so the shortcut pointed at something the resident could see.
+ */
 const QUICK_ACTIONS = [
-  { label: "Visitors", icon: "person_search", href: "/resident/visitors" },
-  { label: "Notices", icon: "campaign", href: "/resident/announcements" },
-  { label: "My Unit", icon: "apartment", href: "/resident/unit" },
+  { label: "Report", icon: "build_circle", href: "/resident/maintenance" },
+  { label: "Book", icon: "calendar_month", href: "/resident/facilities" },
+  { label: "Visitor", icon: "person_search", href: "/resident/visitors" },
+  { label: "My unit", icon: "apartment", href: "/resident/unit" },
 ];
 
 export default async function ResidentDashboardPage() {
@@ -169,7 +179,7 @@ export default async function ResidentDashboardPage() {
 
       {/* One quiet row, not a wall of chips: the icon sits inline at text
           size instead of inside a 48px tinted square. */}
-      <section className="grid grid-cols-3 gap-stack-sm">
+      <section className="grid grid-cols-4 gap-stack-sm">
         {QUICK_ACTIONS.map((action) => (
           <Link
             key={action.label}
@@ -342,6 +352,28 @@ export default async function ResidentDashboardPage() {
                 {announcement.content}
               </p>
             </div>
+
+            {/*
+              The notice board already shows a notice's photo
+              (ResidentAnnouncementList), and the upcoming-booking cards above
+              already show the facility's. This card did not, so the one notice
+              a resident is most likely to read was the only place the picture
+              was missing (user, 2026-11-20).
+
+              A thumbnail rather than a banner: the card is a row, and a wide
+              image here would push the title and the date off a phone.
+              Written as a plain <img> for the same reason as DEV-188 - a CSS
+              background never painted on the user's iPhone.
+            */}
+            {announcement.image_url && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={announcement.image_url}
+                alt=""
+                loading="lazy"
+                className="h-16 w-16 shrink-0 self-center rounded-xl border border-outline-variant/40 object-cover"
+              />
+            )}
           </Link>
         </section>
       )}

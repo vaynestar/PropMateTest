@@ -52,6 +52,7 @@ export default function PaymentPanel({
   /** Object URL of the picked image, so the resident can see what they chose. */
   const [preview, setPreview] = useState<string | null>(null);
   const [withdrawing, setWithdrawing] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const clearFile = () => {
     setPreview((old) => {
@@ -186,7 +187,30 @@ export default function PaymentPanel({
             <dt className="text-on-surface-variant">Account name</dt>
             <dd className="font-medium text-on-surface">{bank.accountName}</dd>
             <dt className="text-on-surface-variant">Account no.</dt>
-            <dd className="select-all font-mono font-semibold text-on-surface">{bank.accountNo}</dd>
+            {/*
+              Long-pressing twelve digits on a phone to select them is
+              miserable, and getting one wrong sends the money nowhere.
+              `select-all` stays as the fallback for anyone who prefers it.
+            */}
+            <dd className="flex items-center gap-2">
+              <span className="select-all font-mono font-semibold text-on-surface">{bank.accountNo}</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(bank.accountNo.replace(/\s+/g, ""));
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  } catch {
+                    // Clipboard blocked (insecure origin, or the browser said no).
+                    // The number is still selectable, so say nothing and let them.
+                  }
+                }}
+                className="pressable shrink-0 rounded-lg border border-outline-variant/60 bg-surface-container-high px-2.5 py-1 text-[11px] font-semibold text-on-surface"
+              >
+                {copied ? "Copied" : "Copy"}
+              </button>
+            </dd>
           </dl>
         ) : (
           <p className="mt-1 text-xs text-on-surface-variant">
@@ -265,15 +289,21 @@ export default function PaymentPanel({
                   />
                 </label>
                 <label className="flex flex-col gap-1">
-                  <span className="text-[11px] font-semibold text-on-surface-variant">Transfer reference</span>
+                  {/*
+                    "Transfer reference" is the bank's phrase, not the
+                    resident's, and it was the field most likely to stall
+                    someone. An example beats a description.
+                  */}
+                  <span className="text-[11px] font-semibold text-on-surface-variant">Reference number</span>
                   <input
                     name="reference"
                     required
                     minLength={4}
                     maxLength={60}
-                    placeholder="From your bank app or receipt"
+                    placeholder="e.g. 1234567890"
                     className="rounded-lg border border-outline-variant bg-surface-container px-3 py-2.5 text-sm text-on-surface outline-none focus:border-primary"
                   />
+                  <span className="text-[11px] text-on-surface-variant">The number on your transfer receipt.</span>
                 </label>
               </div>
 

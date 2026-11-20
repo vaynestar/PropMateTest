@@ -4,13 +4,18 @@ export type ResidentNavItem = {
   icon: string;
 };
 
+/*
+ * The desktop sidebar. Labels match the phone bar (ResidentLayout) word for
+ * word - they disagreed before, with "Dashboard" here and "Home" there, so the
+ * same page had two names depending on the width of the screen.
+ */
 export const residentNav: ResidentNavItem[] = [
-  { label: "Dashboard", href: "/resident", icon: "dashboard" },
-  { label: "Notice Board", href: "/resident/announcements", icon: "campaign" },
+  { label: "Home", href: "/resident", icon: "dashboard" },
+  { label: "Notices", href: "/resident/announcements", icon: "campaign" },
   { label: "Visitors", href: "/resident/visitors", icon: "person_search" },
-  { label: "Invoices", href: "/resident/invoices", icon: "receipt_long" },
-  { label: "Facilities", href: "/resident/facilities", icon: "meeting_room" },
-  { label: "Helpdesk", href: "/resident/maintenance", icon: "build" },
+  { label: "Bills", href: "/resident/invoices", icon: "receipt_long" },
+  { label: "Book", href: "/resident/facilities", icon: "meeting_room" },
+  { label: "Repairs", href: "/resident/maintenance", icon: "build" },
   { label: "My Unit", href: "/resident/unit", icon: "apartment" },
   { label: "Profile", href: "/resident/profile", icon: "person" },
 ];

@@ -27,7 +27,7 @@ export default async function ResidentAnnouncementsPage() {
       <div className="space-y-6">
         <div>
           <p className="text-on-surface-variant text-sm mt-1">
-            Community announcements, service disruptions, and management circulars
+            From the management office.
           </p>
         </div>
 
