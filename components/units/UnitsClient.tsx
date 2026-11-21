@@ -14,7 +14,8 @@ import {
   type UnitStatusKey,
 } from "@/lib/unit-status";
 import ScrollHint from "@/components/ui/ScrollHint";
-import { StatCard, StatGrid } from "@/components/admin/ui";
+import { EmptyState, Money, TABLE } from "@/components/admin/ui";
+import StatusBadge from "@/components/dashboard/StatusBadge";
 
 interface UnitItem {
   unit_id: string;
@@ -473,8 +474,24 @@ export default function UnitsClient({
   activePropertyId,
   activePropertyName,
   contextOutOfSync,
-}: UnitsClientProps) {
+  owesByUnit = {},
+  openByUnit = {},
+}: UnitsClientProps & {
+  owesByUnit?: Record<string, number>;
+  openByUnit?: Record<string, { repairs: number; slips: number; unbilled: boolean }>;
+}) {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  /*
+   * Two ways to look at the same units (DEV-262). The list answers "which
+   * unit needs me"; the floor view answers "what does the building look
+   * like". Both are legitimate questions, so neither is a mode that hides
+   * the other — and the list is the default, because one floor as cards is
+   * 1,872px of screen against about 430px as rows.
+   */
+  const [view, setView] = useState<"list" | "floors">("list");
+  const [floorFilter, setFloorFilter] = useState<string>("ALL");
+  const [sortBy, setSortBy] = useState<"number" | "owed" | "open">("number");
+  const [picked, setPicked] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<UnitItem | null>(null);
@@ -615,6 +632,13 @@ export default function UnitsClient({
     "Not Available": reservedUnits,
   };
 
+  /*
+   * "In arrears" is a filter the register never had (DEV-262). Status says
+   * whether somebody lives there; it says nothing about whether they are
+   * paying, which is the other half of the question.
+   */
+  const arrearsCount = units.filter((u) => (owesByUnit[u.unit_id] ?? 0) > 0).length;
+
   const filters = [
     {
       key: "ALL",
@@ -630,7 +654,66 @@ export default function UnitsClient({
       dot: UNIT_STATUSES[k].rail,
       activeClass: `${UNIT_STATUSES[k].chip} border`,
     })),
+    {
+      key: "ARREARS",
+      label: "In arrears",
+      count: arrearsCount,
+      dot: "bg-rose-400",
+      activeClass: "border border-rose-500/40 bg-rose-500/15 text-rose-300",
+    },
   ];
+
+  /** The floors offered in the Floor selector, newest building order. */
+  const floorOptions = [...new Set(units.map((u) => u.floor_number))].sort((a, b) => a - b);
+
+  /** The rows the list view shows: chips, floor, search and sort applied. */
+  const listRows = units
+    .filter((u) => {
+      if (statusFilter === "ARREARS") {
+        if ((owesByUnit[u.unit_id] ?? 0) <= 0) return false;
+      } else if (statusFilter !== "ALL" && u.status !== statusFilter) {
+        return false;
+      }
+      if (floorFilter !== "ALL" && String(u.floor_number) !== floorFilter) return false;
+      const q = searchQuery.trim().toLowerCase();
+      if (!q) return true;
+      const tenant = u.leases?.find((l: any) => l.status === "Active")?.tenant?.user_name ?? "";
+      return (
+        u.unit_number.toLowerCase().includes(q) ||
+        (u.unit_type ?? "").toLowerCase().includes(q) ||
+        tenant.toLowerCase().includes(q)
+      );
+    })
+    .sort((a, b) => {
+      if (sortBy === "owed") return (owesByUnit[b.unit_id] ?? 0) - (owesByUnit[a.unit_id] ?? 0);
+      if (sortBy === "open") {
+        const score = (id: string) => {
+          const o = openByUnit[id];
+          return o ? o.repairs + o.slips + (o.unbilled ? 1 : 0) : 0;
+        };
+        return score(b.unit_id) - score(a.unit_id);
+      }
+      return a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true });
+    });
+
+  const togglePick = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  /** "1 repair · slip to check" — what is actually outstanding on this unit. */
+  const openLabel = (id: string) => {
+    const o = openByUnit[id];
+    if (!o) return null;
+    const parts: string[] = [];
+    if (o.repairs) parts.push(`${o.repairs} repair${o.repairs === 1 ? "" : "s"}`);
+    if (o.slips) parts.push(`slip to check`);
+    if (o.unbilled) parts.push("no charges set");
+    return parts.length ? parts.join(" · ") : null;
+  };
 
   const isFiltered = searchQuery !== "" || statusFilter !== "ALL";
 
@@ -662,11 +745,36 @@ export default function UnitsClient({
 
   return (
     <div className="space-y-5">
-      <StatGrid>
-        {kpis.map((k) => (
-          <StatCard key={k.label} label={k.label} value={k.value} hint={k.hint} tone={k.tone} />
-        ))}
-      </StatGrid>
+      {/* The counts ARE the filters (DEV-262). Four read-only tiles sat above
+          a separate four-button filter group saying the same four numbers. */}
+      <nav aria-label="Filter units" className="flex flex-wrap gap-2">
+        {filters.map((f) => {
+          const on = statusFilter === f.key;
+          return (
+            <button
+              key={f.key}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setStatusFilter(f.key)}
+              className={`pressable inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${
+                on
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-outline-variant/60 bg-surface-container text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              {f.dot && <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${f.dot}`} aria-hidden="true" />}
+              {f.label}
+              <span
+                className={`rounded-full px-2 py-px text-[11px] font-bold tabular-nums ${
+                  on ? "bg-primary/25 text-primary" : "bg-surface-container-high text-on-surface-variant"
+                }`}
+              >
+                {f.count}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
 
       {/* Controls. No property picker here — units are managed one property at
           a time and the property is chosen once, in the top bar. */}
@@ -688,41 +796,81 @@ export default function UnitsClient({
           />
         </div>
 
-        {/* Two rows on a phone: the status chips scroll sideways on their own,
-            and the actions sit under them. Previously all three shared one
-            scrolling strip, so Collapse all and Add unit were off-screen and
-            had to be swiped to. */}
+        {/* The status chips moved above this bar; what is left is the three
+            controls that narrow and order what the chips selected. */}
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-          <ScrollHint className="min-w-0 xl:shrink-0"><div className="flex items-center gap-2">
-          <div
-            role="group"
-            aria-label="Filter by status"
-            className="flex shrink-0 items-center gap-1 rounded-lg border border-outline-variant/40 bg-surface-container-high/60 p-1"
-          >
-            {filters.map((f) => (
-              <button
-                key={f.key}
-                type="button"
-                onClick={() => setStatusFilter(f.key)}
-                aria-pressed={statusFilter === f.key}
-                className={`pressable flex h-9 items-center gap-1.5 rounded-md px-2.5 text-xs font-semibold transition-colors ${
-                  statusFilter === f.key
-                    ? f.activeClass
-                    : "border border-transparent text-on-surface-variant hover:text-white"
-                }`}
-              >
-                {f.dot && (
-                  <span className={`h-2 w-2 shrink-0 rounded-full ${f.dot}`} aria-hidden="true" />
-                )}
-                <span>{f.label}</span>
-                <span className="tabular-nums opacity-60">{f.count}</span>
-              </button>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            {floorOptions.length > 1 && (
+              <>
+                <label
+                  htmlFor="floor-filter"
+                  className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant"
+                >
+                  Floor
+                </label>
+                <select
+                  id="floor-filter"
+                  value={floorFilter}
+                  onChange={(e) => setFloorFilter(e.target.value)}
+                  className="h-10 rounded-xl border border-outline-variant/60 bg-surface-container-high px-3 text-sm text-on-surface outline-none focus:border-primary"
+                >
+                  <option value="ALL">Every floor</option>
+                  {floorOptions.map((f) => (
+                    <option key={f} value={String(f)}>
+                      Floor {f}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+
+            <label
+              htmlFor="unit-sort"
+              className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant"
+            >
+              Sort
+            </label>
+            <select
+              id="unit-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="h-10 rounded-xl border border-outline-variant/60 bg-surface-container-high px-3 text-sm text-on-surface outline-none focus:border-primary"
+            >
+              <option value="number">Unit number</option>
+              <option value="owed">Most owed</option>
+              <option value="open">Most open items</option>
+            </select>
+
+            {/* Two ways to look at the same units — see the note on `view`. */}
+            <div
+              role="group"
+              aria-label="How to show the units"
+              className="flex items-center gap-1 rounded-xl border border-outline-variant/60 bg-surface-container p-1"
+            >
+              {([
+                { key: "list" as const, label: "List", icon: "format_list_bulleted" },
+                { key: "floors" as const, label: "Floors", icon: "grid_view" },
+              ]).map((v) => (
+                <button
+                  key={v.key}
+                  type="button"
+                  aria-pressed={view === v.key}
+                  onClick={() => setView(v.key)}
+                  className={`pressable inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors ${
+                    view === v.key
+                      ? "bg-primary/15 text-primary"
+                      : "text-on-surface-variant hover:text-white"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[16px]">{v.icon}</span>
+                  {v.label}
+                </button>
+              ))}
+            </div>
           </div>
-          </div></ScrollHint>
 
           <div className="flex items-center gap-2">
-            {allFloors.length > 1 && (
+            {view === "floors" && allFloors.length > 1 && (
               <button
                 type="button"
                 onClick={toggleAllFloors}
@@ -750,7 +898,196 @@ export default function UnitsClient({
         </div>
       </div>
 
-      <div className="space-y-5">
+      {view === "list" && (
+        <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-high/40 px-4 py-2.5 text-xs text-on-surface-variant">
+            <span>
+              Showing <span className="font-semibold tabular-nums text-on-surface">{listRows.length}</span> of{" "}
+              <span className="tabular-nums">{totalUnits}</span>
+            </span>
+            {picked.size > 0 && (
+              <span className="flex items-center gap-2">
+                <span className="font-semibold text-on-surface">{picked.size} selected</span>
+                <button
+                  type="button"
+                  onClick={() => setPicked(new Set())}
+                  className="font-semibold text-primary hover:underline"
+                >
+                  Clear
+                </button>
+              </span>
+            )}
+          </div>
+
+          {/* Cards below md. Eight columns do not survive a phone, and a
+              table that scrolls sideways is a table nobody reads. */}
+          <div className="divide-y divide-outline-variant/30 md:hidden">
+            {listRows.length === 0 ? (
+              <EmptyState
+                icon="meeting_room"
+                title={totalUnits === 0 ? "No units in this property yet" : "No units match these filters"}
+                hint={
+                  totalUnits === 0
+                    ? "Add the first unit — tenancies, invoices and tickets all hang off one."
+                    : "Try another chip, or clear the search."
+                }
+              />
+            ) : (
+              listRows.map((u) => {
+                const activeLease = u.leases?.find((l: any) => l.status === "Active");
+                const owes = owesByUnit[u.unit_id] ?? 0;
+                const open = openLabel(u.unit_id);
+                return (
+                  <button
+                    key={u.unit_id}
+                    type="button"
+                    onClick={() => setEditingUnit(u)}
+                    className="w-full px-4 py-3.5 text-left transition-colors hover:bg-surface-container-high/40"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold text-white">{u.unit_number}</span>
+                        <span className="mt-0.5 block text-[11px] text-on-surface-variant">
+                          {[u.unit_type, u.area_sqft ? `${u.area_sqft.toLocaleString("en-MY")} sqft` : null]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </span>
+                      <StatusBadge status={u.status} variant="unit" />
+                    </div>
+
+                    <p className="mt-1.5 text-xs text-on-surface-variant">
+                      {activeLease?.tenant?.user_name ?? "Nobody living here"}
+                    </p>
+
+                    {(owes > 0 || open) && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                        {owes > 0 && (
+                          <span className="rounded-md border border-rose-500/35 bg-rose-500/10 px-2 py-0.5 font-bold text-rose-300">
+                            <Money value={owes} /> owed
+                          </span>
+                        )}
+                        {open && (
+                          <span className="rounded-md border border-amber-500/35 bg-amber-500/10 px-2 py-0.5 font-semibold text-amber-200">
+                            {open}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          <div className={TABLE.wrap + " hidden md:block"}>
+            <table className={TABLE.table + " min-w-[980px]"}>
+              <caption className="sr-only">Unit register</caption>
+              <thead>
+                <tr>
+                  <th className={TABLE.th + " w-11"}>
+                    <span className="sr-only">Select</span>
+                  </th>
+                  <th className={TABLE.th}>Unit</th>
+                  <th className={TABLE.th}>Layout</th>
+                  <th className={TABLE.thNum}>Sq ft</th>
+                  <th className={TABLE.th}>Resident</th>
+                  <th className={TABLE.th}>Status</th>
+                  <th className={TABLE.thNum}>Owes</th>
+                  <th className={TABLE.th}>Open against it</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="p-0">
+                      <EmptyState
+                        icon="meeting_room"
+                        title={totalUnits === 0 ? "No units in this property yet" : "No units match these filters"}
+                        hint={
+                          totalUnits === 0
+                            ? "Add the first unit — tenancies, invoices and tickets all hang off one."
+                            : "Try another chip, or clear the search."
+                        }
+                      />
+                    </td>
+                  </tr>
+                ) : (
+                  listRows.map((u) => {
+                    const activeLease = u.leases?.find((l: any) => l.status === "Active");
+                    const owes = owesByUnit[u.unit_id] ?? 0;
+                    const open = openLabel(u.unit_id);
+                    const chosen = picked.has(u.unit_id);
+                    return (
+                      <tr
+                        key={u.unit_id}
+                        className={TABLE.tr + (chosen ? " bg-primary/[0.06]" : "")}
+                      >
+                        <td className={TABLE.td}>
+                          <input
+                            type="checkbox"
+                            checked={chosen}
+                            onChange={() => togglePick(u.unit_id)}
+                            aria-label={`Select unit ${u.unit_number}`}
+                            className="h-4 w-4 accent-[#d0bcff]"
+                          />
+                        </td>
+                        <td className={TABLE.td}>
+                          {/* The unit number is the link to the unit, the same
+                              one an invoice, a ticket or a booking points at. */}
+                          <button
+                            type="button"
+                            onClick={() => setEditingUnit(u)}
+                            className="whitespace-nowrap border-b border-primary/35 pb-px font-bold text-on-surface hover:text-primary"
+                          >
+                            {u.unit_number}
+                          </button>
+                        </td>
+                        <td className={TABLE.tdMuted + " whitespace-nowrap"}>{u.unit_type || "—"}</td>
+                        <td className={TABLE.tdNum + " whitespace-nowrap text-on-surface-variant"}>
+                          {u.area_sqft ? u.area_sqft.toLocaleString("en-MY") : "—"}
+                        </td>
+                        <td className={TABLE.tdMuted}>
+                          {activeLease?.tenant ? (
+                            <Link
+                              href={`/admin/leases?tenant=${activeLease.tenant.user_id}`}
+                              className="hover:text-primary hover:underline"
+                            >
+                              {activeLease.tenant.user_name}
+                            </Link>
+                          ) : (
+                            <span className="text-on-surface-variant/50">—</span>
+                          )}
+                        </td>
+                        <td className={TABLE.td}>
+                          <StatusBadge status={u.status} variant="unit" />
+                        </td>
+                        <td className={TABLE.tdNum + " whitespace-nowrap"}>
+                          {owes > 0 ? (
+                            <Link
+                              href={`/admin/invoices?lease=${activeLease?.lease_id ?? ""}`}
+                              className="font-bold text-rose-300 hover:underline"
+                            >
+                              <Money value={owes} />
+                            </Link>
+                          ) : (
+                            <span className="text-on-surface-variant/50">—</span>
+                          )}
+                        </td>
+                        <td className={TABLE.td + " text-[11px] text-on-surface-variant"}>
+                          {open ?? <span className="text-on-surface-variant/50">—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div className={view === "floors" ? "space-y-5" : "hidden"}>
         {unitsByFloor.map(({ floor, units: floorUnits }) => {
           const counts = UNIT_STATUS_ORDER.reduce<Record<string, number>>((acc, k) => {
             acc[k] = floorUnits.filter((u) => u.status === k).length;

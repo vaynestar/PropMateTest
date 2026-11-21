@@ -4,6 +4,8 @@ import { listPropertiesForUnits, listUnits } from "@/lib/unit-management";
 import UnitsClient from "@/components/units/UnitsClient";
 import { resolveActivePropertyId, shouldPersistProperty } from "@/lib/property-context";
 import { PageHeader } from "@/components/admin/ui";
+import { OPEN_STATUSES } from "@/lib/ticket-states";
+import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,83 @@ export default async function UnitsPage(props: {
   const units = activePropertyId ? await listUnits(activePropertyId) : [];
 
   const activeProperty = properties.find((p) => p.property_id === activePropertyId) ?? null;
+
+  /*
+   * What each unit owes, and what is open against it (DEV-262).
+   *
+   * The card grid showed a unit's number, layout, size and status. Neither of
+   * the two things that decide which unit a manager opens — the money and the
+   * outstanding work — was on the screen at all, and a 240-unit tower is
+   * roughly 37,000px of cards before you find either.
+   *
+   * Three cheap queries scoped to this property, reduced into lookups.
+   */
+  const unitIds = units.map((u) => u.unit_id);
+  const [unpaid, openTickets, slips, unbilledLeases] = await Promise.all([
+    unitIds.length
+      ? prisma.invoice.findMany({
+          where: {
+            status: { notIn: ["Paid", "Inactive"] },
+            lease: { unit_id: { in: unitIds } },
+          },
+          select: { total_amount: true, lease: { select: { unit_id: true } } },
+        })
+      : [],
+    unitIds.length
+      ? prisma.ticket.groupBy({
+          by: ["unit_id"],
+          where: { unit_id: { in: unitIds }, status: { in: OPEN_STATUSES } },
+          _count: { _all: true },
+        })
+      : [],
+    unitIds.length
+      ? prisma.paymentTransaction.findMany({
+          where: {
+            transaction_status: "Pending",
+            payment_method: "Bank transfer",
+            invoice: { lease: { unit_id: { in: unitIds } } },
+          },
+          select: { invoice: { select: { lease: { select: { unit_id: true } } } } },
+        })
+      : [],
+    // An active tenancy with no charges and no rent bills nothing — the unit
+    // looks occupied and earning, and quietly is not.
+    unitIds.length
+      ? prisma.tenantLease.findMany({
+          where: { unit_id: { in: unitIds }, status: "Active" },
+          select: {
+            unit_id: true,
+            unit: { select: { monthly_rent: true } },
+            lease_charges: { where: { is_active: true }, select: { amount: true, quantity: true } },
+          },
+        })
+      : [],
+  ]);
+
+  const owesByUnit: Record<string, number> = {};
+  for (const inv of unpaid) {
+    const id = inv.lease?.unit_id;
+    if (!id) continue;
+    // Rule 6.
+    owesByUnit[id] = (owesByUnit[id] ?? 0) + Number(inv.total_amount ?? 0);
+  }
+
+  const openByUnit: Record<string, { repairs: number; slips: number; unbilled: boolean }> = {};
+  const bump = (id: string) => (openByUnit[id] ??= { repairs: 0, slips: 0, unbilled: false });
+  for (const row of openTickets) {
+    if (row.unit_id) bump(row.unit_id).repairs = row._count._all;
+  }
+  for (const s of slips) {
+    const id = s.invoice?.lease?.unit_id;
+    if (id) bump(id).slips += 1;
+  }
+  for (const l of unbilledLeases) {
+    const charges = l.lease_charges.reduce(
+      (sum, c) => sum + Number(c.amount ?? 0) * Number(c.quantity ?? 1),
+      0
+    );
+    if (charges <= 0 && Number(l.unit?.monthly_rent ?? 0) <= 0) bump(l.unit_id).unbilled = true;
+  }
 
   // If the resolved property is not what the cookie holds (a deep link, or a
   // first visit with no cookie yet), tell the client to persist it so the
@@ -82,6 +161,8 @@ export default async function UnitsPage(props: {
 
       <UnitsClient
         initialUnits={serialisedUnits}
+        owesByUnit={owesByUnit}
+        openByUnit={openByUnit}
         properties={properties}
         activePropertyId={activePropertyId}
         activePropertyName={activeProperty?.property_name ?? null}
