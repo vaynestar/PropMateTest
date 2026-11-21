@@ -133,7 +133,7 @@ export function StatCard({
       <span className={`${LABEL} block truncate`}>{label}</span>
       <div className="mt-1.5 flex flex-wrap items-baseline gap-x-2">
         <span
-          className={`min-w-0 break-words text-[26px] font-semibold leading-none tracking-tight tabular-nums ${t.value}`}
+          className={`min-w-0 break-words text-[22px] font-semibold leading-none tracking-tight tabular-nums sm:text-[26px] ${t.value}`}
         >
           {value}
         </span>

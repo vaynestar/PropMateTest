@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import Link from "next/link";
 import ChargeTable from "./ChargeTable";
 import AddChargeForm from "./AddChargeForm";
+import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,15 @@ export default async function ChargesPage() {
 
   const rows = await prisma.chargeMaster.findMany({
     orderBy: { charge_name: "asc" },
+    include: {
+      /*
+       * How many leases bill this, and whether it has ever reached an
+       * invoice (DEV-258). A charge nobody uses and a charge on every lease
+       * looked identical on this screen, and retiring the second one is a
+       * very different act from retiring the first.
+       */
+      _count: { select: { lease_charges: true, invoice_details: true } },
+    },
   });
 
   // Prisma Decimal cannot cross into a Client Component — AGENTS.md Rule 6.
@@ -23,30 +33,26 @@ export default async function ChargesPage() {
     default_amount: Number(c.default_amount ?? 0),
     description: c.description,
     is_active: c.is_active,
+    leaseCount: c._count.lease_charges,
+    invoicedCount: c._count.invoice_details,
   }));
 
   return (
-    <div className="flex flex-col gap-stack-lg animate-fade-in">
-      <div className="flex items-center gap-4">
-        <Link
-          href="/admin/billing"
-          className="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest transition-colors"
-        >
-          <span className="material-symbols-outlined text-[20px]">
-            arrow_back
-          </span>
-        </Link>
-        <div>
-          <h1 className="font-headline-lg text-headline-lg text-on-surface">
-            Charge types
-          </h1>
-          <p className="font-body-md text-body-md text-on-surface-variant mt-1">
-            The things you can bill for — rent, maintenance, parking, deposits.
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-[1400px] space-y-5">
+      <Link
+        href="/admin/billing"
+        className="inline-flex w-fit items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+      >
+        <span className="material-symbols-outlined text-[16px]">arrow_back</span>
+        Billing
+      </Link>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <PageHeader
+        title="Charge types"
+        subtitle="The catalogue every invoice line comes from. Change one here and it applies to the next run, never to an invoice already raised."
+      />
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <ChargeTable charges={charges} />
         <AddChargeForm />
       </div>
