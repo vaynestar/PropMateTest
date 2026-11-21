@@ -177,19 +177,31 @@ export default async function ResidentDashboardPage() {
         </div>
       </section>
 
-      {/* One quiet row, not a wall of chips: the icon sits inline at text
-          size instead of inside a 48px tinted square. */}
+      {/*
+        One quiet row, not a wall of chips: the icon stays at text size
+        rather than sitting in a 48px tinted square.
+
+        The icon used to sit BESIDE the label. Four columns on a 360px
+        phone leaves about 75px a cell, and an inline 18px icon plus its
+        gap took more than half of that, so every label truncated:
+        "Rep...", "Visi...", "My ..." (user, 2026-11-22, on an Android
+        device). Stacking gives the label the whole cell, and `break-words`
+        means a longer one wraps to a second line instead of being clipped
+        — a nav button that cannot say where it goes is not a nav button.
+      */}
       <section className="grid grid-cols-4 gap-stack-sm">
         {QUICK_ACTIONS.map((action) => (
           <Link
             key={action.label}
             href={action.href}
-            className="pressable flex items-center justify-center gap-2 rounded-xl border border-outline-variant/50 bg-surface-container px-2 py-3 transition-colors hover:border-outline hover:bg-surface-container-high"
+            className="pressable flex min-h-[72px] flex-col items-center justify-center gap-1.5 rounded-xl border border-outline-variant/50 bg-surface-container px-1 py-2.5 text-center transition-colors hover:border-outline hover:bg-surface-container-high"
           >
-            <span className="material-symbols-outlined shrink-0 text-[18px] text-on-surface-variant">
+            <span className="material-symbols-outlined shrink-0 text-[20px] leading-none text-on-surface-variant">
               {action.icon}
             </span>
-            <span className="truncate text-xs font-medium text-on-surface">{action.label}</span>
+            <span className="w-full break-words text-[11px] font-medium leading-tight text-on-surface">
+              {action.label}
+            </span>
           </Link>
         ))}
       </section>
