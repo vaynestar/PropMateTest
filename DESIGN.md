@@ -23,7 +23,7 @@ read at leisure.
 
 ---
 
-## 1 · Colour
+## Colors
 
 ### Surfaces — four, in this order, and no others
 
@@ -83,7 +83,7 @@ blindness and a bad monitor in a bright office.
 
 ---
 
-## 2 · Type
+## Typography
 
 **Inter, one family, everything.** No display face. Product UI does not need a pairing, and a
 display face in a table header is a costume.
@@ -111,7 +111,7 @@ head, where it is doing structural work.
 
 ---
 
-## 3 · Space and density
+## Space and density
 
 8px grid. The whole spacing vocabulary:
 
@@ -130,7 +130,7 @@ More space above a heading than below it: the heading belongs to what follows.
 
 ---
 
-## 4 · Components
+## Components
 
 ### Shape
 
@@ -183,7 +183,7 @@ and the recovery)`.
 
 ---
 
-## 5 · Motion
+## Motion
 
 150–250 ms. Users are mid-task; nobody wants choreography between them and the invoice.
 
@@ -199,7 +199,7 @@ Everything respects `prefers-reduced-motion`.
 
 ---
 
-## 6 · Browser surfaces
+## Browser surfaces
 
 The parts nobody draws still belong to the design: text selection, the caret, scrollbars, the
 focus ring, the underline offset, and tabular numerals. Shipping them as browser defaults is
@@ -215,7 +215,7 @@ caret-color        : #d0bcff;
 
 ---
 
-## 7 · Copy
+## Copy
 
 Plain English, sentence case, active voice, the end user's words.
 
@@ -233,7 +233,7 @@ report. Nothing apologises.
 
 ---
 
-## 8 · What this system refuses
+## What this system refuses
 
 - A second accent colour.
 - A fifth surface grey.
