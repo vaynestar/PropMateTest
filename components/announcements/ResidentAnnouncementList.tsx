@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ViewerButton } from "@/components/ui/MediaViewer";
 import Image from "next/image";
 import ScrollHint from "@/components/ui/ScrollHint";
@@ -62,10 +62,49 @@ export default function ResidentAnnouncementList({
   const [searchQuery, setSearchQuery] = useState("");
   const [readingItem, setReadingItem] = useState<ResidentAnnouncement | null>(null);
 
-  // Urgent Emergency Announcement (if any)
-  const urgentAnnouncement = useMemo(() => {
-    return announcements.find((a) => a.priority === "Urgent");
-  }, [announcements]);
+  /*
+   * Every urgent notice, not just the first one (DEV-242; user: "What if we
+   * have multiple urgent one can it be slide or carousel?").
+   *
+   * `.find()` showed one and silently dropped the rest, which is the worst
+   * possible failure for the one category where being missed matters. They
+   * now share a carousel at the top of the board, newest first.
+   */
+  const urgent = useMemo(
+    () =>
+      announcements
+        .filter((a) => a.priority === "Urgent")
+        .sort((a, b) => +new Date(b.publish_date) - +new Date(a.publish_date)),
+    [announcements]
+  );
+  const [urgentIndex, setUrgentIndex] = useState(0);
+  const safeIndex = urgent.length ? Math.min(urgentIndex, urgent.length - 1) : 0;
+  const urgentAnnouncement = urgent[safeIndex];
+
+  /*
+   * Advance on a timer only while there is more than one and the reader has
+   * not taken control. Eight seconds: long enough to read a two-line summary,
+   * and it stops for good on the first tap so it cannot slide away mid-read.
+   */
+  const [urgentPaused, setUrgentPaused] = useState(false);
+  useEffect(() => {
+    if (urgent.length < 2 || urgentPaused) return;
+    const t = setInterval(() => setUrgentIndex((i) => (i + 1) % urgent.length), 8000);
+    return () => clearInterval(t);
+  }, [urgent.length, urgentPaused]);
+
+  const goUrgent = (next: number) => {
+    setUrgentPaused(true);
+    setUrgentIndex((next + urgent.length) % urgent.length);
+  };
+
+  /*
+   * Order within the board: urgent, then pinned, then newest. The grid was in
+   * whatever order the query returned, so an urgent notice could sit below a
+   * social event (user: "How do we display the announcement as urgent on
+   * top?").
+   */
+  const rank = (a: ResidentAnnouncement) => (a.priority === "Urgent" ? 0 : a.is_pinned ? 1 : 2);
 
   // Filtered List
   const filteredList = useMemo(() => {
@@ -80,7 +119,8 @@ export default function ResidentAnnouncementList({
         if (!matchesTitle && !matchesContent) return false;
       }
       return true;
-    });
+    }).sort((a, b) => rank(a) - rank(b) || +new Date(b.publish_date) - +new Date(a.publish_date));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [announcements, selectedCategory, searchQuery]);
 
   return (
@@ -104,7 +144,10 @@ export default function ResidentAnnouncementList({
                     {urgentAnnouncement.property?.property_name || propertyName || "Building Wide"}
                   </span>
                 </div>
-                <h3 className="text-base sm:text-lg font-bold text-white mt-1">
+                <h3
+                  key={urgentAnnouncement.announcement_id}
+                  className="text-base sm:text-lg font-bold text-white mt-1 animate-in fade-in duration-300"
+                >
                   {urgentAnnouncement.title}
                 </h3>
                 <p className="text-xs text-rose-200/80 line-clamp-2 mt-0.5">
@@ -122,6 +165,54 @@ export default function ResidentAnnouncementList({
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
             </button>
           </div>
+
+          {/*
+            Carousel controls, only when there is something to move between.
+            Dots say how many there are - the thing a single rotating banner
+            can never tell you - and are the tap targets themselves, with
+            arrows either side for anyone who would rather step through.
+          */}
+          {urgent.length > 1 && (
+            <div className="mt-3 flex items-center justify-between gap-3 border-t border-rose-500/20 pt-3">
+              <span className="text-[11px] font-semibold text-rose-200/70">
+                {safeIndex + 1} of {urgent.length} urgent
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => goUrgent(safeIndex - 1)}
+                  aria-label="Previous urgent notice"
+                  className="pressable flex h-7 w-7 items-center justify-center rounded-full text-rose-200 hover:bg-rose-500/20"
+                >
+                  <span className="material-symbols-outlined text-[18px]">chevron_left</span>
+                </button>
+                {urgent.map((u, i) => (
+                  <button
+                    key={u.announcement_id}
+                    type="button"
+                    onClick={() => goUrgent(i)}
+                    aria-label={`Urgent notice ${i + 1}: ${u.title}`}
+                    aria-current={i === safeIndex}
+                    className="pressable flex h-7 w-5 items-center justify-center"
+                  >
+                    <span
+                      className={`block rounded-full transition-all ${
+                        i === safeIndex ? "h-2 w-5 bg-rose-400" : "h-2 w-2 bg-rose-400/35"
+                      }`}
+                    />
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => goUrgent(safeIndex + 1)}
+                  aria-label="Next urgent notice"
+                  className="pressable flex h-7 w-7 items-center justify-center rounded-full text-rose-200 hover:bg-rose-500/20"
+                >
+                  <span className="material-symbols-outlined text-[18px]">chevron_right</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -188,6 +279,19 @@ export default function ResidentAnnouncementList({
               >
                 <div className="flex flex-col gap-3">
                   {/* Top Badges */}
+                  {/*
+                    The date used to share a row with the badge group, which
+                    wraps. One notice carrying three badges pushed "21 Nov
+                    2026" onto a second line while its neighbour kept it on
+                    one, so no two cards lined up (user: "some display in one
+                    row some display 2 row"). The badges now get the row to
+                    themselves and the date sits on its own line above them,
+                    in the same place on every card.
+                  */}
+                  <span className="block text-[11px] font-medium text-on-surface-variant">
+                    {publishFormatted}
+                  </span>
+
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 flex-wrap">
                       {item.is_pinned && (
@@ -207,9 +311,6 @@ export default function ResidentAnnouncementList({
                       )}
                     </div>
 
-                    <span className="text-[11px] text-on-surface-variant font-medium">
-                      {publishFormatted}
-                    </span>
                   </div>
 
                   {/* Title & Preview Image */}

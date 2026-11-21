@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { NotificationItem } from "@/lib/notifications";
 import ScrollHint from "@/components/ui/ScrollHint";
+import { dayMonth } from "@/lib/short-date";
 
 type Portal = "admin" | "resident";
 
@@ -38,23 +39,57 @@ const COPY: Record<
       { id: "BILLING", label: "Billing" },
     ],
   },
+  /*
+   * The resident gets two tabs, not seven category pills (DEV-242).
+   *
+   * The pills were a map of the system - BILLING, TICKET, BOOKING, NOTICE,
+   * VISITOR - and a resident does not arrive at a bell thinking "show me
+   * BOOKING notifications". They arrive thinking "is there anything I have to
+   * do?", and occasionally "what did I miss?". Those are the two tabs. The
+   * category is still on every row as a chip, so nothing is hidden behind a
+   * filter that was only ever there to re-find it.
+   */
   resident: {
     title: "Updates",
     empty: "Nothing new here",
     footer: { href: "/resident", label: "Back to home" },
     filters: [
+      { id: "URGENT", label: "Needs you" },
       { id: "ALL", label: "All" },
-      { id: "URGENT", label: "Needs action" },
-      { id: "BILLING", label: "Bills" },
-      /* Same words as the tabs below (ResidentLayout): a resident should not
-         have to learn that "Helpdesk" here is "Repairs" there, or that
-         "Guests" is the Visitors page. */
-      { id: "TICKET", label: "Repairs" },
-      { id: "BOOKING", label: "Bookings" },
-      { id: "NOTICE", label: "Notices" },
-      { id: "VISITOR", label: "Visitors" },
     ],
   },
+};
+
+/**
+ * "14:05" today, "19 Nov" before that.
+ *
+ * Every row printed a bare HH:MM, so a notice from last week read "09:03" and
+ * looked like it had just arrived - the one thing a timestamp exists to rule
+ * out.
+ */
+function whenLabel(ts: Date | string): string {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return "";
+  const fmt = (x: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(x);
+  if (fmt(d) === fmt(new Date())) {
+    return d.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "Asia/Kuala_Lumpur",
+    });
+  }
+  return dayMonth(d);
+}
+
+/** The word for a row's category, so dropping the filters loses nothing. */
+const TYPE_LABEL: Record<string, string> = {
+  TICKET: "Repair",
+  VISITOR: "Visitor",
+  BILLING: "Bill",
+  BOOKING: "Booking",
+  NOTICE: "Notice",
+  SYSTEM: "System",
 };
 
 export default function NotificationCenter({
@@ -68,7 +103,17 @@ export default function NotificationCenter({
   const [isOpen, setIsOpen] = useState(false);
   const [notifications] = useState<NotificationItem[]>(initialNotifications);
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
-  const [filterType, setFilterType] = useState<string>("ALL");
+  /*
+   * Open on whichever tab has something to say. A resident with two overdue
+   * bills should see them, not a chronological mixture they have to sift;
+   * one with nothing outstanding should not land on an empty tab.
+   */
+  const needsYouCount = initialNotifications.filter(
+    (n) => n.urgency === "CRITICAL" || n.urgency === "HIGH"
+  ).length;
+  const [filterType, setFilterType] = useState<string>(
+    portal === "resident" && needsYouCount > 0 ? "URGENT" : "ALL"
+  );
 
   /*
    * Read state lived in component state only, so every navigation or reload
@@ -191,23 +236,55 @@ export default function NotificationCenter({
               </div>
             </div>
 
-            {/* Quick Filter Pills */}
-            <ScrollHint className="border-b border-outline-variant/30 bg-surface-container-low px-3 py-2 text-[11px]"><div className="flex items-center gap-1.5">
-              {copy.filters.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setFilterType(f.id)}
-                  className={`px-2.5 py-1 rounded-lg font-semibold transition-all shrink-0 ${
-                    filterType === f.id
-                      ? "bg-primary text-on-primary"
-                      : "text-on-surface-variant hover:text-white"
-                  }`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div></ScrollHint>
+            {/* Two tabs for the resident, the operator's category pills for admin. */}
+            {portal === "resident" ? (
+              <div className="grid grid-cols-2 gap-1.5 border-b border-outline-variant/30 bg-surface-container-low p-2">
+                {copy.filters.map((f) => {
+                  const count = f.id === "URGENT" ? needsYouCount : notifications.length;
+                  const active = filterType === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFilterType(f.id)}
+                      className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-bold transition-all pressable ${
+                        active ? "bg-primary text-on-primary shadow" : "text-on-surface-variant hover:text-white"
+                      }`}
+                    >
+                      {f.label}
+                      <span
+                        className={`rounded-full px-1.5 text-[10px] ${
+                          active
+                            ? "bg-black/20"
+                            : f.id === "URGENT" && count > 0
+                            ? "bg-rose-500/20 text-rose-300"
+                            : "bg-surface-container-highest"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <ScrollHint className="border-b border-outline-variant/30 bg-surface-container-low px-3 py-2 text-[11px]"><div className="flex items-center gap-1.5">
+                {copy.filters.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setFilterType(f.id)}
+                    className={`px-2.5 py-1 rounded-lg font-semibold transition-all shrink-0 ${
+                      filterType === f.id
+                        ? "bg-primary text-on-primary"
+                        : "text-on-surface-variant hover:text-white"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div></ScrollHint>
+            )}
 
             {/* Notification Item List */}
             <div className="max-h-80 overflow-y-auto divide-y divide-outline-variant/30">
@@ -235,40 +312,68 @@ export default function NotificationCenter({
                       : "text-primary bg-primary/10 border-primary/20";
 
                   return (
+                    /*
+                     * Read and unread were a 5%-opacity tint apart and a 2px
+                     * dot (user: "the contra of read and unread message colour
+                     * can be more significant"). Unread now carries a solid
+                     * left bar, a tint you can actually see and a white title;
+                     * read drops all three and dims. You can tell them apart
+                     * from across the room, which is the entire job.
+                     */
                     <Link
                       key={notif.id}
                       href={notif.href}
                       onClick={() => handleItemClick(notif.id)}
-                      className={`p-3.5 flex items-start gap-3 hover:bg-surface-container-high transition-colors group ${
-                        !isRead ? "bg-primary/5" : ""
+                      className={`relative flex items-start gap-3 py-3.5 pl-4 pr-3.5 transition-colors ${
+                        isRead
+                          ? "bg-transparent hover:bg-surface-container-high"
+                          : "bg-primary/12 hover:bg-primary/20"
                       }`}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${iconColor}`}>
+                      {!isRead && <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-primary" />}
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${iconColor} ${
+                          isRead ? "opacity-55" : ""
+                        }`}
+                      >
                         <span className="material-symbols-outlined text-[18px]">{iconName}</span>
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-1">
-                          <h4 className={`text-xs font-semibold truncate ${!isRead ? "text-white" : "text-on-surface-variant"}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          <h4
+                            className={`truncate text-xs ${
+                              isRead ? "font-medium text-on-surface-variant" : "font-bold text-white"
+                            }`}
+                          >
                             {notif.title}
                           </h4>
-                          <span className="text-[10px] text-on-surface-variant/70 shrink-0 font-mono">
-                            {new Date(notif.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                          <span className="shrink-0 text-[10px] font-medium text-on-surface-variant/70">
+                            {whenLabel(notif.timestamp)}
                           </span>
                         </div>
-                        <p className="text-[11px] text-on-surface-variant line-clamp-2 mt-0.5">
+                        <p className={`mt-0.5 line-clamp-2 text-[11px] ${isRead ? "text-on-surface-variant/70" : "text-on-surface-variant"}`}>
                           {notif.message}
                         </p>
+                        {/* The category, on the row. The filters used to be
+                            the only way to see it. */}
+                        <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-outline-variant/50 bg-surface-container-high px-1.5 py-0.5 text-[10px] font-semibold text-on-surface-variant">
+                          {TYPE_LABEL[notif.type] ?? notif.type}
+                        </span>
                       </div>
-                      {!isRead && (
-                        <span className="w-2 h-2 rounded-full bg-primary shrink-0 mt-1" />
-                      )}
+                      {!isRead && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />}
                     </Link>
                   );
                 })
               ) : (
                 <div className="p-8 text-center text-xs text-on-surface-variant flex flex-col items-center gap-1.5">
-                  <span className="material-symbols-outlined text-[24px] opacity-40">notifications_paused</span>
-                  <span>{copy.empty}</span>
+                  <span className="material-symbols-outlined text-[24px] opacity-40">
+                    {filterType === "URGENT" && portal === "resident" ? "task_alt" : "notifications_paused"}
+                  </span>
+                  <span>
+                    {filterType === "URGENT" && portal === "resident"
+                      ? "Nothing needs you right now."
+                      : copy.empty}
+                  </span>
                 </div>
               )}
             </div>

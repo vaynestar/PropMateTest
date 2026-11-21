@@ -142,7 +142,11 @@ export default async function ResidentMaintenancePage() {
       </section>
 
       {lease && (
-        <ExpandableForm title="Report a problem" buttonLabel="New Request" defaultOpen={false}>
+        <ExpandableForm
+          title="Report a problem"
+          subtitle="Photos help the office send the right person."
+          buttonLabel="Report a repair"
+        >
           <ResidentRaiseTicketForm
             unitId={lease.unit.unit_id}
             unitNumber={lease.unit.unit_number}

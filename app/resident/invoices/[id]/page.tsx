@@ -1,44 +1,18 @@
 import Link from "next/link";
-import { ViewerButton } from "@/components/ui/MediaViewer";
-import DownloadButton from "@/components/ui/DownloadButton";
 import { notFound } from "next/navigation";
-import prisma from "@/lib/prisma";
 import { requireUser } from "@/lib/auth";
-import StatusBadge from "@/components/dashboard/StatusBadge";
-import { getPaymentInstructions } from "@/lib/settings";
-import {
-  MANUAL_METHOD,
-  SUBMISSION_FIELDS,
-  isUuid,
-  onlinePaymentsEnabled,
-  todayMY,
-} from "@/lib/payment/payments";
-import PaymentPanel, { type Submission } from "./PaymentPanel";
-import { rm } from "@/lib/money";
-import { invoiceState } from "@/lib/invoice-state";
+import { getResidentInvoiceDetail } from "@/lib/invoice-detail";
+import InvoiceDetailBody from "@/components/billing/InvoiceDetailBody";
 
 export const dynamic = "force-dynamic";
 
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-/** "16 Sep 2026" in Malaysia time (Intl prints "Sept"). */
-const day = (d: Date | string) => {
-  const [y, m, dd] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date(d)).split("-").map(Number);
-  return `${dd} ${MONTHS[m - 1]} ${y}`;
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  Pending: "Being checked",
-  Success: "Confirmed",
-  Rejected: "Not accepted",
-  Withdrawn: "You took this back",
-  Failed: "Failed",
-  "Amount mismatch": "Amount mismatch",
-};
-
 /**
- * One invoice, and how to pay it. Payment is by bank transfer with proof,
- * verified by the office before the invoice turns Paid (user, 2026-09-15).
+ * One invoice as its own page.
+ *
+ * Since DEV-242 the bill list opens this in a dialog instead of navigating,
+ * so most residents never arrive here. It stays for the places that link
+ * straight to a bill - a notification, a bookmark, a shared link - and
+ * renders the very same body the dialog does.
  */
 export default async function ResidentInvoicePage({
   params,
@@ -50,186 +24,16 @@ export default async function ResidentInvoicePage({
   const user = await requireUser(["Resident"]);
   const { id } = await params;
   await searchParams;
-  if (!isUuid(id)) notFound();
 
-  const invoice = await prisma.invoice.findFirst({
-    where: { invoice_id: id, issued_at: { not: null }, lease: { user_id: user.userId } },
-    include: {
-      details: { orderBy: { created_at: "asc" } },
-      lease: { include: { unit: { include: { property: true } } } },
-    },
-  });
-  if (!invoice) notFound();
-
-  const [transactions, bank] = await Promise.all([
-    prisma.paymentTransaction.findMany({
-      where: { invoice_id: id },
-      orderBy: { created_at: "desc" },
-      select: SUBMISSION_FIELDS,
-    }),
-    getPaymentInstructions(),
-  ]);
-
-  const latestManual = transactions.find((t) => t.payment_method === MANUAL_METHOD) ?? null;
-  const submission: Submission | null = latestManual
-    ? {
-        transactionId: latestManual.transaction_id,
-        status: latestManual.transaction_status,
-        reference: latestManual.reference_number,
-        paidOn: day(latestManual.payment_date),
-        submittedOn: day(latestManual.created_at),
-        reviewNote: latestManual.review_note,
-        hasProof: !!latestManual.proof_mime,
-      }
-    : null;
-
-  const total = Number(invoice.total_amount);
-  const pdf = { url: `/api/invoices/${invoice.invoice_id}/pdf`, filename: `${invoice.invoice_no}.pdf` };
-  const isUnpaid = invoice.status === "Unpaid";
-  const checking = submission?.status === "Pending";
-  /*
-   * This page read the server's midnight and ignored the payment under review,
-   * so an invoice showed Overdue here and "Being checked" in the list it was
-   * opened from (R17). Both now ask lib/invoice-state.
-   */
-  const overdue = invoiceState(invoice, checking) === "overdue";
-
-  /*
-   * Preview and Download (DEV-191; Adobe red at the user's request,
-   * 2026-09-22, because people look for that colour when they want a PDF).
-   *
-   * On an UNPAID bill they were the two biggest, loudest controls on the
-   * screen - a red download shouting over the thing the resident came to do,
-   * which is pay (user, 2026-11-20: "invoice all didnt improve"). The colour
-   * stays; the placement and the weight do not. On an unpaid bill they move
-   * below the payment panel and shrink to a quiet row. On a settled one,
-   * where the document IS the point, they stay where they were.
-   */
-  const docActions = (
-    <div className="grid grid-cols-2 gap-2">
-      <ViewerButton
-        items={[{ src: `/print/invoice/${invoice.invoice_id}`, title: `Invoice ${invoice.invoice_no}`, kind: "doc", download: pdf }]}
-        className={`pressable flex items-center justify-center gap-2 rounded-lg border border-sky-400/50 bg-sky-500/15 font-semibold text-sky-200 transition-colors hover:bg-sky-500/25 ${
-          isUnpaid ? "py-2 text-xs" : "py-2.5 text-sm"
-        }`}
-      >
-        <span className="material-symbols-outlined text-[16px]">visibility</span>
-        Preview
-      </ViewerButton>
-      <DownloadButton
-        url={pdf.url}
-        filename={pdf.filename}
-        className={`pressable flex w-full items-center justify-center gap-2 rounded-lg border border-[#e0301e]/60 bg-[#e0301e]/90 font-semibold text-white transition-colors hover:bg-[#e0301e] disabled:opacity-60 ${
-          isUnpaid ? "py-2 text-xs" : "py-2.5 text-sm"
-        }`}
-      />
-    </div>
-  );
+  const detail = await getResidentInvoiceDetail(id, user.userId);
+  if (!detail) notFound();
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-stack-lg">
       <Link href="/resident/invoices" className="text-xs font-semibold text-primary hover:underline">
         ← All bills
       </Link>
-
-      <section className="glass-card flex flex-col gap-4 rounded-xl p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="font-mono text-xs text-on-surface-variant">{invoice.invoice_no}</p>
-            <h2 className="mt-1 text-2xl font-bold text-on-surface">{rm(total)}</h2>
-            <p className="mt-1 text-xs text-on-surface-variant">
-              Unit {invoice.lease.unit.unit_number} · {invoice.lease.unit.property.property_name}
-            </p>
-          </div>
-          {checking ? (
-            <span className="shrink-0 rounded-full border border-amber-500/40 bg-amber-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-amber-300">
-              Being checked
-            </span>
-          ) : (
-            <StatusBadge status={overdue ? "Overdue" : invoice.status} variant="invoice" />
-          )}
-        </div>
-
-        <dl className="grid grid-cols-2 gap-3 border-t border-outline-variant/30 pt-3 text-xs">
-          <div>
-            <dt className="text-on-surface-variant">Issued</dt>
-            <dd className="font-medium text-on-surface">{day(invoice.invoice_date)}</dd>
-          </div>
-          <div>
-            <dt className="text-on-surface-variant">Due</dt>
-            <dd className={`font-medium ${overdue ? "text-rose-300" : "text-on-surface"}`}>{day(invoice.due_date)}</dd>
-          </div>
-        </dl>
-
-        <ul className="divide-y divide-outline-variant/25 border-t border-outline-variant/30">
-          {invoice.details.map((d) => (
-            <li key={d.detail_id} className="flex items-start justify-between gap-3 py-2.5 text-sm">
-              <span className="min-w-0 text-on-surface">
-                {d.description}
-                {Number(d.quantity) !== 1 && (
-                  <span className="block text-[11px] text-on-surface-variant">
-                    {Number(d.quantity)} × {rm(Number(d.unit_price))}
-                  </span>
-                )}
-              </span>
-              <span className="shrink-0 font-medium text-on-surface">{rm(Number(d.total_price))}</span>
-            </li>
-          ))}
-          <li className="flex justify-between py-2.5 text-sm font-bold text-on-surface">
-            <span>Total</span>
-            <span>{rm(total)}</span>
-          </li>
-        </ul>
-
-        {!isUnpaid && docActions}
-      </section>
-
-      {isUnpaid && (
-        <section className="glass-card flex flex-col gap-3 rounded-xl p-5">
-          <h2 className="text-base font-semibold text-on-surface">Pay this bill</h2>
-          <PaymentPanel
-            invoiceId={invoice.invoice_id}
-            amountLabel={rm(total)}
-            bank={bank}
-            submission={submission}
-            today={todayMY()}
-            onlineEnabled={onlinePaymentsEnabled()}
-          />
-        </section>
-      )}
-
-      {/* The document, after the thing they came to do. */}
-      {isUnpaid && (
-        <div className="-mt-2">
-          <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-on-surface-variant">
-            The invoice itself
-          </p>
-          {docActions}
-        </div>
-      )}
-
-      {transactions.length > 0 && (
-        <section className="glass-card rounded-xl p-5">
-          <h2 className="mb-2 text-sm font-semibold text-on-surface">Payment history</h2>
-          <ul className="divide-y divide-outline-variant/25 text-xs">
-            {transactions.map((t) => (
-              <li key={t.transaction_id} className="flex items-start justify-between gap-3 py-2">
-                <span className="min-w-0 text-on-surface-variant">
-                  {day(t.created_at)} · {t.payment_method}
-                  {t.reference_number && <span className="block font-mono">{t.reference_number}</span>}
-                  {t.transaction_status === "Rejected" && t.review_note && (
-                    <span className="block text-rose-300">{t.review_note}</span>
-                  )}
-                </span>
-                <span className="shrink-0 text-right">
-                  <span className="block font-medium text-on-surface">{rm(Number(t.transaction_amount))}</span>
-                  <span className="text-on-surface-variant">{STATUS_LABEL[t.transaction_status] ?? t.transaction_status}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <InvoiceDetailBody detail={detail} />
     </div>
   );
 }

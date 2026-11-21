@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import InvoiceDetailModal from "./InvoiceDetailModal";
 
 export type ResidentInvoiceRow = {
   id: string;
@@ -42,6 +42,13 @@ export default function ResidentInvoiceList({ rows }: { rows: ResidentInvoiceRow
     .sort((a, b) => Number(needsAction(b.state)) - Number(needsAction(a.state)));
   const paid = rows.filter((r) => r.state === "paid" || r.state === "voided");
   const [tab, setTab] = useState<"pay" | "paid" | "all">(toPay.length ? "pay" : "all");
+  /*
+   * The bill opens in a dialog rather than navigating (DEV-242). The route is
+   * still there for links that point straight at a bill; from the list, a
+   * resident who taps the wrong one should get back with one obvious close
+   * button, not hunt for a text link above the fold.
+   */
+  const [open, setOpen] = useState<string | null>(null);
   const shown = tab === "pay" ? toPay : tab === "paid" ? paid : rows;
 
   const tabs: { id: typeof tab; label: string; count: number }[] = [
@@ -81,10 +88,19 @@ export default function ResidentInvoiceList({ rows }: { rows: ResidentInvoiceRow
         {shown.map((r) => {
           const s = STATE[r.state];
           return (
-            <Link
+            <div
               key={r.id}
-              href={`/resident/invoices/${r.id}`}
-              className="relative pressable glass-card rounded-2xl border border-outline-variant/40 hover:border-primary/50 transition-colors overflow-hidden pl-5 pr-4 py-4 flex flex-col gap-3"
+              role="button"
+              tabIndex={0}
+              aria-haspopup="dialog"
+              onClick={() => setOpen(r.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setOpen(r.id);
+                }
+              }}
+              className="relative pressable cursor-pointer glass-card rounded-2xl border border-outline-variant/40 hover:border-primary/50 transition-colors overflow-hidden pl-5 pr-4 py-4 flex flex-col gap-3"
             >
               <span aria-hidden className={`absolute left-0 inset-y-0 w-1.5 ${s.stripe}`} />
               <div className="flex items-start justify-between gap-3">
@@ -117,10 +133,9 @@ export default function ResidentInvoiceList({ rows }: { rows: ResidentInvoiceRow
 
               {/*
                 The bill that wants doing carries the only button on the card,
-                so "which one do I pay?" answers itself. A span styled as a
-                button, not a nested <button> or <a>: the whole card is already
-                a link, and nesting either inside it is invalid and swallows
-                the tap on some phones.
+                so "which one do I pay?" answers itself. Still a span, not a
+                nested <button>: the card itself is the control, and a button
+                inside a role="button" swallows the tap on some phones.
               */}
               {needsAction(r.state) && (
                 <span className="mt-0.5 flex min-h-[44px] w-full items-center justify-center rounded-xl bg-primary text-sm font-bold text-on-primary">
@@ -133,10 +148,12 @@ export default function ResidentInvoiceList({ rows }: { rows: ResidentInvoiceRow
                   You sent a receipt. Nothing to do until the office confirms it.
                 </span>
               )}
-            </Link>
+            </div>
           );
         })}
       </div>
+
+      {open && <InvoiceDetailModal invoiceId={open} onClose={() => setOpen(null)} />}
     </div>
   );
 }

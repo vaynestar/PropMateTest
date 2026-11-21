@@ -32,6 +32,7 @@ export default function PaymentPanel({
   submission,
   today,
   onlineEnabled,
+  onChanged,
 }: {
   invoiceId: string;
   amountLabel: string;
@@ -39,6 +40,13 @@ export default function PaymentPanel({
   submission: Submission | null;
   today: string;
   onlineEnabled: boolean;
+  /**
+   * Inside the bill dialog (DEV-242) `router.refresh()` only re-renders the
+   * list behind it - the dialog holds its own copy of the invoice and would
+   * go on showing the state from before the receipt was sent. The dialog
+   * passes this to refetch itself.
+   */
+  onChanged?: () => void;
 }) {
   const router = useRouter();
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -73,6 +81,7 @@ export default function PaymentPanel({
     setWithdrawing(false);
     if (res?.error) return setError(res.error);
     router.refresh();
+    onChanged?.();
   };
   const [onlineState, payOnline, paying] = useActionState<PaymentActionState, FormData>(
     payOnlineAction.bind(null, invoiceId),
@@ -166,6 +175,7 @@ export default function PaymentPanel({
         formRef.current?.reset();
         clearFile();
         router.refresh();
+        onChanged?.();
       }
     } catch {
       // Keep what they entered - a dropped connection shouldn't cost them the form (R6).

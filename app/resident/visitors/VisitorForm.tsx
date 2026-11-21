@@ -1,6 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCloseForm } from "@/components/layout/ExpandableForm";
 import { registerVisitor } from "./actions";
 
 const PURPOSES = ["Family visit", "Friends", "Delivery", "Contractor / repair", "Ride pick-up"];
@@ -16,6 +18,8 @@ const input =
  */
 export default function VisitorForm({ onRegistered }: { onRegistered?: () => void }) {
   const [state, formAction, isPending] = useActionState(registerVisitor, null);
+  const router = useRouter();
+  const closeForm = useCloseForm();
   const formRef = useRef<HTMLFormElement>(null);
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
   const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
@@ -28,6 +32,15 @@ export default function VisitorForm({ onRegistered }: { onRegistered?: () => voi
       setDate(today);
       setPurpose("");
       onRegistered?.();
+      /*
+       * The form is a dialog now (DEV-242) and the new pass appears in the
+       * list behind it. Refresh that, let the confirmation be read, then
+       * close - otherwise the resident is looking at a success message with
+       * the thing it created hidden behind it.
+       */
+      router.refresh();
+      const t = setTimeout(() => closeForm(), 1400);
+      return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);

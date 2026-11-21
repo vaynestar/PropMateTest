@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useCloseForm } from "@/components/layout/ExpandableForm";
 import TicketPhotoPicker from "./TicketPhotoPicker";
 
 type CategoryItem = {
@@ -39,6 +41,8 @@ export default function ResidentRaiseTicketForm({
   categories,
   raiseAction,
 }: ResidentRaiseTicketFormProps) {
+  const router = useRouter();
+  const closeForm = useCloseForm();
   const [locationType, setLocationType] = useState<"Unit" | "Common Area">("Unit");
   const [commonAreaPreset, setCommonAreaPreset] = useState("Hallway / Corridor");
   const [locationDetail, setLocationDetail] = useState("Hallway / Corridor");
@@ -96,6 +100,13 @@ export default function ResidentRaiseTicketForm({
       } else {
         setToast({ message: "Reported. You can follow it under My Requests.", type: "success" });
         formEl.reset();
+        /*
+         * The form lives in a dialog now (DEV-242), so the list it was
+         * reported into is behind it. Refresh the page under the dialog, let
+         * the confirmation be read, then get out of the way.
+         */
+        router.refresh();
+        setTimeout(() => closeForm(), 1200);
         setPhotoReset((n) => n + 1);
         setLocationType("Unit");
         setCommonAreaPreset("Hallway / Corridor");

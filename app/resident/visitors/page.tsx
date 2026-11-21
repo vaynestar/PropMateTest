@@ -90,7 +90,11 @@ export default async function ResidentVisitorsPage() {
           <p className="text-xs">You need an active lease to create visitor passes.</p>
         </div>
       ) : (
-        <ExpandableForm title="Create a visitor pass" buttonLabel="New Visitor" defaultOpen={visitors.length === 0}>
+        <ExpandableForm
+          title="Create a visitor pass"
+          subtitle="The guard scans the pass at the gate."
+          buttonLabel="New visitor"
+        >
           <VisitorForm />
         </ExpandableForm>
       )}
