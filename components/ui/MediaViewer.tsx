@@ -104,15 +104,36 @@ export default function MediaViewer({
             />
           )}
           {isDoc ? (
-            <button
-              type="button"
-              onClick={print}
-              aria-label="Print"
-              className="h-11 px-3.5 rounded-full bg-white/15 text-white font-semibold flex items-center gap-1.5 active:scale-95"
-            >
-              <span className="material-symbols-outlined">print</span>
-              <span className="hidden sm:inline">Print</span>
-            </button>
+            <>
+              {/*
+               * "every report can open in new page?" (user, 2026-11-21). The
+               * viewer exists because an installed PWA has no back button
+               * (DEV-190), so it stays the default - but on a desktop an admin
+               * wants the report in its own tab, to keep it open beside the
+               * screen it came from, or to save it as a PDF with the browser's
+               * own dialog.
+               */}
+              <a
+                href={item.src}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Open in a new tab"
+                title="Open in a new tab"
+                className="h-11 px-3.5 rounded-full bg-white/15 text-white font-semibold hidden sm:flex items-center gap-1.5 active:scale-95"
+              >
+                <span className="material-symbols-outlined">open_in_new</span>
+                <span className="hidden md:inline">New tab</span>
+              </a>
+              <button
+                type="button"
+                onClick={print}
+                aria-label="Print"
+                className="h-11 px-3.5 rounded-full bg-white/15 text-white font-semibold flex items-center gap-1.5 active:scale-95"
+              >
+                <span className="material-symbols-outlined">print</span>
+                <span className="hidden sm:inline">Print</span>
+              </button>
+            </>
           ) : (
             !item.download && <span className="w-[5.5rem]" aria-hidden />
           )}
