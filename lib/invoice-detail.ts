@@ -7,7 +7,7 @@ import {
   todayMY,
 } from "@/lib/payment/payments";
 import { getPaymentInstructions } from "@/lib/settings";
-import { invoiceState } from "@/lib/invoice-state";
+import { invoiceState, isSettled } from "@/lib/invoice-state";
 import { rm } from "@/lib/money";
 import type { BankDetails, Submission } from "@/app/resident/invoices/[id]/PaymentPanel";
 
@@ -102,7 +102,17 @@ export async function getResidentInvoiceDetail(
     unitLabel: `Unit ${invoice.lease.unit.unit_number} · ${invoice.lease.unit.property.property_name}`,
     issued: day(invoice.invoice_date),
     due: day(invoice.due_date),
-    isUnpaid: invoice.status === "Unpaid",
+    /*
+     * "Can this still be paid?", not "is the status exactly Unpaid?".
+     *
+     * Two invoices in the database are stored with status "Overdue" - seed
+     * data, from before the admin actions were narrowed to Paid/Unpaid/
+     * Inactive. The list derives its state from invoiceState() and so offered
+     * "Pay this" on them, while this line said they were not unpaid and the
+     * payment panel never rendered: the resident tapped Pay and arrived at a
+     * bill with no way to pay it. Both belong to UAT residents (res3, res5).
+     */
+    isUnpaid: !isSettled(invoice.status),
     checking,
     /*
      * This read the server's midnight and ignored the payment under review,

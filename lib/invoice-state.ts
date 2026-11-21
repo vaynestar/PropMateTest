@@ -31,13 +31,29 @@ export function todayKeyMY(): number {
   return dateKeyMY(new Date());
 }
 
+/**
+ * Settled: nothing more is owed, whatever the due date says.
+ *
+ * A voided invoice is stored as "Inactive" - that is what
+ * app/admin/invoices/actions.ts writes and what every other screen tests for.
+ * This function tested for "Voided", a value nothing writes, so a cancelled
+ * invoice fell through to the date comparison and was shown to the resident
+ * as Unpaid or Overdue, with a Pay button on a bill the office had withdrawn.
+ * None exist today; it would have appeared the first time anyone voided one.
+ */
+const SETTLED = new Set(["Paid", "Inactive", "Voided"]);
+
+export function isSettled(status: string): boolean {
+  return SETTLED.has(status);
+}
+
 export function invoiceState(
   invoice: { status: string; due_date: Date | string },
   hasPendingProof: boolean,
   todayKey = todayKeyMY()
 ): InvoiceState {
   if (invoice.status === "Paid") return "paid";
-  if (invoice.status === "Voided") return "voided";
+  if (invoice.status === "Inactive" || invoice.status === "Voided") return "voided";
   if (hasPendingProof) return "checking";
   return dateKeyMY(invoice.due_date) < todayKey ? "overdue" : "unpaid";
 }
