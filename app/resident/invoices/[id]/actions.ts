@@ -8,13 +8,13 @@ import { startGatewayPayment, withdrawPaymentEvidence } from "@/lib/payment/paym
 
 export type PaymentActionState = { error?: string } | null;
 
-/** Take back a proof the office has not reviewed yet, and send a new one. */
+/** Withdraw a proof the office has not reviewed yet, so a new one can be sent. */
 export async function withdrawProofAction(invoiceId: string, transactionId: string) {
   const user = await requireUser(["Resident"]);
   try {
     await withdrawPaymentEvidence({ transactionId, userId: user.userId });
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "Couldn't take that back. Please try again." };
+    return { error: error instanceof Error ? error.message : "Couldn't withdraw that. Please try again." };
   }
   revalidatePath(`/resident/invoices/${invoiceId}`);
   revalidatePath("/resident/invoices");

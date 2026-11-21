@@ -203,7 +203,7 @@ export async function submitPaymentEvidence(input: {
 }
 
 /**
- * A resident takes back a proof the office has not looked at yet.
+ * A resident withdraws a proof the office has not looked at yet.
  *
  * Until now a wrong receipt, or the wrong reference typed in a hurry, could
  * only be fixed by telephoning the office: the form was replaced by "the
@@ -233,7 +233,7 @@ export async function withdrawPaymentEvidence(input: { transactionId: string; us
   if (!tx || tx.invoice.lease.user_id !== input.userId) throw new Error("Payment not found.");
   if (tx.payment_method !== MANUAL_METHOD) throw new Error("Payment not found.");
   if (tx.transaction_status !== "Pending") {
-    throw new Error("The office has already reviewed this one, so it can't be taken back.");
+    throw new Error("The office has already reviewed this one, so it can't be withdrawn.");
   }
 
   await prisma.paymentTransaction.update({

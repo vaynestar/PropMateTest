@@ -258,9 +258,14 @@ export default function PaymentPanel({
               )}
             </p>
             {/*
-              * Sent the wrong receipt, or mistyped the reference? Until now the
-              * only way back was to telephone the office. The office has not
-              * looked at it yet, so taking it back costs nothing.
+              * Sent the wrong receipt, or mistyped the reference? Until now
+              * the only way back was to telephone the office. The office has
+              * not looked at it yet, so withdrawing it costs nothing.
+              *
+              * "Withdraw", not "take it back" (user, 2026-11-22). It is the
+              * word the rest of the system already uses - the stored status
+              * is "Withdrawn" and so is the action - and the plainer phrasing
+              * was the odd one out.
               */}
             <button
               type="button"
@@ -268,7 +273,7 @@ export default function PaymentPanel({
               disabled={withdrawing}
               className="pressable mt-1 w-full rounded-xl border border-outline-variant/60 bg-surface-container-high px-3 py-2.5 text-xs font-semibold text-on-surface disabled:opacity-60"
             >
-              {withdrawing ? "Taking it back…" : "Take it back and send again"}
+              {withdrawing ? "Withdrawing…" : "Withdraw and send again"}
             </button>
             {error && (
               <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">

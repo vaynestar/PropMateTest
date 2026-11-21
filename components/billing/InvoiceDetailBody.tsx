@@ -10,7 +10,7 @@ const STATUS_LABEL: Record<string, string> = {
   Pending: "Being checked",
   Success: "Confirmed",
   Rejected: "Not accepted",
-  Withdrawn: "You took this back",
+  Withdrawn: "You withdrew this",
   Failed: "Failed",
   "Amount mismatch": "Amount mismatch",
 };
