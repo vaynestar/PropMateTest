@@ -243,11 +243,57 @@ export async function withdrawPaymentEvidence(input: { transactionId: string; us
   return { invoiceId: tx.invoice_id };
 }
 
+/**
+ * What the office needs in front of it before it decides (DEV-260).
+ *
+ * The review dialog showed the invoice total and the resident's reference,
+ * but never the figure being accepted, and never what had already been paid
+ * on the bill. Both are needed to answer the only question the screen asks:
+ * does this settle it.
+ */
+export async function getPaymentReviewContext(transactionId: string) {
+  if (!isUuid(transactionId)) throw new Error("Payment not found.");
+  const tx = await prisma.paymentTransaction.findUnique({
+    where: { transaction_id: transactionId },
+    select: {
+      transaction_id: true,
+      invoice_id: true,
+      transaction_amount: true,
+      invoice: { select: { invoice_no: true, total_amount: true, status: true } },
+    },
+  });
+  if (!tx) throw new Error("Payment not found.");
+
+  // There is no amount_paid column, and there does not need to be: what has
+  // been settled is the sum of the transactions that succeeded.
+  const settled = await prisma.paymentTransaction.aggregate({
+    where: {
+      invoice_id: tx.invoice_id,
+      transaction_status: "Success",
+      transaction_id: { not: transactionId },
+    },
+    _sum: { transaction_amount: true },
+  });
+
+  // Rule 6: every one of these is a Prisma Decimal.
+  const total = Number(tx.invoice.total_amount ?? 0);
+  const alreadyPaid = Number(settled._sum.transaction_amount ?? 0);
+  return {
+    invoiceNo: tx.invoice.invoice_no,
+    invoiceTotal: total,
+    alreadyPaid,
+    outstanding: Math.max(0, total - alreadyPaid),
+    claimed: Number(tx.transaction_amount ?? 0),
+  };
+}
+
 export async function reviewPaymentEvidence(input: {
   transactionId: string;
   adminId: string;
   decision: "approve" | "reject";
   note: string;
+  /** What the slip actually shows. Defaults to the figure on the submission. */
+  amount?: number;
 }) {
   if (!isUuid(input.transactionId)) throw new Error("Payment not found.");
   const tx = await prisma.paymentTransaction.findUnique({
@@ -257,7 +303,8 @@ export async function reviewPaymentEvidence(input: {
       invoice_id: true,
       payment_method: true,
       transaction_status: true,
-      invoice: { select: { invoice_no: true, status: true } },
+      transaction_amount: true,
+      invoice: { select: { invoice_no: true, status: true, total_amount: true } },
     },
   });
   if (!tx || tx.payment_method !== MANUAL_METHOD) throw new Error("Payment not found.");
@@ -285,23 +332,73 @@ export async function reviewPaymentEvidence(input: {
     throw new Error(`${tx.invoice.invoice_no} is ${tx.invoice.status}, not Unpaid. Check it before approving.`);
   }
 
+  /*
+   * Part payments (DEV-260). Until now approving meant marking the whole
+   * invoice Paid, whatever the slip said — and the slip could only ever say
+   * the full amount, because `submitPaymentEvidence` writes
+   * `transaction_amount: invoice.total_amount` and the resident is never
+   * asked. A resident who transferred half their service charge had no way
+   * to say so and the office had no way to record it: the only two outcomes
+   * were "settled in full" and "rejected".
+   *
+   * The office now records what the slip shows. The invoice is marked Paid
+   * only when the money actually covers it; short of that it stays Unpaid
+   * with the balance intact, and the resident can send proof for the rest.
+   */
+  const total = Number(tx.invoice.total_amount ?? 0);
+  const settled = await prisma.paymentTransaction.aggregate({
+    where: {
+      invoice_id: tx.invoice_id,
+      transaction_status: "Success",
+      transaction_id: { not: tx.transaction_id },
+    },
+    _sum: { transaction_amount: true },
+  });
+  const alreadyPaid = Number(settled._sum.transaction_amount ?? 0);
+
+  const claimed = Number(tx.transaction_amount ?? 0);
+  const amount = input.amount === undefined ? claimed : input.amount;
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error("Enter the amount on the slip.");
+  }
+  // Rounded to the cent before comparing: 0.1 + 0.2 must not reject a payment.
+  const cents = (n: number) => Math.round(n * 100);
+  if (cents(amount) > cents(total - alreadyPaid)) {
+    throw new Error(
+      `That is more than the ${total - alreadyPaid === total ? "invoice" : "balance"} of RM ${(total - alreadyPaid).toFixed(2)}.`
+    );
+  }
+  const settlesIt = cents(alreadyPaid + amount) >= cents(total);
+
   await prisma.$transaction([
     prisma.paymentTransaction.update({
       where: { transaction_id: tx.transaction_id },
       data: {
         transaction_status: "Success",
+        transaction_amount: amount,
         reviewed_by: input.adminId,
         reviewed_at: now,
         review_note: note ? note.slice(0, 500) : null,
         modified_by: input.adminId,
       },
     }),
-    prisma.invoice.updateMany({
-      where: { invoice_id: tx.invoice_id, status: "Unpaid" },
-      data: { status: "Paid", modified_by: input.adminId },
-    }),
+    ...(settlesIt
+      ? [
+          prisma.invoice.updateMany({
+            where: { invoice_id: tx.invoice_id, status: "Unpaid" },
+            data: { status: "Paid", modified_by: input.adminId },
+          }),
+        ]
+      : []),
   ]);
-  return { invoiceNo: tx.invoice.invoice_no, invoiceId: tx.invoice_id, decision: "approve" as const };
+  return {
+    invoiceNo: tx.invoice.invoice_no,
+    invoiceId: tx.invoice_id,
+    decision: "approve" as const,
+    amount,
+    settled: settlesIt,
+    balance: Math.max(0, total - alreadyPaid - amount),
+  };
 }
 
 // ---------------------------------------------------------------- gateway (off by default)

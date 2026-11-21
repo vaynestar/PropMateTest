@@ -685,6 +685,13 @@ export default function InvoiceBatchList({
                         </td>
                         <td className={`${TABLE.tdNum} align-top font-semibold`}>
                           <Money value={Number(inv.total_amount ?? 0)} />
+                          {/* A part payment is money in the bank, and the row
+                              said nothing about it (DEV-260). */}
+                          {Number(inv.paidSoFar ?? 0) > 0 && key !== "paid" && key !== "void" && (
+                            <span className="mt-0.5 block whitespace-nowrap text-[11px] font-medium text-emerald-300">
+                              <Money value={Number(inv.paidSoFar)} /> paid
+                            </span>
+                          )}
                         </td>
                         <td className={`${TABLE.td} align-top`}>
                           <span
@@ -770,10 +777,17 @@ export default function InvoiceBatchList({
                   </p>
 
                   <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2">
-                    <Money
-                      value={Number(inv.total_amount ?? 0)}
-                      className="text-xl font-bold tracking-tight text-white"
-                    />
+                    <span className="flex items-baseline gap-2">
+                      <Money
+                        value={Number(inv.total_amount ?? 0)}
+                        className="text-xl font-bold tracking-tight text-white"
+                      />
+                      {Number(inv.paidSoFar ?? 0) > 0 && key !== "paid" && key !== "void" && (
+                        <span className="whitespace-nowrap text-[11px] font-medium text-emerald-300">
+                          <Money value={Number(inv.paidSoFar)} /> paid
+                        </span>
+                      )}
+                    </span>
                     <span
                       className={`text-xs font-semibold ${
                         key === "draft" || key === "paid"

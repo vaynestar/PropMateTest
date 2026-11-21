@@ -38,6 +38,29 @@ export default async function InvoicesDetailPage({
     ? invoices.find((inv) => inv.lease_id === leaseId)?.lease ?? null
     : null;
   if (leaseId) invoices = invoices.filter((inv) => inv.lease_id === leaseId);
+  /*
+   * What has actually been paid against each invoice (DEV-260). The office
+   * can now accept a slip for less than the bill, so an invoice can be part
+   * paid — and the list showed no trace of it: RM 5,000 outstanding on a bill
+   * RM 2,200 of which had been received. There is no amount_paid column and
+   * there need not be; what is settled is the sum of the transactions that
+   * succeeded.
+   */
+  const paidByInvoice = new Map<string, number>();
+  if (invoices.length > 0) {
+    const sums = await prisma.paymentTransaction.groupBy({
+      by: ["invoice_id"],
+      where: {
+        invoice_id: { in: invoices.map((i) => i.invoice_id) },
+        transaction_status: "Success",
+      },
+      _sum: { transaction_amount: true },
+    });
+    for (const row of sums) {
+      paidByInvoice.set(row.invoice_id, Number(row._sum.transaction_amount ?? 0));
+    }
+  }
+
   const chargeMasters = await prisma.chargeMaster.findMany({
     where: { is_active: true },
     orderBy: { charge_name: "asc" }
@@ -53,6 +76,7 @@ export default async function InvoicesDetailPage({
   const serialisedInvoices = (invoices as any[]).map((inv) => ({
     ...inv,
     total_amount: Number(inv.total_amount ?? 0),
+    paidSoFar: paidByInvoice.get(inv.invoice_id) ?? 0,
     lease: inv.lease
       ? {
           ...inv.lease,
