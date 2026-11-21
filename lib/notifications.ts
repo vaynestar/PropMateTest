@@ -507,6 +507,38 @@ export async function getResidentNotificationsFor(userId: string): Promise<Notif
         });
       });
     }
+    /*
+     * 6. Notifications written FOR this resident (DEV-254).
+     *
+     * Every source above is derived — the feed looks at tickets, invoices,
+     * bookings and notices and works out what is worth saying. Nothing read
+     * the `notifications` table, so a row written for a resident reached
+     * nobody; only the admin branch of this file ever looked at it.
+     *
+     * The arrears screen sends payment reminders as rows in that table, so
+     * this is what makes them land.
+     */
+    if (user?.userId) {
+      const written = await prisma.notification.findMany({
+        where: { user_id: user.userId },
+        orderBy: { sent_at: "desc" },
+        take: 5,
+      });
+      written.forEach((n) => {
+        const chase =
+          n.notification_type === "PAYMENT_REMINDER" || n.notification_type === "PAYMENT_FINAL_NOTICE";
+        items.push({
+          id: `db-${n.notification_id}`,
+          type: chase ? "BILLING" : "SYSTEM",
+          title: n.title,
+          message: n.message,
+          timestamp: n.sent_at,
+          isRead: n.is_read,
+          href: chase ? "/resident/invoices" : "/resident",
+          urgency: n.notification_type === "PAYMENT_FINAL_NOTICE" ? "CRITICAL" : chase ? "HIGH" : "INFO",
+        });
+      });
+    }
   } catch (err) {
     console.error("Error generating resident notifications:", err);
   }

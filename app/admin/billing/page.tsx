@@ -155,11 +155,11 @@ export default async function BillingPage() {
       {overdue.length > 0 && (
         <SectionCard
           title="Chasing payment"
-          subtitle={`${overdue.length} invoice${overdue.length === 1 ? "" : "s"} past the due date.`}
+          subtitle={`${overdue.length} invoice${overdue.length === 1 ? "" : "s"} past the due date. Chasing payment groups these by household and records what has been sent.`}
           icon="notification_important"
           action={
-            <Link href="/admin/invoices" className={BTN.secondary}>
-              Open invoices
+            <Link href="/admin/billing/arrears" className={BTN.primary}>
+              Chase these
             </Link>
           }
           padded={false}
