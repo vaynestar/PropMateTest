@@ -20,6 +20,31 @@ type InvoiceWithRelations = WithoutHash<Prisma.InvoiceGetPayload<{
   };
 }>>;
 
+/**
+ * An invoice that also carries the bank-in slip waiting on it.
+ *
+ * `listInvoices` has always fetched this; the type never said so (DEV-260).
+ * The invoice list reads it through `any[]`, so the gap stayed hidden until
+ * a typed page used it — the Billing overview's "slips waiting" panel — and
+ * then only on a **clean** build: an incremental `next build` reuses cached
+ * type information and let it through, while Vercel always builds from
+ * nothing. `getRecentInvoices` deliberately does not fetch them, which is
+ * why this is a separate type rather than an optional field: a summary of
+ * five rows has no business pulling payment evidence.
+ */
+export type InvoiceWithSlips = InvoiceWithRelations & {
+  transactions: {
+    transaction_id: string;
+    payment_method: string;
+    reference_number: string | null;
+    transaction_amount: Prisma.Decimal;
+    payment_date: Date;
+    proof_mime: string | null;
+    proof_filename: string | null;
+    created_at: Date;
+  }[];
+};
+
 /*
  * Which month a billing run belongs to, read in UTC (DEV-224).
  *
@@ -37,7 +62,7 @@ function currentMonthKey(date = new Date()) {
   return { y: date.getUTCFullYear(), m: date.getUTCMonth() };
 }
 
-export async function listInvoices(propertyId?: string): Promise<InvoiceWithRelations[]> {
+export async function listInvoices(propertyId?: string): Promise<InvoiceWithSlips[]> {
   return prisma.invoice.findMany({
     where: propertyId ? { lease: { unit: { property_id: propertyId } } } : undefined,
     orderBy: { invoice_date: "desc" },

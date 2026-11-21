@@ -77,7 +77,9 @@ Step 5: Git Commit & Push
 
 ## 4. Master Engineering Rules (Non-Negotiable)
 
-1. **Rule 1 — Build Gate:** Always run `npx next build` before committing. Never push broken TypeScript or failing route handlers. (Note: `next lint` fails on paths with spaces; use `next build` as the compiler gate).
+1. **Rule 1 — Build Gate:** Always run `npx next build` before committing. Never push broken TypeScript or failing route handlers. (Note: `next lint` fails on paths with spaces; use `next build` as the compiler gate.)
+   > **Delete `.next` first — an incremental build is not a gate (2026-11-22).** DEV-258 through DEV-260 all passed `npx next build` locally and **all three failed on Vercel.** A repeat build reuses cached type information, so a type error in a file whose *dependency* changed is never re-checked; Vercel always builds from nothing and catches it. The fault was a declared return type that had been lying about its own query for months, and it only surfaced when a typed page used the undeclared field.
+   > **Before pushing:** `rm -rf .next && npx next build`. If the dev server is running it holds `.next` open on Windows and the delete fails silently-ish — stop it first.
 2. **Rule 2 — File Storage Isolation:** **NEVER write files to the `C:\` drive.** All scratch scripts, temp files, test outputs, or data dumps must go to `E:\Unitar document\Course\Year 3 Sem 1\Minor Project\FYP\Gemini\` (or `FYP/Gemini/claude-scratch/`).
 3. **Rule 3 — Helper text must earn its place (revised 2026-11-07).** Never display an unlabeled input. Beyond the label, add helper text **only when it tells the user something the label cannot**:
    - a constraint or consequence — *Minimum 6 characters* · *Vacant units only* · *Billing starts here*
