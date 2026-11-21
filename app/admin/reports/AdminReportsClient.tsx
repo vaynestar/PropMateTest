@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import ScrollHint from "@/components/ui/ScrollHint";
+import { ViewerButton } from "@/components/ui/MediaViewer";
 import { useRouter, useSearchParams } from "next/navigation";
 import OverviewReportView from "@/components/reports/OverviewReportView";
 import FinancialsReportView from "@/components/reports/FinancialsReportView";
@@ -33,6 +34,12 @@ export default function AdminReportsClient({
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [isPending, startTransition] = useTransition();
+
+  /* The report document opens on the same property and period as the screen. */
+  const printParams = new URLSearchParams();
+  if (currentPropertyId !== "ALL") printParams.set("propertyId", currentPropertyId);
+  if (currentDateRange !== "ytd") printParams.set("dateRange", currentDateRange);
+  const printHref = `/print/report${printParams.toString() ? `?${printParams}` : ""}`;
 
   const handleFilterChange = (newPropertyId?: string, newDateRange?: string) => {
     const propId = newPropertyId !== undefined ? newPropertyId : currentPropertyId;
@@ -143,10 +150,20 @@ export default function AdminReportsClient({
               <span className="material-symbols-outlined text-[18px] text-primary">download</span>
               Export CSV
             </button>
-            <button type="button" onClick={() => window.print()} className={BTN.primary}>
+            {/*
+             * Was window.print() on this page. There is no print stylesheet in
+             * the app, so that printed the dark dashboard - sidebar, tab strip,
+             * filter buttons, and only the one tab that happened to be mounted.
+             * /print/report is the document: all five sections, captioned
+             * tables, and front matter saying what the figures cover (DEV-248).
+             */}
+            <ViewerButton
+              items={[{ src: printHref, title: "Property Management Report", kind: "doc" }]}
+              className={BTN.primary}
+            >
               <span className="material-symbols-outlined text-[18px]">print</span>
               Print report
-            </button>
+            </ViewerButton>
           </>
         }
       />
