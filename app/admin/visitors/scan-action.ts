@@ -225,3 +225,57 @@ export async function checkOutVisitorById(
 export async function checkInVisitorByQR(rawQrData: string) {
   return await scanVisitorQR(rawQrData);
 }
+
+/**
+ * The guard types in the IC at the gate (DEV-241).
+ *
+ * DEV-240 made the IC optional for the resident on the grounds that the guard
+ * captures it on arrival — then gave the guard nowhere to type it (user,
+ * 2026-11-21: "I think still need for admin input"). This is that field.
+ *
+ * Fill-once, never overwrite. The same reasoning as the identity lock on the
+ * admin edit form: once a number has been matched against a physical card it
+ * is evidence, and a later scan must not be able to quietly replace it. A
+ * correction goes through the edit form, which records who changed it.
+ */
+export async function recordVisitorIdentity(visitorId: string, icNo: string) {
+  try {
+    const user = await getSessionUser();
+    if (!user || user.role !== "Admin") {
+      return { success: false, error: "Unauthorized access: Admin login required." };
+    }
+    if (!/^[0-9a-f-]{36}$/i.test(String(visitorId || ""))) {
+      return { success: false, error: "That visitor pass no longer exists." };
+    }
+
+    const ic = String(icNo || "").trim();
+    if (ic.length < 4) {
+      return { success: false, error: "Enter the IC or passport number as printed on the card." };
+    }
+    if (ic.length > 40) {
+      return { success: false, error: "That is too long for an IC or passport number." };
+    }
+
+    const existing = await prisma.visitor.findUnique({
+      where: { visitor_id: visitorId },
+      select: { visitor_ic_no: true, visitor_name: true },
+    });
+    if (!existing) return { success: false, error: "That visitor pass no longer exists." };
+    if (existing.visitor_ic_no) {
+      return {
+        success: false,
+        error: "This pass already has an IC recorded. Correct it from the visitor list, not here.",
+      };
+    }
+
+    await prisma.visitor.update({
+      where: { visitor_id: visitorId },
+      data: { visitor_ic_no: ic, modified_by: user.userId },
+    });
+
+    revalidatePath("/admin/visitors");
+    return { success: true, ic };
+  } catch (error: any) {
+    return { success: false, error: error?.message || "Could not save that IC number." };
+  }
+}

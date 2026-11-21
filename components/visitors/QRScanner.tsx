@@ -5,7 +5,7 @@ import { maskIdentityNumber, maskPhoneNumber } from "@/lib/visitor-status";
 import { Html5Qrcode } from "html5-qrcode";
 import jsQR from "jsqr";
 import Image from "next/image";
-import { scanVisitorQR, checkOutVisitorById } from "@/app/admin/visitors/scan-action";
+import { scanVisitorQR, checkOutVisitorById, recordVisitorIdentity } from "@/app/admin/visitors/scan-action";
 
 type QRScannerProps = {
   onClose: () => void;
@@ -802,8 +802,32 @@ function VisitorDetailsCard({
   visitor: any;
   showIdentity?: boolean;
 }) {
+  // Held locally so the guard sees the number they just typed without the
+  // whole scan result being refetched behind them.
+  const [savedIc, setSavedIc] = useState<string | null>(null);
+  const [icDraft, setIcDraft] = useState("");
+  const [icError, setIcError] = useState<string | null>(null);
+  const [savingIc, setSavingIc] = useState(false);
+
+  const ic: string | null = visitor.visitor_ic_no || savedIc;
+
+  const saveIc = async () => {
+    const value = icDraft.trim();
+    if (value.length < 4 || savingIc) return;
+    setSavingIc(true);
+    setIcError(null);
+    const res = await recordVisitorIdentity(visitor.visitor_id, value);
+    setSavingIc(false);
+    if (res.success) {
+      setSavedIc(res.ic ?? value);
+      setIcDraft("");
+    } else {
+      setIcError(res.error ?? "Could not save that IC number.");
+    }
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-3 text-xs pt-1">
       <div>
         <span className="text-[10px] text-on-surface-variant block font-medium">
           Visitor
@@ -816,14 +840,17 @@ function VisitorDetailsCard({
             {visitor.visitor_type || "Resident Guest"}
           </span>
         </div>
-        <span className="mt-0.5 block font-mono text-[11px] text-on-surface-variant">
-          {visitor.visitor_ic_no ? (
-            <>IC: {showIdentity ? visitor.visitor_ic_no : maskIdentityNumber(visitor.visitor_ic_no)}</>
-          ) : (
-            /* DEV-240: the resident was not asked for it. Tell the guard to ask. */
-            <span className="font-sans font-semibold text-amber-300">Ask for IC / passport</span>
-          )}
-        </span>
+        {ic ? (
+          <span className="mt-0.5 block font-mono text-[11px] text-on-surface-variant">
+            IC: {showIdentity ? ic : maskIdentityNumber(ic)}
+          </span>
+        ) : (
+          !showIdentity && (
+            <span className="mt-0.5 block text-[11px] font-semibold text-on-surface-variant">
+              IC not recorded
+            </span>
+          )
+        )}
         {visitor.contact_no && (
           <span className="text-[11px] text-on-surface-variant block">
             {showIdentity ? visitor.contact_no : maskPhoneNumber(visitor.contact_no)}
@@ -863,6 +890,55 @@ function VisitorDetailsCard({
         <div className={`${visitor.vehicle_plate ? "" : "col-span-2"} text-[11px] text-on-surface-variant bg-surface-container-high/60 p-2 rounded-lg border border-outline-variant/30`}>
           <span className="font-semibold text-on-surface">Purpose:</span>{" "}
           {visitor.visit_purpose}
+        </div>
+      )}
+
+      {/*
+       * DEV-241: the gate is where the IC is actually taken, so this is where
+       * the guard types it (user, 2026-11-21: "I think still need for admin
+       * input"). Full width, below the details - squeezed into the left column
+       * it was a 90px box that truncated its own placeholder.
+       *
+       * Check-in only. On the way out nothing is being matched against a card,
+       * so asking then would be theatre.
+       */}
+      {!ic && showIdentity && (
+        <div className="col-span-2 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5">
+          <label htmlFor="scan-ic" className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300">
+            <span className="material-symbols-outlined text-[15px]">badge</span>
+            Ask for IC / passport
+          </label>
+          <p className="mt-0.5 text-[10px] text-on-surface-variant">
+            The resident did not have it. Type it from the card.
+          </p>
+          <div className="mt-1.5 flex items-center gap-2">
+            <input
+              id="scan-ic"
+              value={icDraft}
+              onChange={(e) => {
+                setIcDraft(e.target.value);
+                setIcError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  saveIc();
+                }
+              }}
+              placeholder="e.g. 900101-14-5555"
+              autoComplete="off"
+              className="min-w-0 flex-1 rounded-lg border border-amber-500/40 bg-surface-container-lowest px-2.5 py-2 font-mono text-xs text-white placeholder:font-sans placeholder:text-on-surface-variant/50 focus:border-amber-400 focus:outline-none"
+            />
+            <button
+              type="button"
+              onClick={saveIc}
+              disabled={savingIc || icDraft.trim().length < 4}
+              className="pressable shrink-0 rounded-lg border border-amber-500/40 bg-amber-500/20 px-3.5 py-2 text-xs font-bold text-amber-200 transition-colors hover:bg-amber-500/30 disabled:opacity-40"
+            >
+              {savingIc ? "Saving…" : "Save"}
+            </button>
+          </div>
+          {icError && <p className="mt-1.5 text-[11px] font-medium text-rose-300">{icError}</p>}
         </div>
       )}
     </div>
