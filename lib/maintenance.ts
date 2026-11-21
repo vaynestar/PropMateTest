@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import prisma from "@/lib/prisma";
+import { nextTicketNo } from "@/lib/ticket-no";
 
 /**
  * The tenant arrives without `password_hash`: the client omits it everywhere
@@ -185,6 +186,8 @@ export async function raiseTicket(input: {
 
   return prisma.ticket.create({
     data: {
+      // Every ticket raised from here on carries a readable number (DEV-256).
+      ticket_no: await nextTicketNo(),
       property_id: propertyId,
       lease_id: leaseId,
       unit_id: locationType === "Unit" ? unitId : null,

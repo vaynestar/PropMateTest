@@ -1,5 +1,12 @@
 import { UNIT_STATUSES, unitStatus } from "@/lib/unit-status";
 import { VISITOR_STATUSES, normaliseVisitorStatus } from "@/lib/visitor-status";
+import {
+  OPEN_STATUSES,
+  DONE_STATUSES,
+  TICKET_STATE_TONE,
+  ticketStateKey,
+  ticketStateLabel,
+} from "@/lib/ticket-states";
 
 type StatusBadgeProps = {
   status: string;
@@ -73,6 +80,31 @@ export default function StatusBadge({ status, variant }: StatusBadgeProps) {
         }`}
       >
         {meta?.label ?? status}
+      </span>
+    );
+  }
+
+  /*
+   * Ticket statuses go through the shared vocabulary (DEV-256), the same way
+   * visitor passes and unit statuses already do. Without this the badge
+   * printed the database's own word, so a resident looking at their own
+   * repair was shown "KIV" — an office abbreviation for "keep in view" that
+   * means nothing outside a Malaysian back office — or "Pending Parts",
+   * which reads like a fault in the app rather than a fact about a supplier.
+   *
+   * Only the six real ticket statuses are matched. `ticketStyles` doubles as
+   * the booking map (Pending, Confirmed, Completed, Cancelled, Rejected) and
+   * those must keep falling through untouched.
+   */
+  const isTicketStatus = OPEN_STATUSES.includes(status) || DONE_STATUSES.includes(status);
+  if (isTicketStatus && (variant === undefined || variant === "ticket")) {
+    return (
+      <span
+        className={`whitespace-nowrap shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium ${
+          TICKET_STATE_TONE[ticketStateKey(status)]
+        }`}
+      >
+        {ticketStateLabel(status)}
       </span>
     );
   }

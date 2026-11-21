@@ -353,6 +353,10 @@ model LeaseCharge {
 
 model Ticket {
   ticket_id         String    @id @default(uuid()) @db.Uuid
+  // A number a person can read out to a contractor (DEV-256). Nullable only
+  // because the column was added by raw DDL; every existing row is backfilled
+  // and lib/tickets-no.ts assigns one on create.
+  ticket_no         String?   @unique @db.VarChar
   property_id       String?   @db.Uuid
   lease_id          String?   @db.Uuid
   requester_id      String    @db.Uuid

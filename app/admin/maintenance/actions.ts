@@ -191,3 +191,60 @@ export async function adminTicketReply(formData: FormData): Promise<{ ok?: boole
   revalidatePath("/resident/maintenance");
   return { ok: true };
 }
+
+/* ------------------------------------------------------------------ *
+ * DEV-256 — acting on a ticket without opening it.
+ *
+ * The queue could already tell an admin that five tickets had no owner. It
+ * could not give them one: every assignment meant opening the Manage modal,
+ * choosing a name, saving, and closing — five times. The warning and the fix
+ * were five hundred clicks apart. These two actions put the fix on the row.
+ * ------------------------------------------------------------------ */
+
+/** Hand one or many tickets to an admin, or take the owner off again. */
+export async function assignTicketsAction(
+  ticketIds: string[],
+  assignedTo: string | null
+): Promise<{ ok?: number; error?: string }> {
+  const user = await requireUser(["Admin"]);
+  const ids = [...new Set(ticketIds.map((id) => id.trim()).filter(Boolean))];
+  if (ids.length === 0) return { error: "No tickets were selected." };
+
+  // Same guard as the modal path (DEV-198): a ticket may only belong to an
+  // active admin, and an id arriving from the browser is text, not a promise.
+  if (assignedTo) {
+    const assignee = await prisma.user.findUnique({
+      where: { user_id: assignedTo },
+      select: { role: true, is_active: true },
+    });
+    if (!assignee || assignee.role !== "Admin" || !assignee.is_active) {
+      return { error: "A ticket can only be assigned to an active admin." };
+    }
+  }
+
+  try {
+    const res = await prisma.ticket.updateMany({
+      where: { ticket_id: { in: ids } },
+      data: { assigned_to: assignedTo, modified_by: user.userId },
+    });
+    revalidatePath("/admin/maintenance");
+    return { ok: res.count };
+  } catch (err: any) {
+    return { error: err?.message || "Could not assign those tickets." };
+  }
+}
+
+/** Move one ticket along the four states, from the row. */
+export async function setTicketStatusAction(
+  ticketId: string,
+  status: string
+): Promise<{ ok?: boolean; error?: string }> {
+  const user = await requireUser(["Admin"]);
+  try {
+    await updateTicketStatus(ticketId, status, user.userId);
+    revalidatePath("/admin/maintenance");
+    return { ok: true };
+  } catch (err: any) {
+    return { error: err?.message || "Could not change that ticket's state." };
+  }
+}

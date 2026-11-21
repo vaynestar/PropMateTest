@@ -12,6 +12,13 @@ import { durationSince } from "@/lib/short-date";
 import prisma from "@/lib/prisma";
 import { getActivePropertyId } from "@/lib/property-context.server";
 import { getOperationalSettings } from "@/lib/settings";
+import {
+  OPEN_STATUSES,
+  TICKET_STATES,
+  TICKET_STATE_ORDER,
+  isOpenStatus,
+  ticketStateKey,
+} from "@/lib/ticket-states";
 
 export const dynamic = "force-dynamic";
 
@@ -54,9 +61,10 @@ export default async function MaintenancePage() {
    */
   const propertyUnits = units.filter((u) => u.property_id === activePropId);
 
-  // Open means someone still has work to do on it.
-  const isUnresolved = (status: string) =>
-    ["Open", "In Progress", "Pending Parts", "KIV"].includes(status);
+  // Open means someone still has work to do on it. The list of raw statuses
+  // that counts as open now lives in one place (lib/ticket-states, DEV-256) —
+  // it was written out by hand in four spots on this page alone.
+  const isUnresolved = isOpenStatus;
 
   const openTickets = tickets.filter((t) => isUnresolved(t.status));
   const openCount = openTickets.length;
@@ -74,7 +82,7 @@ export default async function MaintenancePage() {
   const slaHours = (priority: string) => ops.sla[priority] ?? ops.sla.Medium;
   const hoursOpen = (t: any) => (Date.now() - new Date(t.created_at).getTime()) / 3_600_000;
   const isBreached = (t: any) =>
-    ["Open", "In Progress", "Pending Parts", "KIV"].includes(t.status) && hoursOpen(t) > slaHours(t.priority);
+    isOpenStatus(t.status) && hoursOpen(t) > slaHours(t.priority);
   const breachedCount = openTickets.filter(isBreached).length;
 
   // AGENTS.md Rule 6: Prisma Decimal cannot cross into a Client Component.
@@ -149,12 +157,19 @@ export default async function MaintenancePage() {
     ageing[i === -1 ? AGE.length - 1 : i].count++;
   });
 
-  const byStatus = ["Open", "In Progress", "Pending Parts", "KIV", "Resolved", "Closed"]
-    .map((label) => ({ label, count: tickets.filter((t: any) => t.status === label).length }))
-    .filter((r) => r.count > 0);
+  /*
+   * By state, not by raw status (DEV-256). This chart used to have six bars,
+   * two of them labelled "Pending Parts" and "KIV" — database words on a
+   * screen. Four bars, in the order work moves, and the ones at zero are kept
+   * so the shape of the queue is readable rather than re-scaled each day.
+   */
+  const byStatus = TICKET_STATE_ORDER.map((key) => ({
+    label: TICKET_STATES[key].label,
+    count: tickets.filter((t: any) => ticketStateKey(t.status) === key).length,
+  }));
 
   const resolvedThisMonth = tickets.filter((t: any) => {
-    if (!["Resolved", "Closed"].includes(t.status)) return false;
+    if (OPEN_STATUSES.includes(t.status)) return false;
     const d = new Date(t.modified_at ?? t.created_at);
     const now = new Date();
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -164,7 +179,13 @@ export default async function MaintenancePage() {
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
         title="Helpdesk"
-        subtitle={`Repairs and complaints for ${activePropName} — what is outstanding, who is on it, and what it cost.`}
+        subtitle={
+          openCount === 0
+            ? `${activePropName} — nothing is open.`
+            : `${activePropName} · ${openCount} open, ${
+                unassignedCount === 0 ? "all owned" : `${unassignedCount} with no owner`
+              }`
+        }
         actions={
           <>
             <CategoryMasterManager categories={categories} />

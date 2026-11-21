@@ -1,26 +1,40 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import TicketDetailModal from "@/components/maintenance/TicketDetailModal";
-import StatusBadge from "@/components/dashboard/StatusBadge";
+import RowMenu, { type RowMenuItem } from "@/components/admin/RowMenu";
+import { Toast, type ToastState } from "@/components/admin/Toast";
 import { EmptyState, FIELD, SearchField, TABLE, Toolbar } from "@/components/admin/ui";
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-import { updateTicketAction } from "@/app/admin/maintenance/actions";
+import {
+  TICKET_STATE_DOT,
+  TICKET_STATE_TONE,
+  TICKET_STATUS_OPTIONS,
+  isOpenStatus,
+  ticketRef,
+  ticketStateKey,
+  ticketStateLabel,
+} from "@/lib/ticket-states";
+import {
+  assignTicketsAction,
+  setTicketStatusAction,
+  updateTicketAction,
+} from "@/app/admin/maintenance/actions";
 import { dayMonth } from "@/lib/short-date";
 
 /**
- * The marker on a ticket that is past its turnaround target, at the start of
- * the row. Colour is the ticket's PRIORITY, so the flag says two things at
- * once: this one is late, and this is how much that matters.
+ * The helpdesk queue (rebuilt DEV-256).
  *
- * The rail is `border-l-2` on the first cell, transparent when the ticket is
- * on time, so every row still lines up.
+ * What was wrong with it. The reference on every row was "#AC7BBCB2" — eight
+ * characters of a UUID, which nobody reads down a phone to a contractor. The
+ * status column showed the database's own words, so "Pending Parts" and "KIV"
+ * were on screen. And the row was read-only: an admin who could see that five
+ * tickets had no owner had to open the Manage modal five times to fix it.
  *
- * Deliberately no full-row tint: 9 of the 14 tickets in this property are
- * past target, and shading two thirds of a table makes the shading mean
- * nothing. The rail carries it.
+ * What it does now. Real ticket numbers (PM-0118). Four states in plain words.
+ * Owner and state are both set from the row, and every unowned ticket can be
+ * handed over at once from the band at the top.
  */
+
 const PRIORITY_FLAG: Record<string, { rail: string; icon: string }> = {
   Urgent: { rail: "border-rose-400", icon: "text-rose-300" },
   High: { rail: "border-amber-400", icon: "text-amber-300" },
@@ -34,521 +48,726 @@ const flagFor = (priority: string) => PRIORITY_FLAG[priority] ?? PRIORITY_FLAG.L
 const flagTitle = (t: { openFor?: string | null; slaHours?: number; priority: string }) =>
   `Open ${t.openFor ?? ""} — past the ${t.slaHours}-hour target for ${t.priority} priority`;
 
-type PropertyItem = {
-  property_id: string;
-  property_name: string;
+const PRIORITY_PILL: Record<string, string> = {
+  Urgent: "border-rose-500/40 bg-rose-500/15 text-rose-300",
+  High: "border-amber-500/40 bg-amber-500/15 text-amber-300",
+  Medium: "border-primary/40 bg-primary/15 text-primary",
+  Low: "border-outline-variant/60 bg-surface-container-high text-on-surface-variant",
 };
+
+/** The five ways an admin actually slices this queue. */
+type ChipKey = "open" | "noowner" | "hot" | "late" | "done";
+const CHIPS: { key: ChipKey; label: string; dot: string }[] = [
+  { key: "open", label: "Everything open", dot: "bg-slate-300" },
+  { key: "noowner", label: "No owner", dot: "bg-amber-400" },
+  { key: "hot", label: "Urgent or high", dot: "bg-rose-400" },
+  { key: "late", label: "Past SLA", dot: "bg-rose-400" },
+  { key: "done", label: "Done this month", dot: "bg-emerald-400" },
+];
+
+function inThisMonth(d: Date | string | null | undefined) {
+  if (!d) return false;
+  const x = new Date(d);
+  const now = new Date();
+  return x.getMonth() === now.getMonth() && x.getFullYear() === now.getFullYear();
+}
 
 type AdminTicketTableProps = {
   tickets: any[];
   admins: any[];
-  properties?: PropertyItem[];
+  properties?: { property_id: string; property_name: string }[];
   defaultPropertyId?: string;
 };
 
-export default function AdminTicketTable({
-  tickets,
-  admins,
-  properties = [],
-  defaultPropertyId = "",
-}: AdminTicketTableProps) {
+export default function AdminTicketTable({ tickets, admins }: AdminTicketTableProps) {
   const [search, setSearch] = useState("");
-
-  const [filterLocationType, setFilterLocationType] = useState("ALL");
-  const [filterPriority, setFilterPriority] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
+  const [chip, setChip] = useState<ChipKey>("open");
+  const [owner, setOwner] = useState("ANY");
   const [editingTicket, setEditingTicket] = useState<any>(null);
   // Reading a ticket used to mean opening the Manage form, which is an edit
-  // screen — so you could not look at one without being able to change it. And
-  // the table truncates the description to nothing on a narrow screen.
+  // screen — so you could not look at one without being able to change it.
   const [detailTicketId, setDetailTicketId] = useState<string | null>(null);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [bulkOwner, setBulkOwner] = useState("");
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
+  const [modalToast, setModalToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  const filteredTickets = tickets.filter((t) => {
-    const propId = t.property_id || t.lease?.unit?.property_id || t.unit?.property_id;
-    const matchesProperty =
-      true;
+  const matchesChip = (t: any, k: ChipKey) => {
+    switch (k) {
+      case "open":
+        return isOpenStatus(t.status);
+      case "noowner":
+        return isOpenStatus(t.status) && !t.assigned_to;
+      case "hot":
+        return isOpenStatus(t.status) && (t.priority === "Urgent" || t.priority === "High");
+      case "late":
+        return !!t.slaBreached;
+      case "done":
+        return !isOpenStatus(t.status) && inThisMonth(t.modified_at ?? t.created_at);
+    }
+  };
 
-    const isCommonArea = t.location_type === "Common Area";
-    const matchesLocationType =
-      filterLocationType === "ALL"
-        ? true
-        : filterLocationType === "COMMON"
-        ? isCommonArea
-        : !isCommonArea;
+  // Counts are of the whole property, not of the current search — a chip whose
+  // number changed as you typed would be useless as a headline.
+  const counts = useMemo(() => {
+    const out = {} as Record<ChipKey, number>;
+    for (const c of CHIPS) out[c.key] = tickets.filter((t) => matchesChip(t, c.key)).length;
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tickets]);
 
-    const matchesPriority = filterPriority ? t.priority === filterPriority : true;
-    const matchesStatus = filterStatus ? t.status === filterStatus : true;
-    const searchLower = search.toLowerCase().trim();
+  const visible = tickets.filter((t) => {
+    if (!matchesChip(t, chip)) return false;
+    if (owner === "NOBODY" && t.assigned_to) return false;
+    if (owner !== "ANY" && owner !== "NOBODY" && t.assigned_to !== owner) return false;
+
+    const q = search.toLowerCase().trim();
+    if (!q) return true;
     const unitNumber = t.unit?.unit_number || t.lease?.unit?.unit_number || "";
-    const matchesSearch =
-      !searchLower ||
-      t.title.toLowerCase().includes(searchLower) ||
-      unitNumber.toLowerCase().includes(searchLower) ||
-      (t.location_detail && t.location_detail.toLowerCase().includes(searchLower)) ||
-      t.ticket_category?.toLowerCase().includes(searchLower) ||
-      t.ticket_id?.toLowerCase().includes(searchLower);
-
-    return matchesProperty && matchesLocationType && matchesPriority && matchesStatus && matchesSearch;
+    return (
+      t.title.toLowerCase().includes(q) ||
+      unitNumber.toLowerCase().includes(q) ||
+      (t.location_detail && t.location_detail.toLowerCase().includes(q)) ||
+      (t.ticket_category || "").toLowerCase().includes(q) ||
+      ticketRef(t).toLowerCase().includes(q) ||
+      t.ticket_id.toLowerCase().includes(q)
+    );
   });
 
-  // Built by hand: newer ICU prints September as "Sept" (DEV-184).
-  const formatDate = (date: Date | string) => {
-    const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
-      .format(new Date(date))
-      .split("-")
-      .map(Number);
-    return `${String(d).padStart(2, "0")} ${MONTHS[m - 1]} ${y}`;
+  const unowned = tickets.filter((t) => isOpenStatus(t.status) && !t.assigned_to);
+  const oldestUnowned = unowned.reduce(
+    (worst: any, t: any) => (!worst || new Date(t.created_at) < new Date(worst.created_at) ? t : worst),
+    null as any
+  );
+
+  const whereOf = (t: any) =>
+    t.location_type === "Common Area"
+      ? t.location_detail || "Common area"
+      : `Unit ${t.unit?.unit_number ?? t.lease?.unit?.unit_number ?? "—"}`;
+
+  const nameOf = (id: string | null | undefined) =>
+    admins.find((a: any) => a.user_id === id)?.user_name ?? "Nobody yet";
+
+  /* ---------------------------------------------------------------- *
+   * Writing from the row
+   * ---------------------------------------------------------------- */
+
+  const assign = (ids: string[], to: string | null, label: string) => {
+    setBusyId(ids.length === 1 ? ids[0] : "bulk");
+    startTransition(async () => {
+      const res = await assignTicketsAction(ids, to);
+      setBusyId(null);
+      if (res.error) {
+        setToast({ message: res.error, tone: "error" });
+        return;
+      }
+      setPicked(new Set());
+      setToast({ message: label, detail: `${res.ok} ticket${res.ok === 1 ? "" : "s"} updated.` });
+    });
+  };
+
+  const advance = (t: any, status: string) => {
+    setBusyId(t.ticket_id);
+    startTransition(async () => {
+      const res = await setTicketStatusAction(t.ticket_id, status);
+      setBusyId(null);
+      if (res.error) {
+        setToast({ message: res.error, tone: "error" });
+        return;
+      }
+      setToast({
+        message: `${ticketRef(t)} is now “${ticketStateLabel(status)}”.`,
+        detail: t.lease?.tenant?.user_name
+          ? `${t.lease.tenant.user_name} sees the new state on their ticket.`
+          : undefined,
+      });
+    });
   };
 
   const handleUpdateSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-
     startTransition(async () => {
       const res = await updateTicketAction(formData);
       if (res?.error) {
-        setToast({ message: res.error, type: "error" });
+        setModalToast({ message: res.error, type: "error" });
       } else {
-        setToast({ message: "Ticket updated.", type: "success" });
+        setModalToast({ message: "Ticket updated.", type: "success" });
         setTimeout(() => {
           setEditingTicket(null);
-          setToast(null);
+          setModalToast(null);
         }, 600);
       }
     });
   };
 
+  const menuFor = (t: any): RowMenuItem[] => [
+    { label: "Read the whole ticket", onSelect: () => setDetailTicketId(t.ticket_id) },
+    { label: "Record cost and what was done", onSelect: () => setEditingTicket(t) },
+    ...(t.assigned_to
+      ? [
+          {
+            label: "Take the owner off",
+            onSelect: () => assign([t.ticket_id], null, `${ticketRef(t)} has no owner again.`),
+            danger: true,
+          },
+        ]
+      : []),
+  ];
+
+  const togglePick = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
   return (
     <>
       <div className="space-y-4">
+        {/* The band that carries its own fix. A tile could say five tickets had
+            no owner; it could not give them one. */}
+        {unowned.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/[0.07] px-4 py-3">
+            <span className="material-symbols-outlined shrink-0 text-[20px] text-amber-300">person_add</span>
+            <p className="min-w-[280px] flex-[999_1_280px] text-sm leading-relaxed">
+              <span className="font-bold text-amber-200">
+                {unowned.length} ticket{unowned.length === 1 ? " has" : "s have"} no owner.
+              </span>{" "}
+              <span className="text-on-surface-variant">
+                {oldestUnowned?.openFor ? `The oldest has waited ${oldestUnowned.openFor}. ` : ""}
+                Nobody picks these up by themselves.
+              </span>
+            </p>
+            <label htmlFor="bulk-owner" className="text-xs font-semibold text-on-surface-variant">
+              Give them all to
+            </label>
+            <select
+              id="bulk-owner"
+              value={bulkOwner}
+              onChange={(e) => setBulkOwner(e.target.value)}
+              className={FIELD}
+            >
+              <option value="">Choose a person…</option>
+              {admins.map((a: any) => (
+                <option key={a.user_id} value={a.user_id}>
+                  {a.user_name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              disabled={!bulkOwner || isPending}
+              onClick={() =>
+                assign(
+                  unowned.map((t: any) => t.ticket_id),
+                  bulkOwner,
+                  `All ${unowned.length} went to ${nameOf(bulkOwner)}.`
+                )
+              }
+              className="pressable inline-flex h-10 items-center rounded-xl bg-amber-400 px-4 text-sm font-bold text-[#241a02] transition-colors hover:bg-amber-300 disabled:opacity-40"
+            >
+              {busyId === "bulk" ? "Assigning…" : `Assign all ${unowned.length}`}
+            </button>
+          </div>
+        )}
+
+        <nav aria-label="Filter tickets" className="flex flex-wrap gap-2">
+          {CHIPS.map((c) => {
+            const on = chip === c.key;
+            return (
+              <button
+                key={c.key}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setChip(c.key)}
+                className={`pressable inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${
+                  on
+                    ? "border-primary bg-primary/15 text-primary"
+                    : "border-outline-variant/60 bg-surface-container text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${c.dot}`} />
+                {c.label}
+                <span
+                  className={`rounded-full px-2 py-px text-[11px] font-bold tabular-nums ${
+                    on ? "bg-primary/25 text-primary" : "bg-surface-container-high text-on-surface-variant"
+                  }`}
+                >
+                  {counts[c.key]}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
         <Toolbar>
-          <SearchField
-            placeholder="Search by title, category, location, or unit…"
-            value={search}
-            onChange={setSearch}
-          />
-          <select value={filterLocationType} onChange={(e) => setFilterLocationType(e.target.value)} className={FIELD}>
-            <option value="ALL">Units and common areas</option>
-            <option value="UNIT">Inside a unit</option>
-            <option value="COMMON">Common areas</option>
-          </select>
-          <select value={filterPriority} onChange={(e) => setFilterPriority(e.target.value)} className={FIELD}>
-            <option value="">All priorities</option>
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-            <option value="Urgent">Urgent</option>
-          </select>
-          <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className={FIELD}>
-            <option value="">All statuses</option>
-            <option value="Open">Open</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Pending Parts">Pending Parts</option>
-            <option value="KIV">KIV (Keep In View)</option>
-            <option value="Resolved">Resolved</option>
-            <option value="Closed">Closed</option>
+          <SearchField placeholder="Ticket number, unit, or what broke" value={search} onChange={setSearch} />
+          <label
+            htmlFor="owner-filter"
+            className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant"
+          >
+            Owner
+          </label>
+          <select id="owner-filter" value={owner} onChange={(e) => setOwner(e.target.value)} className={FIELD}>
+            <option value="ANY">Anyone</option>
+            <option value="NOBODY">Nobody yet</option>
+            {admins.map((a: any) => (
+              <option key={a.user_id} value={a.user_id}>
+                {a.user_name}
+              </option>
+            ))}
           </select>
         </Toolbar>
 
-        <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container">
-        {/* Results count & reset */}
-        <div className="flex items-center justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-high/40 px-4 py-2.5 text-xs text-on-surface-variant">
-          <span>
-            Showing <span className="font-semibold tabular-nums text-on-surface">{filteredTickets.length}</span> of{" "}
-            <span className="tabular-nums">{tickets.length}</span> tickets in this property
-          </span>
-          {(search || filterLocationType !== "ALL" || filterPriority || filterStatus) && (
+        {picked.size > 0 && (
+          <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary/[0.08] px-4 py-2.5">
+            <span className="text-sm font-semibold text-on-surface">{picked.size} selected</span>
+            <select
+              value={bulkOwner}
+              onChange={(e) => setBulkOwner(e.target.value)}
+              className={FIELD}
+              aria-label="Owner for the selected tickets"
+            >
+              <option value="">Choose a person…</option>
+              {admins.map((a: any) => (
+                <option key={a.user_id} value={a.user_id}>
+                  {a.user_name}
+                </option>
+              ))}
+            </select>
             <button
               type="button"
-              onClick={() => {
-                setSearch("");
-                setFilterLocationType("ALL");
-                setFilterPriority("");
-                setFilterStatus("");
-              }}
-              className="text-primary hover:underline font-medium flex items-center gap-1"
+              disabled={!bulkOwner || isPending}
+              onClick={() => assign([...picked], bulkOwner, `${picked.size} went to ${nameOf(bulkOwner)}.`)}
+              className="pressable inline-flex h-10 items-center rounded-xl bg-primary px-4 text-sm font-bold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-40"
             >
-              <span className="material-symbols-outlined text-[14px]">close</span>
-              Clear filters
+              Assign them
             </button>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={() => setPicked(new Set())}
+              className="text-sm font-semibold text-on-surface-variant hover:text-white"
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
-        {/* Cards below md. A ticket has eight columns and a phone shows two of
-            them, so the table was scrolled past rather than read. */}
-        <div className="divide-y divide-outline-variant/30 md:hidden">
-          {filteredTickets.length === 0 ? (
-            <EmptyState icon="search_off" title="No tickets match these filters" hint="Try clearing the search or the filters above." />
-          ) : (
-            filteredTickets.map((t: any) => {
-              const isCommon = t.location_type === "Common Area";
-              const where = isCommon
-                ? t.location_detail || "Common area"
-                : `Unit ${t.unit?.unit_number ?? t.lease?.unit?.unit_number ?? "—"}`;
-              return (
-                <button
-                  key={t.ticket_id}
-                  type="button"
-                  onClick={() => setDetailTicketId(t.ticket_id)}
-                  className={
-                    "pressable w-full border-l-2 px-4 py-3 text-left transition-colors hover:bg-surface-container-low/50 " +
-                    (t.slaBreached ? flagFor(t.priority).rail : "border-transparent")
-                  }
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="flex min-w-0 items-start gap-1.5 text-sm font-semibold leading-snug text-white">
-                      {t.slaBreached && (
-                        <span
-                          className={`material-symbols-outlined mt-px shrink-0 text-[15px] leading-none ${flagFor(t.priority).icon}`}
-                          title={flagTitle(t)}
-                          aria-label={flagTitle(t)}
-                          role="img"
-                        >
-                          timer_off
+        <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container">
+          <div className="flex items-center justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-high/40 px-4 py-2.5 text-xs text-on-surface-variant">
+            <span>
+              Showing <span className="font-semibold tabular-nums text-on-surface">{visible.length}</span> of{" "}
+              <span className="tabular-nums">{tickets.length}</span> tickets in this property
+            </span>
+            {(search || chip !== "open" || owner !== "ANY") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearch("");
+                  setChip("open");
+                  setOwner("ANY");
+                }}
+                className="flex items-center gap-1 font-medium text-primary hover:underline"
+              >
+                <span className="material-symbols-outlined text-[14px]">close</span>
+                Clear filters
+              </button>
+            )}
+          </div>
+
+          {/* Cards below xl. A ticket row carries five columns plus two
+              dropdowns; that needs real width before it stops wrapping. */}
+          <div className="divide-y divide-outline-variant/30 xl:hidden">
+            {visible.length === 0 ? (
+              <EmptyState
+                icon="search_off"
+                title="No tickets match these filters"
+                hint="Try clearing the search or choosing another chip."
+              />
+            ) : (
+              visible.map((t: any) => {
+                const key = ticketStateKey(t.status);
+                const unassigned = isOpenStatus(t.status) && !t.assigned_to;
+                return (
+                  <div
+                    key={t.ticket_id}
+                    className={`border-l-2 px-4 py-3.5 ${
+                      unassigned
+                        ? "border-rose-400/70 bg-rose-500/[0.04]"
+                        : t.slaBreached
+                        ? flagFor(t.priority).rail
+                        : "border-transparent"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <button type="button" onClick={() => setDetailTicketId(t.ticket_id)} className="min-w-0 text-left">
+                        <span className="font-mono text-[11px] font-bold tracking-wide text-on-surface-variant">
+                          {ticketRef(t)}
                         </span>
-                      )}
-                      {t.title}
-                    </span>
-                    <span
-                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
-                        t.priority === "Urgent"
-                          ? "border-rose-500/40 bg-rose-500/20 text-rose-300"
-                          : t.priority === "High"
-                          ? "border-amber-500/40 bg-amber-500/15 text-amber-300"
-                          : "border-outline-variant/60 bg-surface-container-high text-on-surface-variant"
-                      }`}
-                    >
-                      {t.priority}
-                    </span>
-                  </div>
+                        <span className="mt-0.5 block text-sm font-semibold leading-snug text-white">{t.title}</span>
+                      </button>
+                      <span
+                        className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                          PRIORITY_PILL[t.priority] ?? PRIORITY_PILL.Low
+                        }`}
+                      >
+                        {t.priority}
+                      </span>
+                    </div>
 
-                  <p className="mt-1 flex items-center gap-1.5 text-[11px] text-on-surface-variant">
-                    <span className="material-symbols-outlined text-[13px] leading-none">
-                      {isCommon ? "domain" : "meeting_room"}
-                    </span>
-                    <span className="truncate">{where}</span>
-                    <span aria-hidden>·</span>
-                    <span className="truncate">{t.ticket_category}</span>
-                  </p>
+                    <p className="mt-1 flex items-center gap-1.5 text-[11px] text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[13px] leading-none">
+                        {t.location_type === "Common Area" ? "domain" : "meeting_room"}
+                      </span>
+                      <span className="truncate">{whereOf(t)}</span>
+                      <span aria-hidden>·</span>
+                      <span className="truncate">{t.ticket_category}</span>
+                    </p>
 
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <span className="flex items-center gap-2">
-                      <span className="rounded-md border border-outline-variant/60 bg-surface-container-high px-2 py-0.5 text-[10px] font-semibold text-on-surface-variant">
-                        {t.status}
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                      <span className={`rounded-md border px-2 py-0.5 font-semibold ${TICKET_STATE_TONE[key]}`}>
+                        {ticketStateLabel(t.status)}
                       </span>
                       {t.openFor && (
-                        <span className="text-[10px] font-medium tabular-nums text-on-surface-variant">
-                          for {t.openFor}
+                        <span
+                          className={`font-medium tabular-nums ${
+                            t.slaBreached ? "text-rose-300" : "text-on-surface-variant"
+                          }`}
+                        >
+                          waiting {t.openFor}
                         </span>
                       )}
                       {t.messageCount > 0 && (
-                        <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
+                        <span className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 font-semibold text-primary">
                           <span className="material-symbols-outlined text-[13px] leading-none">forum</span>
                           {t.messageCount}
                         </span>
                       )}
-                    </span>
-                    <span className="flex items-center gap-3">
-                      <span className="font-mono text-[10px] text-on-surface-variant">
-                        {dayMonth(t.created_at)}
-                      </span>
-                      <span
-                        role="button"
-                        tabIndex={0}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingTicket(t);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.stopPropagation();
-                            setEditingTicket(t);
+                    </div>
+
+                    {/* One primary action at thumb height: the thing this
+                        ticket is actually waiting for. */}
+                    <div className="mt-3 flex items-center gap-2">
+                      {unassigned ? (
+                        <select
+                          aria-label={`Owner for ${ticketRef(t)}`}
+                          value=""
+                          disabled={isPending}
+                          onChange={(e) =>
+                            e.target.value &&
+                            assign([t.ticket_id], e.target.value, `${ticketRef(t)} went to ${nameOf(e.target.value)}.`)
                           }
-                        }}
-                        className="pressable rounded-lg bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/20"
-                      >
-                        Manage
-                      </span>
-                    </span>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
-
-        <div className="hidden md:block">
-          <div className={TABLE.wrap}>
-          <table className={TABLE.table + " min-w-[900px]"}>
-            <thead>
-              <tr>
-                <th className={TABLE.th}>Ref</th>
-                <th className={TABLE.th}>Location</th>
-                <th className={TABLE.th}>Category</th>
-                <th className={TABLE.th}>Title &amp; remark</th>
-                <th className={TABLE.th}>Priority</th>
-                <th className={TABLE.th}>Status</th>
-                <th className={TABLE.thNum}>Messages</th>
-                <th className={TABLE.th}>Raised</th>
-                <th className={TABLE.thNum}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredTickets.length === 0 ? (
-                <tr>
-                  <td colSpan={9} className="p-0">
-                    <EmptyState icon="search_off" title="No tickets match these filters" hint="Try clearing the search or the filters above." />
-                  </td>
-                </tr>
-              ) : (
-                filteredTickets.map((t) => {
-                  const isCommonArea = t.location_type === "Common Area";
-                  const unitNum = t.unit?.unit_number || t.lease?.unit?.unit_number;
-                  const propertyName =
-                    t.property?.property_name ||
-                    t.lease?.unit?.property?.property_name ||
-                    t.unit?.property?.property_name ||
-                    "—";
-
-                  return (
-                    <tr
-                      key={t.ticket_id}
-                      onClick={() => setDetailTicketId(t.ticket_id)}
-                      className={"cursor-pointer " + TABLE.tr}
-                    >
-                      <td
-                        className={
-                          TABLE.td +
-                          " border-l-2 font-mono text-xs text-on-surface-variant " +
-                          (t.slaBreached ? flagFor(t.priority).rail : "border-transparent")
-                        }
-                      >
-                        <span className="flex items-center gap-1.5">
-                          {t.slaBreached && (
-                            <span
-                              className={`material-symbols-outlined shrink-0 text-[15px] leading-none ${flagFor(t.priority).icon}`}
-                              title={flagTitle(t)}
-                              aria-label={flagTitle(t)}
-                              role="img"
-                            >
-                              timer_off
-                            </span>
-                          )}
-                          #{t.ticket_id.split("-")[0].toUpperCase()}
-                        </span>
-                      </td>
-                      <td className={TABLE.td}>
-                        {isCommonArea ? (
-                          <div>
-                            <div className="flex items-center gap-1 text-cyan-300 font-semibold text-xs">
-                              <span className="material-symbols-outlined text-[15px]">domain</span>
-                              <span>{t.location_detail || "Common Area"}</span>
-                            </div>
-                            <div className="text-[11px] text-on-surface-variant mt-0.5">
-                              {propertyName}
-                            </div>
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="font-semibold text-on-surface text-xs flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[15px] text-primary">meeting_room</span>
-                              <span>Unit {unitNum || "N/A"}</span>
-                            </div>
-                            <div className="text-[11px] text-on-surface-variant mt-0.5">
-                              {propertyName}
-                            </div>
-                          </div>
-                        )}
-                      </td>
-                      <td className={TABLE.td + " text-xs font-medium text-primary"}>
-                        {t.ticket_category}
-                      </td>
-                      <td className={TABLE.td}>
-                        <div className="max-w-[220px] truncate font-medium text-on-surface text-xs" title={t.title}>
-                          {t.title}
-                        </div>
-                        {t.remark ? (
-                          <div className="max-w-[220px] truncate text-[11px] text-amber-300 flex items-center gap-1 mt-0.5" title={t.remark}>
-                            <span className="material-symbols-outlined text-[13px]">sticky_note_2</span>
-                            <span>{t.remark}</span>
-                          </div>
-                        ) : t.description ? (
-                          <div className="max-w-[220px] truncate text-[11px] text-on-surface-variant mt-0.5" title={t.description}>
-                            {t.description}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className={TABLE.td}>
-                        <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold ${
-                          t.priority === 'Urgent' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 
-                          t.priority === 'High' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' :
-                          t.priority === 'Medium' ? 'bg-primary/20 text-primary border border-primary/40' :
-                          'bg-surface-variant text-on-surface-variant border border-outline-variant'
-                        }`}>
-                          {t.priority}
-                        </span>
-                      </td>
-                      <td className={TABLE.td}>
-                        <span className="flex items-center gap-1.5">
-                          <StatusBadge status={t.status} />
-                          {t.openFor && (
-                            <span className="whitespace-nowrap text-[11px] tabular-nums text-on-surface-variant">
-                              for {t.openFor}
-                            </span>
-                          )}
-                        </span>
-                      </td>
-                      <td className={TABLE.tdNum}>
-                        {t.messageCount > 0 ? (
-                          <span
-                            className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary"
-                            title={`${t.messageCount} message${t.messageCount === 1 ? "" : "s"} with the resident`}
-                          >
-                            <span className="material-symbols-outlined text-[14px] leading-none">forum</span>
-                            {t.messageCount}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-on-surface-variant/50" title="No messages yet">
-                            —
-                          </span>
-                        )}
-                      </td>
-                      <td className={TABLE.td + " whitespace-nowrap text-xs tabular-nums text-on-surface-variant"}>
-                        {formatDate(t.created_at)}
-                      </td>
-                      <td className={TABLE.td + " text-right"}>
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); setEditingTicket(t); }}
-                          className="pressable inline-flex h-9 items-center rounded-lg bg-primary/10 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                          className="h-11 flex-1 rounded-xl border border-dashed border-rose-400/60 bg-rose-500/10 px-3 text-sm font-bold text-rose-200 outline-none"
                         >
-                          Manage
-                        </button>
+                          <option value="">+ Assign someone</option>
+                          {admins.map((a: any) => (
+                            <option key={a.user_id} value={a.user_id}>
+                              {a.user_name}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <select
+                          aria-label={`State of ${ticketRef(t)}`}
+                          value={TICKET_STATUS_OPTIONS.find((o) => o.key === key)?.value ?? t.status}
+                          disabled={isPending}
+                          onChange={(e) => advance(t, e.target.value)}
+                          className="h-11 flex-1 rounded-xl border border-outline-variant/60 bg-surface-container-high px-3 text-sm font-semibold text-on-surface outline-none"
+                        >
+                          {TICKET_STATUS_OPTIONS.map((o) => (
+                            <option key={o.key} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <RowMenu label={`More for ${ticketRef(t)}`} items={menuFor(t)} />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="hidden xl:block">
+            <div className={TABLE.wrap}>
+              <table className={TABLE.table + " min-w-[1060px]"}>
+                <caption className="sr-only">Tickets in this property</caption>
+                <thead>
+                  <tr>
+                    <th className={TABLE.th + " w-10"}>
+                      <span className="sr-only">Select</span>
+                    </th>
+                    <th className={TABLE.th}>Ticket</th>
+                    <th className={TABLE.th}>What is wrong</th>
+                    <th className={TABLE.th}>Waiting</th>
+                    <th className={TABLE.th}>Who is on it</th>
+                    <th className={TABLE.th}>Where it is up to</th>
+                    <th className={TABLE.thNum}>
+                      <span className="sr-only">More</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visible.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="p-0">
+                        <EmptyState
+                          icon="search_off"
+                          title="No tickets match these filters"
+                          hint="Try clearing the search or choosing another chip."
+                        />
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  ) : (
+                    visible.map((t: any) => {
+                      const key = ticketStateKey(t.status);
+                      const unassigned = isOpenStatus(t.status) && !t.assigned_to;
+                      const busy = busyId === t.ticket_id;
+                      return (
+                        <tr key={t.ticket_id} className={TABLE.tr + (unassigned ? " bg-rose-500/[0.035]" : "")}>
+                          <td className={TABLE.td}>
+                            {isOpenStatus(t.status) && (
+                              <input
+                                type="checkbox"
+                                checked={picked.has(t.ticket_id)}
+                                onChange={() => togglePick(t.ticket_id)}
+                                aria-label={`Select ${ticketRef(t)}`}
+                                className="h-4 w-4 accent-[#d0bcff]"
+                              />
+                            )}
+                          </td>
+
+                          <td
+                            className={
+                              TABLE.td +
+                              " border-l-2 align-top " +
+                              (t.slaBreached ? flagFor(t.priority).rail : "border-transparent")
+                            }
+                          >
+                            <span className="flex items-center gap-1.5">
+                              {t.slaBreached && (
+                                <span
+                                  className={`material-symbols-outlined shrink-0 text-[15px] leading-none ${
+                                    flagFor(t.priority).icon
+                                  }`}
+                                  title={flagTitle(t)}
+                                  aria-label={flagTitle(t)}
+                                  role="img"
+                                >
+                                  timer_off
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setDetailTicketId(t.ticket_id)}
+                                className="whitespace-nowrap border-b border-primary/35 pb-px font-mono text-xs font-bold text-on-surface hover:text-primary"
+                              >
+                                {ticketRef(t)}
+                              </button>
+                            </span>
+                            <span
+                              className={`mt-1.5 inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                                PRIORITY_PILL[t.priority] ?? PRIORITY_PILL.Low
+                              }`}
+                            >
+                              {t.priority}
+                            </span>
+                          </td>
+
+                          <td className={TABLE.td + " max-w-[340px] align-top"}>
+                            <div className="font-semibold text-on-surface">{t.title}</div>
+                            <div className="mt-0.5 text-[11px] text-on-surface-variant">
+                              {whereOf(t)} · {t.ticket_category}
+                            </div>
+                            {t.remark ? (
+                              <div className="mt-1.5 inline-flex max-w-full items-center gap-1.5 rounded-lg border border-amber-500/35 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-200">
+                                <span className="material-symbols-outlined shrink-0 text-[13px]">sticky_note_2</span>
+                                <span className="truncate">{t.remark}</span>
+                              </div>
+                            ) : t.messageCount > 0 ? (
+                              <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2 py-1 text-[11px] text-primary">
+                                <span className="material-symbols-outlined text-[13px]">forum</span>
+                                <span>
+                                  {t.messageCount} message{t.messageCount === 1 ? "" : "s"}
+                                </span>
+                              </div>
+                            ) : null}
+                          </td>
+
+                          <td className={TABLE.td + " align-top"}>
+                            <div
+                              className={`font-bold tabular-nums ${t.slaBreached ? "text-rose-300" : "text-on-surface"}`}
+                            >
+                              {t.openFor ?? "—"}
+                            </div>
+                            <div
+                              className={`mt-0.5 text-[11px] ${
+                                t.slaBreached ? "text-rose-300" : "text-on-surface-variant"
+                              }`}
+                            >
+                              {!isOpenStatus(t.status)
+                                ? `closed ${dayMonth(t.modified_at ?? t.created_at)}`
+                                : t.slaBreached
+                                ? `past the ${t.slaHours}h target`
+                                : "within target"}
+                            </div>
+                          </td>
+
+                          <td className={TABLE.td + " min-w-[160px] align-top"}>
+                            <select
+                              aria-label={`Owner for ${ticketRef(t)}`}
+                              value={t.assigned_to ?? ""}
+                              disabled={isPending}
+                              onChange={(e) =>
+                                assign(
+                                  [t.ticket_id],
+                                  e.target.value || null,
+                                  e.target.value
+                                    ? `${ticketRef(t)} went to ${nameOf(e.target.value)}.`
+                                    : `${ticketRef(t)} has no owner again.`
+                                )
+                              }
+                              className={`h-9 w-full rounded-lg border px-2 text-xs outline-none transition-colors ${
+                                unassigned
+                                  ? "border-dashed border-rose-400/60 bg-rose-500/10 font-bold text-rose-200"
+                                  : "border-outline-variant/60 bg-surface-container-high text-on-surface"
+                              } ${busy ? "opacity-50" : ""}`}
+                            >
+                              <option value="">Nobody yet</option>
+                              {admins.map((a: any) => (
+                                <option key={a.user_id} value={a.user_id}>
+                                  {a.user_name}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+
+                          <td className={TABLE.td + " min-w-[170px] align-top"}>
+                            <span className="flex items-center gap-2">
+                              <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${TICKET_STATE_DOT[key]}`} />
+                              <select
+                                aria-label={`State of ${ticketRef(t)}`}
+                                value={TICKET_STATUS_OPTIONS.find((o) => o.key === key)?.value ?? t.status}
+                                disabled={isPending}
+                                onChange={(e) => advance(t, e.target.value)}
+                                className={`h-9 w-full rounded-lg border px-2 text-xs font-semibold outline-none transition-colors ${
+                                  TICKET_STATE_TONE[key]
+                                } ${busy ? "opacity-50" : ""}`}
+                              >
+                                {TICKET_STATUS_OPTIONS.map((o) => (
+                                  <option key={o.key} value={o.value}>
+                                    {o.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </span>
+                          </td>
+
+                          <td className={TABLE.tdNum + " align-top"}>
+                            <RowMenu label={`More for ${ticketRef(t)}`} items={menuFor(t)} />
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
         </div>
       </div>
 
-      {/* Manage / Update Ticket Modal */}
-      {detailTicketId && (
-        <TicketDetailModal
-          ticketId={detailTicketId}
-          onClose={() => setDetailTicketId(null)}
-        />
-      )}
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
 
+      {detailTicketId && <TicketDetailModal ticketId={detailTicketId} onClose={() => setDetailTicketId(null)} />}
+
+      {/* Close-out: cost and what was done. Owner and state moved to the row,
+          so this modal is now only the parts that need typing. */}
       {editingTicket && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="glass-card rounded-2xl w-full max-w-lg overflow-hidden border border-outline-variant shadow-2xl flex flex-col animate-in fade-in zoom-in duration-200">
-            <div className="p-4 border-b border-outline-variant/40 flex justify-between items-center bg-surface-container-low">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div className="glass-card flex w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant shadow-2xl">
+            <div className="flex items-center justify-between border-b border-outline-variant/40 bg-surface-container-low p-4">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-[20px]">edit_document</span>
-                <h3 className="font-title-lg text-title-lg text-on-surface">Manage ticket</h3>
-                <span className="font-mono text-xs px-2 py-0.5 rounded bg-surface-variant text-on-surface-variant font-semibold">
-                  #{editingTicket.ticket_id.split("-")[0].toUpperCase()}
+                <span className="material-symbols-outlined text-[20px] text-primary">edit_document</span>
+                <h3 className="font-title-lg text-title-lg text-on-surface">Close out a ticket</h3>
+                <span className="rounded bg-surface-variant px-2 py-0.5 font-mono text-xs font-semibold text-on-surface-variant">
+                  {ticketRef(editingTicket)}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => {
                   setEditingTicket(null);
-                  setToast(null);
+                  setModalToast(null);
                 }}
-                className="text-on-surface-variant hover:text-on-surface transition-colors p-1"
+                className="p-1 text-on-surface-variant transition-colors hover:text-on-surface"
               >
                 <span className="material-symbols-outlined">close</span>
               </button>
             </div>
 
-            <form onSubmit={handleUpdateSubmit} className="p-5 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
-              {toast && (
+            <form onSubmit={handleUpdateSubmit} className="flex max-h-[80vh] flex-col gap-4 overflow-y-auto p-5">
+              {modalToast && (
                 <div
-                  className={`p-3 rounded-lg text-xs font-semibold flex items-center gap-2 border ${
-                    toast.type === "success"
-                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                      : "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                  className={`flex items-center gap-2 rounded-lg border p-3 text-xs font-semibold ${
+                    modalToast.type === "success"
+                      ? "border-emerald-500/40 bg-emerald-500/20 text-emerald-300"
+                      : "border-rose-500/40 bg-rose-500/20 text-rose-300"
                   }`}
                 >
                   <span className="material-symbols-outlined text-[18px]">
-                    {toast.type === "success" ? "check_circle" : "error"}
+                    {modalToast.type === "success" ? "check_circle" : "error"}
                   </span>
-                  <span>{toast.message}</span>
+                  <span>{modalToast.message}</span>
                 </div>
               )}
 
               <input type="hidden" name="ticket_id" value={editingTicket.ticket_id} />
+              <input type="hidden" name="assigned_to" value={editingTicket.assigned_to || ""} />
 
-              {/* Location Badge Header */}
-              <div className="p-3 rounded-xl bg-surface-container-high/50 border border-outline-variant/30 text-xs space-y-1.5">
+              <div className="space-y-1.5 rounded-xl border border-outline-variant/30 bg-surface-container-high/50 p-3 text-xs">
                 <div className="flex items-center justify-between">
-                  <div className="font-semibold text-on-surface text-sm">{editingTicket.title}</div>
-                  <span className="text-[11px] px-2 py-0.5 rounded bg-primary/20 text-primary font-medium">
+                  <div className="text-sm font-semibold text-on-surface">{editingTicket.title}</div>
+                  <span className="rounded bg-primary/20 px-2 py-0.5 text-[11px] font-medium text-primary">
                     {editingTicket.ticket_category}
                   </span>
                 </div>
-                <div className="text-xs font-medium text-cyan-300 flex items-center gap-1">
+                <div className="flex items-center gap-1 text-xs font-medium text-cyan-300">
                   <span className="material-symbols-outlined text-[15px]">
                     {editingTicket.location_type === "Common Area" ? "domain" : "meeting_room"}
                   </span>
-                  <span>
-                    {editingTicket.location_type === "Common Area"
-                      ? `Common Area: ${editingTicket.location_detail || "General"}`
-                      : `Unit ${editingTicket.unit?.unit_number || editingTicket.lease?.unit?.unit_number || "N/A"}`}
-                  </span>
+                  <span>{whereOf(editingTicket)}</span>
                 </div>
-                <div className="text-on-surface-variant line-clamp-3 pt-1 border-t border-outline-variant/20">
+                <div className="line-clamp-3 border-t border-outline-variant/20 pt-1 text-on-surface-variant">
                   {editingTicket.description}
                 </div>
               </div>
 
-              {/* Status Dropdown with KIV Option */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-on-surface-variant">Status</label>
+                <label className="text-xs font-medium text-on-surface-variant">State</label>
                 <select
                   name="status"
-                  defaultValue={editingTicket.status}
-                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary text-sm font-semibold"
+                  defaultValue={
+                    TICKET_STATUS_OPTIONS.find((o) => o.key === ticketStateKey(editingTicket.status))?.value ??
+                    editingTicket.status
+                  }
+                  className="rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 text-sm font-semibold text-on-surface outline-none focus:border-primary"
                 >
-                  <option value="Open">Open</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Pending Parts">Pending Parts</option>
-                  <option value="KIV">KIV (Keep In View)</option>
-                  <option value="Resolved">Resolved</option>
-                  <option value="Closed">Closed</option>
-                </select>
-              </div>
-
-              {/* Assignee */}
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-on-surface-variant">Assigned to</label>
-                <select
-                  name="assigned_to"
-                  defaultValue={editingTicket.assigned_to || ""}
-                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary text-sm"
-                >
-                  <option value="">Unassigned</option>
-                  {admins?.map((admin) => (
-                    <option key={admin.user_id} value={admin.user_id}>
-                      {admin.user_name}
+                  {TICKET_STATUS_OPTIONS.map((o) => (
+                    <option key={o.key} value={o.value}>
+                      {o.label}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Maintenance Cost */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-on-surface-variant">
-                  What it cost (RM)
-                </label>
+                <label className="text-xs font-medium text-on-surface-variant">What it cost (RM)</label>
                 <input
                   type="number"
                   name="cost"
@@ -556,50 +775,47 @@ export default function AdminTicketTable({
                   min="0"
                   defaultValue={editingTicket.cost ? Number(editingTicket.cost) : ""}
                   placeholder="0.00"
-                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary text-sm font-mono"
+                  className="rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 font-mono text-sm text-on-surface outline-none focus:border-primary"
                 />
               </div>
 
-              {/* Optional Remark / Admin Notes */}
               <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-on-surface-variant flex items-center justify-between">
+                <label className="flex items-center justify-between text-xs font-medium text-on-surface-variant">
                   <span>What was done</span>
                   {/* The placeholder invited internal notes; the resident reads
                       this field on their own ticket (R11). */}
-                  <span className="text-[10px] text-amber-300/90 font-normal">The resident sees this</span>
+                  <span className="text-[10px] font-normal text-amber-300/90">The resident sees this</span>
                 </label>
                 <textarea
                   name="remark"
                   defaultValue={editingTicket.remark || ""}
                   placeholder="e.g. Replaced the tap washer. Please tell us if it still drips."
                   rows={2}
-                  className="rounded-lg bg-surface-container-high border border-outline-variant px-3 py-2 text-on-surface outline-none focus:border-primary text-xs resize-none placeholder:text-on-surface-variant/60"
+                  className="resize-none rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 text-xs text-on-surface outline-none placeholder:text-on-surface-variant/60 focus:border-primary"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 mt-2 pt-3 border-t border-outline-variant/30">
+              <div className="mt-2 flex justify-end gap-2 border-t border-outline-variant/30 pt-3">
                 <button
                   type="button"
                   onClick={() => {
                     setEditingTicket(null);
-                    setToast(null);
+                    setModalToast(null);
                   }}
                   disabled={isPending}
-                  className="px-4 py-2 rounded-lg font-medium text-xs text-on-surface-variant hover:bg-surface-variant transition-colors disabled:opacity-50"
+                  className="rounded-lg px-4 py-2 text-xs font-medium text-on-surface-variant transition-colors hover:bg-surface-variant disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="btn-primary px-5 py-2 rounded-xl text-xs font-bold text-white shadow-lg transition-all pressable disabled:opacity-50 flex items-center gap-1.5"
+                  className="pressable flex items-center gap-1.5 rounded-xl bg-primary px-5 py-2 text-xs font-bold text-on-primary shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
                 >
-                  {isPending ? (
-                    <span className="material-symbols-outlined animate-spin-slow text-[16px]">progress_activity</span>
-                  ) : (
-                    <span className="material-symbols-outlined text-[16px]">check</span>
-                  )}
-                  {isPending ? "Saving Changes..." : "Save Changes"}
+                  <span className="material-symbols-outlined text-[16px]">
+                    {isPending ? "progress_activity" : "check"}
+                  </span>
+                  {isPending ? "Saving…" : "Save"}
                 </button>
               </div>
             </form>
