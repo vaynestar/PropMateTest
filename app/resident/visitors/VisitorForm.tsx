@@ -53,8 +53,9 @@ export default function VisitorForm({ onRegistered }: { onRegistered?: () => voi
           <input name="visitor_name" required className={input} placeholder="e.g. Ali bin Abu" autoComplete="off" />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-xs font-semibold text-on-surface">IC / passport no. *</span>
-          <input name="visitor_ic_no" required className={input} placeholder="e.g. 900101-14-5555" autoComplete="off" />
+          <span className="text-xs font-semibold text-on-surface">IC / passport no.</span>
+          <input name="visitor_ic_no" className={input} placeholder="e.g. 900101-14-5555" autoComplete="off" />
+          <span className="text-[11px] text-on-surface-variant">Optional — the guard takes it at the gate</span>
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-xs font-semibold text-on-surface">Phone (optional)</span>

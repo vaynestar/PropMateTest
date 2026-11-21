@@ -817,10 +817,12 @@ function VisitorDetailsCard({
           </span>
         </div>
         <span className="mt-0.5 block font-mono text-[11px] text-on-surface-variant">
-          IC:{" "}
-          {showIdentity
-            ? visitor.visitor_ic_no || "N/A"
-            : maskIdentityNumber(visitor.visitor_ic_no)}
+          {visitor.visitor_ic_no ? (
+            <>IC: {showIdentity ? visitor.visitor_ic_no : maskIdentityNumber(visitor.visitor_ic_no)}</>
+          ) : (
+            /* DEV-240: the resident was not asked for it. Tell the guard to ask. */
+            <span className="font-sans font-semibold text-amber-300">Ask for IC / passport</span>
+          )}
         </span>
         {visitor.contact_no && (
           <span className="text-[11px] text-on-surface-variant block">

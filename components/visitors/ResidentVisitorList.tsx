@@ -9,7 +9,7 @@ import { cancelVisitorPass } from "@/app/resident/visitors/actions";
 interface ResidentVisitorRecord {
   visitor_id: string;
   visitor_name: string;
-  visitor_ic_no: string;
+  visitor_ic_no: string | null;
   visitor_type?: string | null;
   destination?: string | null;
   vehicle_plate?: string | null;

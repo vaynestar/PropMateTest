@@ -39,7 +39,7 @@ interface VisitorRecord {
   lease_id?: string | null;
   visitor_type?: string | null;
   visitor_name: string;
-  visitor_ic_no: string;
+  visitor_ic_no: string | null;
   contact_no?: string | null;
   vehicle_plate?: string | null;
   visit_purpose?: string | null;
@@ -141,7 +141,7 @@ export default function AdminVisitorList({
       // 1. Text Search
       if (q) {
         const nameMatch = v.visitor_name.toLowerCase().includes(q);
-        const icMatch = v.visitor_ic_no.toLowerCase().includes(q);
+        const icMatch = (v.visitor_ic_no ?? "").toLowerCase().includes(q);
         const plateMatch = v.vehicle_plate?.toLowerCase().includes(q);
         const destMatch = v.destination?.toLowerCase().includes(q);
         const purposeMatch = v.visit_purpose?.toLowerCase().includes(q);

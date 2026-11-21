@@ -11,7 +11,7 @@ interface VisitorPassProps {
   visitor: {
     visitor_id: string;
     visitor_name: string;
-    visitor_ic_no: string;
+    visitor_ic_no: string | null;
     visitor_type?: string | null;
     destination?: string | null;
     vehicle_plate?: string | null;
@@ -133,23 +133,31 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
           </div>
           <div className="flex items-center justify-between gap-2">
             <span className="text-[11px] text-on-surface-variant">IC / Passport:</span>
-            <span className="flex items-center gap-1.5">
-              <span className="font-mono font-medium text-white">
-                {showIdentity
-                  ? visitor.visitor_ic_no
-                  : maskIdentityNumber(visitor.visitor_ic_no)}
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowIdentity((v) => !v)}
-                aria-label={showIdentity ? "Hide identity number" : "Show identity number"}
-                className="pressable rounded p-0.5 text-on-surface-variant transition-colors hover:text-white"
-              >
-                <span className="material-symbols-outlined text-[16px] leading-none">
-                  {showIdentity ? "visibility_off" : "visibility"}
+            {/*
+              No IC is a normal pass now (DEV-240): the resident did not know
+              it and the guard will take it at the gate. A masked "—" behind a
+              reveal eye reads as something hidden from you, so say plainly
+              that there is nothing there and drop the eye.
+            */}
+            {visitor.visitor_ic_no ? (
+              <span className="flex items-center gap-1.5">
+                <span className="font-mono font-medium text-white">
+                  {showIdentity ? visitor.visitor_ic_no : maskIdentityNumber(visitor.visitor_ic_no)}
                 </span>
-              </button>
-            </span>
+                <button
+                  type="button"
+                  onClick={() => setShowIdentity((v) => !v)}
+                  aria-label={showIdentity ? "Hide identity number" : "Show identity number"}
+                  className="pressable rounded p-0.5 text-on-surface-variant transition-colors hover:text-white"
+                >
+                  <span className="material-symbols-outlined text-[16px] leading-none">
+                    {showIdentity ? "visibility_off" : "visibility"}
+                  </span>
+                </button>
+              </span>
+            ) : (
+              <span className="text-on-surface-variant">Taken at the gate</span>
+            )}
           </div>
 
           {visitor.contact_no && (

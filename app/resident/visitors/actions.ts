@@ -24,14 +24,17 @@ export async function registerVisitor(state: any, formData: FormData) {
     }
 
     const visitor_name = (formData.get("visitor_name") as string)?.trim();
-    const visitor_ic_no = (formData.get("visitor_ic_no") as string)?.trim();
+    const visitor_ic_no = (formData.get("visitor_ic_no") as string)?.trim() || null;
     const contact_no = (formData.get("contact_no") as string)?.trim() || null;
     const vehicle_plate = (formData.get("vehicle_plate") as string)?.trim() || null;
     const visit_purpose = (formData.get("visit_purpose") as string)?.trim() || "Visiting Resident";
     const visit_date_str = (formData.get("visit_date") as string) || null;
 
-    if (!visitor_name || !visitor_ic_no || !visit_date_str) {
-      throw new Error("Required fields missing: Please provide name, IC/Passport, and visit date.");
+    // The IC is NOT required here (DEV-240, user 2026-11-21). A resident
+    // rarely knows their guest's IC; demanding it blocked the pass or invited
+    // a made-up number. The guard takes it at the gate instead.
+    if (!visitor_name || !visit_date_str) {
+      throw new Error("Please give the visitor's name and the date of the visit.");
     }
 
     // R5: a pass dated 2020 was accepted and issued a working QR code. Compared

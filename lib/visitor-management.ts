@@ -83,7 +83,7 @@ export async function createVisitor(data: {
   lease_id?: string | null;
   visitor_type?: string;
   visitor_name: string;
-  visitor_ic_no: string;
+  visitor_ic_no?: string | null;
   contact_no?: string;
   vehicle_plate?: string;
   visit_purpose?: string;
@@ -99,7 +99,7 @@ export async function createVisitor(data: {
         lease_id: data.lease_id || undefined,
         visitor_type: data.visitor_type || "Resident Guest",
         visitor_name: data.visitor_name,
-        visitor_ic_no: data.visitor_ic_no,
+        visitor_ic_no: data.visitor_ic_no || null,
         contact_no: data.contact_no,
         vehicle_plate: data.vehicle_plate,
         visit_purpose: data.visit_purpose,

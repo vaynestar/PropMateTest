@@ -204,7 +204,7 @@ export async function adminUpdateVisitor(visitorId: string, formData: FormData) 
       // someone already on site should hear no, not believe it was saved.
       const name = text("visitor_name");
       const ic = text("visitor_ic_no");
-      if ((name && name !== current.visitor_name) || (ic && ic !== current.visitor_ic_no)) {
+      if ((name && name !== current.visitor_name) || (ic && ic !== (current.visitor_ic_no ?? ""))) {
         throw new Error(
           "The name and IC cannot be changed after the visitor has arrived. If the wrong person was admitted, check them out and register the right one."
         );
@@ -213,14 +213,14 @@ export async function adminUpdateVisitor(visitorId: string, formData: FormData) 
       const name = text("visitor_name");
       const ic = text("visitor_ic_no");
       const dateStr = text("visit_date");
-      if (!name || !ic || !dateStr) {
-        throw new Error("Enter the visitor's name, IC or passport number, and the date of the visit.");
+      if (!name || !dateStr) {
+        throw new Error("Enter the visitor's name and the date of the visit.");
       }
       const visitDate = new Date(dateStr);
       if (isNaN(visitDate.getTime())) throw new Error("That visit date is not valid.");
 
       data.visitor_name = name;
-      data.visitor_ic_no = ic;
+      data.visitor_ic_no = ic || null;
       data.visit_date = visitDate;
       // visitor_type is deliberately not editable: it decides whether the visit
       // hangs off a resident's lease or a free-text destination, so changing it

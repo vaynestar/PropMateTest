@@ -152,7 +152,7 @@ export default async function PrintVisitorPassPage({
             <span className="text-gray-500 text-[10px] uppercase font-bold block">
               IC / Passport Number
             </span>
-            <span className="font-mono font-bold text-gray-900">{visitor.visitor_ic_no}</span>
+            <span className="font-mono font-bold text-gray-900">{visitor.visitor_ic_no || "____________________"}</span>
           </div>
 
           <div className="border-b border-gray-100 pb-1.5">

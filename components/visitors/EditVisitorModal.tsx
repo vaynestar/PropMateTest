@@ -18,7 +18,7 @@ type Visitor = {
   visitor_id: string;
   visitor_type?: string | null;
   visitor_name: string;
-  visitor_ic_no: string;
+  visitor_ic_no: string | null;
   contact_no?: string | null;
   vehicle_plate?: string | null;
   visit_purpose?: string | null;
@@ -148,9 +148,9 @@ export default function EditVisitorModal({
             <Field label="IC or passport no.">
               <input
                 name="visitor_ic_no"
-                defaultValue={visitor.visitor_ic_no}
+                defaultValue={visitor.visitor_ic_no ?? ""}
                 disabled={identityLocked}
-                required={!identityLocked}
+                placeholder="Taken at the gate"
                 className={`${inputCls} font-mono`}
               />
             </Field>

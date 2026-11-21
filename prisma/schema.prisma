@@ -460,7 +460,9 @@ model Visitor {
   lease_id       String?   @db.Uuid
   visitor_type   String    @default("Guest") @db.VarChar
   visitor_name   String    @db.VarChar
-  visitor_ic_no  String    @db.VarChar
+  /// Optional: a resident pre-registering a guest usually does not know it.
+  /// The guard captures it at the gate (DEV-240).
+  visitor_ic_no  String?   @db.VarChar
   contact_no     String?   @db.VarChar
   vehicle_plate  String?   @db.VarChar
   visit_purpose  String?   @db.VarChar
