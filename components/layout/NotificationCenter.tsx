@@ -50,9 +50,13 @@ const COPY: Record<
    * filter that was only ever there to re-find it.
    */
   resident: {
-    title: "Updates",
+    // "Updates" named the same thing twice over - the bell already says what
+    // this is (user, 2026-11-21: "Change the Updates to Notifications").
+    title: "Notifications",
     empty: "Nothing new here",
-    footer: { href: "/resident", label: "Back to home" },
+    // Was "Back to home", and home shows at most a couple of recent items, so
+    // anything older than the popover could hold was unreachable (DEV-244).
+    footer: { href: "/resident/notifications", label: "See all notifications" },
     filters: [
       { id: "URGENT", label: "Needs you" },
       { id: "ALL", label: "All" },
@@ -108,11 +112,11 @@ export default function NotificationCenter({
    * bills should see them, not a chronological mixture they have to sift;
    * one with nothing outstanding should not land on an empty tab.
    */
-  const needsYouCount = initialNotifications.filter(
+  const needsYouTotal = initialNotifications.filter(
     (n) => n.urgency === "CRITICAL" || n.urgency === "HIGH"
   ).length;
   const [filterType, setFilterType] = useState<string>(
-    portal === "resident" && needsYouCount > 0 ? "URGENT" : "ALL"
+    portal === "resident" && needsYouTotal > 0 ? "URGENT" : "ALL"
   );
 
   /*
@@ -165,7 +169,8 @@ export default function NotificationCenter({
     };
   }, [isOpen]);
 
-  const unreadCount = notifications.filter((n) => !n.isRead && !readIds.has(n.id)).length;
+  const isUnread = (n: NotificationItem) => !n.isRead && !readIds.has(n.id);
+  const unreadCount = notifications.filter(isUnread).length;
 
   const handleMarkAllRead = () => {
     persist(new Set(notifications.map((n) => n.id)));
@@ -240,7 +245,18 @@ export default function NotificationCenter({
             {portal === "resident" ? (
               <div className="grid grid-cols-2 gap-1.5 border-b border-outline-variant/30 bg-surface-container-low p-2">
                 {copy.filters.map((f) => {
-                  const count = f.id === "URGENT" ? needsYouCount : notifications.length;
+                  /*
+                   * The count is of UNREAD items, not of items (user,
+                   * 2026-11-21: "the number wont change even though already
+                   * read"). A tab that says 6 after you have read all six is
+                   * telling you about the database, not about you - and it
+                   * disagreed with the bell's badge, which was counting
+                   * unread all along.
+                   */
+                  const count =
+                    f.id === "URGENT"
+                      ? notifications.filter((n) => isUnread(n) && (n.urgency === "CRITICAL" || n.urgency === "HIGH")).length
+                      : unreadCount;
                   const active = filterType === f.id;
                   return (
                     <button
@@ -252,17 +268,21 @@ export default function NotificationCenter({
                       }`}
                     >
                       {f.label}
-                      <span
-                        className={`rounded-full px-1.5 text-[10px] ${
-                          active
-                            ? "bg-black/20"
-                            : f.id === "URGENT" && count > 0
-                            ? "bg-rose-500/20 text-rose-300"
-                            : "bg-surface-container-highest"
-                        }`}
-                      >
-                        {count}
-                      </span>
+                      {/* No badge at zero: "All 0" beside a list of eight
+                          read notifications reads as an error. */}
+                      {count > 0 && (
+                        <span
+                          className={`rounded-full px-1.5 text-[10px] ${
+                            active
+                              ? "bg-black/20"
+                              : f.id === "URGENT"
+                              ? "bg-rose-500/20 text-rose-300"
+                              : "bg-surface-container-highest"
+                          }`}
+                        >
+                          {count}
+                        </span>
+                      )}
                     </button>
                   );
                 })}

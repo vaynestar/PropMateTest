@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
+import { todayDateMY } from "@/lib/short-date";
 
 export type NotificationItem = {
   id: string;
@@ -481,8 +482,7 @@ export async function getResidentNotificationsFor(userId: string): Promise<Notif
 
     // 5. Notices that went up this week - the same rule the notice board uses
     if (propertyIds.length > 0) {
-      const today = new Date(now);
-      today.setHours(0, 0, 0, 0);
+      const today = todayDateMY();
       const notices = await prisma.announcement.findMany({
         where: {
           OR: [{ property_id: { in: propertyIds } }, { property_id: null }],

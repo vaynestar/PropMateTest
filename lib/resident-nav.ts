@@ -17,5 +17,8 @@ export const residentNav: ResidentNavItem[] = [
   { label: "Book", href: "/resident/facilities", icon: "meeting_room" },
   { label: "Repairs", href: "/resident/maintenance", icon: "build" },
   { label: "My Unit", href: "/resident/unit", icon: "apartment" },
+  /* Reachable without the bell (DEV-244) - the bell is a popover, and a
+     resident who has dismissed it should still be able to find an update. */
+  { label: "Notifications", href: "/resident/notifications", icon: "notifications" },
   { label: "Profile", href: "/resident/profile", icon: "person" },
 ];

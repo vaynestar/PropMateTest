@@ -30,6 +30,9 @@ const PRIMARY: NavItem[] = [
 const MORE: NavItem[] = [
   { label: "Notices", href: "/resident/announcements", icon: "campaign" },
   { label: "Visitors", href: "/resident/visitors", icon: "person_search" },
+  // The bell is a popover; this is the way back to an update after it has
+  // been dismissed or scrolled past (DEV-244).
+  { label: "Notifications", href: "/resident/notifications", icon: "notifications" },
   { label: "My Unit", href: "/resident/unit", icon: "apartment" },
   { label: "Profile", href: "/resident/profile", icon: "person" },
 ];

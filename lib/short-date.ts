@@ -1,3 +1,23 @@
+/**
+ * Today as a `@db.Date` value: UTC midnight of the Malaysian calendar day.
+ *
+ * A `@db.Date` column stores UTC midnight of the date written, so comparing
+ * one against `new Date()` with `setHours(0,0,0,0)` compares it against LOCAL
+ * midnight — which in Malaysia is 16:00Z the previous day. A notice published
+ * today sits at 00:00Z today, which is AFTER that, so `publish_date <= today`
+ * excluded it and the notice only appeared tomorrow (DEV-244: a notice dated
+ * 21 Nov was invisible on 21 Nov).
+ *
+ * Use this for every comparison against a `@db.Date` column.
+ */
+export function todayDateMY(): Date {
+  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" })
+    .format(new Date())
+    .split("-")
+    .map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { todayDateMY } from "@/lib/short-date";
 
 export type AnnouncementFilters = {
   propertyId?: string;
@@ -27,8 +28,7 @@ export async function getAllAnnouncements(filters?: AnnouncementFilters) {
   }
 
   if (filters?.status && filters.status !== "ALL") {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = todayDateMY();
 
     if (filters.status === "Active") {
       where.status = "Published";
@@ -78,8 +78,9 @@ export async function getAllAnnouncements(filters?: AnnouncementFilters) {
 }
 
 export async function getResidentAnnouncements(propertyId: string) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // UTC midnight of the Malaysian day - see todayDateMY. Local midnight made
+  // a notice published today invisible until tomorrow.
+  const today = todayDateMY();
 
   return prisma.announcement.findMany({
     where: {
