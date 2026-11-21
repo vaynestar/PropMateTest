@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import ScrollHint from "@/components/ui/ScrollHint";
-import { ViewerButton } from "@/components/ui/MediaViewer";
+import ReportLibrary from "@/components/reports/ReportLibrary";
+import { RANGE_LABEL } from "@/lib/reports/catalog";
 import { useRouter, useSearchParams } from "next/navigation";
 import OverviewReportView from "@/components/reports/OverviewReportView";
 import FinancialsReportView from "@/components/reports/FinancialsReportView";
@@ -35,11 +36,11 @@ export default function AdminReportsClient({
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [isPending, startTransition] = useTransition();
 
-  /* The report document opens on the same property and period as the screen. */
-  const printParams = new URLSearchParams();
-  if (currentPropertyId !== "ALL") printParams.set("propertyId", currentPropertyId);
-  if (currentDateRange !== "ytd") printParams.set("dateRange", currentDateRange);
-  const printHref = `/print/report${printParams.toString() ? `?${printParams}` : ""}`;
+  const propertyLabel =
+    currentPropertyId === "ALL"
+      ? "All properties"
+      : data.properties?.find((p: any) => p.property_id === currentPropertyId)?.property_name ??
+        "This property";
 
   const handleFilterChange = (newPropertyId?: string, newDateRange?: string) => {
     const propId = newPropertyId !== undefined ? newPropertyId : currentPropertyId;
@@ -151,19 +152,19 @@ export default function AdminReportsClient({
               Export CSV
             </button>
             {/*
-             * Was window.print() on this page. There is no print stylesheet in
-             * the app, so that printed the dark dashboard - sidebar, tab strip,
-             * filter buttons, and only the one tab that happened to be mounted.
-             * /print/report is the document: all five sections, captioned
-             * tables, and front matter saying what the figures cover (DEV-248).
+             * Was window.print() on this page, which printed the dark dashboard
+             * because the app has no print stylesheet (DEV-248). Then one
+             * ten-page document covering every module, which the user did not
+             * want either: "module based, no need so details ... 5 to 10
+             * reports to view that will be commonly used" (DEV-249). This opens
+             * the library, carrying the filters currently on screen.
              */}
-            <ViewerButton
-              items={[{ src: printHref, title: "Property Management Report", kind: "doc" }]}
-              className={BTN.primary}
-            >
-              <span className="material-symbols-outlined text-[18px]">print</span>
-              Print report
-            </ViewerButton>
+            <ReportLibrary
+              propertyId={currentPropertyId}
+              dateRange={currentDateRange}
+              rangeLabel={RANGE_LABEL[currentDateRange] ?? currentDateRange}
+              propertyLabel={propertyLabel}
+            />
           </>
         }
       />
@@ -189,12 +190,7 @@ export default function AdminReportsClient({
 
         {/* Right: Date Range Selector */}
         <div className="flex items-center gap-1 bg-surface-container-high p-1 rounded-xl border border-outline-variant/40 w-full sm:w-auto justify-between sm:justify-start">
-          {[
-            { id: "30d", label: "Last 30 Days" },
-            { id: "quarter", label: "This Quarter" },
-            { id: "ytd", label: "YTD (2026)" },
-            { id: "all", label: "All Time" },
-          ].map((r) => (
+          {Object.entries(RANGE_LABEL).map(([id, label]) => ({ id, label })).map((r) => (
             <button
               type="button"
               key={r.id}

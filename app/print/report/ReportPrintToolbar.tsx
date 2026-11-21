@@ -9,7 +9,7 @@ import { useEffect, useState } from "react";
  * Deliberately NOT a PrintHelper that fires window.print() on load: a report is
  * read before it is printed, unlike an invoice slip.
  */
-export default function ReportPrintToolbar() {
+export default function ReportPrintToolbar({ title }: { title: string }) {
   const [framed, setFramed] = useState(false);
   useEffect(() => setFramed(window.self !== window.top), []);
   if (framed) return null;
@@ -18,7 +18,7 @@ export default function ReportPrintToolbar() {
     <div className="print:hidden mb-8 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-slate-100 p-3.5 shadow-xs">
       <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
         <span className="material-symbols-outlined text-slate-600">description</span>
-        <span>Property Management Report</span>
+        <span>{title}</span>
       </div>
       <div className="flex gap-2">
         <button
