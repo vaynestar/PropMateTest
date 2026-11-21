@@ -7,6 +7,7 @@ import {
   daysUntilExpiry,
 } from "@/lib/announcement-status";
 import Image from "next/image";
+import AnnouncementThumb from "@/components/announcements/AnnouncementThumb";
 import AdminAnnouncementForm from "./AdminAnnouncementForm";
 import {
   deleteAnnouncement,
@@ -483,18 +484,14 @@ export default function AdminAnnouncementList({
                     </h3>
                   </div>
 
-                  {/* Optional Cover Image */}
-                  {a.image_url && (
-                    <div className="relative w-full h-32 rounded-xl overflow-hidden border border-outline-variant/40">
-                      <Image
-                        src={a.image_url}
-                        alt={a.title}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                    </div>
-                  )}
+                  {/* Cover. Drawn for every notice now, the default included,
+                      so the cards in a column are one height and the eye has a
+                      line to follow (DEV-255). */}
+                  <AnnouncementThumb
+                    src={a.image_url}
+                    alt={a.title}
+                    className="h-32 w-full rounded-xl border border-outline-variant/40"
+                  />
 
                   {/* Body Content Snippet */}
                   <p className="text-xs text-on-surface-variant line-clamp-3 leading-relaxed">
@@ -647,23 +644,36 @@ export default function AdminAnnouncementList({
                     }`}
                   >
                     <td className="px-4 py-3.5">
-                      <div className="flex items-center gap-2">
-                        {a.is_pinned && (
-                          <span className="material-symbols-outlined text-[15px] text-amber-400 shrink-0">
-                            push_pin
+                      <div className="flex items-start gap-3">
+                        {/* The table had no picture at all, so an admin could
+                            not tell which notice carried the lift-shutdown
+                            poster without opening each one (DEV-255). */}
+                        <AnnouncementThumb
+                          src={a.image_url}
+                          alt={a.title}
+                          sizes="80px"
+                          className="h-11 w-16 shrink-0 rounded-lg border border-outline-variant/40"
+                        />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            {a.is_pinned && (
+                              <span className="material-symbols-outlined text-[15px] text-amber-400 shrink-0">
+                                push_pin
+                              </span>
+                            )}
+                            <span
+                              className="font-bold text-white hover:text-primary cursor-pointer max-w-xs truncate block"
+                              onClick={() => setPreviewItem(a)}
+                              title={a.title}
+                            >
+                              {a.title}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-on-surface-variant truncate block max-w-sm mt-0.5">
+                            {a.content}
                           </span>
-                        )}
-                        <span
-                          className="font-bold text-white hover:text-primary cursor-pointer max-w-xs truncate block"
-                          onClick={() => setPreviewItem(a)}
-                          title={a.title}
-                        >
-                          {a.title}
-                        </span>
+                        </div>
                       </div>
-                      <span className="text-[11px] text-on-surface-variant truncate block max-w-sm mt-0.5">
-                        {a.content}
-                      </span>
                     </td>
 
                     <td className="px-4 py-3.5">

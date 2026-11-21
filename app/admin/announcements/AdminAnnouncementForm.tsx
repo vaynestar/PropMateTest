@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { fitUploadLimit, optimizePhoto } from "@/lib/client/shrink-upload";
 import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import Image from "next/image";
+import AnnouncementThumb from "@/components/announcements/AnnouncementThumb";
 import { createAnnouncement, updateAnnouncement } from "./actions";
 
 interface PropertyOption {
@@ -377,9 +378,12 @@ export default function AdminAnnouncementForm({
 
         {/* Cover Photo */}
         <div>
-          <label className="text-[11px] font-medium text-on-surface-variant block mb-1">
-            Photo (optional)
+          <label className="text-[11px] font-medium text-on-surface-variant block">
+            Photo
           </label>
+          <p className="text-[11px] text-on-surface-variant/70 mb-1.5">
+            Leave it blank and the notice uses the default cover shown here.
+          </p>
           <div className="flex items-center gap-2">
             {imageUrl ? (
               <div className="relative w-16 h-10 rounded-lg overflow-hidden border border-outline-variant shrink-0 bg-surface-container group">
@@ -399,7 +403,16 @@ export default function AdminAnnouncementForm({
                   <span className="material-symbols-outlined text-[16px]">close</span>
                 </button>
               </div>
-            ) : null}
+            ) : (
+              /* The default, shown rather than an empty slot, so the admin can
+                 see what the notice board will actually carry (DEV-255). */
+              <AnnouncementThumb
+                src={null}
+                alt=""
+                sizes="80px"
+                className="h-10 w-16 shrink-0 rounded-lg border border-outline-variant"
+              />
+            )}
 
             <input
               type="text"
