@@ -41,8 +41,15 @@ export default function ResidentTicketModal({ ticketId, onClose }: { ticketId: s
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/65 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full sm:max-w-lg max-h-[92dvh] sm:max-h-[85dvh] overflow-y-auto overscroll-contain rounded-t-3xl sm:rounded-3xl bg-surface-container border border-outline-variant/60 shadow-2xl animate-slide-up pb-[env(safe-area-inset-bottom)]">
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 px-5 py-3 bg-surface-container/95 backdrop-blur border-b border-outline-variant/40">
+      {/*
+        Header outside the scroll area, not `sticky` inside it - the same
+        fault fixed on the booking dialog in DEV-246. A sticky header on a
+        95%-opaque background lets the thread slide underneath and show
+        through it; a shrink-0 header above its own scrolling body makes
+        that impossible rather than merely hard to see.
+      */}
+      <div className="relative flex w-full max-h-[92dvh] sm:max-h-[85dvh] flex-col overflow-hidden rounded-t-3xl sm:max-w-lg sm:rounded-3xl bg-surface-container border border-outline-variant/60 shadow-2xl animate-slide-up">
+        <div className="flex shrink-0 items-center justify-between gap-3 px-5 py-3 bg-surface-container border-b border-outline-variant/40">
           <span className="text-xs font-semibold text-on-surface-variant">
             Request {thread ? `#${thread.shortId}` : ""}
           </span>
@@ -56,7 +63,7 @@ export default function ResidentTicketModal({ ticketId, onClose }: { ticketId: s
           </button>
         </div>
 
-        <div className="p-5 flex flex-col gap-5">
+        <div className="flex flex-col gap-5 overflow-y-auto overscroll-contain p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           {!thread && !error && (
             <p className="text-sm text-on-surface-variant flex items-center gap-2">
               <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>

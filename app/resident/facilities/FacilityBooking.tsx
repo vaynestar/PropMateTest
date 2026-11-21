@@ -221,8 +221,23 @@ export default function FacilityBooking({
             onClick={() => setSelectedId(null)}
             className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           />
-          <div className="relative z-10 w-full sm:max-w-lg max-h-[92dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl border border-outline-variant/60 bg-surface-container-lowest p-4 pb-8 sm:p-5 animate-in fade-in slide-in-from-bottom-4 duration-200">
-            <div className="sticky top-0 -mx-4 -mt-4 mb-3 flex items-center justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-lowest/95 px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
+          {/*
+            Header OUTSIDE the scroll area, not `sticky` inside it.
+
+            It was sticky within the scrolling panel, on a 95%-opaque
+            background with a backdrop blur, so the form slid underneath and
+            showed through it - the duration chips read as though they were
+            printed on the title bar (user, 2026-11-22, on iOS: "facilities
+            when scrolling the top bar seem overlay?"). Measured before the
+            fix: six elements painting inside the header's band.
+
+            A flex column with a shrink-0 header and its own scrolling body
+            makes the overlap impossible rather than merely hard to see, and
+            matches the dialog ExpandableForm uses. The background is now
+            fully opaque for the same reason.
+          */}
+          <div className="relative z-10 flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-outline-variant/60 bg-surface-container-lowest animate-in fade-in slide-in-from-bottom-4 duration-200 sm:max-w-lg sm:rounded-3xl">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-lowest px-4 py-3 sm:px-5">
               <p className="min-w-0 truncate text-sm font-bold text-on-surface">Book {selected.facility_name}</p>
               <button
                 type="button"
@@ -233,7 +248,9 @@ export default function FacilityBooking({
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
-            <BookingCard facility={selected} slots={slots} />
+            <div className="overflow-y-auto overscroll-contain px-4 pt-4 pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-5">
+              <BookingCard facility={selected} slots={slots} />
+            </div>
           </div>
         </div>
       )}
