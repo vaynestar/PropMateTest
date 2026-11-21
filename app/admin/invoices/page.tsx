@@ -7,8 +7,7 @@ import InvoiceBatchList from "@/components/billing/InvoiceBatchList";
 
 import prisma from "@/lib/prisma";
 
-import RefreshDataButton from "@/components/billing/RefreshDataButton";
-import { PageHeader } from "@/components/admin/ui";
+import { BTN, PageHeader } from "@/components/admin/ui";
 import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
@@ -87,27 +86,40 @@ export default async function InvoicesDetailPage({
     default_amount: Number(c.default_amount ?? 0),
   }));
 
+  /*
+   * The subtitle used to be "Every invoice raised, newest batch first." — a
+   * description of the sort order, which the reader can see. It now says what
+   * is actually true of this list today, because that is the reason anyone
+   * opens the page.
+   */
+  const owing = serialisedInvoices.filter((i) => i.status !== "Paid" && i.status !== "Inactive");
+  const owed = owing.reduce((sum, i) => sum + Number(i.total_amount ?? 0), 0);
+  const drafts = serialisedInvoices.filter((i) => !i.issued_at && i.status !== "Paid" && i.status !== "Inactive").length;
+
   return (
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
         title="Invoices"
-        subtitle="Every invoice raised, newest batch first."
+        subtitle={
+          serialisedInvoices.length === 0
+            ? "Nothing has been billed for this property yet."
+            : `${owing.length} unpaid, RM ${owed.toLocaleString("en-MY", { minimumFractionDigits: 2 })} outstanding${
+                drafts > 0 ? ` · ${drafts} still a draft` : ""
+              }`
+        }
         actions={
           <>
-            <RefreshDataButton />
+            {/* "Refresh" went in DEV-253. Every action on this page already
+                calls router.refresh(), so the button only ever reloaded data
+                that was current — it was reassurance, not a function. */}
+            <Link href="/admin/billing" className={BTN.secondary}>
+              Chase arrears
+            </Link>
             <ManualInvoiceButton />
             <GenerateInvoicesButton />
           </>
         }
-      >
-        <Link
-          href="/admin/billing"
-          className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-        >
-          <span className="material-symbols-outlined text-[16px]">arrow_back</span>
-          Back to Billing
-        </Link>
-      </PageHeader>
+      />
 
       {leaseId && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/[0.06] px-4 py-3">

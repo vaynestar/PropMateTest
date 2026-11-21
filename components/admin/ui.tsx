@@ -30,40 +30,47 @@ export const LABEL = "text-[11px] font-medium text-on-surface-variant";
 export type Tone = "neutral" | "primary" | "positive" | "warning" | "critical";
 
 /**
- * Tone marks an exception, and it marks it in exactly two places: a 2px rule
- * down the left edge and the value's colour. No tinted icon chip, no corner
- * gradient, no blurred bloom.
+ * Tone marks an exception, and it marks it in exactly two places: the card's
+ * own border and the value's colour. No tinted icon chip, no corner gradient,
+ * no blurred bloom.
  *
  * Those three were the reason the portal read as generated. Every tile had an
  * icon in a coloured rounded box, a gradient and a glow, so a tile that
  * mattered looked identical to one that did not — the page had five accents
  * and therefore none. (User, 2026-11-07: "still crowded and very ai like".)
+ *
+ * The 2px rule down the left edge went in DEV-252. It was the surviving piece
+ * of the same habit: a coloured stripe glued to a card edge, carrying meaning
+ * at 2px that the border and the number already carry at full size. DESIGN.md
+ * bans it by name. Tone is now one thing — the whole border changes — so a
+ * tile that matters is legible from across the room and a neutral one is
+ * genuinely quiet.
  */
-const TONE: Record<Tone, { rule: string; value: string; ring: string }> = {
+const TONE: Record<Tone, { border: string; value: string; ring: string }> = {
   neutral: {
-    rule: "",
+    border: "border-outline-variant/50",
     value: "text-white",
     ring: "hover:border-outline",
   },
   primary: {
-    rule: "before:bg-primary/70",
+    border: "border-primary/45",
     value: "text-white",
-    ring: "hover:border-primary/50",
+    ring: "hover:border-primary/70",
   },
   positive: {
-    rule: "before:bg-emerald-400/70",
+    border: "border-emerald-500/40",
     value: "text-white",
-    ring: "hover:border-emerald-500/40",
+    ring: "hover:border-emerald-500/60",
   },
   warning: {
-    rule: "before:bg-amber-400/80",
+    border: "border-amber-500/45",
     value: "text-amber-200",
-    ring: "hover:border-amber-500/40",
+    ring: "hover:border-amber-500/65",
   },
   critical: {
-    rule: "before:bg-rose-400/80",
+    border: "border-rose-500/45",
     value: "text-rose-200",
-    ring: "hover:border-rose-500/40",
+    ring: "hover:border-rose-500/65",
   },
 };
 
@@ -153,11 +160,10 @@ export function StatCard({
     </>
   );
 
-  // The 2px tone rule is a ::before so it hugs the rounded left edge without
-  // an extra wrapper. `icon` is still accepted by the prop type — twenty-eight
-  // call sites pass one — but nothing renders it any more.
+  // `icon` is still accepted by the prop type — twenty-eight call sites pass
+  // one — but nothing renders it any more.
   void icon;
-  const shell = `${CARD} relative overflow-hidden p-4 transition-colors before:absolute before:inset-y-0 before:left-0 before:w-[2px] ${t.rule} ${
+  const shell = `rounded-xl border bg-surface-container ${t.border} overflow-hidden p-4 transition-colors ${
     href ? `${t.ring} pressable` : ""
   }`;
   return href ? <Link href={href} className={`block ${shell}`}>{body}</Link> : <div className={shell}>{body}</div>;
@@ -268,23 +274,177 @@ export const TABLE = {
   tdMuted: "px-4 py-3 align-middle text-on-surface-variant",
 };
 
+/* ------------------------------------------------------------------------- *
+ * The four states a screen can be in (DEV-252)
+ *
+ * Until now there was one of these — EmptyState — and the other three were
+ * not written at all. So a list with no rows, a list that failed to load and
+ * a list belonging to another property all rendered the same thing: a card
+ * with a header row and nothing under it. The reader could not tell which,
+ * and no state offered a next move.
+ *
+ * Four components, four distinguishable looks, each carrying the one action a
+ * reader would want. The rule: never a bare spinner, never "Something went
+ * wrong", never an empty table.
+ * ------------------------------------------------------------------------- */
+
+/** A frame shared by the three "nothing to show" states, so they match. */
+function StateShell({
+  icon,
+  iconClass,
+  title,
+  titleClass,
+  children,
+}: {
+  icon: string;
+  iconClass: string;
+  title: string;
+  titleClass: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-3 px-5 py-10 text-center">
+      <span
+        className={`flex h-12 w-12 items-center justify-center rounded-2xl ${iconClass}`}
+      >
+        <span className="material-symbols-outlined text-[24px]">{icon}</span>
+      </span>
+      <p className={`text-[15px] font-semibold ${titleClass}`}>{title}</p>
+      {children}
+    </div>
+  );
+}
+
+/**
+ * Nothing is wrong — there is simply nothing yet. So it names what is missing
+ * and offers the thing that would create the first one.
+ */
 export function EmptyState({
   icon = "inbox",
   title,
   hint,
   action,
+  secondary,
 }: {
   icon?: string;
   title: string;
   hint?: string;
   action?: ReactNode;
+  /** A quieter alternative, e.g. "Or write a one-off invoice". */
+  secondary?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-      <span className="material-symbols-outlined text-[28px] text-on-surface-variant/40">{icon}</span>
-      <p className="text-sm font-semibold text-on-surface">{title}</p>
-      {hint && <p className="max-w-sm text-xs text-on-surface-variant">{hint}</p>}
-      {action && <div className="mt-2">{action}</div>}
+    <StateShell
+      icon={icon}
+      iconClass="border border-dashed border-outline-variant/70 text-on-surface-variant/60"
+      title={title}
+      titleClass="text-on-surface"
+    >
+      {hint && <p className="max-w-md text-[13px] leading-relaxed text-on-surface-variant">{hint}</p>}
+      {action && <div className="mt-1 flex flex-wrap justify-center gap-2">{action}</div>}
+      {secondary && <div className="text-xs text-on-surface-variant">{secondary}</div>}
+    </StateShell>
+  );
+}
+
+/**
+ * It broke. Say what failed, say whether anything was changed, give the reader
+ * a way out, and carry the one string a developer needs to find it in a log.
+ */
+export function ErrorState({
+  title,
+  detail,
+  action,
+  reference,
+}: {
+  title: string;
+  /** What failed and whether anything was written. */
+  detail?: string;
+  action?: ReactNode;
+  /** A short code the reader can quote, e.g. "21 Nov 09:41 · ref 4f21c8". */
+  reference?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-rose-500/40 bg-rose-500/[0.05]">
+      <StateShell
+        icon="warning"
+        iconClass="border border-rose-500/35 bg-rose-500/10 text-rose-400"
+        title={title}
+        titleClass="text-rose-100"
+      >
+        {detail && <p className="max-w-md text-[13px] leading-relaxed text-rose-200/90">{detail}</p>}
+        {action && <div className="mt-1 flex flex-wrap justify-center gap-2">{action}</div>}
+        {reference && (
+          <p className="mt-1 rounded-lg border border-outline-variant/50 bg-black/30 px-2.5 py-1.5 text-[11px] text-on-surface-variant">
+            {reference}
+          </p>
+        )}
+      </StateShell>
+    </div>
+  );
+}
+
+/**
+ * Not empty and not broken: the reader is in the wrong property, or their
+ * account does not reach this. Both are one click from fixed, so say which.
+ */
+export function DeniedState({
+  title,
+  detail,
+  action,
+  footnote,
+}: {
+  title: string;
+  detail?: string;
+  action?: ReactNode;
+  footnote?: string;
+}) {
+  return (
+    <div className="rounded-xl border border-amber-500/40 bg-amber-500/[0.05]">
+      <StateShell
+        icon="lock"
+        iconClass="border border-amber-500/35 bg-amber-500/10 text-amber-400"
+        title={title}
+        titleClass="text-amber-100"
+      >
+        {detail && <p className="max-w-md text-[13px] leading-relaxed text-amber-100/80">{detail}</p>}
+        {action && <div className="mt-1 flex flex-wrap justify-center gap-2">{action}</div>}
+        {footnote && <p className="max-w-md text-xs text-on-surface-variant">{footnote}</p>}
+      </StateShell>
+    </div>
+  );
+}
+
+/**
+ * Loading is the shape of what is coming, at the height it will be, so the
+ * page does not jump when the figures land. Not a spinner over a void.
+ */
+export function TableSkeleton({ rows = 6, cols = 4 }: { rows?: number; cols?: number }) {
+  return (
+    <div aria-hidden="true" className="divide-y divide-outline-variant/30">
+      {Array.from({ length: rows }).map((_, r) => (
+        <div key={r} className="flex items-center gap-4 px-4 py-3.5">
+          {Array.from({ length: cols }).map((_, c) => (
+            <span
+              key={c}
+              className={`h-3 rounded bg-surface-container-high ${c === 0 ? "w-28" : "flex-1"}`}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function TileSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div aria-hidden="true" className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className={`${CARD} h-[88px] p-4`}>
+          <span className="block h-2.5 w-20 rounded bg-surface-container-high" />
+          <span className="mt-3 block h-6 w-24 rounded bg-surface-container-high" />
+        </div>
+      ))}
     </div>
   );
 }

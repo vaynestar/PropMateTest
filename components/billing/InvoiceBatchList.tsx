@@ -1,38 +1,90 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { CARD, EmptyState, FIELD, TABLE } from "@/components/admin/ui";
-
-/** Row actions are icons with tooltips: four labelled buttons ran off the
- *  right edge of the table (DEV-199). */
-const ICON_BTN = "pressable inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors";
+import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import StatusBadge from "@/components/dashboard/StatusBadge";
+import { BTN, CARD, EmptyState, FIELD, Money, TABLE } from "@/components/admin/ui";
+import RowMenu, { type RowMenuItem } from "@/components/admin/RowMenu";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import { Toast, type ToastState } from "@/components/admin/Toast";
 import { updateInvoiceStatusAction, issueInvoice } from "@/app/admin/invoices/actions";
 import EditInvoiceItemsModal from "./EditInvoiceItemsModal";
 import InvoicePdfPreviewModal from "./InvoicePdfPreviewModal";
 import VerifyPaymentModal from "./VerifyPaymentModal";
 import { dayMonth } from "@/lib/short-date";
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("en-MY", {
-    style: "currency",
-    currency: "MYR",
-    maximumFractionDigits: 2,
-  }).format(value);
-}
+/**
+ * The invoice list, rebuilt (DEV-253).
+ *
+ * What it was: three filter controls (a month select, a status select and a
+ * date-range popover with five presets, two date pickers, an Apply, a Reset
+ * and its own summary bar), then a 980px table in a horizontal scroller whose
+ * last column held five 32px icon buttons with tooltips — preview, issue,
+ * edit-or-lock, paid-or-unpaid, void-or-restore. Nothing was selectable, so
+ * issuing a batch of twelve meant twelve confirm boxes. Voiding had no
+ * confirmation at all. Each row also carried "Edited by: Admin1", which is for
+ * nobody.
+ *
+ * What it is: a chip per state with its count — a count is a filter, never
+ * decoration — one NAMED action per row for the likeliest next move, everything
+ * else written out in a menu, tick boxes with a bulk bar, and real cards on a
+ * phone instead of a table nobody can reach the right-hand side of.
+ *
+ * The date-range popover is gone. The month selector already answers "which
+ * billing run", which is the only date question anyone asked of this screen,
+ * and the popover was 170 lines of UI plus a second summary bar to explain
+ * itself. Searching by unit, resident or invoice number covers the rest.
+ */
 
 function formatDate(date: Date | string) {
   return dayMonth(date, true);
 }
 
 function getMonthYear(date: Date | string) {
-  return new Intl.DateTimeFormat("en-GB", {
-    month: "long",
-    year: "numeric",
-  }).format(new Date(date));
+  return new Intl.DateTimeFormat("en-GB", { month: "long", year: "numeric" }).format(new Date(date));
 }
+
+function daysPastDue(dueDate: Date | string) {
+  const due = new Date(dueDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  due.setHours(0, 0, 0, 0);
+  return Math.floor((today.getTime() - due.getTime()) / 86_400_000);
+}
+
+type StateKey = "draft" | "slip" | "overdue" | "unpaid" | "paid" | "void";
+
+/**
+ * One function decides a row's state, and the pill, the chips, the row colour
+ * and the primary action all read from it. Previously each of those worked it
+ * out again from `status`, `issued_at`, `due_date` and `transactions`, so a
+ * row could be "Unpaid" in the badge and counted as overdue by the filter.
+ */
+function invoiceState(inv: any): { key: StateKey; label: string } {
+  if (inv.status === "Inactive") return { key: "void", label: "Voided" };
+  if (inv.status === "Paid") return { key: "paid", label: "Settled" };
+  if (!inv.issued_at) return { key: "draft", label: "Draft, not sent" };
+  if (inv.transactions?.[0]) return { key: "slip", label: "Slip to check" };
+  if (daysPastDue(inv.due_date) > 0) return { key: "overdue", label: "Overdue" };
+  return { key: "unpaid", label: "Issued, not due" };
+}
+
+const PILL: Record<StateKey, string> = {
+  draft: "border-outline-variant/60 bg-surface-container-high text-on-surface-variant",
+  slip: "border-amber-500/40 bg-amber-500/10 text-amber-200",
+  overdue: "border-rose-500/40 bg-rose-500/10 text-rose-200",
+  unpaid: "border-outline-variant/60 bg-surface-container-high text-on-surface",
+  paid: "border-emerald-500/40 bg-emerald-500/10 text-emerald-200",
+  void: "border-outline-variant/40 bg-surface-container text-on-surface-variant",
+};
+
+const CHIPS: { key: "all" | StateKey; label: string; dot: string }[] = [
+  { key: "all", label: "Everything", dot: "bg-on-surface-variant" },
+  { key: "draft", label: "Draft, not sent", dot: "bg-slate-300" },
+  { key: "slip", label: "Slip to check", dot: "bg-amber-400" },
+  { key: "overdue", label: "Overdue", dot: "bg-rose-400" },
+  { key: "paid", label: "Settled", dot: "bg-emerald-400" },
+];
 
 export default function InvoiceBatchList({
   invoices,
@@ -43,691 +95,755 @@ export default function InvoiceBatchList({
 }) {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("All");
-  const [selectedBatch, setSelectedBatch] = useState("");
-
-  // Date Filter State & Presets
-  const [fromDate, setFromDate] = useState("");
-  const [toDate, setToDate] = useState("");
-  const [activePreset, setActivePreset] = useState<string>("all");
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [stateFilter, setStateFilter] = useState<"all" | StateKey>("all");
+  const [month, setMonth] = useState("ALL");
+  const [picked, setPicked] = useState<Set<string>>(new Set());
 
   const [editingInvoice, setEditingInvoice] = useState<any | null>(null);
-  const [pdfPreviewInvoice, setPdfPreviewInvoice] = useState<any | null>(null);
-  const [verifyingInvoice, setVerifyingInvoice] = useState<any | null>(null);
-  const [updatingStatusId, setUpdatingStatusId] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "info" | "error" } | null>(null);
-  const [, startTransition] = useTransition();
+  const [pdfInvoice, setPdfInvoice] = useState<any | null>(null);
+  const [verifying, setVerifying] = useState<any | null>(null);
+  const [confirming, setConfirming] = useState<
+    | null
+    | { kind: "issue" | "void" | "restore" | "paid" | "unpaid"; invoice: any }
+    | { kind: "issueMany"; ids: string[] }
+  >(null);
+  const [toast, setToast] = useState<ToastState>(null);
+  const [pending, startTransition] = useTransition();
 
-  const showToast = (text: string, type: "success" | "info" | "error" = "success") => {
-    setToastMessage({ text, type });
-    setTimeout(() => setToastMessage(null), 4000);
-  };
+  /* ----------------------------------------------------------------- *
+   * Filtering
+   * ----------------------------------------------------------------- */
 
-  const handleIssue = (invoiceId: string, invoiceNo: string) => {
-    if (
-      !window.confirm(
-        `Issue ${invoiceNo} to the tenant?
-
-After this its line items can no longer be edited. You can still record payment or void it.`
-      )
-    )
-      return;
-    setUpdatingStatusId(invoiceId);
-    startTransition(async () => {
-      try {
-        const res = await issueInvoice(invoiceId);
-        if (res.success) {
-          showToast(res.message, "success");
-          router.refresh();
-        } else if (res.error) {
-          showToast(res.error, "error");
-        }
-      } catch (e: any) {
-        showToast(e.message || "Failed to issue invoice", "error");
-      } finally {
-        setUpdatingStatusId(null);
-      }
-    });
-  };
-
-  const handleStatusChange = (invoiceId: string, currentInvoiceNo: string, newStatus: string) => {
-    setUpdatingStatusId(invoiceId);
-    startTransition(async () => {
-      try {
-        const res = await updateInvoiceStatusAction(invoiceId, newStatus);
-        if (res.success) {
-          showToast(res.message, newStatus === "Paid" ? "success" : newStatus === "Unpaid" ? "info" : "error");
-          router.refresh();
-        } else if (res.error) {
-          showToast(res.error, "error");
-        }
-      } catch (e: any) {
-        showToast(e.message || "Failed to update status", "error");
-      } finally {
-        setUpdatingStatusId(null);
-      }
-    });
-  };
-
-  // Preset Handlers
-  const handlePresetSelect = (presetKey: string) => {
-    setActivePreset(presetKey);
-    const now = new Date();
-
-    if (presetKey === "all") {
-      setFromDate("");
-      setToDate("");
-    } else if (presetKey === "this_month") {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1);
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      setFromDate(start.toISOString().split("T")[0]);
-      setToDate(end.toISOString().split("T")[0]);
-    } else if (presetKey === "last_30") {
-      const start = new Date();
-      start.setDate(now.getDate() - 30);
-      setFromDate(start.toISOString().split("T")[0]);
-      setToDate(now.toISOString().split("T")[0]);
-    } else if (presetKey === "last_90") {
-      const start = new Date();
-      start.setDate(now.getDate() - 90);
-      setFromDate(start.toISOString().split("T")[0]);
-      setToDate(now.toISOString().split("T")[0]);
-    } else if (presetKey === "this_year") {
-      const start = new Date(now.getFullYear(), 0, 1);
-      const end = new Date(now.getFullYear(), 11, 31);
-      setFromDate(start.toISOString().split("T")[0]);
-      setToDate(end.toISOString().split("T")[0]);
+  const months = useMemo(() => {
+    const seen = new Map<string, number>();
+    for (const inv of invoices) {
+      const key = getMonthYear(inv.invoice_date);
+      seen.set(key, (seen.get(key) ?? 0) + 1);
     }
-  };
+    return [...seen.entries()].sort(
+      (a, b) =>
+        new Date(invoices.find((i) => getMonthYear(i.invoice_date) === b[0])!.invoice_date).getTime() -
+        new Date(invoices.find((i) => getMonthYear(i.invoice_date) === a[0])!.invoice_date).getTime()
+    );
+  }, [invoices]);
 
-  const clearDateFilter = () => {
-    setFromDate("");
-    setToDate("");
-    setActivePreset("all");
-    setShowDatePicker(false);
-  };
+  // The month narrows first, so the chip counts describe the batch on screen
+  // rather than the whole ledger.
+  const inMonth = useMemo(
+    () => (month === "ALL" ? invoices : invoices.filter((i) => getMonthYear(i.invoice_date) === month)),
+    [invoices, month]
+  );
 
-  const hasDateFilter = Boolean(fromDate || toDate);
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: inMonth.length };
+    for (const inv of inMonth) {
+      const { key } = invoiceState(inv);
+      c[key] = (c[key] ?? 0) + 1;
+    }
+    return c;
+  }, [inMonth]);
 
-  // Filter Logic
-  const filteredInvoices = invoices.filter((inv) => {
-    const s = search.toLowerCase();
-    const matchesSearch =
-      inv.invoice_no.toLowerCase().includes(s) ||
-      inv.lease?.unit?.unit_number?.toLowerCase().includes(s) ||
-      inv.lease?.tenant?.user_name?.toLowerCase().includes(s);
-      
-    const isOverdue = (() => {
-      if (inv.status === "Paid" || inv.status === "Inactive") return false;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      return new Date(inv.due_date) < today;
-    })();
-    const matchesStatus =
-      filterStatus === "All"
-        ? true
-        : filterStatus === "Overdue"
-        ? isOverdue
-        : inv.status === filterStatus;
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return inMonth.filter((inv) => {
+      const matchesSearch =
+        !q ||
+        inv.invoice_no?.toLowerCase().includes(q) ||
+        inv.lease?.unit?.unit_number?.toLowerCase().includes(q) ||
+        inv.lease?.tenant?.user_name?.toLowerCase().includes(q);
+      const matchesState = stateFilter === "all" || invoiceState(inv).key === stateFilter;
+      return matchesSearch && matchesState;
+    });
+  }, [inMonth, search, stateFilter]);
 
-    const invDateStr = new Date(inv.invoice_date).toISOString().split("T")[0];
-    const matchesFromDate = !fromDate || invDateStr >= fromDate;
-    const matchesToDate = !toDate || invDateStr <= toDate;
-    
-    return matchesSearch && matchesStatus && matchesFromDate && matchesToDate;
-  });
+  const draftsOnScreen = rows.filter((inv) => invoiceState(inv).key === "draft");
+  const pickedDrafts = draftsOnScreen.filter((inv) => picked.has(inv.invoice_id));
 
-  const batches = filteredInvoices.reduce((acc, inv) => {
-    const key = getMonthYear(inv.invoice_date);
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(inv);
-    return acc;
-  }, {} as Record<string, any[]>);
+  /* ----------------------------------------------------------------- *
+   * Actions. Each one owns its confirm dialog; none uses window.confirm.
+   * ----------------------------------------------------------------- */
 
-  // Sort batches by latest date first
-  const batchKeys = Object.keys(batches).sort((a, b) => {
-    const dateA = new Date(batches[a][0].invoice_date).getTime();
-    const dateB = new Date(batches[b][0].invoice_date).getTime();
-    return dateB - dateA;
-  });
+  const toggle = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
-  // The month dropdown lists EVERY month that has invoices, not just the
-  // months surviving the current status/search filter. Deriving its options
-  // from filteredInvoices made the whole control vanish the moment a filter
-  // returned nothing (pick "Voided" with no voided invoices and the toolbar
-  // collapsed, sliding the status and date controls left). The option list is
-  // fixed furniture; only the counts beside each month react to the filter.
-  const allMonths = invoices.reduce((acc, inv) => {
-    const key = getMonthYear(inv.invoice_date);
-    (acc[key] ||= []).push(inv);
-    return acc;
-  }, {} as Record<string, any[]>);
-  const allBatchKeys = Object.keys(allMonths).sort((a, b) => {
-    const dateA = new Date(allMonths[a][0].invoice_date).getTime();
-    const dateB = new Date(allMonths[b][0].invoice_date).getTime();
-    return dateB - dateA;
-  });
+  const run = (fn: () => Promise<{ success?: boolean; message?: string; error?: string }>, after?: () => void) =>
+    startTransition(async () => {
+      try {
+        const res = await fn();
+        if (res.success) {
+          setToast({ message: res.message ?? "Done", tone: "success" });
+          after?.();
+          router.refresh();
+        } else {
+          setToast({ message: res.error ?? "That did not work", tone: "error" });
+        }
+      } catch (e: any) {
+        setToast({ message: e?.message || "That did not work", tone: "error" });
+      } finally {
+        setConfirming(null);
+      }
+    });
 
-  // Default to every invoice. Opening on the newest month hid 7 of 8 invoices
-  // here, including all the overdue ones, on a page whose whole job is chasing
-  // them. The month selector is still there for anyone who wants one batch.
-  let currentBatch = selectedBatch || "ALL";
-  if (currentBatch !== "ALL" && !allBatchKeys.includes(currentBatch)) {
-    currentBatch = "ALL";
+  const doIssueMany = (ids: string[]) =>
+    startTransition(async () => {
+      let ok = 0;
+      const failed: string[] = [];
+      for (const id of ids) {
+        try {
+          const res = await issueInvoice(id);
+          res.success ? ok++ : failed.push(id);
+        } catch {
+          failed.push(id);
+        }
+      }
+      setConfirming(null);
+      setPicked(new Set());
+      setToast(
+        failed.length
+          ? {
+              message: `${ok} issued, ${failed.length} would not go`,
+              detail: "The ones that failed are still drafts. Try them one at a time to see why.",
+              tone: "error",
+            }
+          : {
+              message: `${ok} invoice${ok === 1 ? "" : "s"} issued`,
+              detail: "Residents can see them now. The line items are locked.",
+              tone: "success",
+            }
+      );
+      router.refresh();
+    });
+
+  /** The one named button on a row: the likeliest next move for that state. */
+  function primaryAction(inv: any, key: StateKey) {
+    switch (key) {
+      case "draft":
+        return {
+          label: "Issue to resident",
+          primary: true,
+          onClick: () => setConfirming({ kind: "issue", invoice: inv }),
+        };
+      case "slip":
+        return {
+          label: "Check the slip",
+          primary: true,
+          onClick: () => setVerifying(inv),
+        };
+      case "overdue":
+      case "unpaid":
+        return {
+          label: "Record a payment",
+          primary: false,
+          onClick: () => setConfirming({ kind: "paid", invoice: inv }),
+        };
+      case "paid":
+        return { label: "View receipt", primary: false, onClick: () => setPdfInvoice(inv) };
+      default:
+        return null;
+    }
   }
 
-  // Active list to render: if date filter is active OR currentBatch is "ALL", show all filteredInvoices across batches!
-  const displayedInvoices = hasDateFilter || currentBatch === "ALL" ? filteredInvoices : (batches[currentBatch] || []);
+  function menuItems(inv: any, key: StateKey): RowMenuItem[] {
+    const items: RowMenuItem[] = [
+      { label: "Open the invoice PDF", onSelect: () => setPdfInvoice(inv) },
+      { label: "Every invoice on this lease", onSelect: () => router.push(`/admin/invoices?lease=${inv.lease_id}`) },
+    ];
+
+    if (key === "draft") {
+      items.push({ label: "Edit the line items", onSelect: () => setEditingInvoice(inv) });
+    } else if (key !== "void") {
+      items.push({
+        label: "Unlock for editing",
+        hint: "Issued invoices need your password to change",
+        onSelect: () => setEditingInvoice(inv),
+      });
+    }
+
+    if (key === "paid") {
+      items.push({
+        label: "Move it back to unpaid",
+        hint: "If the payment bounced or was recorded twice",
+        onSelect: () => setConfirming({ kind: "unpaid", invoice: inv }),
+      });
+    } else if (key !== "void" && key !== "draft") {
+      items.push({
+        label: "Mark it paid by hand",
+        hint: "Cash or a transfer you have already seen",
+        onSelect: () => setConfirming({ kind: "paid", invoice: inv }),
+      });
+    }
+
+    if (key === "void") {
+      items.push({
+        label: "Bring it back into the books",
+        onSelect: () => setConfirming({ kind: "restore", invoice: inv }),
+      });
+    } else {
+      items.push({
+        label: "Void this invoice…",
+        danger: true,
+        onSelect: () => setConfirming({ kind: "void", invoice: inv }),
+      });
+    }
+
+    return items;
+  }
+
+  /* ----------------------------------------------------------------- *
+   * Render
+   * ----------------------------------------------------------------- */
+
+  const dialog = (() => {
+    if (!confirming) return null;
+    if (confirming.kind === "issueMany") {
+      const n = confirming.ids.length;
+      return {
+        tone: "primary" as const,
+        title: `Issue ${n} invoice${n === 1 ? "" : "s"} to residents?`,
+        body: (
+          <p>
+            All {n} appear in the resident app straight away and each resident is notified. Their line items lock
+            afterwards.
+          </p>
+        ),
+        confirmLabel: `Issue all ${n}`,
+        cancelLabel: "Leave them as drafts",
+        irreversible: "Issuing cannot be undone — a correction needs an unlock, with your password.",
+        onConfirm: () => doIssueMany((confirming as any).ids),
+      };
+    }
+
+    const inv = (confirming as any).invoice;
+    const who = inv.lease?.tenant?.user_name ?? "the resident";
+    const unit = inv.lease?.unit?.unit_number ?? "—";
+    const amount = Number(inv.total_amount ?? 0);
+    const asMoney = `RM ${amount.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`;
+
+    switch (confirming.kind) {
+      case "issue":
+        return {
+          tone: "primary" as const,
+          title: `Issue ${inv.invoice_no} to ${who}?`,
+          body: (
+            <p>
+              Unit {unit} &middot; {asMoney}, due {formatDate(inv.due_date)}. It appears in their app straight away.
+            </p>
+          ),
+          confirmLabel: "Issue it",
+          cancelLabel: "Leave it as a draft",
+          irreversible: "The line items lock afterwards. Correcting them needs an unlock, with your password.",
+          onConfirm: () => run(() => issueInvoice(inv.invoice_id)),
+        };
+      case "void":
+        return {
+          tone: "danger" as const,
+          title: `Void ${inv.invoice_no}?`,
+          body: (
+            <p>
+              {asMoney} comes off what unit {unit} owes, and the number {inv.invoice_no} is never reused. {who} sees it
+              marked void.
+            </p>
+          ),
+          confirmLabel: "Void it",
+          cancelLabel: "Keep it",
+          irreversible: "A voided invoice can be brought back, but the resident will have seen it go.",
+          onConfirm: () => run(() => updateInvoiceStatusAction(inv.invoice_id, "Inactive")),
+        };
+      case "restore":
+        return {
+          tone: "primary" as const,
+          title: `Bring ${inv.invoice_no} back into the books?`,
+          body: (
+            <p>
+              {asMoney} is owed by unit {unit} again, and {who} sees it as unpaid.
+            </p>
+          ),
+          confirmLabel: "Bring it back",
+          cancelLabel: "Leave it voided",
+          onConfirm: () => run(() => updateInvoiceStatusAction(inv.invoice_id, "Unpaid")),
+        };
+      case "paid":
+        return {
+          tone: "primary" as const,
+          title: `Record ${asMoney} against ${inv.invoice_no}?`,
+          body: (
+            <p>
+              Unit {unit} &middot; {who}. Use this for cash or a transfer you have already checked. A slip the resident
+              sent should go through <strong className="text-on-surface">Check the slip</strong> instead, so their proof
+              is kept with the payment.
+            </p>
+          ),
+          confirmLabel: "Record it as paid",
+          cancelLabel: "Not yet",
+          onConfirm: () => run(() => updateInvoiceStatusAction(inv.invoice_id, "Paid")),
+        };
+      case "unpaid":
+        return {
+          tone: "danger" as const,
+          title: `Move ${inv.invoice_no} back to unpaid?`,
+          body: (
+            <p>
+              {asMoney} is owed by unit {unit} again and it will start counting as arrears from its due date,{" "}
+              {formatDate(inv.due_date)}.
+            </p>
+          ),
+          confirmLabel: "Move it back",
+          cancelLabel: "Leave it settled",
+          onConfirm: () => run(() => updateInvoiceStatusAction(inv.invoice_id, "Unpaid")),
+        };
+    }
+  })();
 
   return (
-    <div className="relative flex w-full min-w-0 flex-col gap-6">
-      {/* Toast Notification Banner */}
-      {toastMessage && (
-        <div
-          className={`fixed top-20 right-6 z-50 px-4 py-3 rounded-xl shadow-2xl border flex items-center gap-3 text-xs font-semibold animate-slide-in backdrop-blur-md ${
-            toastMessage.type === "success"
-              ? "bg-emerald-950/90 border-emerald-500/50 text-emerald-200"
-              : toastMessage.type === "info"
-              ? "bg-sky-950/90 border-sky-500/50 text-sky-200"
-              : "bg-rose-950/90 border-rose-500/50 text-rose-200"
-          }`}
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            {toastMessage.type === "success" ? "check_circle" : toastMessage.type === "info" ? "info" : "error"}
-          </span>
-          <span>{toastMessage.text}</span>
-        </div>
-      )}
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
 
-      {/* Filter Toolbar */}
-      <div className={`${CARD} flex flex-col items-stretch justify-between gap-4 p-3.5 lg:flex-row lg:items-center`}>
-        <div className="flex flex-wrap items-center gap-3">
-          {/* Month Batch Selector (only active when custom date filter is off) */}
-          {allBatchKeys.length > 0 && (
-            <select
-              value={currentBatch}
-              onChange={(e) => setSelectedBatch(e.target.value)}
-              disabled={hasDateFilter}
-              title={hasDateFilter ? "Clear the date range to pick a month" : undefined}
-              className={`${FIELD} cursor-pointer border-primary/30 bg-primary/10 font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-40`}
-            >
-              <option value="ALL">All invoices ({filteredInvoices.length})</option>
-              {allBatchKeys.map((bk) => (
-                <option key={bk} value={bk}>
-                  {bk} ({(batches[bk] ?? []).length})
-                </option>
-              ))}
-            </select>
-          )}
-
-          {/* Status Filter */}
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className={`${FIELD} cursor-pointer`}
-          >
-            <option value="All">All statuses</option>
-            <option value="Overdue">Overdue</option>
-            <option value="Unpaid">Unpaid</option>
-            <option value="Paid">Paid</option>
-            <option value="Inactive">Voided</option>
-          </select>
-
-          {/* User-Friendly Prominent Date Range Button */}
-          <div className="relative">
+      {/* A count is a filter. These five replace a status dropdown nobody
+          could read a total out of. */}
+      <nav aria-label="Filter by state" className="flex flex-wrap gap-2">
+        {CHIPS.map((chip) => {
+          const n = counts[chip.key] ?? 0;
+          const on = stateFilter === chip.key;
+          return (
             <button
+              key={chip.key}
               type="button"
-              onClick={() => setShowDatePicker(!showDatePicker)}
-              className={`pressable flex h-10 items-center gap-2 rounded-xl border px-3.5 text-sm font-semibold transition-all ${
-                hasDateFilter
-                  ? "bg-primary/15 text-primary border-primary/40 shadow-sm"
-                  : "bg-surface-container-high hover:bg-surface-container-highest text-on-surface border-outline-variant"
+              aria-pressed={on}
+              onClick={() => setStateFilter(chip.key)}
+              className={`pressable inline-flex h-10 items-center gap-2 rounded-xl border px-3.5 text-sm transition-colors ${
+                on
+                  ? "border-primary bg-primary/15 font-bold text-primary"
+                  : "border-outline-variant/60 bg-surface-container font-semibold text-on-surface hover:bg-surface-container-high"
               }`}
             >
-              <span className="material-symbols-outlined text-[18px] text-primary">
-                calendar_month
-              </span>
-              <span>
-                {hasDateFilter
-                  ? `Date: ${fromDate ? formatDate(fromDate) : "Start"} → ${toDate ? formatDate(toDate) : "End"}`
-                  : "Filter by Date Range"}
-              </span>
-              <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
-                {showDatePicker ? "expand_less" : "expand_more"}
+              <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${chip.dot}`} aria-hidden="true" />
+              {chip.label}
+              <span
+                className={`rounded-full px-2 py-px text-[11px] font-bold tabular-nums ${
+                  on ? "bg-primary/25 text-primary" : "bg-surface-container-highest text-on-surface-variant"
+                }`}
+              >
+                {n}
               </span>
             </button>
+          );
+        })}
+      </nav>
 
-            {/* Interactive Date Picker Popover Panel */}
-            {showDatePicker && (
-              <div className="absolute left-0 top-[calc(100%+8px)] z-40 bg-surface-container-highest border border-outline-variant/80 rounded-2xl p-4 shadow-2xl min-w-[320px] sm:min-w-[360px] animate-scale-up">
-                <div className="flex items-center justify-between pb-3 border-b border-outline-variant/40 mb-3">
-                  <span className="text-xs font-bold text-on-surface flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-primary text-[16px]">date_range</span>
-                    Select Billing Date Range
-                  </span>
-                  <button
-                    onClick={() => setShowDatePicker(false)}
-                    className="text-on-surface-variant hover:text-on-surface p-1 rounded-full"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">close</span>
-                  </button>
-                </div>
-
-                {/* Quick Presets Chips */}
-                <div className="mb-4">
-                  <label className="text-[11px] font-bold text-on-surface-variant block mb-2">
-                    ⚡ Quick Range Shortcuts
-                  </label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      { key: "all", label: "All Time" },
-                      { key: "this_month", label: "This Month" },
-                      { key: "last_30", label: "Last 30 Days" },
-                      { key: "last_90", label: "Last 90 Days" },
-                      { key: "this_year", label: "This Year" },
-                    ].map((p) => (
-                      <button
-                        key={p.key}
-                        type="button"
-                        onClick={() => handlePresetSelect(p.key)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all ${
-                          activePreset === p.key && hasDateFilter
-                            ? "bg-primary text-on-primary shadow-sm"
-                            : "bg-surface-container-low hover:bg-surface-container text-on-surface border border-outline-variant/40"
-                        }`}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Custom From & To Pickers */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-on-surface-variant">
-                      From Date
-                    </label>
-                    <input
-                      type="date"
-                      value={fromDate}
-                      onChange={(e) => {
-                        setFromDate(e.target.value);
-                        setActivePreset("custom");
-                      }}
-                      className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-2.5 py-1.5 text-white text-xs font-mono outline-none focus:border-primary"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-on-surface-variant">
-                      To Date
-                    </label>
-                    <input
-                      type="date"
-                      value={toDate}
-                      onChange={(e) => {
-                        setToDate(e.target.value);
-                        setActivePreset("custom");
-                      }}
-                      className="w-full bg-[#0c1324] border border-[#4a4455] rounded-lg px-2.5 py-1.5 text-white text-xs font-mono outline-none focus:border-primary"
-                    />
-                  </div>
-                </div>
-
-                {/* Popover Actions */}
-                <div className="flex items-center justify-between pt-3 border-t border-outline-variant/40">
-                  <button
-                    type="button"
-                    onClick={clearDateFilter}
-                    className="text-xs text-rose-400 hover:text-rose-300 font-semibold px-2 py-1"
-                  >
-                    Reset Filter
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowDatePicker(false)}
-                    className="btn-primary px-4 py-1.5 text-xs font-bold rounded-lg"
-                  >
-                    Apply Range
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Reset All Filters Button when active */}
-          {hasDateFilter && (
-            <button
-              onClick={clearDateFilter}
-              className="text-xs text-rose-400 hover:text-rose-300 font-semibold flex items-center gap-1 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1.5 rounded-lg"
-              title="Clear the date range and go back to monthly batches"
-            >
-              <span className="material-symbols-outlined text-[14px]">cancel</span>
-              Clear Date Range
-            </button>
-          )}
-        </div>
-        
-        {/* Search Box */}
-        <div className="w-full lg:w-64 relative">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">
+      <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+        <div className="relative min-w-0 flex-1">
+          <label htmlFor="inv-q" className="sr-only">
+            Search invoices
+          </label>
+          <span
+            className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-on-surface-variant"
+            aria-hidden="true"
+          >
             search
           </span>
           <input
-            type="text"
-            placeholder="Search unit, tenant, or invoice no..."
+            id="inv-q"
+            type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-container-high border border-outline-variant text-sm focus:border-primary outline-none transition-colors"
+            placeholder="Unit, resident or invoice number"
+            className={`${FIELD} h-11 w-full rounded-xl pl-10`}
           />
+        </div>
+        <div className="flex items-center gap-2.5">
+          <label
+            htmlFor="inv-month"
+            className="shrink-0 text-[11px] font-bold uppercase tracking-wider text-on-surface-variant"
+          >
+            Month
+          </label>
+          <select
+            id="inv-month"
+            value={month}
+            onChange={(e) => {
+              setMonth(e.target.value);
+              setPicked(new Set());
+            }}
+            className={`${FIELD} h-11 min-w-[190px] cursor-pointer rounded-xl font-semibold`}
+          >
+            <option value="ALL">All months ({invoices.length})</option>
+            {months.map(([key, n]) => (
+              <option key={key} value={key}>
+                {key} ({n})
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Active Filter Summary Bar */}
-      {hasDateFilter && (
-        <div className="px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/30 text-xs text-primary flex items-center justify-between animate-fade-in">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[18px]">filter_alt</span>
-            <span>
-              Showing <strong>{displayedInvoices.length}</strong> invoice(s) issued between{" "}
-              <strong>{fromDate ? formatDate(fromDate) : "Beginning"}</strong> and{" "}
-              <strong>{toDate ? formatDate(toDate) : "Today"}</strong>.
-            </span>
-          </div>
+      {/* The bulk bar. Raising twelve invoices used to be followed by issuing
+          them twelve times, through twelve browser confirm boxes. */}
+      {pickedDrafts.length > 0 && (
+        <div className="animate-fade-in flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-primary/[0.08] px-4 py-3">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-primary/40 bg-primary/15 text-xs font-bold tabular-nums text-primary">
+            {pickedDrafts.length}
+          </span>
+          <span className="min-w-0 flex-1 basis-[240px] text-[13px] text-on-surface">
+            {pickedDrafts.length === picked.size ? (
+              <>Selected, all of them drafts.</>
+            ) : (
+              <>
+                {pickedDrafts.length} of the {picked.size} selected can be issued — the rest are already out.
+              </>
+            )}
+          </span>
+          <button type="button" onClick={() => setPicked(new Set())} className={BTN.ghost}>
+            Clear
+          </button>
           <button
-            onClick={clearDateFilter}
-            className="font-bold underline hover:text-primary-container"
+            type="button"
+            onClick={() => setConfirming({ kind: "issueMany", ids: pickedDrafts.map((i) => i.invoice_id) })}
+            className={BTN.primary}
           >
-            Switch to Monthly Batches
+            Issue all {pickedDrafts.length}
           </button>
         </div>
       )}
 
-      {displayedInvoices.length === 0 ? (
+      {rows.length === 0 ? (
         <div className={CARD}>
-          <EmptyState
-            icon="receipt_long"
-            title="No invoices found"
-            hint="Try a different month, status or date range."
-          />
+          {invoices.length === 0 ? (
+            <EmptyState
+              icon="receipt_long"
+              title="No invoices yet"
+              hint="Nothing has been billed for this property. Units with recurring charges set up are waiting for the first run."
+              action={
+                <Link href="/admin/billing" className={BTN.primary}>
+                  Generate a billing run
+                </Link>
+              }
+              secondary={
+                <>
+                  Or{" "}
+                  <Link href="/admin/billing" className="font-semibold text-primary hover:underline">
+                    write a one-off invoice
+                  </Link>
+                </>
+              }
+            />
+          ) : (
+            <EmptyState
+              icon="filter_alt_off"
+              title="Nothing matches that"
+              hint={
+                stateFilter === "all"
+                  ? `No invoice in ${month === "ALL" ? "the ledger" : month} matches “${search}”.`
+                  : `No ${CHIPS.find((c) => c.key === stateFilter)?.label.toLowerCase()} invoice${
+                      month === "ALL" ? "" : ` in ${month}`
+                    }.`
+              }
+              action={
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStateFilter("all");
+                    setSearch("");
+                    setMonth("ALL");
+                  }}
+                  className={BTN.secondary}
+                >
+                  Show everything
+                </button>
+              }
+            />
+          )}
         </div>
       ) : (
-        <div className={`${CARD} animate-fade-in flex flex-col overflow-hidden`}>
-          <div className="flex items-center justify-between gap-3 border-b border-outline-variant/40 bg-gradient-to-r from-surface-container-high/70 via-surface-container-high/25 to-transparent px-4 py-3.5">
-            <h3 className="text-sm font-bold text-white">
-              {hasDateFilter
-                ? "Filtered Date Range Invoices"
-                : currentBatch === "ALL"
-                ? "All invoices"
-                : currentBatch}
-            </h3>
-            <span className="rounded-md bg-surface-container-high px-2.5 py-1 text-[11px] font-semibold tabular-nums text-on-surface-variant">
-              {displayedInvoices.length} invoices
-            </span>
-          </div>
-
-          <div className={TABLE.wrap}>
-            <table className={TABLE.table + " min-w-[980px]"}>
-              <thead>
-                <tr>
-                  <th className={TABLE.th}>Invoice no</th>
-                  <th className={TABLE.th}>Unit &amp; tenant</th>
-                  <th className={TABLE.th}>Raised</th>
-                  <th className={TABLE.th}>Due</th>
-                  <th className={TABLE.thNum}>Amount</th>
-                  <th className={TABLE.th}>Status</th>
-                  <th className={TABLE.thNum}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {displayedInvoices.map((inv: any) => {
-                  const isPrinted = inv.is_printed;
-                  const isPaid = inv.status === "Paid";
-                  const isInactive = inv.status === "Inactive";
-                  const isIssued = !!inv.issued_at;
-                  const isDraft = !isIssued && !isPaid && !isInactive;
-                  const isLocked = isPaid || isIssued || isInactive;
-                  const isUpdating = updatingStatusId === inv.invoice_id;
-
-                  const lockTooltip = isPaid
-                    ? "Paid — items can no longer be changed"
-                    : isIssued
-                    ? "Issued to the tenant. Open to view, or unlock with your password to correct it."
-                    : isInactive
-                    ? "Voided — items can no longer be changed"
-                    : "Edit Line Items";
-
-                  return (
-                    <tr
-                      key={inv.invoice_id}
-                      className={isInactive ? `${TABLE.tr} bg-surface-container-lowest/40 opacity-60` : TABLE.tr}
-                    >
-                      <td className={TABLE.td}>
-                        <div className="flex flex-col gap-1">
-                          <span className="font-mono text-xs font-bold text-on-surface">
+        <>
+          {/* ---------- Desktop ----------
+              The table appears at xl, not lg. Seven columns in the ~760px a
+              1024px laptop has left after the sidebar meant the invoice
+              number wrapped onto three lines and the action column fell off
+              the edge into a horizontal scroller — the thing this rewrite
+              exists to remove. Cards read better there, so cards it is. */}
+          <section className={`${CARD} hidden overflow-hidden xl:block`}>
+            <div className={TABLE.wrap}>
+              <table className={TABLE.table}>
+                <caption className="sr-only">
+                  Invoices for {month === "ALL" ? "every month" : month}, newest first
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" className={`${TABLE.th} w-12 pr-0`}>
+                      <input
+                        type="checkbox"
+                        aria-label="Select every draft on screen"
+                        checked={draftsOnScreen.length > 0 && pickedDrafts.length === draftsOnScreen.length}
+                        onChange={(e) =>
+                          setPicked(e.target.checked ? new Set(draftsOnScreen.map((i) => i.invoice_id)) : new Set())
+                        }
+                        disabled={draftsOnScreen.length === 0}
+                        className="h-4 w-4 accent-primary disabled:opacity-30"
+                      />
+                    </th>
+                    <th scope="col" className={TABLE.th}>
+                      Invoice
+                    </th>
+                    <th scope="col" className={TABLE.th}>
+                      Unit &amp; resident
+                    </th>
+                    <th scope="col" className={TABLE.th}>
+                      Due
+                    </th>
+                    <th scope="col" className={TABLE.thNum}>
+                      Amount
+                    </th>
+                    <th scope="col" className={TABLE.th}>
+                      State
+                    </th>
+                    <th scope="col" className={TABLE.thNum}>
+                      What happens next
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((inv) => {
+                    const { key, label } = invoiceState(inv);
+                    const late = daysPastDue(inv.due_date);
+                    const action = primaryAction(inv, key);
+                    const slip = key === "slip" ? inv.transactions[0] : null;
+                    return (
+                      <tr key={inv.invoice_id} className={key === "void" ? `${TABLE.tr} opacity-55` : TABLE.tr}>
+                        <td className="pl-4 align-top pt-4">
+                          <input
+                            type="checkbox"
+                            aria-label={`Select invoice ${inv.invoice_no}`}
+                            checked={picked.has(inv.invoice_id)}
+                            onChange={() => toggle(inv.invoice_id)}
+                            disabled={key !== "draft"}
+                            title={key === "draft" ? undefined : "Only drafts can be issued in a batch"}
+                            className="h-4 w-4 accent-primary disabled:opacity-20"
+                          />
+                        </td>
+                        <td className={`${TABLE.td} align-top`}>
+                          <span className="whitespace-nowrap font-mono text-[11.5px] font-semibold text-on-surface-variant">
                             {inv.invoice_no}
                           </span>
-                          {isPrinted && (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-300 bg-purple-500/10 border border-purple-500/20 px-1.5 py-0.5 rounded w-max">
-                              <span className="material-symbols-outlined text-[12px]">print</span>
-                              Printed
-                            </span>
+                          {inv.is_printed && (
+                            <span className="mt-1 block text-[10.5px] text-on-surface-variant/70">Printed</span>
                           )}
-                        </div>
-                      </td>
-
-                      <td className={TABLE.td}>
-                        <div className="flex flex-col">
-                          {/* The only way from an invoice to the person who owes it used to
-                              be reading the name and searching Tenants by hand. */}
+                        </td>
+                        <td className={`${TABLE.td} align-top`}>
                           <Link
                             href={`/admin/invoices?lease=${inv.lease_id}`}
-                            title="Every invoice on this lease"
-                            className="w-max font-medium text-on-surface hover:text-primary hover:underline"
+                            className="w-max font-semibold text-on-surface decoration-primary/40 underline-offset-4 hover:underline"
                           >
-                            {inv.lease?.unit?.unit_number}
+                            {inv.lease?.unit?.unit_number ?? "—"}
                           </Link>
-                          {inv.lease?.tenant ? (
-                            <Link
-                              href={`/admin/leases?tenant=${inv.lease.tenant.user_id}`}
-                              title="Open this tenant's lease"
-                              className="w-max text-xs text-on-surface-variant hover:text-primary hover:underline"
-                            >
-                              {inv.lease.tenant.user_name}
-                            </Link>
-                          ) : (
-                            <span className="text-xs text-on-surface-variant">No tenant on the lease</span>
-                          )}
-                          {inv.status === "Unpaid" && inv.transactions?.[0] && (
-                            <button
-                              type="button"
-                              onClick={() => setVerifyingInvoice(inv)}
-                              className="pressable mt-1 inline-flex w-max items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300 hover:bg-amber-500/20"
-                              title="The resident sent proof of payment. Check it and approve or reject."
-                            >
-                              <span className="material-symbols-outlined text-[12px]">fact_check</span>
-                              Verify payment
-                              {inv.transactions[0].reference_number && (
-                                <span className="font-mono font-normal">· {inv.transactions[0].reference_number}</span>
-                              )}
-                            </button>
-                          )}
-                          {inv.modifier?.user_name && (
-                            <span className="text-[10px] text-on-surface-variant/70 italic mt-0.5">
-                              Edited by: {inv.modifier.user_name}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className={TABLE.td + " whitespace-nowrap text-xs tabular-nums text-on-surface-variant"}>
-                        {formatDate(inv.invoice_date)}
-                      </td>
-
-                      <td className={TABLE.td + " whitespace-nowrap text-xs tabular-nums"}>
-                        {(() => {
-                          const due = new Date(inv.due_date);
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          const daysLate = Math.floor(
-                            (today.getTime() - due.getTime()) / 86_400_000
-                          );
-                          const isLate = inv.status !== "Paid" && daysLate > 0;
-                          return (
-                            <div className="flex flex-col gap-0.5">
-                              <span className={isLate ? "text-rose-300" : "text-on-surface-variant"}>
-                                {formatDate(inv.due_date)}
+                          <span className="mt-0.5 block text-xs text-on-surface-variant">
+                            {inv.lease?.tenant?.user_name ?? "No tenant on the lease"}
+                          </span>
+                          {/* The slip, on the row. It was a 10px chip that
+                              said only "Verify payment", so judging it meant
+                              opening a modal for every one. */}
+                          {slip && (
+                            <span className="mt-2 inline-flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-[11.5px] text-amber-200">
+                              <span className="material-symbols-outlined text-[15px]" aria-hidden="true">
+                                receipt
                               </span>
-                              {isLate && (
-                                <span
-                                  className={`w-fit rounded font-sans text-[10px] font-semibold ${
-                                    daysLate > 90
-                                      ? "bg-rose-500/20 px-1.5 py-0.5 text-rose-200"
-                                      : daysLate > 30
-                                      ? "text-rose-300"
-                                      : "text-amber-300"
-                                  }`}
-                                >
-                                  {daysLate} day{daysLate === 1 ? "" : "s"} late
-                                </span>
+                              <Money value={Number(slip.transaction_amount ?? 0)} className="font-semibold" />
+                              {slip.reference_number && (
+                                <span className="font-mono text-amber-200/80">· {slip.reference_number}</span>
                               )}
-                            </div>
-                          );
-                        })()}
-                      </td>
-
-                      <td className={TABLE.tdNum + " font-semibold"}>
-                        {formatCurrency(Number(inv.total_amount))}
-                      </td>
-
-                      <td className={TABLE.td}>
-                        <div className="flex items-center gap-2">
-                          {isDraft ? (
-                            <span className="rounded-md border border-outline-variant/60 bg-surface-container-high px-2.5 py-1 text-xs font-medium text-on-surface-variant">
-                              Draft
                             </span>
-                          ) : (
-                            <StatusBadge status={inv.status} variant="invoice" />
                           )}
-                        </div>
-                      </td>
-
-                      <td className={TABLE.tdNum}>
-                        <div className="flex justify-end items-center gap-2">
-                          {/* PDF Preview Button */}
-                          <button
-                            type="button"
-                            onClick={() => setPdfPreviewInvoice(inv)}
-                            className={`${ICON_BTN} border-outline-variant/60 bg-surface-container-high text-primary hover:bg-surface-container-highest`}
-                            title="Preview or download the invoice"
-                            aria-label="Preview invoice"
+                        </td>
+                        <td className={`${TABLE.td} whitespace-nowrap align-top text-xs tabular-nums`}>
+                          <span className={late > 0 && key !== "paid" ? "text-rose-300" : "text-on-surface-variant"}>
+                            {formatDate(inv.due_date)}
+                          </span>
+                          <span
+                            className={`mt-0.5 block text-[11px] font-semibold ${
+                              key === "draft"
+                                ? "text-on-surface-variant"
+                                : key === "paid"
+                                  ? "text-on-surface-variant"
+                                  : late > 30
+                                    ? "text-rose-300"
+                                    : late > 0
+                                      ? "text-amber-300"
+                                      : "text-on-surface-variant"
+                            }`}
                           >
-                            <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
-                          </button>
+                            {key === "draft"
+                              ? "Not issued yet"
+                              : key === "paid"
+                                ? "Settled"
+                                : late > 0
+                                  ? `${late} day${late === 1 ? "" : "s"} late`
+                                  : `in ${Math.abs(late)} day${late === -1 ? "" : "s"}`}
+                          </span>
+                        </td>
+                        <td className={`${TABLE.tdNum} align-top font-semibold`}>
+                          <Money value={Number(inv.total_amount ?? 0)} />
+                        </td>
+                        <td className={`${TABLE.td} align-top`}>
+                          <span
+                            className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-1 text-[11.5px] font-semibold ${PILL[key]}`}
+                          >
+                            {label}
+                          </span>
+                        </td>
+                        <td className={`${TABLE.td} align-top`}>
+                          <div className="flex items-start justify-end gap-2">
+                            {action && (
+                              <button
+                                type="button"
+                                onClick={action.onClick}
+                                disabled={pending}
+                                className={`pressable inline-flex h-10 items-center whitespace-nowrap rounded-xl px-3.5 text-xs font-bold transition-colors disabled:opacity-50 ${
+                                  action.primary
+                                    ? "bg-primary text-on-primary hover:bg-primary/90"
+                                    : "border border-outline-variant/60 bg-surface-container-high font-semibold text-on-surface hover:bg-surface-container-highest"
+                                }`}
+                              >
+                                {action.label}
+                              </button>
+                            )}
+                            <RowMenu label={`More actions for invoice ${inv.invoice_no}`} items={menuItems(inv, key)} />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t border-outline-variant/40 bg-surface-container-high px-4 py-3 text-xs text-on-surface-variant">
+              <span>
+                <strong className="tabular-nums text-on-surface">{rows.length}</strong> shown
+                {rows.length !== invoices.length && <> of {invoices.length} on record</>}
+              </span>
+              <span className="tabular-nums">
+                <Money
+                  value={rows
+                    .filter((i) => invoiceState(i).key !== "void")
+                    .reduce((sum, i) => sum + Number(i.total_amount ?? 0), 0)}
+                  className="font-semibold text-on-surface"
+                />{" "}
+                billed on screen
+              </span>
+            </div>
+          </section>
 
-                          {isDraft && (
-                            <button
-                              type="button"
-                              onClick={() => handleIssue(inv.invoice_id, inv.invoice_no)}
-                              disabled={isUpdating}
-                              title="Send this invoice to the tenant. Items lock afterwards."
-                              className="pressable inline-flex h-9 items-center gap-1.5 rounded-lg border border-primary/40 bg-primary/15 px-3 text-xs font-semibold text-primary transition-colors hover:bg-primary/25 disabled:opacity-50"
-                            >
-                              <span className="material-symbols-outlined text-[16px] leading-none">outgoing_mail</span>
-                              Issue
-                            </button>
-                          )}
+          {/* ---------- Phone and tablet ---------- */}
+          <div className="flex flex-col gap-2.5 xl:hidden">
+            {rows.map((inv) => {
+              const { key, label } = invoiceState(inv);
+              const late = daysPastDue(inv.due_date);
+              const action = primaryAction(inv, key);
+              const slip = key === "slip" ? inv.transactions[0] : null;
+              return (
+                <article
+                  key={inv.invoice_id}
+                  className={`rounded-2xl border bg-surface-container p-4 ${
+                    key === "overdue" || key === "slip"
+                      ? key === "slip"
+                        ? "border-amber-500/40"
+                        : "border-rose-500/40"
+                      : "border-outline-variant/50"
+                  } ${key === "void" ? "opacity-55" : ""}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="font-mono text-[11.5px] font-semibold text-on-surface-variant">
+                      {inv.invoice_no}
+                    </span>
+                    <span
+                      className={`shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold ${PILL[key]}`}
+                    >
+                      {label}
+                    </span>
+                  </div>
 
-                          {/* Edit Items Button (Disabled if Locked) */}
-                          {isLocked ? (
-                            <button
-                              type="button"
-                              onClick={() => setEditingInvoice(inv)}
-                              className={`${ICON_BTN} border-outline-variant/30 bg-surface-container-high/40 text-amber-400 hover:bg-surface-container-high`}
-                              title={lockTooltip}
-                              aria-label="Locked - open to view or unlock"
-                            >
-                              <span className="material-symbols-outlined text-[18px]">lock</span>
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setEditingInvoice(inv)}
-                              className={`${ICON_BTN} border-primary/20 bg-primary/10 text-primary hover:bg-primary/20`}
-                              title="Edit the line items"
-                              aria-label="Edit line items"
-                            >
-                              <span className="material-symbols-outlined text-[18px]">edit_note</span>
-                            </button>
-                          )}
+                  <p className="mt-2 text-[15px] font-bold text-white">{inv.lease?.unit?.unit_number ?? "—"}</p>
+                  <p className="text-[13px] text-on-surface-variant">
+                    {inv.lease?.tenant?.user_name ?? "No tenant on the lease"}
+                  </p>
 
-                          {/* Status Action Controls */}
-                          {isUpdating ? (
-                            <span className="material-symbols-outlined animate-spin text-[18px] text-primary p-1">
-                              progress_activity
-                            </span>
-                          ) : (
-                            <div className="flex items-center gap-1 bg-surface-container-high/50 p-1 rounded-lg border border-outline-variant/30">
-                              {/* Toggle Paid / Unpaid */}
-                              {isPaid ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Unpaid")}
-                                  className="pressable flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold leading-none transition-colors text-amber-300 hover:bg-amber-500/15"
-                                  title="Move this invoice back to unpaid"
-                                >
-                                  <span className="material-symbols-outlined text-[16px] leading-none">undo</span>
-                                  
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Paid")}
-                                  className="pressable flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold leading-none transition-colors text-emerald-300 hover:bg-emerald-500/15"
-                                  title="Mark this invoice as paid"
-                                >
-                                  <span className="material-symbols-outlined text-[16px] leading-none">check_circle</span>
-                                  
-                                </button>
-                              )}
+                  <div className="mt-3 flex flex-wrap items-baseline justify-between gap-2">
+                    <Money
+                      value={Number(inv.total_amount ?? 0)}
+                      className="text-xl font-bold tracking-tight text-white"
+                    />
+                    <span
+                      className={`text-xs font-semibold ${
+                        key === "draft" || key === "paid"
+                          ? "text-on-surface-variant"
+                          : late > 30
+                            ? "text-rose-300"
+                            : late > 0
+                              ? "text-amber-300"
+                              : "text-on-surface-variant"
+                      }`}
+                    >
+                      {key === "draft"
+                        ? "Not issued yet"
+                        : key === "paid"
+                          ? "Settled"
+                          : late > 0
+                            ? `${late} day${late === 1 ? "" : "s"} late`
+                            : `due ${formatDate(inv.due_date)}`}
+                    </span>
+                  </div>
 
-                              {/* Toggle Inactive / Active */}
-                              {isInactive ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Unpaid")}
-                                  className="pressable flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold leading-none transition-colors text-sky-300 hover:bg-sky-500/15"
-                                  title="Bring this invoice back into the books"
-                                >
-                                  <span className="material-symbols-outlined text-[16px] leading-none">restart_alt</span>
-                                  
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleStatusChange(inv.invoice_id, inv.invoice_no, "Inactive")}
-                                  className="pressable flex h-8 w-8 items-center justify-center rounded-md text-[11px] font-semibold leading-none transition-colors text-rose-300 hover:bg-rose-500/15"
-                                  title="Void this invoice — it stops counting towards what is owed"
-                                >
-                                  <span className="material-symbols-outlined text-[16px] leading-none">block</span>
-                                  
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  {slip && (
+                    <p className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11.5px] text-amber-200">
+                      <span className="material-symbols-outlined text-[15px]" aria-hidden="true">
+                        receipt
+                      </span>
+                      <Money value={Number(slip.transaction_amount ?? 0)} className="font-semibold" />
+                      {slip.reference_number && <span className="font-mono">· {slip.reference_number}</span>}
+                    </p>
+                  )}
+
+                  <div className="mt-3.5 flex items-center gap-2">
+                    {action && (
+                      <button
+                        type="button"
+                        onClick={action.onClick}
+                        disabled={pending}
+                        className={`pressable inline-flex h-11 min-w-0 flex-1 items-center justify-center rounded-xl px-3 text-sm font-bold transition-colors disabled:opacity-50 ${
+                          action.primary
+                            ? "bg-primary text-on-primary hover:bg-primary/90"
+                            : "border border-outline-variant/60 bg-surface-container-high font-semibold text-on-surface"
+                        }`}
+                      >
+                        {action.label}
+                      </button>
+                    )}
+                    <RowMenu label={`More actions for invoice ${inv.invoice_no}`} items={menuItems(inv, key)} />
+                  </div>
+                </article>
+              );
+            })}
           </div>
-        </div>
+        </>
       )}
 
-      {/* Edit Line Items Modal */}
+      {dialog && (
+        <ConfirmDialog
+          open
+          tone={dialog.tone}
+          title={dialog.title}
+          body={dialog.body}
+          confirmLabel={dialog.confirmLabel}
+          cancelLabel={dialog.cancelLabel}
+          irreversible={dialog.irreversible}
+          pending={pending}
+          onConfirm={dialog.onConfirm}
+          onClose={() => setConfirming(null)}
+        />
+      )}
+
       {editingInvoice && (
         <EditInvoiceItemsModal
           invoice={editingInvoice}
@@ -736,29 +852,28 @@ After this its line items can no longer be edited. You can still record payment 
         />
       )}
 
-      {/* Interactive PDF Preview Modal */}
-      {verifyingInvoice && verifyingInvoice.transactions?.[0] && (
+      {verifying?.transactions?.[0] && (
         <VerifyPaymentModal
-          submission={verifyingInvoice.transactions[0]}
-          invoiceNo={verifyingInvoice.invoice_no}
-          amount={Number(verifyingInvoice.total_amount)}
-          tenantName={verifyingInvoice.lease?.tenant?.user_name ?? "Tenant"}
-          unitNumber={verifyingInvoice.lease?.unit?.unit_number ?? "-"}
-          onClose={() => setVerifyingInvoice(null)}
+          submission={verifying.transactions[0]}
+          invoiceNo={verifying.invoice_no}
+          amount={Number(verifying.total_amount)}
+          tenantName={verifying.lease?.tenant?.user_name ?? "Tenant"}
+          unitNumber={verifying.lease?.unit?.unit_number ?? "-"}
+          onClose={() => setVerifying(null)}
           onDone={(message) => {
-            setVerifyingInvoice(null);
-            showToast(message, "success");
+            setVerifying(null);
+            setToast({ message, tone: "success" });
             router.refresh();
           }}
         />
       )}
 
-      {pdfPreviewInvoice && (
+      {pdfInvoice && (
         <InvoicePdfPreviewModal
-          invoice={pdfPreviewInvoice}
-          onClose={() => setPdfPreviewInvoice(null)}
+          invoice={pdfInvoice}
+          onClose={() => setPdfInvoice(null)}
           onPrinted={() => {
-            setPdfPreviewInvoice((prev: any) => (prev ? { ...prev, is_printed: true } : null));
+            setPdfInvoice((prev: any) => (prev ? { ...prev, is_printed: true } : null));
             router.refresh();
           }}
         />
