@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition, useRef, useEffect, useActionState } from "react";
 import FacilityPhotoField from "./FacilityPhotoField";
+import CoverThumb, { DEFAULT_FACILITY_COVER } from "@/components/ui/CoverThumb";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import FacilityTypeCombobox from "@/components/facilities/FacilityTypeCombobox";
 import {
@@ -80,6 +81,22 @@ export default function AdminFacilitiesManager({
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  /*
+   * Facility photos are Firebase URLs. When a file is deleted from the bucket
+   * the card's background wash renders nothing and the header goes flat, with
+   * no sign that anything is wrong. The URLs that have failed are remembered
+   * so the wash falls back to the same default an empty facility gets. A Set
+   * of URLs rather than a flag per card, so repointing a facility at a
+   * working photo recovers by itself (DEV-257).
+   */
+  const [brokenPhotos, setBrokenPhotos] = useState<Set<string>>(new Set());
+  const markBroken = (url?: string | null) => {
+    if (!url) return;
+    setBrokenPhotos((prev) => (prev.has(url) ? prev : new Set(prev).add(url)));
+  };
+  const washSrcFor = (f: { image_url?: string | null }) =>
+    f.image_url && !brokenPhotos.has(f.image_url) ? f.image_url : DEFAULT_FACILITY_COVER;
 
   // Filter States
   const [searchQuery, setSearchQuery] = useState("");
@@ -777,24 +794,43 @@ export default function AdminFacilitiesManager({
                 block — the line directly before "Close for maintenance".
                 It was a full-strength 128px banner with a dark scrim on top.
               */}
-              {f.image_url && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={f.image_url}
-                  alt=""
-                  aria-hidden="true"
-                  loading="lazy"
-                  className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover opacity-30 transition-transform duration-500 group-hover:scale-105"
-                  style={{
-                    maskImage: "linear-gradient(to bottom, #000 0%, #000 22%, transparent 62%)",
-                    WebkitMaskImage: "linear-gradient(to bottom, #000 0%, #000 22%, transparent 62%)",
-                  }}
-                />
-              )}
+              {/* The wash now runs on every card, the default included
+                  (DEV-257). It used to be drawn only when a photo existed, so
+                  a grid of twelve facilities had two different card textures
+                  and the ones without a photo looked unfinished rather than
+                  simply unphotographed. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={washSrcFor(f)}
+                alt=""
+                aria-hidden="true"
+                loading="lazy"
+                onError={() => markBroken(f.image_url)}
+                className="pointer-events-none absolute inset-0 h-full w-full select-none object-cover opacity-30 transition-transform duration-500 group-hover:scale-105"
+                style={{
+                  maskImage: "linear-gradient(to bottom, #000 0%, #000 22%, transparent 62%)",
+                  WebkitMaskImage: "linear-gradient(to bottom, #000 0%, #000 22%, transparent 62%)",
+                }}
+              />
 
-              <div className="relative flex min-h-[104px] shrink-0 items-end p-3">
+              {/* The thumbnail the wash could never be. At 30% opacity behind
+                  a headline you cannot tell a pool from a surau; this is the
+                  same photo, sharp, at a size where the facility is
+                  recognisable. It sits at the top of the header rather than
+                  beside the name, because a tile in the title row cost the
+                  name a third of its width and "EV Fast Charging Station Hub"
+                  wrapped onto three lines. */}
+              <CoverThumb
+                src={f.image_url}
+                alt={f.facility_name || "Facility"}
+                fallback={DEFAULT_FACILITY_COVER}
+                sizes="96px"
+                className="absolute left-3 top-3 z-10 h-12 w-16 rounded-lg border border-outline-variant/70 shadow-lg"
+              />
+
+              <div className="relative flex min-h-[116px] shrink-0 items-end p-3 pt-16">
                 <div className="flex w-full items-end justify-between gap-2">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <h4 className="text-base font-bold leading-tight text-white" title={f.facility_name}>
                       {f.facility_name || "Unnamed facility"}
                     </h4>

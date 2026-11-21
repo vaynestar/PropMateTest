@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { optimizePhoto } from "@/lib/client/shrink-upload";
 import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
+import CoverThumb, { DEFAULT_FACILITY_COVER } from "@/components/ui/CoverThumb";
 
 /**
  * Facility photo picker for the admin add/edit forms (DEV-184). Uploads to
@@ -45,17 +46,22 @@ export default function FacilityPhotoField({ defaultValue }: { defaultValue?: st
 
   return (
     <div className="space-y-1.5 md:col-span-2">
-      <span className="text-[11px] font-bold text-on-surface-variant">Photo (shown to residents)</span>
+      <span className="text-[11px] font-bold text-on-surface-variant">Photo</span>
+      <p className="text-[11px] text-on-surface-variant/70">
+        Residents see this on the booking card. Leave it blank and the default shown here is used.
+      </p>
       <input type="hidden" name="image_url" value={url} />
       <div className="flex items-center gap-3">
-        <div className="w-28 aspect-[4/3] shrink-0 rounded-lg overflow-hidden border border-outline-variant bg-surface-container-high flex items-center justify-center">
-          {url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={url} alt="Facility photo" className="w-full h-full object-cover" />
-          ) : (
-            <span className="material-symbols-outlined text-on-surface-variant/60 text-[28px]">add_photo_alternate</span>
-          )}
-        </div>
+        {/* The empty slot used to be an "add photo" icon, which implied the
+            facility would have no picture at all. It will have one — this one
+            — so the slot shows it (DEV-257). */}
+        <CoverThumb
+          src={url || null}
+          alt="Facility photo"
+          fallback={DEFAULT_FACILITY_COVER}
+          sizes="120px"
+          className="w-28 aspect-[4/3] shrink-0 rounded-lg border border-outline-variant"
+        />
         <div className="flex flex-col gap-1.5 min-w-0">
           <button
             type="button"

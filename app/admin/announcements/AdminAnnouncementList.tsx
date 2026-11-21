@@ -7,7 +7,7 @@ import {
   daysUntilExpiry,
 } from "@/lib/announcement-status";
 import Image from "next/image";
-import AnnouncementThumb from "@/components/announcements/AnnouncementThumb";
+import CoverThumb, { DEFAULT_ANNOUNCEMENT_COVER } from "@/components/ui/CoverThumb";
 import AdminAnnouncementForm from "./AdminAnnouncementForm";
 import {
   deleteAnnouncement,
@@ -487,9 +487,10 @@ export default function AdminAnnouncementList({
                   {/* Cover. Drawn for every notice now, the default included,
                       so the cards in a column are one height and the eye has a
                       line to follow (DEV-255). */}
-                  <AnnouncementThumb
+                  <CoverThumb
                     src={a.image_url}
                     alt={a.title}
+                    fallback={DEFAULT_ANNOUNCEMENT_COVER}
                     className="h-32 w-full rounded-xl border border-outline-variant/40"
                   />
 
@@ -648,9 +649,10 @@ export default function AdminAnnouncementList({
                         {/* The table had no picture at all, so an admin could
                             not tell which notice carried the lift-shutdown
                             poster without opening each one (DEV-255). */}
-                        <AnnouncementThumb
+                        <CoverThumb
                           src={a.image_url}
                           alt={a.title}
+                          fallback={DEFAULT_ANNOUNCEMENT_COVER}
                           sizes="80px"
                           className="h-11 w-16 shrink-0 rounded-lg border border-outline-variant/40"
                         />

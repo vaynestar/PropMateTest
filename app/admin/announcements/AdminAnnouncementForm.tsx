@@ -4,7 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { fitUploadLimit, optimizePhoto } from "@/lib/client/shrink-upload";
 import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import Image from "next/image";
-import AnnouncementThumb from "@/components/announcements/AnnouncementThumb";
+import CoverThumb, { DEFAULT_ANNOUNCEMENT_COVER } from "@/components/ui/CoverThumb";
 import { createAnnouncement, updateAnnouncement } from "./actions";
 
 interface PropertyOption {
@@ -406,9 +406,10 @@ export default function AdminAnnouncementForm({
             ) : (
               /* The default, shown rather than an empty slot, so the admin can
                  see what the notice board will actually carry (DEV-255). */
-              <AnnouncementThumb
+              <CoverThumb
                 src={null}
                 alt=""
+                fallback={DEFAULT_ANNOUNCEMENT_COVER}
                 sizes="80px"
                 className="h-10 w-16 shrink-0 rounded-lg border border-outline-variant"
               />
