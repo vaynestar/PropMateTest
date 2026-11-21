@@ -430,3 +430,136 @@ export async function markInvoicePaid(invoiceId: string, modifiedBy?: string) {
     data: { status: "Paid", modified_by: modifiedBy },
   });
 }
+
+/* ------------------------------------------------------------------ *
+ * What a run will actually do (DEV-259)
+ *
+ * `getEligibleLeasesForInvoicing` answers "which leases can be billed".
+ * That is half the question. The run reports eight invoices created and
+ * says nothing about the four it passed over — a lease with no charges, a
+ * tenancy that ended mid-month, a unit with nobody in it. Those four are the
+ * ones somebody has to act on, and they were invisible.
+ *
+ * This returns both halves so the wizard can show the second one by name,
+ * with a link to the screen that fixes each case.
+ * ------------------------------------------------------------------ */
+
+export type RunSkip = {
+  leaseId: string;
+  unitNumber: string;
+  tenantName: string;
+  why: string;
+  fixLabel: string;
+  fixHref: string;
+};
+
+export async function planInvoiceRun(targetDate = new Date(), propertyId?: string | null) {
+  const d = new Date(targetDate);
+  const monthStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
+  const monthEnd = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1));
+
+  const leases = await prisma.tenantLease.findMany({
+    where: {
+      ...(propertyId ? { unit: { property_id: propertyId } } : {}),
+      OR: [
+        { status: "Active" },
+        // A tenancy that ended inside the month being billed was live for part
+        // of it, so its absence from the run is a decision somebody should see
+        // rather than a silence. Anything that ended earlier is simply history.
+        { move_out_date: { gte: monthStart, lt: monthEnd } },
+      ],
+    },
+    include: {
+      unit: { select: { unit_id: true, unit_number: true, monthly_rent: true, status: true } },
+      tenant: { select: { user_id: true, user_name: true } },
+      invoices: {
+        where: { invoice_date: { gte: monthStart, lt: monthEnd } },
+        select: { invoice_id: true },
+      },
+      lease_charges: { where: { is_active: true }, include: { charge: true } },
+    },
+    orderBy: { unit: { unit_number: "asc" } },
+  });
+
+  const billable: {
+    leaseId: string;
+    unitNumber: string;
+    tenantName: string;
+    charges: string;
+    amount: number;
+  }[] = [];
+  const skipped: RunSkip[] = [];
+
+  for (const l of leases) {
+    const unitNumber = l.unit?.unit_number ?? "—";
+    const tenantName = l.tenant?.user_name ?? "No tenant";
+    const base = { leaseId: l.lease_id, unitNumber, tenantName };
+
+    if (l.status !== "Active") {
+      skipped.push({
+        ...base,
+        why: `Tenancy ended ${
+          l.move_out_date
+            ? new Date(l.move_out_date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+            : "this month"
+        }`,
+        fixLabel: "View lease",
+        fixHref: `/admin/leases?tenant=${l.tenant?.user_id ?? ""}`,
+      });
+      continue;
+    }
+
+    if (l.invoices.length > 0) {
+      skipped.push({
+        ...base,
+        why: "Already invoiced for this month",
+        fixLabel: "See the invoice",
+        fixHref: `/admin/invoices?lease=${l.lease_id}`,
+      });
+      continue;
+    }
+
+    if (!l.tenant) {
+      skipped.push({
+        ...base,
+        why: "No tenant on the lease, so there is nobody to bill",
+        fixLabel: "View lease",
+        fixHref: "/admin/leases",
+      });
+      continue;
+    }
+
+    // Rule 6: Decimal on monthly_rent and on every lease charge.
+    const amount = leaseBillableAmount(l);
+    if (amount <= 0) {
+      skipped.push({
+        ...base,
+        why:
+          l.lease_charges.length === 0
+            ? "No recurring charges set, and no rent on the unit"
+            : "Its charges add up to nothing",
+        fixLabel: "Set charges",
+        fixHref: `/admin/billing/recurring-charges?lease=${l.lease_id}`,
+      });
+      continue;
+    }
+
+    billable.push({
+      ...base,
+      charges:
+        l.lease_charges.length > 0
+          ? l.lease_charges.map((c) => c.charge?.charge_name ?? "Charge").join(" · ")
+          : "Monthly rent",
+      amount,
+    });
+  }
+
+  billable.sort((a, b) => b.amount - a.amount);
+
+  return {
+    billable,
+    skipped,
+    total: billable.reduce((sum, r) => sum + r.amount, 0),
+    dates: await getBillingDateSettings(),
+  };
+}

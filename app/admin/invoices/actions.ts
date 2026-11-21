@@ -2,7 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser, verifyPassword } from "@/lib/auth";
-import { generateInvoicesForLeases, markInvoicePaid, getEligibleLeasesForInvoicing } from "@/lib/billing";
+import {
+  generateInvoicesForLeases,
+  markInvoicePaid,
+  getEligibleLeasesForInvoicing,
+  planInvoiceRun,
+} from "@/lib/billing";
 import prisma from "@/lib/prisma";
 import { getActivePropertyId } from "@/lib/property-context.server";
 
@@ -26,6 +31,26 @@ export async function getEligibleLeasesAction(targetDateStr?: string) {
       : null,
   ]);
   return { leases, propertyName: property?.property_name ?? null };
+}
+
+/**
+ * What a run would do, both halves (DEV-259). The wizard's second step reads
+ * this: what will be created, and what will be passed over and why.
+ */
+export async function getInvoiceRunPlanAction(targetDateStr?: string) {
+  await requireUser(["Admin"]);
+  const targetDate = targetDateStr ? new Date(targetDateStr) : new Date();
+  const propertyId = await getActivePropertyId();
+  const [plan, property] = await Promise.all([
+    planInvoiceRun(targetDate, propertyId),
+    propertyId
+      ? prisma.propertyMaster.findUnique({
+          where: { property_id: propertyId },
+          select: { property_name: true },
+        })
+      : null,
+  ]);
+  return { ...plan, propertyName: property?.property_name ?? null };
 }
 
 export async function getAllActiveLeasesAction() {
