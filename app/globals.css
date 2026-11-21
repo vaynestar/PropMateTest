@@ -282,6 +282,29 @@ html, body {
     display: none;
 }
 
+/*
+ * A refusal that moves (DEV-251, user: "if clash should direct change the
+ * Your Booking details section to red colour with animation bouncing left
+ * right and X icon").
+ *
+ * Used on the booking summary panel the moment the chosen slot stops being
+ * available - either because the resident picked a taken hour, or because
+ * somebody else took it while this form was open. Replayed by remounting the
+ * panel with a new key, so a second clash shakes again.
+ */
+@keyframes propmateShake {
+    0%, 100% { transform: translateX(0); }
+    12% { transform: translateX(-9px); }
+    26% { transform: translateX(8px); }
+    40% { transform: translateX(-6px); }
+    54% { transform: translateX(5px); }
+    70% { transform: translateX(-3px); }
+    85% { transform: translateX(2px); }
+}
+.animate-shake {
+    animation: propmateShake 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .pressable { transition: none; }
     .pressable:active:not(:disabled) { transform: none; }
@@ -290,5 +313,6 @@ html, body {
     .animate-fade-in,
     .animate-laser-sweep,
     .animate-indeterminate-progress,
+    .animate-shake,
     .sparkline-path { animation: none; }
 }

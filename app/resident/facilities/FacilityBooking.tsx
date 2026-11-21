@@ -6,8 +6,9 @@ import { bookFacility } from "./actions";
 import BookingTimeline from "@/components/facilities/BookingTimeline";
 import BookingCalendarDatePicker from "@/components/facilities/BookingCalendarDatePicker";
 import BookingResultModal from "@/components/facilities/BookingResultModal";
+import BookingSummaryPanel, { type ClashKind } from "@/components/facilities/BookingSummaryPanel";
+import { useLiveSlots, checkedLabel } from "@/components/facilities/useLiveSlots";
 import { getFacilityAccentColor } from "@/lib/facility-colors";
-import { shortDate } from "@/lib/short-date";
 
 type Facility = {
   facility_id: string;
@@ -292,8 +293,15 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
     endTime?: string;
   } | null>(null);
 
+  /*
+   * The server's verdict. A refusal used to end here, with a modal over a
+   * form that still showed the slot as free. Now a lost race re-reads the day
+   * first, so when the modal is dismissed the hour is already crossed out and
+   * the next tap is a different time rather than the same one again.
+   */
   useEffect(() => {
     if (state?.success) {
+      refresh();
       setModalConfig({
         isOpen: true,
         type: "success",
@@ -305,17 +313,31 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
         endTime: fmt(end),
       });
     } else if (state?.error) {
+      if (state.conflict) refresh();
       setModalConfig({
         isOpen: true,
         type: "error",
-        title: "Unable to Reserve Facility",
-        message: state.error,
+        title: state.conflict ? "That slot has just gone" : "Unable to Reserve Facility",
+        message: state.conflict
+          ? `${state.error} The times below have been refreshed — pick another slot and confirm again.`
+          : state.error,
         facilityName: facility.facility_name,
       });
     }
   }, [state]);
 
   const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    if (clash === "invalid") {
+      e.preventDefault();
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Check the times",
+        message: "The end time has to be after the start time.",
+        facilityName: facility.facility_name,
+      });
+      return;
+    }
     if (clash === "out_of_bounds") {
       e.preventDefault();
       setModalConfig({
@@ -340,11 +362,14 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
     }
     if (clash) {
       e.preventDefault();
+      refresh();
       setModalConfig({
         isOpen: true,
         type: "error",
-        title: "Time Slot Unavailable",
-        message: "This time slot has already been booked by another resident. Please select a different time slot.",
+        title: "That time is taken",
+        message: takenLabel
+          ? `Someone already has ${facility.facility_name} from ${takenLabel}. Please choose another time slot.`
+          : "This time slot is not available. Please choose another time slot.",
         facilityName: facility.facility_name,
       });
       return;
@@ -374,9 +399,31 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
   const start = startHour * 60 + startMin;
   const end = endHour * 60 + endMin;
 
-  const dayBookings = useMemo(
-    () => slots.filter((s) => s.facility_id === facility.facility_id && s.booking_date === date),
+  /*
+   * The day as the SERVER last rendered it. Used until the first live read
+   * lands, so the grid is never briefly blank.
+   */
+  const seedBookings = useMemo(
+    () =>
+      slots
+        .filter((s) => s.facility_id === facility.facility_id && s.booking_date === date)
+        .map((s) => ({ start_min: s.start_min, end_min: s.end_min })),
     [slots, facility.facility_id, date]
+  );
+
+  /*
+   * ...and the day as it actually is (DEV-251). Re-read when the sheet opens,
+   * when the date changes, when the tab comes back to the front, every 20
+   * seconds while it is open, and the instant the server refuses a slot.
+   *
+   * The complaint behind this: two phones booked the same hour, the second
+   * was correctly refused - and then went on showing the hour as free, so the
+   * only thing left to do was press Confirm again.
+   */
+  const { slots: dayBookings, refresh, refreshing, checkedAt } = useLiveSlots(
+    facility.facility_id,
+    date,
+    seedBookings
   );
 
   /*
@@ -434,14 +481,21 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
     setEndPeriod(eh >= 12 ? "PM" : "AM");
   };
 
-  const clash = useMemo(() => {
-    if (end <= start) return null;
-    if (facility.max_booking_hours && (end - start) > facility.max_booking_hours * 60) return "max_exceeded";
-    if (start < DAY_START || end > DAY_END) return "out_of_bounds";
-    return (
-      dayBookings.find((b) => start < b.end_min && end > b.start_min) ?? null
-    );
+  /*
+   * One named verdict on the chosen slot, instead of a value that was
+   * sometimes a string, sometimes a booking object and sometimes null - which
+   * is why "end before start" showed a red panel with no explanation.
+   */
+  const { clash, takenBy } = useMemo((): { clash: ClashKind; takenBy: Slot | null } => {
+    if (end <= start) return { clash: "invalid", takenBy: null };
+    if (facility.max_booking_hours && end - start > facility.max_booking_hours * 60)
+      return { clash: "max_exceeded", takenBy: null };
+    if (start < DAY_START || end > DAY_END) return { clash: "out_of_bounds", takenBy: null };
+    const hit = dayBookings.find((b) => start < b.end_min && end > b.start_min);
+    return hit ? { clash: "taken", takenBy: hit as Slot } : { clash: null, takenBy: null };
   }, [dayBookings, start, end, DAY_START, DAY_END, facility.max_booking_hours]);
+
+  const takenLabel = takenBy ? `${clock12(takenBy.start_min)} to ${clock12(takenBy.end_min)}` : null;
 
   return (
     <div className="glass-card rounded-2xl p-4 sm:p-6 space-y-5 border border-primary/30">
@@ -590,64 +644,47 @@ function BookingCard({ facility, slots }: { facility: Facility; slots: Slot[] })
         </div>
       </div>
 
-      {/* The chosen slot in plain words - the timeline alone was hard to read (DEV-184) */}
-      <div
-        className={`rounded-xl px-4 py-3 border flex items-center gap-3 ${
-          clash || end <= start ? "bg-rose-500/10 border-rose-500/40" : "bg-primary/10 border-primary/40"
-        }`}
-      >
-        <span className={`material-symbols-outlined ${clash || end <= start ? "text-rose-300" : "text-primary"}`}>
-          {clash || end <= start ? "error" : "check_circle"}
-        </span>
-        <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-wider font-semibold text-on-surface/80">Your booking</p>
-          <p className="text-base font-bold text-on-surface tabular-nums">
-            {shortDate(date)}
-            {" · "}
-            {clock12(start)} – {clock12(end)}
-            {end > start ? ` (${(end - start) / 60} h)` : ""}
-          </p>
-        </div>
-      </div>
+      {/*
+        The chosen slot, and whether it can be had. The three separate error
+        strips that used to sit under the timeline said the same things a
+        scroll further down, after the panel had already gone quietly rose;
+        the panel says it itself now, in red, with an X and a shake.
+        `key` on the clash replays the shake for each NEW refusal.
+      */}
+      <BookingSummaryPanel
+        key={`${clash ?? "ok"}-${start}-${end}-${date}`}
+        date={date}
+        start={start}
+        end={end}
+        clash={clash}
+        openTime={facility.open_time}
+        closeTime={facility.close_time}
+        maxHours={facility.max_booking_hours}
+        takenLabel={takenLabel}
+      />
 
       {/* Timeline Visualization */}
       <div className="pt-1 min-w-0 w-full max-w-full">
-        <p className="text-xs font-bold text-on-surface mb-1">Who has booked this day</p>
-        <BookingTimeline 
-          dayStart={DAY_START} 
-          dayEnd={DAY_END} 
+        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="text-xs font-bold text-on-surface">Time slot availability</p>
+          <span className="flex items-center gap-1 text-[11px] text-on-surface-variant">
+            {refreshing && (
+              <span className="material-symbols-outlined animate-spin-slow text-[13px]" aria-hidden="true">
+                progress_activity
+              </span>
+            )}
+            {checkedLabel(checkedAt, refreshing)}
+          </span>
+        </div>
+        <BookingTimeline
+          dayStart={DAY_START}
+          dayEnd={DAY_END}
           bookings={dayBookings.map((b) => ({ start_time: b.start_min, end_time: b.end_min }))}
-          
           selectedStart={start}
           selectedEnd={end}
           hasClash={!!clash}
         />
       </div>
-
-      {clash === "out_of_bounds" && (
-        <div className="rounded-lg bg-error-container/10 border border-error-container/40 px-4 py-3">
-          <span className="font-label-md text-label-md text-on-error-container">
-            Booking must be within operating hours ({facility.open_time} - {facility.close_time}).
-          </span>
-        </div>
-      )}
-
-      {clash === "max_exceeded" && (
-        <div className="rounded-lg bg-error-container/10 border border-error-container/40 px-4 py-3">
-          <span className="font-label-md text-label-md text-on-error-container">
-            Maximum booking duration allowed is {facility.max_booking_hours} hours.
-          </span>
-        </div>
-      )}
-      
-      {clash && clash !== "out_of_bounds" && clash !== "max_exceeded" && (
-        <div className="flex items-start gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-4 py-3">
-          <span className="material-symbols-outlined text-[18px] text-rose-300">event_busy</span>
-          <span className="font-label-md text-label-md text-rose-200">
-            This time slot has been booked by others. Please try again.
-          </span>
-        </div>
-      )}
 
       {state?.error && (
         <div className="rounded-lg bg-error-container/10 border border-error-container/40 px-4 py-3">

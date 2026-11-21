@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createBooking } from "@/lib/booking-management";
+import { createBooking, isSlotTaken } from "@/lib/booking-management";
 import prisma from "@/lib/prisma";
 import { getSessionUser } from "@/lib/auth";
 import { normaliseBookingStatus } from "@/lib/booking-status";
@@ -62,7 +62,9 @@ export async function adminBookFacility(formData: FormData) {
     revalidatePath("/admin/bookings");
     return { success: true };
   } catch (error: any) {
-    return { error: error.message };
+    const message = error?.message || "Failed to create the booking.";
+    // Lost the race for the slot: the form re-reads the day (DEV-251).
+    return { error: message, conflict: isSlotTaken(message) };
   }
 }
 

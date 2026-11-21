@@ -1,6 +1,7 @@
 "use server";
 
-import { createBooking, getBookingsByFacilityAndDate, cancelBooking } from "@/lib/booking-management";
+import { createBooking, getBookingsByFacilityAndDate, cancelBooking, isSlotTaken } from "@/lib/booking-management";
+import { clockMY } from "@/lib/booking-time";
 import { bookingHasEnded } from "@/lib/booking-status";
 import { getSessionUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
@@ -51,17 +52,25 @@ export async function bookFacility(state: any, formData: FormData) {
       throw new Error("You can only book facilities in your own property.");
     }
 
+    /*
+     * A courtesy check so the common case gets a specific message. The guard
+     * that actually prevents a double booking is the advisory lock inside
+     * createBooking - this one reads getHours(), which is the viewer's... no:
+     * the SERVER's timezone, and on Vercel that is UTC. Read the clock in
+     * Malaysia like everything else in the booking path (lib/booking-time).
+     */
     const existing = await getBookingsByFacilityAndDate(facilityId, bookingDate);
     const clash = existing.find((b) => {
-      const bStartDate = new Date(b.start_time);
-      const bs = bStartDate.getHours() * 60 + bStartDate.getMinutes();
-      const bEndDate = new Date(b.end_time);
-      const be = bEndDate.getHours() * 60 + bEndDate.getMinutes();
+      const bs = toMin(clockMY(b.start_time));
+      const be = toMin(clockMY(b.end_time));
       return toMin(start) < be && toMin(end) > bs;
     });
 
     if (clash) {
-      throw new Error("Someone booked that slot first. Pick another time.");
+      return {
+        error: `Someone booked ${clockMY(clash.start_time)}–${clockMY(clash.end_time)} just before you.`,
+        conflict: true,
+      };
     }
 
     await createBooking(
@@ -81,7 +90,9 @@ export async function bookFacility(state: any, formData: FormData) {
     revalidatePath("/resident/facilities");
     return { success: true, message: "Your slot is reserved. It is under My Bookings." };
   } catch (error: any) {
-    return { error: error.message || "Failed to book facility." };
+    const message = error?.message || "Failed to book facility.";
+    // A lost race is not a broken form: say so, and the client re-reads the day.
+    return { error: message, conflict: isSlotTaken(message) };
   }
 }
 

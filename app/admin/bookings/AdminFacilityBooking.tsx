@@ -5,6 +5,8 @@ import { adminBookFacility } from "./actions";
 import BookingTimeline from "@/components/facilities/BookingTimeline";
 import BookingCalendarDatePicker from "@/components/facilities/BookingCalendarDatePicker";
 import BookingResultModal from "@/components/facilities/BookingResultModal";
+import BookingSummaryPanel, { type ClashKind } from "@/components/facilities/BookingSummaryPanel";
+import { useLiveSlots, checkedLabel } from "@/components/facilities/useLiveSlots";
 
 type Facility = {
   facility_id: string;
@@ -197,33 +199,55 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
   const start = startHour * 60 + startMin;
   const end = endHour * 60 + endMin;
 
-  const dayBookings = useMemo(() => {
-    return bookings.filter((b) => {
-      // Handle the fact that prisma returns Dates
-      const bDate = new Date(b.booking_date);
-      const isoDate = dateToISO(bDate);
-      return (
-        b.facility_id === facility.facility_id &&
-        isoDate === date &&
-        b.booking_status !== "Cancelled" &&
-        b.booking_status !== "Rejected"
-      );
-    });
+  /* The day as the page last rendered it, until the live read lands. */
+  const seedBookings = useMemo(() => {
+    return bookings
+      .filter((b) => {
+        // Handle the fact that prisma returns Dates
+        const bDate = new Date(b.booking_date);
+        const isoDate = dateToISO(bDate);
+        return (
+          b.facility_id === facility.facility_id &&
+          isoDate === date &&
+          b.booking_status !== "Cancelled" &&
+          b.booking_status !== "Rejected"
+        );
+      })
+      .map((b) => ({
+        start_min: toMinutes(new Date(b.start_time).toTimeString().slice(0, 5)),
+        end_min: toMinutes(new Date(b.end_time).toTimeString().slice(0, 5)),
+      }));
   }, [bookings, facility.facility_id, date]);
 
-  const clash = useMemo(() => {
-    if (end <= start) return null;
-    if (facility.max_booking_hours && (end - start) > facility.max_booking_hours * 60) return "max_exceeded";
-    return (
-      dayBookings.find((b) => {
-        const dStart = new Date(b.start_time);
-        const dEnd = new Date(b.end_time);
-        const bs = dStart.getHours() * 60 + dStart.getMinutes();
-        const be = dEnd.getHours() * 60 + dEnd.getMinutes();
-        return start < be && end > bs;
-      }) ?? null
-    );
-  }, [dayBookings, start, end, facility.max_booking_hours]);
+  /*
+   * ...and the day as it actually is (DEV-251). An admin screen goes stale
+   * faster than a resident's: it is left open all morning while residents
+   * book from their phones, so the grid an officer is looking at can be an
+   * hour out of date.
+   */
+  const { slots: dayBookings, refresh, refreshing, checkedAt } = useLiveSlots(
+    facility.facility_id,
+    date,
+    seedBookings
+  );
+
+  const { clash, takenBy } = useMemo((): {
+    clash: ClashKind;
+    takenBy: { start_min: number; end_min: number } | null;
+  } => {
+    if (end <= start) return { clash: "invalid", takenBy: null };
+    if (facility.max_booking_hours && end - start > facility.max_booking_hours * 60)
+      return { clash: "max_exceeded", takenBy: null };
+    if (start < DAY_START || end > DAY_END) return { clash: "out_of_bounds", takenBy: null };
+    const hit = dayBookings.find((b) => start < b.end_min && end > b.start_min);
+    return hit ? { clash: "taken", takenBy: hit } : { clash: null, takenBy: null };
+  }, [dayBookings, start, end, DAY_START, DAY_END, facility.max_booking_hours]);
+
+  const clock12 = (min: number) => {
+    const h = Math.floor(min / 60) % 24;
+    return `${h % 12 || 12}:${pad(min % 60)} ${h >= 12 ? "PM" : "AM"}`;
+  };
+  const takenLabel = takenBy ? `${clock12(takenBy.start_min)} to ${clock12(takenBy.end_min)}` : null;
 
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
@@ -261,12 +285,25 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
       });
       return;
     }
+    if (clash === "invalid") {
+      setModalConfig({
+        isOpen: true,
+        type: "error",
+        title: "Check the times",
+        message: "The end time has to be after the start time.",
+        facilityName: facility.facility_name,
+      });
+      return;
+    }
     if (clash) {
+      refresh();
       setModalConfig({
         isOpen: true,
         type: "error",
         title: "That slot is taken",
-        message: "Someone already has this facility then. The timeline below shows what is free.",
+        message: takenLabel
+          ? `Someone already has ${facility.facility_name} from ${takenLabel}. Please choose another time slot.`
+          : "This time slot is not available. Please choose another time slot.",
         facilityName: facility.facility_name,
       });
       return;
@@ -317,14 +354,18 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
     startTransition(async () => {
       const res = await adminBookFacility(formData);
       if (res.error) {
+        if (res.conflict) refresh();
         setModalConfig({
           isOpen: true,
           type: "error",
-          title: "Could not save the booking",
-          message: res.error,
+          title: res.conflict ? "That slot has just gone" : "Could not save the booking",
+          message: res.conflict
+            ? `${res.error} The times below have been refreshed — pick another slot and confirm again.`
+            : res.error,
           facilityName: facility.facility_name,
         });
       } else {
+        refresh();
         setModalConfig({
           isOpen: true,
           type: "success",
@@ -522,37 +563,42 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
           </label>
         </div>
 
+        {/* The chosen slot, and whether it can be had. Same component and
+            the same wording as the resident sheet (DEV-251). */}
+        <BookingSummaryPanel
+          key={`${clash ?? "ok"}-${start}-${end}-${date}`}
+          date={date}
+          start={start}
+          end={end}
+          clash={clash}
+          openTime={facility.open_time}
+          closeTime={facility.close_time}
+          maxHours={facility.max_booking_hours}
+          takenLabel={takenLabel}
+        />
+
         {/* Timeline Visualization */}
         <div className="pt-2 min-w-0 w-full max-w-full">
-          <p className="text-xs font-semibold text-on-surface-variant mb-2">Who else has this facility that day</p>
-          <BookingTimeline 
-            dayStart={DAY_START} 
-            dayEnd={DAY_END} 
-            bookings={dayBookings.map(b => ({
-              start_time: toMinutes(new Date(b.start_time).toTimeString().slice(0,5)),
-              end_time: toMinutes(new Date(b.end_time).toTimeString().slice(0,5)),
-            }))} 
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+            <p className="text-xs font-semibold text-on-surface-variant">Time slot availability</p>
+            <span className="flex items-center gap-1 text-[11px] text-on-surface-variant">
+              {refreshing && (
+                <span className="material-symbols-outlined animate-spin-slow text-[13px]" aria-hidden="true">
+                  progress_activity
+                </span>
+              )}
+              {checkedLabel(checkedAt, refreshing)}
+            </span>
+          </div>
+          <BookingTimeline
+            dayStart={DAY_START}
+            dayEnd={DAY_END}
+            bookings={dayBookings.map((b) => ({ start_time: b.start_min, end_time: b.end_min }))}
             selectedStart={start}
             selectedEnd={end}
             hasClash={!!clash}
           />
         </div>
-
-        {clash === "max_exceeded" && (
-          <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-4 py-3">
-            <span className="text-sm text-rose-400">
-              Maximum booking duration allowed is {facility.max_booking_hours} hours.
-            </span>
-          </div>
-        )}
-
-        {clash && clash !== "max_exceeded" && (
-          <div className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-4 py-3">
-            <span className="text-sm text-rose-400">
-              This time slot is already booked. Please try another time.
-            </span>
-          </div>
-        )}
 
         <div className="pt-4 flex justify-end">
           <button

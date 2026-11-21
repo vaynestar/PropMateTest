@@ -63,9 +63,20 @@ export default function BookingTimeline({
 
   const hasSelection = selectedStart !== undefined && selectedEnd !== undefined && selectedEnd > selectedStart;
 
+  /*
+   * Bring the chosen slot into view. The strip is 80px an hour, so a facility
+   * open 08:00-22:00 is 1,120px wide and a 7pm booking sat well off the right
+   * edge of a phone: you picked a time and the bar appeared not to react.
+   * ScrollHint owns the scroller, so it takes the point to centre rather than
+   * handing out its ref.
+   */
+  const focusRatio = hasSelection
+    ? ((selectedStart! + selectedEnd!) / 2 - dayStart) / totalMins
+    : null;
+
   return (
     <div className="space-y-2">
-      <ScrollHint className="w-full pb-2">
+      <ScrollHint className="w-full pb-2" scrollTo={focusRatio}>
         <div className="mt-1 px-4" style={{ minWidth }}>
           {/* Hour labels */}
           <div className="relative h-6">

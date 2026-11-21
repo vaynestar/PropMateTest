@@ -43,8 +43,17 @@ export type BookingInput = {
   booking_status?: BookingStatusKey;
 };
 
-const SLOT_TAKEN =
+export const SLOT_TAKEN =
   "This time slot overlaps an existing booking. Please choose another slot.";
+
+/**
+ * Did this fail because somebody got there first? The booking forms re-read
+ * the day when it did, so the slot the resident just lost is crossed out
+ * before the refusal is even dismissed (DEV-251).
+ */
+export function isSlotTaken(message: string): boolean {
+  return message === SLOT_TAKEN || /already booked|booked that slot|overlaps an existing/i.test(message);
+}
 
 const DAY_NAMES = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 

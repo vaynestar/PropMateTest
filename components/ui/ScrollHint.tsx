@@ -19,9 +19,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export default function ScrollHint({
   children,
   className = "",
+  scrollTo = null,
 }: {
   children: React.ReactNode;
   className?: string;
+  /**
+   * 0–1: a point in the scrollable content to centre, whenever the value
+   * changes. The booking timeline uses it so the hour you just picked is
+   * brought into view instead of sitting off the right edge (DEV-251, user:
+   * "when select time, the who has booked this day, it wont auto scroll to
+   * the time zone user choose").
+   */
+  scrollTo?: number | null;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [atStart, setAtStart] = useState(true);
@@ -55,6 +64,18 @@ export default function ScrollHint({
       ro.disconnect();
     };
   }, [measure]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || scrollTo === null || Number.isNaN(scrollTo)) return;
+    const max = el.scrollWidth - el.clientWidth;
+    if (max <= 2) return; // nothing to scroll: it already all fits
+    const target = Math.max(0, Math.min(max, scrollTo * el.scrollWidth - el.clientWidth / 2));
+    if (Math.abs(target - el.scrollLeft) < 8) return;
+    const still = typeof window !== "undefined"
+      && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    el.scrollTo({ left: target, behavior: still ? "auto" : "smooth" });
+  }, [scrollTo]);
 
   const nudge = (direction: 1 | -1) => {
     const el = ref.current;
