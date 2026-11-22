@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import ScrollHint from "@/components/ui/ScrollHint";
 import { SystemSettings } from "@/lib/settings";
 import { saveSettingsAction } from "./actions";
@@ -38,6 +38,71 @@ export default function AdminSettingsClient({
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
+  /*
+   * What is about to change, named (DEV-274).
+   *
+   * Seven tabs of parameters behind one Save button, and nothing told you
+   * what you had touched. An admin who changed the grace period, wandered
+   * into the invoice tab, changed a footer line and then hesitated had no
+   * way to find out what was pending except to press Save and see.
+   *
+   * The form is uncontrolled — it is read with FormData on submit — so the
+   * changes are tracked by diffing against a snapshot taken on mount, and
+   * the human label comes from the DOM (the field's own <label>), not from
+   * a hand-written map that would rot the moment somebody adds a field.
+   */
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const initial = useRef<Record<string, string> | null>(null);
+  const [changed, setChanged] = useState<string[]>([]);
+
+  const snapshot = (form: HTMLFormElement) => {
+    const out: Record<string, string> = {};
+    for (const [k, v] of new FormData(form).entries()) {
+      if (typeof v === "string") out[k] = v;
+    }
+    return out;
+  };
+
+  const labelFor = (form: HTMLFormElement, name: string) => {
+    const el = form.querySelector<HTMLElement>(`[name="${CSS.escape(name)}"]`);
+    if (!el) return name;
+    /*
+     * Three ways a field is labelled in this form, in order of reliability.
+     * Most of them are an unassociated <label> sitting above the input in a
+     * wrapper div — no `for`, no wrapping — so the first two miss and the
+     * bar would print "SYSTEM_CURRENCY" at an administrator.
+     */
+    const byFor = el.id ? form.querySelector(`label[for="${CSS.escape(el.id)}"]`) : null;
+    const wrapping = el.closest("label");
+    /*
+     * The field's OWN wrapper only, and only a <label>. Walking up two
+     * levels reached the grid that holds the whole row, so editing
+     * "System Base Currency" reported "Default Active Property" — the
+     * neighbouring field's label, which is worse than printing the raw name.
+     */
+    const sibling = el.parentElement?.querySelector("label");
+    const text = (byFor?.textContent || wrapping?.textContent || sibling?.textContent || "").trim();
+    const clean = text.replace(/\s+/g, " ").replace(/\s*\*$/, "").trim();
+    // A label longer than a label is helper text that got picked up instead.
+    return clean && clean.length <= 48 ? clean : name;
+  };
+
+  const recompute = () => {
+    const form = formRef.current;
+    if (!form || !initial.current) return;
+    const now = snapshot(form);
+    const names = new Set([...Object.keys(initial.current), ...Object.keys(now)]);
+    const diff: string[] = [];
+    names.forEach((n) => {
+      if ((initial.current?.[n] ?? "") !== (now[n] ?? "")) diff.push(labelFor(form, n));
+    });
+    setChanged(diff);
+  };
+
+  useEffect(() => {
+    if (formRef.current && !initial.current) initial.current = snapshot(formRef.current);
+  }, []);
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -46,6 +111,8 @@ export default function AdminSettingsClient({
       try {
         const res = await saveSettingsAction(formData);
         if (res.success) {
+          if (formRef.current) initial.current = snapshot(formRef.current);
+          setChanged([]);
           setToast({ message: res.message || "Settings updated successfully.", type: "success" });
         } else {
           setToast({ message: res.error || "Failed to update settings.", type: "error" });
@@ -124,7 +191,11 @@ export default function AdminSettingsClient({
       )}
 
       <form
+        ref={formRef}
         onSubmit={handleSubmit}
+        // Any change anywhere in the seven tabs re-reads the whole form, which
+        // is cheap and means a field added later is tracked for free.
+        onChange={recompute}
         className={`p-6 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-lg space-y-6 ${
           activeTab === "accounts" ? "hidden" : ""
         }`}
@@ -586,7 +657,18 @@ export default function AdminSettingsClient({
         )}
 
         {/* Form Submission Bar */}
-        <div className="pt-4 border-t border-outline-variant/30 flex items-center justify-end gap-3">
+        <div className="flex flex-wrap items-center justify-end gap-3 border-t border-outline-variant/30 pt-4">
+          {changed.length > 0 && (
+            <p className="mr-auto min-w-[240px] flex-[999_1_240px] text-xs leading-relaxed text-amber-200">
+              <span className="font-bold">
+                {changed.length} unsaved change{changed.length === 1 ? "" : "s"}:
+              </span>{" "}
+              <span className="text-on-surface-variant">{changed.slice(0, 4).join(", ")}</span>
+              {changed.length > 4 && (
+                <span className="text-on-surface-variant"> and {changed.length - 4} more</span>
+              )}
+            </p>
+          )}
           <button
             type="submit"
             disabled={isPending}
