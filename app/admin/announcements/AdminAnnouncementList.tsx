@@ -53,6 +53,9 @@ interface AdminAnnouncementListProps {
   announcements: AnnouncementRecord[];
   properties: PropertyOption[];
   defaultPropertyId?: string;
+  /** Households with a running tenancy — the real audience (DEV-272). */
+  households?: number;
+  propertyName?: string | null;
 }
 
 const CATEGORY_MAP: Record<string, { label: string; icon: string; style: string }> = {
@@ -68,6 +71,8 @@ export default function AdminAnnouncementList({
   announcements,
   properties,
   defaultPropertyId,
+  households = 0,
+  propertyName = null,
 }: AdminAnnouncementListProps) {
   const [isPending, startTransition] = useTransition();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -267,10 +272,12 @@ export default function AdminAnnouncementList({
       {/* CREATE / EDIT FORM POPUP MODAL */}
       {(isCreating || editingItem) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl animate-in zoom-in-95 duration-200 shadow-2xl">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl animate-in zoom-in-95 duration-200 shadow-2xl">
             <AdminAnnouncementForm
               properties={properties}
               defaultPropertyId={defaultPropertyId}
+              households={households}
+              propertyName={propertyName}
               initialData={editingItem}
               onSuccess={() => {
                 setIsCreating(false);

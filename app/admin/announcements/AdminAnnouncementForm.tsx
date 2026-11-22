@@ -34,6 +34,9 @@ interface AdminAnnouncementFormProps {
   initialData?: AnnouncementData | null;
   onSuccess?: () => void;
   onCancel?: () => void;
+  /** Households with a running tenancy — the real audience (DEV-272). */
+  households?: number;
+  propertyName?: string | null;
 }
 
 const CATEGORIES = [
@@ -51,9 +54,14 @@ export default function AdminAnnouncementForm({
   initialData,
   onSuccess,
   onCancel,
+  households = 0,
+  propertyName = null,
 }: AdminAnnouncementFormProps) {
   const isEditing = Boolean(initialData);
 
+  // Controlled, so the preview can show what is actually being typed.
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [content, setContent] = useState(initialData?.content || "");
   const [category, setCategory] = useState(initialData?.category || "Notice");
   const [priority, setPriority] = useState(initialData?.priority || "Normal");
   const [isPinned, setIsPinned] = useState(initialData?.is_pinned || false);
@@ -276,9 +284,18 @@ export default function AdminAnnouncementForm({
         </div>
       )}
 
-      <form action={formAction} className="mt-4 space-y-3.5">
+      {/* Who is actually going to read this. */}
+      {!isEditing && households > 0 && (
+        <p className="mt-3 text-xs text-on-surface-variant">
+          Everyone in {propertyName ?? "this property"} will see this — {households} household
+          {households === 1 ? "" : "s"}.
+        </p>
+      )}
+
+      <div className="mt-4 grid gap-5 lg:grid-cols-[1.35fr_1fr]">
+        <form action={formAction} className="min-w-0 space-y-3.5">
         {/* Controls row: Category, Priority, Pin */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 items-center">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {/* Category */}
           <div>
             <label className="text-[11px] font-medium text-on-surface-variant block mb-1">
@@ -302,25 +319,35 @@ export default function AdminAnnouncementForm({
             <label className="text-[11px] font-medium text-on-surface-variant block mb-1">
               Priority
             </label>
-            <div className="grid grid-cols-3 gap-1">
-              {(["Normal", "High", "Urgent"] as const).map((p) => {
+            {/*
+              Three words with no consequence attached told nobody anything.
+              Each option now says what it DOES to the resident's screen,
+              which is the only difference between them (DEV-272).
+            */}
+            <div className="grid grid-cols-3 gap-1.5">
+              {([
+                { p: "Normal", what: "In the list" },
+                { p: "High", what: "Near the top" },
+                { p: "Urgent", what: "A banner on their home screen" },
+              ] as const).map(({ p, what }) => {
                 const isSelected = priority === p;
                 return (
                   <button
                     type="button"
                     key={p}
                     onClick={() => setPriority(p)}
-                    className={`py-1.5 rounded-lg text-xs font-semibold border transition-all text-center ${
+                    className={`rounded-xl border px-2.5 py-2 text-left transition-all ${
                       isSelected
                         ? p === "Urgent"
-                          ? "bg-rose-500/20 text-rose-300 border-rose-500/50"
+                          ? "border-rose-500/50 bg-rose-500/15 text-rose-200"
                           : p === "High"
-                          ? "bg-amber-500/20 text-amber-300 border-amber-500/50"
-                          : "bg-primary/20 text-primary border-primary/50"
-                        : "bg-surface-container border-outline-variant/40 text-on-surface-variant hover:text-white"
+                          ? "border-amber-500/50 bg-amber-500/15 text-amber-200"
+                          : "border-primary/50 bg-primary/15 text-primary"
+                        : "border-outline-variant/40 bg-surface-container text-on-surface-variant hover:text-white"
                     }`}
                   >
-                    {p}
+                    <span className="block text-xs font-bold">{p}</span>
+                    <span className="mt-0.5 block text-[10.5px] leading-tight opacity-80">{what}</span>
                   </button>
                 );
               })}
@@ -353,11 +380,17 @@ export default function AdminAnnouncementForm({
             type="text"
             id="title"
             name="title"
-            defaultValue={initialData?.title || ""}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             required
-            placeholder="e.g. Water supply maintenance notice"
+            placeholder="e.g. No water, 9 AM to 4 PM on Tuesday"
             className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-3.5 py-2 text-sm font-semibold text-white placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary"
           />
+          {/* A constraint the label cannot carry (Rule 3). */}
+          <p className="mt-1 text-[11px] text-on-surface-variant/70">
+            Say the effect, not the activity. &ldquo;No water&rdquo; is what a resident needs;
+            &ldquo;tank cleaning&rdquo; is why.
+          </p>
         </div>
 
         {/* Body content */}
@@ -369,7 +402,8 @@ export default function AdminAnnouncementForm({
             id="content"
             name="content"
             rows={4}
-            defaultValue={initialData?.content || ""}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
             required
             placeholder="Notice details, affected areas, dates, or contact information..."
             className="w-full bg-surface-container border border-outline-variant/50 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-gray-200 placeholder:text-on-surface-variant/40 focus:outline-none focus:border-primary resize-y leading-relaxed font-sans"
@@ -569,11 +603,78 @@ export default function AdminAnnouncementForm({
               {isPending ? "sync" : "check"}
             </span>
             <span>
-              {isPending ? "Saving..." : isEditing ? "Save changes" : "Publish"}
+              {isPending
+                ? "Saving…"
+                : isEditing
+                ? "Save changes"
+                : households > 0
+                ? `Post it to ${households} household${households === 1 ? "" : "s"}`
+                : "Post it"}
             </span>
           </button>
         </div>
-      </form>
+
+        {/* The one thing the old form never said. */}
+        {!isEditing && (
+          <p className="pt-1 text-[11px] leading-relaxed text-on-surface-variant">
+            Posting is immediate. There is no recall — taking it down later does not unsee it.
+          </p>
+        )}
+        </form>
+
+        {/*
+          Not decoration (DEV-272). This is the only place an admin can see
+          what they wrote the way a resident reads it, at the width they read
+          it on. A notice is written in a wide dark form and read on a phone,
+          and nothing in PropMate had ever shown the second one.
+        */}
+        <aside className="min-w-0">
+          <p className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70">
+            On a resident&rsquo;s phone
+          </p>
+          <div className="rounded-2xl border border-outline-variant/60 bg-surface-container-lowest p-3.5">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {isPinned && (
+                <span className="inline-flex items-center gap-1 rounded-md border border-primary/40 bg-primary/15 px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-primary">
+                  <span className="material-symbols-outlined text-[11px] leading-none">push_pin</span>
+                  Pinned
+                </span>
+              )}
+              <span
+                className={`rounded-md border px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide ${
+                  priority === "Urgent"
+                    ? "border-rose-500/40 bg-rose-500/10 text-rose-300"
+                    : priority === "High"
+                    ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                    : "border-outline-variant bg-surface-container-high text-on-surface-variant"
+                }`}
+              >
+                {category}
+              </span>
+            </div>
+
+            <h3 className="mt-2.5 text-sm font-bold leading-snug text-on-surface">
+              {title || <span className="text-on-surface-variant/40">Your headline goes here</span>}
+            </h3>
+            <p className="mt-1.5 whitespace-pre-wrap text-xs leading-relaxed text-on-surface-variant">
+              {content || "The notice itself goes here — what is happening, where, and when."}
+            </p>
+            <p className="mt-2.5 text-[10.5px] text-on-surface-variant/60">
+              Management office · today
+            </p>
+          </div>
+
+          {/* One honest reading check, from the text itself. */}
+          <p className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-on-surface-variant">
+            <span className="material-symbols-outlined mt-px shrink-0 text-[14px] text-emerald-300">
+              check
+            </span>
+            {content.trim()
+              ? `About ${Math.max(1, Math.round(content.trim().split(/\s+/).length / 3.5))} seconds to read.`
+              : "Nothing written yet."}
+          </p>
+        </aside>
+      </div>
     </div>
   );
 }

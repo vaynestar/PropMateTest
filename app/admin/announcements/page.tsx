@@ -36,6 +36,19 @@ export default async function AdminAnnouncementsPage({
       ? queryPropertyId
       : (await getActivePropertyId()) ?? properties[0]?.property_id;
 
+  /*
+     * Who will actually read this (DEV-272). "Post it" said nothing about
+     * the audience; an announcement goes to every household with a running
+     * tenancy, and the composer should name them before you press the
+     * button, not after.
+     */
+  const households = await prisma.tenantLease.count({
+    where: {
+      status: "Active",
+      ...(activePropertyId ? { unit: { property_id: activePropertyId } } : {}),
+    },
+  });
+
   // Fetch all announcements (universal + scoped to active property if selected)
   const announcements = await getAllAnnouncements({
     propertyId: queryPropertyId === "ALL" ? undefined : activePropertyId,
@@ -53,6 +66,10 @@ export default async function AdminAnnouncementsPage({
         announcements={announcements as unknown as AnnouncementRecord[]}
         properties={properties}
         defaultPropertyId={activePropertyId}
+        households={households}
+        propertyName={
+          properties.find((p) => p.property_id === activePropertyId)?.property_name ?? null
+        }
       />
     </div>
   );
