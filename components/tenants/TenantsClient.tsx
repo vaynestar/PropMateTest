@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import TenantFormModal from "./TenantFormModal";
 import TenantEditModal from "./TenantEditModal";
 import TenantDeleteModal from "./TenantDeleteModal";
-import ScrollHint from "@/components/ui/ScrollHint";
-import { FIELD, StatCard, StatGrid } from "@/components/admin/ui";
+import RowMenu, { type RowMenuItem } from "@/components/admin/RowMenu";
+import { BTN, EmptyState, FIELD, Money, SearchField, TABLE, Toolbar } from "@/components/admin/ui";
 
 interface Lease {
   lease_id: string;
@@ -15,9 +15,7 @@ interface Lease {
     unit_id: string;
     unit_number: string;
     property_id: string;
-    property: {
-      property_name: string;
-    };
+    property: { property_name: string };
   };
 }
 
@@ -26,6 +24,11 @@ export interface TenantItem {
   user_name: string;
   user_email: string;
   phone_number: string | null;
+  is_active?: boolean;
+  last_login_at?: string | null;
+  locked_until?: string | null;
+  created_at?: string;
+  owes?: number;
   tenant_leases: Lease[];
 }
 
@@ -35,6 +38,39 @@ interface TenantsClientProps {
   activePropertyId?: string | null;
 }
 
+/** How long ago, in the words somebody would actually use. */
+function ago(iso: string) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return "last week";
+  if (days < 60) return `${Math.floor(days / 7)} weeks ago`;
+  return new Date(iso).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+}
+
+const monthYear = (iso?: string) =>
+  iso ? new Date(iso).toLocaleDateString("en-GB", { month: "short", year: "numeric" }) : "";
+
+type PortalKey = "never" | "locked" | "off" | "active";
+
+/**
+ * Residents (rebuilt DEV-264, to the batch-2 `Tenants` artboard).
+ *
+ * Four changes.
+ *
+ *   · **"No tenancy" is called out.** A resident with a login but no unit
+ *     cannot be billed and cannot book anything. They looked identical to
+ *     everyone else, and nobody found out until something failed.
+ *   · **The row's action follows from that.** Somebody without a tenancy
+ *     gets *Start a tenancy* as the primary; everyone else gets *Open their
+ *     unit*.
+ *   · **Portal status is a real column**, from a `last_login_at` the schema
+ *     did not have until this increment. An account that has never been
+ *     opened is the most common reason a resident says they were not told.
+ *   · **Owes is a column and a filter.** The question an office brings to
+ *     this screen could not be answered here at all.
+ */
 export default function TenantsClient({
   initialTenants,
   properties,
@@ -42,311 +78,377 @@ export default function TenantsClient({
 }: TenantsClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>(activePropertyId ?? "ALL");
-  const [leaseFilter, setLeaseFilter] = useState<string>("ALL");
+  const [chip, setChip] = useState<"all" | "notenancy" | "never" | "arrears">("all");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<TenantItem | null>(null);
   const [deletingTenant, setDeletingTenant] = useState<TenantItem | null>(null);
 
-  // Filtered tenants
-  const filteredTenants = useMemo(() => {
-    return initialTenants.filter((tenant) => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        tenant.user_name.toLowerCase().includes(q) ||
-        tenant.user_email.toLowerCase().includes(q) ||
-        (tenant.phone_number && tenant.phone_number.toLowerCase().includes(q));
+  const activeLeaseOf = (t: TenantItem) =>
+    t.tenant_leases.find((l) => l.status === "Active") ?? null;
 
-      // Scoped strictly to the chosen property: only residents holding a unit
-      // there. Tenants with no unit belong to no property, so they fall out —
-      // the banner below tells you they exist rather than letting them vanish.
-      const matchesProperty =
-        selectedPropertyId === "ALL" ||
-        tenant.tenant_leases.some((l) => l.unit.property_id === selectedPropertyId);
+  const portalOf = (t: TenantItem): { key: PortalKey; label: string } => {
+    if (t.is_active === false) return { key: "off", label: "Account switched off" };
+    if (t.locked_until && new Date(t.locked_until) > new Date())
+      return { key: "locked", label: "Locked out" };
+    if (!t.last_login_at) return { key: "never", label: "Never signed in" };
+    return { key: "active", label: `Signed in ${ago(t.last_login_at)}` };
+  };
 
-      const hasActiveLease = tenant.tenant_leases.length > 0;
-      const matchesLease =
-        leaseFilter === "ALL" ||
-        (leaseFilter === "LEASED" && hasActiveLease) ||
-        (leaseFilter === "UNASSIGNED" && !hasActiveLease);
+  const PORTAL_PILL: Record<PortalKey, string> = {
+    active: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+    never: "border-sky-500/40 bg-sky-500/10 text-sky-300",
+    locked: "border-amber-500/45 bg-amber-500/10 text-amber-200",
+    off: "border-outline-variant bg-surface-container-highest text-on-surface-variant",
+  };
 
-      return matchesSearch && matchesProperty && matchesLease;
-    });
-  }, [initialTenants, searchQuery, selectedPropertyId, leaseFilter]);
+  const matchesChip = (t: TenantItem, k: typeof chip) => {
+    switch (k) {
+      case "all":
+        return true;
+      case "notenancy":
+        return !activeLeaseOf(t);
+      case "never":
+        return portalOf(t).key === "never";
+      case "arrears":
+        return (t.owes ?? 0) > 0;
+    }
+  };
 
-  // KPIs follow the property filter, so the figures match the list on screen
-  // rather than reporting the whole portfolio while a single property is shown.
-  const scopedTenants = useMemo(
-    () =>
-      selectedPropertyId === "ALL"
-        ? initialTenants
-        : initialTenants.filter((x) =>
-            x.tenant_leases.some((l) => l.unit.property_id === selectedPropertyId)
-          ),
-    [initialTenants, selectedPropertyId]
-  );
+  /*
+   * A property filter is a standing scope, not an ad-hoc search, so the chip
+   * counts respect it: "In arrears 34" above a table showing two rows is a
+   * headline that contradicts the thing underneath it. The search box is
+   * excluded, because a count that moved as you typed would be useless.
+   */
+  const inScope = initialTenants.filter((t) => {
+    if (selectedPropertyId === "ALL") return true;
+    const inProperty = t.tenant_leases.some((l) => l.unit?.property_id === selectedPropertyId);
+    return inProperty || t.tenant_leases.length === 0;
+  });
 
-  const totalTenants = scopedTenants.length;
-  const activeLeaseholders = scopedTenants.filter((x) => x.tenant_leases.length > 0).length;
-  const unassignedTenants = totalTenants - activeLeaseholders;
-  // Residents with no unit at all — invisible while a property filter is on.
-  const withoutUnitCount = initialTenants.filter((x) => x.tenant_leases.length === 0).length;
-  const hiddenUnassignedCount = selectedPropertyId === "ALL" ? 0 : withoutUnitCount;
+  const counts = {
+    all: inScope.length,
+    notenancy: inScope.filter((t) => matchesChip(t, "notenancy")).length,
+    never: inScope.filter((t) => matchesChip(t, "never")).length,
+    arrears: inScope.filter((t) => matchesChip(t, "arrears")).length,
+  };
+
+  const CHIPS: { key: typeof chip; label: string; dot: string }[] = [
+    { key: "all", label: "Everyone", dot: "bg-slate-300" },
+    { key: "notenancy", label: "No tenancy", dot: "bg-amber-400" },
+    { key: "never", label: "Never signed in", dot: "bg-sky-400" },
+    { key: "arrears", label: "In arrears", dot: "bg-rose-400" },
+  ];
+
+  const rows = initialTenants.filter((t) => {
+    if (!matchesChip(t, chip)) return false;
+
+    if (selectedPropertyId !== "ALL") {
+      const inProperty = t.tenant_leases.some((l) => l.unit?.property_id === selectedPropertyId);
+      // A resident with no tenancy at all belongs to no property, so a
+      // property filter would hide exactly the people the "No tenancy" chip
+      // exists to surface. Keep them visible.
+      if (!inProperty && t.tenant_leases.length > 0) return false;
+    }
+
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      t.user_name.toLowerCase().includes(q) ||
+      t.user_email.toLowerCase().includes(q) ||
+      (t.phone_number ?? "").toLowerCase().includes(q) ||
+      t.tenant_leases.some((l) => l.unit?.unit_number?.toLowerCase().includes(q))
+    );
+  });
+
+  const initials = (name: string) =>
+    name
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase() ?? "")
+      .join("");
+
+  const menuFor = (t: TenantItem): RowMenuItem[] => {
+    const held = t.tenant_leases.length;
+    return [
+      { label: "Edit their details", onSelect: () => setEditingTenant(t) },
+      { label: "See their tenancies", onSelect: () => {}, disabled: true, hint: "Use the button in the row" },
+      {
+        label: "Delete this account",
+        onSelect: () => setDeletingTenant(t),
+        danger: true,
+        disabled: held > 0,
+        hint:
+          held > 0
+            ? `They still hold ${held} tenanc${held === 1 ? "y" : "ies"}. End those first.`
+            : undefined,
+      },
+    ];
+  };
 
   return (
     <div className="space-y-5">
-      <StatGrid cols={3}>
-        <StatCard label="Tenants" value={totalTenants} tone="primary" />
-        <StatCard label="With a unit" value={activeLeaseholders} tone="positive" />
-        <StatCard
-          label="No unit yet"
-          value={withoutUnitCount}
-          hint={withoutUnitCount > 0 ? "needs a lease" : undefined}
-          tone={withoutUnitCount > 0 ? "warning" : "neutral"}
-        />
-      </StatGrid>
+      <nav aria-label="Filter residents" className="flex flex-wrap gap-2">
+        {CHIPS.map((c) => {
+          const on = chip === c.key;
+          return (
+            <button
+              key={c.key}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setChip(c.key)}
+              className={`pressable inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${
+                on
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-outline-variant/60 bg-surface-container text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${c.dot}`} />
+              {c.label}
+              <span
+                className={`rounded-full px-2 py-px text-[11px] font-bold tabular-nums ${
+                  on ? "bg-primary/25 text-primary" : "bg-surface-container-high text-on-surface-variant"
+                }`}
+              >
+                {counts[c.key]}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
 
-      {/* Filter & Controls Bar */}
-      <div className="flex flex-col items-stretch justify-between gap-3 rounded-xl border border-outline-variant/50 bg-surface-container p-3 md:flex-row md:items-center">
-        {/* Search & Property Select */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-xl">
+      <Toolbar
+        right={
+          <button type="button" onClick={() => setIsAddModalOpen(true)} className={BTN.primary}>
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            Add a resident
+          </button>
+        }
+      >
+        <SearchField
+          placeholder="Name, email, phone or unit"
+          value={searchQuery}
+          onChange={setSearchQuery}
+        />
+        {properties.length > 1 && (
           <select
             value={selectedPropertyId}
             onChange={(e) => setSelectedPropertyId(e.target.value)}
-            className="px-3 py-2 rounded-xl bg-surface-container-high border border-outline-variant/60 text-xs text-white outline-none focus:border-primary shrink-0"
+            aria-label="Filter by property"
+            className={FIELD}
           >
-            <option value="ALL">All properties</option>
+            <option value="ALL">Every property</option>
             {properties.map((p) => (
               <option key={p.property_id} value={p.property_id}>
                 {p.property_name}
               </option>
             ))}
           </select>
-
-          <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-              search
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search name, email or phone"
-              className={`${FIELD} w-full pl-9 placeholder:text-on-surface-variant/60`}
-            />
-          </div>
-        </div>
-
-        {/* Lease Status Pills & Add Button */}
-        {/* Two rows on a phone: the filter pills scroll sideways on their own,
-            and the action sits under them, reachable without a swipe. */}
-        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-          <ScrollHint className="min-w-0 xl:shrink-0"><div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 shrink-0 bg-surface-container-high/60 p-1 rounded-xl border border-outline-variant/40">
-            {[
-              { id: "ALL", label: "All" },
-              { id: "LEASED", label: "Has unit" },
-              { id: "UNASSIGNED", label: "No unit" },
-            ].map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setLeaseFilter(f.id)}
-                className={`inline-flex h-9 items-center rounded-lg px-3 text-xs font-semibold transition-all ${
-                  leaseFilter === f.id
-                    ? "bg-primary text-on-primary shadow-xs"
-                    : "text-on-surface-variant hover:text-white"
-                }`}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
-
-          </div></ScrollHint>
-
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex w-full items-center justify-center gap-2 transition-all shadow-md pressable xl:w-auto xl:shrink-0"
-          >
-            <span className="material-symbols-outlined text-[18px]">person_add</span>
-            <span>Add tenant</span>
-          </button>
-        </div>
-      </div>
-
-      {/* A tenant with no unit belongs to no property, so a property filter hides
-          them — including one just created. Say so instead of losing them. */}
-      {hiddenUnassignedCount > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-outline-variant/50 bg-surface-container px-4 py-3">
-          <p className="text-xs text-on-surface-variant">
-            <span className="font-semibold text-white">
-              {hiddenUnassignedCount} tenant{hiddenUnassignedCount === 1 ? "" : "s"}
-            </span>{" "}
-            {hiddenUnassignedCount === 1 ? "has" : "have"} no unit yet, so{" "}
-            {hiddenUnassignedCount === 1 ? "it is" : "they are"} not shown while a property is
-            selected.
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedPropertyId("ALL");
-              setLeaseFilter("UNASSIGNED");
-            }}
-            className="pressable shrink-0 rounded-lg border border-outline-variant/60 bg-surface-container-high px-3 py-1.5 text-xs font-semibold text-on-surface transition-colors hover:text-white"
-          >
-            Show them
-          </button>
-        </div>
-      )}
-
-      {/* Tenants Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredTenants.map((tenant) => {
-          const hasLease = tenant.tenant_leases.length > 0;
-          const leaseCount = tenant.tenant_leases.length;
-          // Show only the units that belong to the property being viewed.
-          const visibleLeases =
-            selectedPropertyId === "ALL"
-              ? tenant.tenant_leases
-              : tenant.tenant_leases.filter(
-                  (l) => l.unit.property_id === selectedPropertyId
-                );
-
-          return (
-            <div
-              key={tenant.user_id}
-              className="p-5 rounded-2xl bg-surface-container border border-outline-variant/60 hover:border-primary/50 transition-all flex flex-col justify-between gap-4 group"
-            >
-              <div>
-                {/* Header: Avatar + Name + Status */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center text-primary font-bold text-sm shrink-0 group-hover:scale-105 transition-transform">
-                      {tenant.user_name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
-                        {tenant.user_name}
-                      </h3>
-                      <span className="text-[10px] font-semibold text-on-surface-variant">
-                        Resident
-                      </span>
-                    </div>
-                  </div>
-
-                  {hasLease ? (
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold shrink-0">
-                      Has unit
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-full bg-surface-container-high border border-outline-variant/60 text-on-surface-variant text-[10px] font-medium shrink-0">
-                      No unit
-                    </span>
-                  )}
-                </div>
-
-                {/* Contact Information */}
-                <div className="space-y-1.5 text-xs text-on-surface-variant border-b border-outline-variant/30 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[15px] text-on-surface-variant shrink-0">mail</span>
-                    <span className="truncate">{tenant.user_email}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[15px] text-on-surface-variant shrink-0">call</span>
-                    <span>{tenant.phone_number || "No phone number registered"}</span>
-                  </div>
-                </div>
-
-                {/* Assigned Units Pill List */}
-                <div className="pt-3">
-                  <span className="text-[10px] font-semibold text-on-surface-variant block mb-1.5">
-                    Units
-                  </span>
-                  {hasLease ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {visibleLeases.map((l) => (
-                        <Link
-                          key={l.lease_id}
-                          href={`/admin/leases?tenant=${tenant.user_id}`}
-                          className="px-2.5 py-1 rounded-lg bg-surface-container-high hover:bg-surface-variant border border-outline-variant/40 text-xs font-semibold text-white flex items-center gap-1 transition-all"
-                        >
-                          <span className="material-symbols-outlined text-[13px] text-cyan-400">meeting_room</span>
-                          <span>{l.unit.unit_number}</span>
-                          {selectedPropertyId === "ALL" && (
-                            <span className="text-[10px] text-on-surface-variant">
-                              ({l.unit.property.property_name})
-                            </span>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-on-surface-variant/70 italic">No active unit leases assigned</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Card Action Buttons */}
-              <div className="flex items-center gap-2 pt-2 border-t border-outline-variant/30">
-                <Link
-                  href={`/admin/leases?tenant=${tenant.user_id}`}
-                  className="pressable flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-on-primary shadow-xs transition-colors hover:bg-primary/90"
-                >
-                  <span>{leaseCount === 0 ? "Create lease" : "View leases"}</span>
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => setEditingTenant(tenant)}
-                  className="pressable flex items-center justify-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 transition-colors hover:bg-blue-500/20"
-                >
-                  <span className="material-symbols-outlined text-[15px]">edit</span>
-                  Edit
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setDeletingTenant(tenant)}
-                  disabled={leaseCount > 0}
-                  title={
-                    leaseCount > 0
-                      ? `${tenant.user_name} still holds ${leaseCount} lease${leaseCount === 1 ? "" : "s"}. End them before deleting the account.`
-                      : undefined
-                  }
-                  className="pressable flex items-center justify-center gap-1 rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:border-outline-variant/40 disabled:bg-surface-container disabled:text-on-surface-variant/50 disabled:hover:bg-surface-container"
-                >
-                  <span className="material-symbols-outlined text-[15px]">delete</span>
-                  Delete
-                </button>
-              </div>
-            </div>
-          );
-        })}
-
-        {filteredTenants.length === 0 && (
-          <div className="col-span-full py-16 text-center rounded-2xl bg-surface-container border border-outline-variant/40 flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center text-on-surface-variant">
-              <span className="material-symbols-outlined text-[28px] opacity-40">person_off</span>
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white">No residents found</h4>
-              <p className="text-xs text-on-surface-variant mt-0.5">
-                {searchQuery || selectedPropertyId !== "ALL" || leaseFilter !== "ALL"
-                  ? "No resident accounts match your filter criteria."
-                  : "Start onboarding residents by registering their accounts."}
-              </p>
-            </div>
-          </div>
         )}
+      </Toolbar>
+
+      <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container">
+        <div className="border-b border-outline-variant/40 bg-surface-container-high/40 px-4 py-2.5 text-xs text-on-surface-variant">
+          Showing <span className="font-semibold tabular-nums text-on-surface">{rows.length}</span> of{" "}
+          <span className="tabular-nums">{inScope.length}</span>
+        </div>
+
+        {/* Cards below md — six columns do not survive a phone. */}
+        <div className="divide-y divide-outline-variant/30 md:hidden">
+          {rows.length === 0 ? (
+            <EmptyState
+              icon="person_off"
+              title="No residents match these filters"
+              hint="Try another chip, or clear the search."
+            />
+          ) : (
+            rows.map((t) => {
+              const lease = activeLeaseOf(t);
+              const portal = portalOf(t);
+              const owes = t.owes ?? 0;
+              return (
+                <div key={t.user_id} className="px-4 py-3.5">
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold text-white">{t.user_name}</span>
+                      <span className="mt-0.5 block truncate text-[11px] text-on-surface-variant">
+                        {t.user_email}
+                      </span>
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${PORTAL_PILL[portal.key]}`}
+                    >
+                      {portal.label}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                    {lease ? (
+                      <Link
+                        href={`/admin/units/${lease.unit.unit_id}`}
+                        className="font-semibold text-primary hover:underline"
+                      >
+                        {lease.unit.unit_number}
+                      </Link>
+                    ) : (
+                      <span className="rounded-full border border-amber-500/45 bg-amber-500/10 px-2 py-0.5 font-bold text-amber-200">
+                        No tenancy
+                      </span>
+                    )}
+                    {owes > 0 && (
+                      <span className="rounded-md border border-rose-500/35 bg-rose-500/10 px-2 py-0.5 font-bold text-rose-300">
+                        <Money value={owes} /> owed
+                      </span>
+                    )}
+                  </div>
+
+                  <Link
+                    href={
+                      lease ? `/admin/units/${lease.unit.unit_id}` : `/admin/leases?tenant=${t.user_id}`
+                    }
+                    className={(lease ? BTN.secondary : BTN.primary) + " mt-3 h-11 w-full justify-center"}
+                  >
+                    {lease ? "Open their unit" : "Start a tenancy"}
+                  </Link>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className={TABLE.wrap + " hidden md:block"}>
+          <table className={TABLE.table + " min-w-[940px]"}>
+            <caption className="sr-only">Residents</caption>
+            <thead>
+              <tr>
+                <th className={TABLE.th}>Resident</th>
+                <th className={TABLE.th}>Unit</th>
+                <th className={TABLE.th}>Reaches them at</th>
+                <th className={TABLE.th}>Portal</th>
+                <th className={TABLE.thNum}>Owes</th>
+                <th className={TABLE.thNum}>What happens next</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-0">
+                    <EmptyState
+                      icon="person_off"
+                      title={
+                        initialTenants.length === 0
+                          ? "Nobody has a resident login yet"
+                          : "No residents match these filters"
+                      }
+                      hint={
+                        initialTenants.length === 0
+                          ? "Add the person first, then start their tenancy — a resident reaches a unit only through a lease."
+                          : "Try another chip, or clear the search."
+                      }
+                      action={
+                        initialTenants.length === 0 ? (
+                          <button type="button" onClick={() => setIsAddModalOpen(true)} className={BTN.primary}>
+                            Add a resident
+                          </button>
+                        ) : undefined
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : (
+                rows.map((t) => {
+                  const lease = activeLeaseOf(t);
+                  const portal = portalOf(t);
+                  const owes = t.owes ?? 0;
+                  return (
+                    <tr key={t.user_id} className={TABLE.tr}>
+                      <td className={TABLE.td + " align-top"}>
+                        <span className="flex items-center gap-3">
+                          <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-surface-container-high text-[11px] font-extrabold text-on-surface-variant">
+                            {initials(t.user_name)}
+                          </span>
+                          <span className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() => setEditingTenant(t)}
+                              className="block w-fit border-b border-primary/35 pb-px font-bold text-on-surface hover:text-primary"
+                            >
+                              {t.user_name}
+                            </button>
+                            <span className="mt-0.5 block text-[11px] text-on-surface-variant">
+                              {lease
+                                ? `resident since ${monthYear(t.created_at)}`
+                                : `added ${monthYear(t.created_at)}`}
+                            </span>
+                          </span>
+                        </span>
+                      </td>
+
+                      <td className={TABLE.td + " align-top"}>
+                        {lease ? (
+                          <Link
+                            href={`/admin/units/${lease.unit.unit_id}`}
+                            className="whitespace-nowrap border-b border-primary/35 pb-px font-semibold text-on-surface hover:text-primary"
+                          >
+                            {lease.unit.unit_number}
+                          </Link>
+                        ) : (
+                          <span className="whitespace-nowrap rounded-full border border-amber-500/45 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-200">
+                            No tenancy
+                          </span>
+                        )}
+                      </td>
+
+                      <td className={TABLE.tdMuted + " align-top"}>
+                        <span className="block truncate">{t.user_email}</span>
+                        <span className="mt-0.5 block text-[11px] tabular-nums text-on-surface-variant">
+                          {t.phone_number ?? "no phone on file"}
+                        </span>
+                      </td>
+
+                      <td className={TABLE.td + " align-top"}>
+                        <span
+                          className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-bold ${PORTAL_PILL[portal.key]}`}
+                        >
+                          {portal.label}
+                        </span>
+                      </td>
+
+                      <td className={TABLE.tdNum + " whitespace-nowrap align-top"}>
+                        {owes > 0 ? (
+                          <Link href="/admin/billing/arrears" className="font-bold text-rose-300 hover:underline">
+                            <Money value={owes} />
+                          </Link>
+                        ) : (
+                          <span className="text-on-surface-variant/50">—</span>
+                        )}
+                      </td>
+
+                      <td className={TABLE.tdNum + " align-top"}>
+                        <span className="inline-flex items-center justify-end gap-2">
+                          <Link
+                            href={
+                              lease
+                                ? `/admin/units/${lease.unit.unit_id}`
+                                : `/admin/leases?tenant=${t.user_id}`
+                            }
+                            className={(lease ? BTN.secondary : BTN.primary) + " h-9 whitespace-nowrap text-xs"}
+                          >
+                            {lease ? "Open their unit" : "Start a tenancy"}
+                          </Link>
+                          <RowMenu label={`More actions for ${t.user_name}`} items={menuFor(t)} />
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      {/* Modals */}
-      <TenantFormModal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-      />
+      <TenantFormModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
 
       <TenantEditModal
         tenant={editingTenant}

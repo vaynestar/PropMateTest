@@ -36,6 +36,23 @@ export default async function TenantsPage() {
   // global — but it opens on whichever property the top bar is working in.
   const activePropertyId = await getActivePropertyId();
 
+  /*
+   * What each resident owes (DEV-264). "In arrears" is the question an office
+   * actually brings to this screen, and the list could not answer it: a
+   * resident who owes RM 25,030 looked exactly like one who owes nothing.
+   */
+  const owedByTenant: Record<string, number> = {};
+  const unpaid = await prisma.invoice.findMany({
+    where: { status: { notIn: ["Paid", "Inactive"] } },
+    select: { total_amount: true, lease: { select: { user_id: true } } },
+  });
+  for (const inv of unpaid) {
+    const uid = inv.lease?.user_id;
+    if (!uid) continue;
+    // Rule 6.
+    owedByTenant[uid] = (owedByTenant[uid] ?? 0) + Number(inv.total_amount ?? 0);
+  }
+
   // Prisma returns Decimal on the nested unit (area_sqft, monthly_rent).
   // Passing those raw into a Client Component logged "Only plain objects can be
   // passed to Client Components" for every tenant on every render. AGENTS.md Rule 6.
@@ -46,6 +63,11 @@ export default async function TenantsPage() {
     phone_number: u.phone_number ?? null,
     role: u.role,
     is_active: u.is_active,
+    // Dates cannot cross the boundary as Date objects and stay formattable.
+    last_login_at: u.last_login_at ? u.last_login_at.toISOString() : null,
+    locked_until: u.locked_until ? u.locked_until.toISOString() : null,
+    created_at: u.created_at.toISOString(),
+    owes: owedByTenant[u.user_id] ?? 0,
     tenant_leases: (u.tenant_leases ?? []).map((l: any) => ({
       lease_id: l.lease_id,
       status: l.status,
@@ -70,8 +92,8 @@ export default async function TenantsPage() {
   return (
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
-        title="Tenants"
-        subtitle="The people who live here. Add a tenant first, then give them a unit by creating a lease."
+        title="Residents"
+        subtitle="Everyone with a login to the resident app. A resident is only attached to a unit through a tenancy — add the person here, then start their tenancy."
       />
 
       {/*

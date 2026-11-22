@@ -98,6 +98,10 @@ model User {
   // Announcement.
   failed_login_count Int       @default(0)
   locked_until       DateTime?
+  // When this account was last used (DEV-264). NULL means never — the state
+  // the Residents screen has to show, and the reason it must not be
+  // backfilled. Added by raw DDL; see prisma/manual-migrations.
+  last_login_at      DateTime?
 
   // Resident details for Malaysian strata management (DEV-134).
   // NRIC/MyKad (or passport for non-citizens) is the identifier used for access

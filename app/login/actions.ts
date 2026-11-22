@@ -61,13 +61,16 @@ export async function loginAction(
     return { error: "Invalid email or password." };
   }
 
-  // A correct password clears the slate.
-  if (user.failed_login_count > 0 || user.locked_until) {
-    await prisma.user.update({
-      where: { user_id: user.user_id },
-      data: { failed_login_count: 0, locked_until: null },
-    });
-  }
+  /*
+   * A correct password clears the slate and records the visit (DEV-264).
+   * Written on every sign-in, not only when the counter needs clearing:
+   * `last_login_at` is the only thing that can tell an account somebody uses
+   * from one that has never been opened.
+   */
+  await prisma.user.update({
+    where: { user_id: user.user_id },
+    data: { failed_login_count: 0, locked_until: null, last_login_at: new Date() },
+  });
 
   await createSession(user.user_id, user.role, user.user_name, user.user_email);
 
