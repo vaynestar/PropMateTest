@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createLease, updateLease, deleteLease, reassignLease } from "@/lib/lease-management";
 import { getSessionUser, requireUser } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
 export async function adminCreateLease(state: any, formData: FormData) {
   try {
@@ -102,5 +103,58 @@ export async function adminReassignLease(state: any, formData: FormData) {
     return { success: true, message: "Lease updated." };
   } catch (error: any) {
     return { error: error.message || "Could not update the lease" };
+  }
+}
+
+/**
+ * End a tenancy (DEV-265).
+ *
+ * Not the same thing as `adminDeleteLease`, which removes the row and
+ * refuses the moment an invoice exists — correctly, because deleting would
+ * take billing history with it. Ending sets a move-out date and frees the
+ * unit, and the arrears stay exactly where they are: still owed, still
+ * chaseable, still on the ledger.
+ *
+ * `updateLease` already derives the status from the presence of a move-out
+ * date and frees the unit when no other tenancy is active on it, so this is
+ * that call with today's date rather than a second code path.
+ */
+export async function adminEndLease(
+  leaseId: string,
+  endOn?: string
+): Promise<{ ok?: true; message?: string; error?: string }> {
+  try {
+    const user = await requireUser(["Admin"]);
+    const id = leaseId.trim();
+    if (!id) return { error: "Which tenancy?" };
+
+    const lease = await prisma.tenantLease.findUnique({
+      where: { lease_id: id },
+      select: { move_in_date: true, status: true, unit: { select: { unit_number: true } } },
+    });
+    if (!lease) return { error: "That tenancy no longer exists." };
+    if (lease.status !== "Active") return { error: "That tenancy has already ended." };
+
+    // Malaysian calendar day, so "today" is today here and not in UTC.
+    const today = endOn ?? new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kuala_Lumpur" });
+    if (new Date(today) < new Date(lease.move_in_date)) {
+      return { error: "A tenancy cannot end before it started." };
+    }
+
+    await updateLease(
+      id,
+      {
+        move_in_date: lease.move_in_date.toISOString().slice(0, 10),
+        move_out_date: today,
+      },
+      user.userId
+    );
+
+    revalidatePath("/admin/leases");
+    revalidatePath("/admin/units");
+    revalidatePath("/admin/tenants");
+    return { ok: true, message: `${lease.unit.unit_number} is vacant again.` };
+  } catch (error: any) {
+    return { error: error?.message || "Could not end that tenancy." };
   }
 }

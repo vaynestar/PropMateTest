@@ -45,6 +45,57 @@ export default async function AdminLeasesPage(props: {
     }),
   ]);
 
+  /*
+   * What each tenancy actually bills, and what it is still owed (DEV-265).
+   *
+   * A tenancy with no recurring charges is the most expensive silent failure
+   * in the product: the monthly run skips it, the money never appears, and
+   * nobody learns until somebody audits the arrears. The list could not show
+   * it because it never knew the amounts — only `_count.lease_charges`,
+   * which a charge of RM 0.00 satisfies just as well as a real one.
+   */
+  const leaseIds = leases.map((l: any) => l.lease_id);
+  const [charges, unpaidInvoices] = await Promise.all([
+    leaseIds.length
+      ? prisma.leaseCharge.findMany({
+          where: { lease_id: { in: leaseIds }, is_active: true },
+          select: {
+            lease_id: true,
+            amount: true,
+            quantity: true,
+            charge: { select: { charge_name: true } },
+          },
+        })
+      : [],
+    leaseIds.length
+      ? prisma.invoice.findMany({
+          where: { lease_id: { in: leaseIds }, status: { notIn: ["Paid", "Inactive"] } },
+          select: { lease_id: true, total_amount: true },
+        })
+      : [],
+  ]);
+
+  const billedByLease: Record<string, number> = {};
+  const chargeNamesByLease: Record<string, string[]> = {};
+  for (const c of charges) {
+    // Rule 6: amount and quantity are both Decimal.
+    billedByLease[c.lease_id] =
+      (billedByLease[c.lease_id] ?? 0) + Number(c.amount ?? 0) * Number(c.quantity ?? 1);
+    (chargeNamesByLease[c.lease_id] ??= []).push(c.charge?.charge_name ?? "Charge");
+  }
+
+  const owedByLease: Record<string, number> = {};
+  for (const inv of unpaidInvoices) {
+    if (!inv.lease_id) continue;
+    owedByLease[inv.lease_id] = (owedByLease[inv.lease_id] ?? 0) + Number(inv.total_amount ?? 0);
+  }
+
+  // A lease with no charges falls back to the unit's own monthly rent, which
+  // is what the invoice generator does — so the figure here and the figure it
+  // would bill cannot disagree.
+  const rentByUnit: Record<string, number> = {};
+  for (const u of units) rentByUnit[u.unit_id] = Number(u.monthly_rent ?? 0);
+
   // The setup chain, through to the first invoices (see lib/setup-progress).
   const activeProperty = properties.find((p) => p.property_id === activePropertyId) ?? null;
   const setupCounts = await getSetupProgress(activePropertyId);
@@ -52,8 +103,8 @@ export default async function AdminLeasesPage(props: {
   return (
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
-        title="Leases"
-        subtitle="A lease links a tenant to a unit and starts their billing. Create one once the unit and the tenant both exist."
+        title="Tenancies"
+        subtitle="A tenancy joins a resident to a unit, and it is what gets billed. No tenancy, no invoice."
       />
 
       {/* Interactive Leases Workspace */}
@@ -92,6 +143,9 @@ export default async function AdminLeasesPage(props: {
             user_email: l.tenant.user_email,
             phone_number: l.tenant.phone_number,
           },
+          billedMonthly: billedByLease[l.lease_id] ?? rentByUnit[l.unit_id] ?? 0,
+          chargeNames: chargeNamesByLease[l.lease_id] ?? [],
+          owed: owedByLease[l.lease_id] ?? 0,
         }))}
         properties={properties}
         // Only the four fields the client actually declares. The `as any` cast

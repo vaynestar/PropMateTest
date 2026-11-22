@@ -1,11 +1,15 @@
 "use client";
 
-import { useState, useMemo, useActionState, useEffect } from "react";
-import { adminDeleteLease } from "@/app/admin/leases/actions";
+import { useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { adminEndLease } from "@/app/admin/leases/actions";
 import AdminLeaseFormModal from "./AdminLeaseFormModal";
 import AdminLeaseEditModal from "./AdminLeaseEditModal";
-import { FIELD, StatCard, StatGrid } from "@/components/admin/ui";
+import RowMenu, { type RowMenuItem } from "@/components/admin/RowMenu";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import { Toast, type ToastState } from "@/components/admin/Toast";
+import { BTN, EmptyState, Money, SearchField, TABLE, Toolbar } from "@/components/admin/ui";
 import { dayMonth } from "@/lib/short-date";
 
 export interface LeaseItem {
@@ -17,15 +21,15 @@ export interface LeaseItem {
   move_in_date: any;
   move_out_date: any;
   status: string;
+  billedMonthly?: number;
+  chargeNames?: string[];
+  owed?: number;
   unit: {
     unit_id: string;
     unit_number: string;
     unit_type?: string;
     property_id?: string;
-    property?: {
-      property_id: string;
-      property_name: string;
-    };
+    property?: { property_id: string; property_name: string };
   };
   tenant: {
     user_id: string;
@@ -44,252 +48,432 @@ interface LeasesClientProps {
     status: string;
     property?: { property_name: string };
   }[];
-  users: {
-    user_id: string;
-    user_name: string;
-    user_email: string;
-  }[];
+  users: { user_id: string; user_name: string; user_email: string }[];
   activePropertyId?: string | null;
 }
 
+/** "10 months", "6 days" — how long this has been running. */
+function runningFor(from: any, to: any) {
+  const start = new Date(from).getTime();
+  const end = to ? new Date(to).getTime() : Date.now();
+  const days = Math.max(0, Math.floor((end - start) / 86_400_000));
+  if (days < 31) return `${days} day${days === 1 ? "" : "s"}`;
+  const months = Math.floor(days / 30.44);
+  if (months < 24) return `${months} month${months === 1 ? "" : "s"}`;
+  return `${Math.floor(months / 12)} years`;
+}
+
+type ChipKey = "all" | "active" | "unbilled" | "ended";
+
+/**
+ * Tenancies (rebuilt DEV-265, to the batch-2 `Leases` and `LeaseEnd`
+ * artboards).
+ *
+ * **"Bills nothing" is the point of this screen.** A tenancy with no
+ * recurring charges is the most expensive silent failure in PropMate: the
+ * monthly run skips it, the money never appears, and nobody learns until
+ * somebody audits the arrears. It is on the row, it is a chip, and it is a
+ * strip at the top that counts them — finding four across 206 tenancies by
+ * eye is not a plan.
+ *
+ * The row's action is the one that matters: *Set its charges* when there are
+ * none, *What it is billed* when there are. And ending a tenancy moved into
+ * the menu, where the dialog can say what happens to the unpaid invoices
+ * behind it.
+ */
 export default function LeasesClient({
   initialLeases,
-  properties,
   availableUnits,
   users,
-  activePropertyId: initialActiveProp,
 }: LeasesClientProps) {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [includePrevious, setIncludePrevious] = useState(true);
+  const [chip, setChip] = useState<ChipKey>("all");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLease, setEditingLease] = useState<LeaseItem | null>(null);
-  const [deletingLease, setDeletingLease] = useState<LeaseItem | null>(null);
+  const [ending, setEnding] = useState<LeaseItem | null>(null);
+  const [toast, setToast] = useState<ToastState>(null);
+  const [isPending, startTransition] = useTransition();
 
-  // Filtered leases
-  const filteredLeases = useMemo(() => {
-    return initialLeases.filter((lease) => {
-      const matchesProp =
-        true; // the server already scoped this list to the active property
+  const billsNothing = (l: LeaseItem) => l.status === "Active" && (l.billedMonthly ?? 0) <= 0;
 
-      const matchesStatus = includePrevious || lease.status === "Active";
+  const matchesChip = (l: LeaseItem, k: ChipKey) => {
+    switch (k) {
+      case "all":
+        return true;
+      case "active":
+        return l.status === "Active";
+      case "unbilled":
+        return billsNothing(l);
+      case "ended":
+        return l.status !== "Active";
+    }
+  };
 
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        lease.unit.unit_number.toLowerCase().includes(q) ||
-        lease.tenant.user_name.toLowerCase().includes(q) ||
-        lease.tenant.user_email.toLowerCase().includes(q) ||
-        (lease.tenant.phone_number && lease.tenant.phone_number.toLowerCase().includes(q));
+  const counts: Record<ChipKey, number> = {
+    all: initialLeases.length,
+    active: initialLeases.filter((l) => matchesChip(l, "active")).length,
+    unbilled: initialLeases.filter((l) => matchesChip(l, "unbilled")).length,
+    ended: initialLeases.filter((l) => matchesChip(l, "ended")).length,
+  };
 
-      return matchesProp && matchesStatus && matchesSearch;
+  const CHIPS: { key: ChipKey; label: string; dot: string }[] = [
+    { key: "all", label: "All", dot: "bg-slate-300" },
+    { key: "active", label: "Active", dot: "bg-emerald-400" },
+    { key: "unbilled", label: "Bills nothing", dot: "bg-amber-400" },
+    { key: "ended", label: "Ended", dot: "bg-slate-500" },
+  ];
+
+  const rows = initialLeases.filter((l) => {
+    if (!matchesChip(l, chip)) return false;
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      l.unit.unit_number.toLowerCase().includes(q) ||
+      l.tenant.user_name.toLowerCase().includes(q) ||
+      l.tenant.user_email.toLowerCase().includes(q)
+    );
+  });
+
+  const unbilled = initialLeases.filter(billsNothing);
+
+  const endLease = (l: LeaseItem) => {
+    startTransition(async () => {
+      /*
+       * `adminEndLease`, not `adminDeleteLease` — the latter removes the row
+       * and refuses the moment an invoice exists, which is correct for a
+       * delete and wrong for an ending. Ending sets a move-out date, frees
+       * the unit and leaves the arrears owed.
+       */
+      const res = await adminEndLease(l.lease_id);
+      setEnding(null);
+      if (res?.error) {
+        setToast({ message: res.error, tone: "error" });
+        return;
+      }
+      router.refresh();
+      setToast({
+        message: `The tenancy on ${l.unit.unit_number} has ended.`,
+        detail:
+          (l.owed ?? 0) > 0
+            ? `RM ${(l.owed ?? 0).toLocaleString("en-MY", { minimumFractionDigits: 2 })} is still owed and still chaseable.`
+            : undefined,
+      });
     });
-  }, [initialLeases, includePrevious, searchQuery]);
+  };
 
-  // Aggregate KPIs
-  const totalLeases = initialLeases.length;
-  const activeLeasesCount = initialLeases.filter((l) => l.status === "Active").length;
-  const inactiveLeasesCount = totalLeases - activeLeasesCount;
+  const menuFor = (l: LeaseItem): RowMenuItem[] => [
+    { label: "Edit this tenancy", onSelect: () => setEditingLease(l) },
+    ...(l.status === "Active"
+      ? [{ label: "End this tenancy", onSelect: () => setEnding(l), danger: true }]
+      : []),
+  ];
 
   return (
     <div className="space-y-5">
-      <StatGrid cols={3}>
-        <StatCard label="Leases" value={totalLeases} tone="primary" />
-        <StatCard label="Active" value={activeLeasesCount} tone="positive" />
-        <StatCard label="Ended" value={inactiveLeasesCount} tone="neutral" />
-      </StatGrid>
-
-      {/* Filter & Controls Bar */}
-      <div className="flex flex-col items-stretch justify-between gap-3 rounded-xl border border-outline-variant/50 bg-surface-container p-3 md:flex-row md:items-center">
-        {/* Search & Property Select */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 flex-1 max-w-xl">
-          <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">
-              search
+      {/* The warning only an invoice run discovers today. */}
+      {unbilled.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-amber-500/40 bg-amber-500/[0.07] px-4 py-3">
+          <span className="material-symbols-outlined shrink-0 text-[20px] text-amber-300">error</span>
+          <p className="min-w-[320px] flex-[999_1_320px] text-sm leading-relaxed">
+            <span className="font-bold text-amber-200">
+              {unbilled.length} tenanc{unbilled.length === 1 ? "y has" : "ies have"} no charges attached.
+            </span>{" "}
+            <span className="text-on-surface-variant">
+              They bill nothing, and the monthly run skips them without saying so.
             </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search tenant, unit or email"
-              className={`${FIELD} w-full pl-9 placeholder:text-on-surface-variant/60`}
-            />
-          </div>
-        </div>
-
-        {/* Status Toggle & Add Button */}
-        <div className="flex items-center gap-3 shrink-0">
-          <label className="flex items-center gap-2 cursor-pointer text-xs text-on-surface-variant select-none">
-            <input
-              type="checkbox"
-              checked={includePrevious}
-              onChange={(e) => setIncludePrevious(e.target.checked)}
-              className="rounded border-outline-variant text-primary focus:ring-primary h-4 w-4 bg-surface-container-high"
-            />
-            <span>Include Inactive Leases</span>
-          </label>
-
+          </p>
           <button
             type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold flex items-center gap-2 transition-all shadow-md pressable shrink-0"
+            onClick={() => setChip("unbilled")}
+            className="pressable inline-flex h-10 items-center rounded-xl bg-amber-400 px-4 text-sm font-bold text-[#241a02] transition-colors hover:bg-amber-300"
           >
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            <span>Create lease</span>
+            Show {unbilled.length === 1 ? "it" : `all ${unbilled.length}`}
           </button>
+        </div>
+      )}
+
+      <nav aria-label="Filter tenancies" className="flex flex-wrap gap-2">
+        {CHIPS.map((c) => {
+          const on = chip === c.key;
+          return (
+            <button
+              key={c.key}
+              type="button"
+              aria-pressed={on}
+              onClick={() => setChip(c.key)}
+              className={`pressable inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${
+                on
+                  ? "border-primary bg-primary/15 text-primary"
+                  : "border-outline-variant/60 bg-surface-container text-on-surface-variant hover:text-on-surface"
+              }`}
+            >
+              <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${c.dot}`} />
+              {c.label}
+              <span
+                className={`rounded-full px-2 py-px text-[11px] font-bold tabular-nums ${
+                  on ? "bg-primary/25 text-primary" : "bg-surface-container-high text-on-surface-variant"
+                }`}
+              >
+                {counts[c.key]}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+
+      <Toolbar
+        right={
+          <button type="button" onClick={() => setIsAddModalOpen(true)} className={BTN.primary}>
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            Start a tenancy
+          </button>
+        }
+      >
+        <SearchField placeholder="Unit, resident or email" value={searchQuery} onChange={setSearchQuery} />
+      </Toolbar>
+
+      <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container">
+        <div className="border-b border-outline-variant/40 bg-surface-container-high/40 px-4 py-2.5 text-xs text-on-surface-variant">
+          Showing <span className="font-semibold tabular-nums text-on-surface">{rows.length}</span> of{" "}
+          <span className="tabular-nums">{initialLeases.length}</span>
+        </div>
+
+        {/* Cards below md. */}
+        <div className="divide-y divide-outline-variant/30 md:hidden">
+          {rows.length === 0 ? (
+            <EmptyState
+              icon="description"
+              title="No tenancies match these filters"
+              hint="Try another chip, or clear the search."
+            />
+          ) : (
+            rows.map((l) => {
+              const nothing = billsNothing(l);
+              return (
+                <div key={l.lease_id} className={`px-4 py-3.5 ${l.status !== "Active" ? "opacity-70" : ""}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="min-w-0">
+                      <Link
+                        href={`/admin/units/${l.unit.unit_id}`}
+                        className="block text-sm font-bold text-white hover:text-primary"
+                      >
+                        {l.unit.unit_number}
+                      </Link>
+                      <span className="mt-0.5 block text-[11px] text-on-surface-variant">
+                        {l.tenant.user_name}
+                      </span>
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
+                        l.status === "Active"
+                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                          : "border-outline-variant bg-surface-container-highest text-on-surface-variant"
+                      }`}
+                    >
+                      {l.status === "Active" ? "Active" : "Ended"}
+                    </span>
+                  </div>
+
+                  <p className="mt-1.5 text-[11px] text-on-surface-variant">
+                    since {dayMonth(l.move_in_date, true)} · {runningFor(l.move_in_date, l.move_out_date)}
+                  </p>
+
+                  <div className="mt-2">
+                    {nothing ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/45 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-200">
+                        <span className="material-symbols-outlined text-[13px]">error</span>
+                        Bills nothing
+                      </span>
+                    ) : (
+                      <span className="text-xs font-bold text-on-surface">
+                        <Money value={l.billedMonthly ?? 0} /> a month
+                      </span>
+                    )}
+                  </div>
+
+                  <Link
+                    href={`/admin/leases/${l.lease_id}/charges`}
+                    className={(nothing ? BTN.primary : BTN.secondary) + " mt-3 h-11 w-full justify-center"}
+                  >
+                    {nothing ? "Set its charges" : "What it is billed"}
+                  </Link>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className={TABLE.wrap + " hidden md:block"}>
+          <table className={TABLE.table + " min-w-[980px]"}>
+            <caption className="sr-only">Tenancies</caption>
+            <thead>
+              <tr>
+                <th className={TABLE.th}>Unit</th>
+                <th className={TABLE.th}>Resident</th>
+                <th className={TABLE.th}>Running since</th>
+                <th className={TABLE.th}>Status</th>
+                <th className={TABLE.th}>Billed each month</th>
+                <th className={TABLE.thNum}>What happens next</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-0">
+                    <EmptyState
+                      icon="description"
+                      title={
+                        initialLeases.length === 0
+                          ? "No tenancies yet"
+                          : "No tenancies match these filters"
+                      }
+                      hint={
+                        initialLeases.length === 0
+                          ? "A tenancy joins a resident to a unit, and it is what gets billed. Nothing can be invoiced until one exists."
+                          : "Try another chip, or clear the search."
+                      }
+                      action={
+                        initialLeases.length === 0 ? (
+                          <button type="button" onClick={() => setIsAddModalOpen(true)} className={BTN.primary}>
+                            Start a tenancy
+                          </button>
+                        ) : undefined
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : (
+                rows.map((l) => {
+                  const nothing = billsNothing(l);
+                  return (
+                    <tr
+                      key={l.lease_id}
+                      className={
+                        TABLE.tr +
+                        (nothing ? " bg-amber-500/[0.05]" : "") +
+                        (l.status !== "Active" ? " opacity-65" : "")
+                      }
+                    >
+                      <td className={TABLE.td + " align-top"}>
+                        <Link
+                          href={`/admin/units/${l.unit.unit_id}`}
+                          className="whitespace-nowrap border-b border-primary/35 pb-px font-bold text-on-surface hover:text-primary"
+                        >
+                          {l.unit.unit_number}
+                        </Link>
+                      </td>
+
+                      <td className={TABLE.tdMuted + " align-top"}>
+                        <Link
+                          href={`/admin/tenants?q=${encodeURIComponent(l.tenant.user_name)}`}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {l.tenant.user_name}
+                        </Link>
+                      </td>
+
+                      <td className={TABLE.td + " align-top"}>
+                        <span className="whitespace-nowrap tabular-nums text-on-surface-variant">
+                          {dayMonth(l.move_in_date, true)}
+                        </span>
+                        <span className="mt-0.5 block text-[11px] text-on-surface-variant">
+                          {l.status === "Active"
+                            ? runningFor(l.move_in_date, null)
+                            : `ended ${dayMonth(l.move_out_date ?? l.move_in_date, true)}`}
+                        </span>
+                      </td>
+
+                      <td className={TABLE.td + " align-top"}>
+                        <span
+                          className={`inline-block whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-bold ${
+                            l.status === "Active"
+                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
+                              : "border-outline-variant bg-surface-container-highest text-on-surface-variant"
+                          }`}
+                        >
+                          {l.status === "Active" ? "Active" : "Ended"}
+                        </span>
+                      </td>
+
+                      <td className={TABLE.td + " align-top"}>
+                        {nothing ? (
+                          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-500/45 bg-amber-500/10 px-2.5 py-1 text-[11px] font-bold text-amber-200">
+                            <span className="material-symbols-outlined text-[13px]">error</span>
+                            Bills nothing
+                          </span>
+                        ) : (
+                          <>
+                            <span className="whitespace-nowrap font-bold tabular-nums text-on-surface">
+                              <Money value={l.billedMonthly ?? 0} />
+                            </span>
+                            <span className="mt-0.5 block text-[11px] text-on-surface-variant">
+                              {l.chargeNames && l.chargeNames.length > 0
+                                ? l.chargeNames.join(" · ")
+                                : "the unit's monthly rent"}
+                            </span>
+                          </>
+                        )}
+                      </td>
+
+                      <td className={TABLE.tdNum + " align-top"}>
+                        <span className="inline-flex items-center justify-end gap-2">
+                          <Link
+                            href={`/admin/leases/${l.lease_id}/charges`}
+                            className={
+                              (nothing
+                                ? "pressable inline-flex h-9 items-center rounded-xl bg-amber-400 px-3.5 text-xs font-bold text-[#241a02] transition-colors hover:bg-amber-300"
+                                : BTN.secondary + " h-9 text-xs") + " whitespace-nowrap"
+                            }
+                          >
+                            {nothing ? "Set its charges" : "What it is billed"}
+                          </Link>
+                          <RowMenu
+                            label={`More actions for the tenancy on ${l.unit.unit_number}`}
+                            items={menuFor(l)}
+                          />
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Leases Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredLeases.map((lease) => {
-          const isActive = lease.status === "Active";
-          const invoiceCount = lease._count?.invoices ?? 0;
-          const chargeCount = lease._count?.lease_charges ?? 0;
-          // A lease that has billed anything is a financial record: it can be
-          // ended, but never deleted or repointed at a different unit/tenant.
-          const billingLocked = invoiceCount > 0 || chargeCount > 0;
-          const lockReason =
-            invoiceCount > 0
-              ? `${invoiceCount} invoice${invoiceCount === 1 ? "" : "s"} raised — end the lease instead of deleting it`
-              : chargeCount > 0
-              ? `${chargeCount} recurring charge${chargeCount === 1 ? "" : "s"} set up — remove them first`
-              : undefined;
-          // toLocaleDateString() reads the *runtime's* locale, so the server
-          // rendered 06/11/2026 and the browser 11/6/2026 - a hydration
-          // mismatch, and an ambiguous date either way. dayMonth is pinned to
-          // Malaysia and spells the month out.
-          const moveInStr = lease.move_in_date ? dayMonth(lease.move_in_date, true) : "N/A";
-          const moveOutStr = lease.move_out_date ? dayMonth(lease.move_out_date, true) : "—";
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
 
-          return (
-            <div
-              key={lease.lease_id}
-              className={`p-5 rounded-2xl bg-surface-container border transition-all flex flex-col justify-between gap-4 group ${
-                isActive
-                  ? "border-outline-variant/60 hover:border-primary/50"
-                  : "border-outline-variant/30 opacity-75 hover:opacity-100"
-              }`}
-            >
-              <div>
-                {/* Top Row: Unit # & Status Pill */}
-                <div className="flex items-start justify-between gap-3 mb-3">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold text-sm shrink-0 group-hover:scale-105 transition-transform">
-                      <span className="material-symbols-outlined text-[20px]">meeting_room</span>
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-white truncate group-hover:text-primary transition-colors">
-                        Unit {lease.unit.unit_number}
-                      </h3>
-                      <span className="text-[11px] text-on-surface-variant font-medium block truncate">
-                        {lease.unit.property?.property_name || "Strata Development"}
-                      </span>
-                    </div>
-                  </div>
+      {/* Ending a tenancy says what happens to the money behind it. */}
+      <ConfirmDialog
+        open={!!ending}
+        tone="danger"
+        title={ending ? `End the tenancy on ${ending.unit.unit_number}?` : ""}
+        body={
+          ending
+            ? (ending.owed ?? 0) > 0
+              ? `${ending.tenant.user_name} stops being billed from today, and the unit becomes vacant. The RM ${(ending.owed ?? 0).toLocaleString(
+                  "en-MY",
+                  { minimumFractionDigits: 2 }
+                )} already owed on ${
+                  ending._count?.invoices ?? 0
+                } invoice${(ending._count?.invoices ?? 0) === 1 ? "" : "s"} is not written off — it stays on the account and can still be chased.`
+              : `${ending.tenant.user_name} stops being billed from today and the unit becomes vacant. Nothing is owed, so nothing is left behind.`
+            : ""
+        }
+        confirmLabel="End it"
+        cancelLabel="Keep it running"
+        pending={isPending}
+        onConfirm={() => ending && endLease(ending)}
+        onClose={() => setEnding(null)}
+      />
 
-                  {isActive ? (
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold shrink-0">
-                      Active
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-1 rounded-full bg-surface-container-high border border-outline-variant/60 text-on-surface-variant text-[10px] font-medium shrink-0">
-                      Inactive
-                    </span>
-                  )}
-                </div>
-
-                {/* Tenant Row */}
-                <div className="p-3 rounded-xl bg-surface-container-high/60 border border-outline-variant/40 space-y-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-white truncate">{lease.tenant.user_name}</span>
-                    <span className="text-[10px] font-semibold text-primary">Tenant</span>
-                  </div>
-                  <div className="text-[11px] text-on-surface-variant truncate">
-                    {lease.tenant.user_email}
-                  </div>
-                  {lease.tenant.phone_number && (
-                    <div className="text-[11px] text-on-surface-variant/80">
-                      {lease.tenant.phone_number}
-                    </div>
-                  )}
-                </div>
-
-                {/* Tenancy Dates */}
-                <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-outline-variant/30 text-xs">
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] font-semibold text-on-surface-variant flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[12px] text-emerald-400">login</span>
-                      Move-In
-                    </span>
-                    <span className="font-semibold text-white">{moveInStr}</span>
-                  </div>
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] font-semibold text-on-surface-variant flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[12px] text-amber-400">logout</span>
-                      Move-Out
-                    </span>
-                    <span className="font-semibold text-white">{moveOutStr}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bottom Actions */}
-              <div className="flex items-center gap-2 pt-2 border-t border-outline-variant/30">
-                <Link
-                  href={`/admin/leases/${lease.lease_id}/charges`}
-                  className="flex-1 px-3 py-2 rounded-xl bg-primary hover:bg-primary/90 text-on-primary font-semibold text-xs flex items-center justify-center gap-1.5 transition-all shadow-xs pressable"
-                >
-                  <span className="material-symbols-outlined text-[15px]">receipt_long</span>
-                  <span>Charges & Billing</span>
-                </Link>
-
-                <button
-                  type="button"
-                  onClick={() => setEditingLease(lease)}
-                  className="pressable flex items-center justify-center gap-1 rounded-xl border border-blue-500/30 bg-blue-500/10 px-3 py-2 text-xs font-semibold text-blue-300 transition-colors hover:bg-blue-500/20"
-                >
-                  <span className="material-symbols-outlined text-[15px]">edit</span>
-                  Edit
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setDeletingLease(lease)}
-                  disabled={billingLocked}
-                  title={lockReason}
-                  className="pressable flex items-center justify-center gap-1 rounded-xl border border-rose-500/40 bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-300 transition-colors hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:border-outline-variant/40 disabled:bg-surface-container disabled:text-on-surface-variant/50 disabled:hover:bg-surface-container"
-                >
-                  <span className="material-symbols-outlined text-[15px]">delete</span>
-                  Delete
-                </button>
-              </div>
-            </div>
-          );
-        })}
-
-        {filteredLeases.length === 0 && (
-          <div className="col-span-full py-16 text-center rounded-2xl bg-surface-container border border-outline-variant/40 flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-surface-container-high flex items-center justify-center text-on-surface-variant">
-              <span className="material-symbols-outlined text-[28px] opacity-40">description</span>
-            </div>
-            <div>
-              <h4 className="text-sm font-bold text-white">No leases yet</h4>
-              <p className="text-xs text-on-surface-variant mt-0.5">
-                {searchQuery
-                  ? "Try a different tenant, unit or email."
-                  : "A lease is what connects a tenant to a unit. Create one to fill a vacant unit."}
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Modals */}
       <AdminLeaseFormModal
-        units={availableUnits}
-        users={users}
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+        units={availableUnits}
+        users={users}
       />
 
       <AdminLeaseEditModal
@@ -297,96 +481,6 @@ export default function LeasesClient({
         isOpen={!!editingLease}
         onClose={() => setEditingLease(null)}
       />
-
-      <DeleteLeaseDialog lease={deletingLease} onClose={() => setDeletingLease(null)} />
-    </div>
-  );
-}
-
-
-/**
- * Deleting is only offered for a lease that never billed anything, so this is a
- * plain confirmation rather than a warning wall. The server re-checks the same
- * rule — the disabled button is a courtesy, not the guard.
- */
-function DeleteLeaseDialog({
-  lease,
-  onClose,
-}: {
-  lease: LeaseItem | null;
-  onClose: () => void;
-}) {
-  const [state, formAction, isPending] = useActionState(adminDeleteLease, null);
-
-  useEffect(() => {
-    if (state?.success) onClose();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
-
-  if (!lease) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="w-full max-w-md overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl max-h-[90dvh] overflow-y-auto"
-      >
-        <div className="flex items-center gap-3 border-b border-outline-variant/40 px-6 py-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-300">
-            <span className="material-symbols-outlined text-[20px]">delete</span>
-          </div>
-          <div>
-            <h2 className="text-base font-bold text-white">Delete this lease?</h2>
-            <p className="text-xs text-on-surface-variant">
-              {lease.unit?.unit_number} — {lease.tenant?.user_name}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-3 p-6">
-          <p className="text-xs leading-relaxed text-on-surface-variant">
-            Nothing has been billed against this lease, so it can be removed as if it were never
-            created. {lease.unit?.unit_number} goes back to <strong className="text-sky-300">Vacant</strong>.
-          </p>
-          <p className="text-xs leading-relaxed text-on-surface-variant">
-            If the tenant actually lived here, set a move-out date under Edit instead — that keeps
-            the record.
-          </p>
-          {state?.error && (
-            <p role="alert" className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
-              {state.error}
-            </p>
-          )}
-        </div>
-
-        <form
-          action={formAction}
-          className="flex items-center justify-end gap-3 border-t border-outline-variant/40 bg-surface-container-high/40 px-6 py-4"
-        >
-          <input type="hidden" name="lease_id" value={lease.lease_id} />
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isPending}
-            className="pressable rounded-xl border border-outline-variant/60 bg-surface-container-high px-4 py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-white"
-          >
-            Keep it
-          </button>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="pressable flex items-center gap-2 rounded-xl border border-rose-500/40 bg-rose-500/20 px-5 py-2 text-xs font-bold text-rose-200 transition-colors hover:bg-rose-500/30 disabled:opacity-50"
-          >
-            {isPending && (
-              <span className="material-symbols-outlined animate-spin-slow text-[15px]">
-                progress_activity
-              </span>
-            )}
-            Delete lease
-          </button>
-        </form>
-      </div>
     </div>
   );
 }
