@@ -428,22 +428,19 @@ function UnitCard({
             Edit
           </button>
 
-          <button
-            type="button"
-            onClick={() => onDelete(unit)}
-            disabled={hasActiveLease}
-            title={
-              hasActiveLease
-                ? `${unit.unit_number} has an active lease. End the lease before deleting the unit.`
-                : undefined
-            }
-            className="pressable flex items-center gap-1 rounded-md border border-rose-500/40 bg-rose-500/15 px-2.5 py-1.5 text-[11px] font-semibold text-rose-300 transition-colors hover:bg-rose-500/25 disabled:cursor-not-allowed disabled:border-outline-variant/40 disabled:bg-surface-container disabled:text-on-surface-variant/50 disabled:hover:bg-surface-container"
+          {/* Delete left the card (DEV-263). It does not belong, in red, once
+              per unit on a screen that can hold 240 of them — and a card has
+              no room to say what deleting one actually destroys. It lives on
+              the unit's own page now, where the consequence is spelled out. */}
+          <Link
+            href={`/admin/units/${unit.unit_id}`}
+            className="pressable flex items-center gap-1 rounded-md border border-outline-variant/60 bg-surface-container px-2.5 py-1.5 text-[11px] font-semibold text-on-surface transition-colors hover:text-white"
           >
             <span className="material-symbols-outlined text-[14px]" aria-hidden="true">
-              delete
+              open_in_new
             </span>
-            Delete
-          </button>
+            Open
+          </Link>
         </div>
 
         {status === "Vacant" ? (
@@ -497,6 +494,23 @@ export default function UnitsClient({
   const [editingUnit, setEditingUnit] = useState<UnitItem | null>(null);
   const [deletingUnit, setDeletingUnit] = useState<UnitItem | null>(null);
   const [collapsedFloors, setCollapsedFloors] = useState<Set<number>>(new Set());
+
+  /*
+   * `?edit=<unit_id>` opens that unit's edit form straight away (DEV-263).
+   * The unit file's menu links here rather than carrying a second copy of
+   * the form, and the parameter is dropped once the modal is open so a
+   * refresh does not reopen it.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const wanted = new URLSearchParams(window.location.search).get("edit");
+    if (!wanted) return;
+    const target = initialUnits.find((u) => u.unit_id === wanted);
+    if (target) {
+      setEditingUnit(target);
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+  }, [initialUnits]);
 
   // A ?property= deep link can point somewhere other than the top-bar
   // selection. Push it into the universal context so the two never disagree.
@@ -938,11 +952,10 @@ export default function UnitsClient({
                 const owes = owesByUnit[u.unit_id] ?? 0;
                 const open = openLabel(u.unit_id);
                 return (
-                  <button
+                  <Link
                     key={u.unit_id}
-                    type="button"
-                    onClick={() => setEditingUnit(u)}
-                    className="w-full px-4 py-3.5 text-left transition-colors hover:bg-surface-container-high/40"
+                    href={`/admin/units/${u.unit_id}`}
+                    className="block w-full px-4 py-3.5 text-left transition-colors hover:bg-surface-container-high/40"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <span className="min-w-0">
@@ -974,7 +987,7 @@ export default function UnitsClient({
                         )}
                       </div>
                     )}
-                  </button>
+                  </Link>
                 );
               })
             )}
@@ -1035,13 +1048,12 @@ export default function UnitsClient({
                         <td className={TABLE.td}>
                           {/* The unit number is the link to the unit, the same
                               one an invoice, a ticket or a booking points at. */}
-                          <button
-                            type="button"
-                            onClick={() => setEditingUnit(u)}
+                          <Link
+                            href={`/admin/units/${u.unit_id}`}
                             className="whitespace-nowrap border-b border-primary/35 pb-px font-bold text-on-surface hover:text-primary"
                           >
                             {u.unit_number}
-                          </button>
+                          </Link>
                         </td>
                         <td className={TABLE.tdMuted + " whitespace-nowrap"}>{u.unit_type || "—"}</td>
                         <td className={TABLE.tdNum + " whitespace-nowrap text-on-surface-variant"}>
