@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminNav, type NavItem } from "@/lib/admin-nav";
+import type { NavCounts } from "@/lib/nav-counts";
 
 /**
  * Desktop sidebar navigation.
@@ -26,7 +27,80 @@ function sectionIsActive(pathname: string, item: NavItem) {
   return (item.children ?? []).some((c) => isActive(pathname, c.href));
 }
 
-export default function SidebarNav() {
+/**
+ * What is waiting behind each destination (DEV-270).
+ *
+ * The point of a sidebar is to say where the work is BEFORE you click. This
+ * one listed nine destinations and told you nothing about any of them, so
+ * finding the five overdue invoices meant opening Billing, then Invoices,
+ * then reading.
+ *
+ * Only where there IS work: every entry returns null at zero, because a
+ * badge reading 0 is noise and nine of them is worse than none.
+ */
+function badgeFor(href: string, c?: NavCounts): { text: string; tone: "warn" | "bad" | "good" } | null {
+  if (!c) return null;
+  const at = (n: number, text: string, tone: "warn" | "bad" | "good" = "warn") =>
+    n > 0 ? { text, tone } : null;
+
+  switch (href) {
+    case "/admin/units":
+      return at(c.vacantUnits, `${c.vacantUnits} vacant`);
+    case "/admin/leases":
+      return at(c.leasesEnding, `${c.leasesEnding} ending`);
+    case "/admin/invoices":
+      return at(c.overdueInvoices, `${c.overdueInvoices} overdue`, "bad");
+    case "/admin/billing":
+      return at(c.slipsWaiting, `${c.slipsWaiting} slip${c.slipsWaiting === 1 ? "" : "s"}`);
+    case "/admin/facilities":
+      return at(c.facilitiesOverdue, `${c.facilitiesOverdue} overdue`, "bad");
+    case "/admin/bookings":
+      return at(c.bookingsToApprove, `${c.bookingsToApprove} to approve`);
+    case "/admin/maintenance":
+      return at(c.openTickets, String(c.openTickets));
+    case "/admin/visitors":
+      return at(c.visitorsInside, `${c.visitorsInside} inside`, "good");
+    default:
+      return null;
+  }
+}
+
+const BADGE_TONE = {
+  warn: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  bad: "border-rose-500/30 bg-rose-500/10 text-rose-300",
+  good: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
+} as const;
+
+const DOT_TONE = {
+  warn: "bg-amber-400",
+  bad: "bg-rose-400",
+  good: "bg-emerald-400",
+} as const;
+
+function Badge({ href, counts }: { href: string; counts?: NavCounts }) {
+  const b = badgeFor(href, counts);
+  if (!b) return null;
+  return (
+    <span
+      className={`shrink-0 rounded-full border px-2 py-px text-[10.5px] font-bold tabular-nums ${BADGE_TONE[b.tone]}`}
+    >
+      {b.text}
+    </span>
+  );
+}
+
+/** A parent carries the worst of its children, so a collapsed section still speaks. */
+function sectionBadge(item: NavItem, counts?: NavCounts) {
+  const own = badgeFor(item.href, counts);
+  if (own) return own;
+  for (const c of item.children ?? []) {
+    const b = badgeFor(c.href, counts);
+    if (b) return b;
+  }
+  return null;
+}
+
+export default function SidebarNav({ counts }: { counts?: NavCounts }) {
   const pathname = usePathname() || "/admin";
 
   return (
@@ -54,7 +128,8 @@ export default function SidebarNav() {
                 >
                   {item.icon}
                 </span>
-                <span className="font-body-md text-body-md">{item.label}</span>
+                <span className="font-body-md text-body-md flex-1 min-w-0">{item.label}</span>
+                <Badge href={item.href} counts={counts} />
               </Link>
             </li>
           );
@@ -70,10 +145,27 @@ export default function SidebarNav() {
                     : "font-medium text-on-surface-variant hover:bg-surface-container-high"
                 }`}
               >
-                <span className="flex items-center gap-3">
-                  <span className="material-symbols-outlined">{item.icon}</span>
+                <span className="flex min-w-0 flex-1 items-center gap-3">
+                  <span className="material-symbols-outlined shrink-0">{item.icon}</span>
                   <span className="font-body-md text-body-md">{item.label}</span>
                 </span>
+                {/*
+                  A collapsed parent gets a DOT, not the child's text. At 260px
+                  "Properties · 10 vacant" forced the destination's own name to
+                  truncate to "Prope…", and truncating the name to fit the
+                  badge is the wrong way round. The dot says "there is work
+                  behind this"; opening it says what.
+                */}
+                {(() => {
+                  const b = sectionBadge(item, counts);
+                  return b && !sectionActive ? (
+                    <span
+                      aria-label={b.text}
+                      title={b.text}
+                      className={`mr-2 h-[7px] w-[7px] shrink-0 rounded-full ${DOT_TONE[b.tone]}`}
+                    />
+                  ) : null;
+                })()}
                 <span className="material-symbols-outlined text-sm transition-transform group-open:rotate-180">
                   expand_more
                 </span>
@@ -87,13 +179,14 @@ export default function SidebarNav() {
                       <Link
                         href={child.href}
                         aria-current={active ? "page" : undefined}
-                        className={`block rounded-md py-2 pl-2 text-sm transition-colors ${
+                        className={`flex items-center gap-2 rounded-md py-2 pl-2 pr-1.5 text-sm transition-colors ${
                           active
                             ? "bg-primary/10 font-semibold text-primary"
                             : "text-on-surface-variant hover:text-primary"
                         }`}
                       >
-                        {child.label}
+                        <span className="min-w-0 flex-1">{child.label}</span>
+                        <Badge href={child.href} counts={counts} />
                       </Link>
                     </li>
                   );

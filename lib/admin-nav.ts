@@ -23,8 +23,8 @@ export const adminNav: NavItem[] = [
     children: [
       { label: "All Properties", href: "/admin/properties" },
       { label: "Units", href: "/admin/units" },
-      { label: "Tenants", href: "/admin/tenants" },
-      { label: "Leases", href: "/admin/leases" },
+      { label: "Residents", href: "/admin/tenants" },
+      { label: "Tenancies", href: "/admin/leases" },
     ],
   },
   {

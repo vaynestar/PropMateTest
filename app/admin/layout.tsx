@@ -12,6 +12,7 @@ import BackToTop from "@/components/layout/BackToTop";
 import { getAdminNotifications } from "@/lib/notifications";
 import { resolveActivePropertyId } from "@/lib/property-context";
 import NotificationCenter from "@/components/layout/NotificationCenter";
+import { getNavCounts } from "@/lib/nav-counts";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const user = await requireUser(["Admin"]);
@@ -36,6 +37,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   const hasValidUserCookie = properties.some((p) => p.property_id === activePropertyId);
   const safeActivePropertyId = resolveActivePropertyId(properties, activePropertyId) ?? "";
 
+  // Where the work is, for the sidebar badges and the top bar's "N need you"
+  // (DEV-270). Scoped to the property, because every figure on every screen is.
+  const counts = await getNavCounts(safeActivePropertyId || null);
+
   return (
     <div className="bg-surface text-on-surface font-body-md antialiased overflow-x-clip min-h-screen flex w-full">
       {/* SideNavBar (Desktop Only) */}
@@ -59,7 +64,20 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </div>
         </Link>
 
-        <SidebarNav />
+        {/*
+          Which property you are in decides every figure on every screen, so
+          it belongs at the top of the navigation rather than in a corner of
+          a top bar, where it read as a filter (DEV-270).
+        */}
+        <div className="px-gutter pb-4">
+          <PropertySwitcher
+            properties={properties}
+            activePropertyId={safeActivePropertyId}
+            isValid={hasValidUserCookie}
+          />
+        </div>
+
+        <SidebarNav counts={counts} />
 
         {/* User Info & Profile at bottom of sidebar */}
         <div className="px-gutter mt-auto flex items-center justify-between pt-4 border-t border-outline-variant/30">
@@ -91,16 +109,39 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <div className="flex items-center md:hidden">
             <AdminMenuButton />
           </div>
-          <div className="hidden md:flex items-center font-headline-sm text-headline-sm font-bold mr-4">
-            PropMate
+          {/* The brand was printed here AND in the sidebar, two inches
+              apart, and the property switcher was here instead of beside the
+              navigation it scopes. Both moved; what is left is the one thing
+              a top bar is for — what needs you (DEV-270). */}
+          {/*
+            The switcher lives in the sidebar on desktop — but the sidebar is
+            `hidden md:flex`, so on a phone that would have stranded it and an
+            admin could not change property at all. It stays in the top bar
+            below md, and only there.
+          */}
+          <div className="min-w-0 flex-1 max-w-[46vw] md:hidden">
+            <PropertySwitcher
+              properties={properties}
+              activePropertyId={safeActivePropertyId}
+              isValid={hasValidUserCookie}
+            />
           </div>
 
-          <div className="flex-1 flex items-center justify-start max-w-md">
-            <PropertySwitcher properties={properties} activePropertyId={safeActivePropertyId} isValid={hasValidUserCookie} />
+          <div className="hidden min-w-0 flex-1 items-center md:flex">
+            {counts.needsYou > 0 && (
+              <Link
+                href="/admin"
+                className="pressable inline-flex h-10 items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20"
+                title="Slips waiting, bookings to approve, and tickets nobody owns"
+              >
+                <span className="material-symbols-outlined text-[17px]">warning</span>
+                {counts.needsYou} need{counts.needsYou === 1 ? "s" : ""} you
+              </Link>
+            )}
           </div>
 
           {/* Top Header Actions: Notifications, Settings & Logout */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
             {/* Notification Center */}
             <NotificationCenter initialNotifications={notifications} />
 

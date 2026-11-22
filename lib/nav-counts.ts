@@ -1,0 +1,106 @@
+import "server-only";
+import prisma from "@/lib/prisma";
+import { OPEN_STATUSES } from "@/lib/ticket-states";
+
+/**
+ * Where the work is, for the sidebar (DEV-270).
+ *
+ * The point of a sidebar is to say where the work is **before** you click.
+ * PropMate's listed nine destinations and told you nothing about any of
+ * them, so finding the five overdue invoices meant opening Billing, then
+ * Invoices, then reading. These are the counts that would have made that
+ * trip unnecessary.
+ *
+ * **Only where there is work.** A badge reading 0 is noise, and nine zeroes
+ * is worse than none — every count below is dropped by the renderer when it
+ * is zero, so the sidebar stays quiet on a day when nothing needs doing.
+ *
+ * Scoped to the active property, because every figure on every screen is.
+ */
+export type NavCounts = {
+  vacantUnits: number;
+  leasesEnding: number;
+  overdueInvoices: number;
+  slipsWaiting: number;
+  facilitiesOverdue: number;
+  bookingsToApprove: number;
+  openTickets: number;
+  visitorsInside: number;
+  /** The three things on the top bar's "N need you". */
+  needsYou: number;
+};
+
+export async function getNavCounts(propertyId?: string | null): Promise<NavCounts> {
+  const inProperty = propertyId ? { property_id: propertyId } : {};
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const inThirtyDays = new Date(today.getTime() + 30 * 86_400_000);
+
+  const [
+    vacantUnits,
+    leasesEnding,
+    overdueInvoices,
+    slipsWaiting,
+    facilitiesOverdue,
+    bookingsToApprove,
+    openTickets,
+    visitorsInside,
+    unownedTickets,
+  ] = await Promise.all([
+    prisma.unit.count({ where: { ...inProperty, status: "Vacant" } }),
+    prisma.tenantLease.count({
+      where: {
+        status: "Active",
+        unit: inProperty,
+        move_out_date: { gte: today, lte: inThirtyDays },
+      },
+    }),
+    prisma.invoice.count({
+      where: {
+        status: { notIn: ["Paid", "Inactive"] },
+        due_date: { lt: today },
+        ...(propertyId ? { lease: { unit: { property_id: propertyId } } } : {}),
+      },
+    }),
+    prisma.paymentTransaction.count({
+      where: {
+        transaction_status: "Pending",
+        payment_method: "Bank transfer",
+        ...(propertyId ? { invoice: { lease: { unit: { property_id: propertyId } } } } : {}),
+      },
+    }),
+    prisma.facility.count({
+      where: { ...inProperty, next_maintenance_date: { lt: today } },
+    }),
+    prisma.booking.count({
+      where: {
+        booking_status: "Pending",
+        ...(propertyId ? { facility: { property_id: propertyId } } : {}),
+      },
+    }),
+    prisma.ticket.count({ where: { ...inProperty, status: { in: OPEN_STATUSES } } }),
+    prisma.visitor.count({ where: { ...inProperty, status: "Checked In" } }),
+    prisma.ticket.count({
+      where: { ...inProperty, status: { in: OPEN_STATUSES }, assigned_to: null },
+    }),
+  ]);
+
+  /*
+   * "N need you" is deliberately narrow: a slip somebody is waiting on, a
+   * booking somebody is waiting on, and a ticket nobody owns. Three things
+   * with a person at the other end. Overdue invoices are not in it — they
+   * are a standing condition, not an item in a queue, and folding them in
+   * would make the number permanently large and therefore ignorable.
+   */
+  return {
+    vacantUnits,
+    leasesEnding,
+    overdueInvoices,
+    slipsWaiting,
+    facilitiesOverdue,
+    bookingsToApprove,
+    openTickets,
+    visitorsInside,
+    needsYou: slipsWaiting + bookingsToApprove + unownedTickets,
+  };
+}

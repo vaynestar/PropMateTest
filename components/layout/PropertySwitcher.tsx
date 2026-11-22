@@ -28,12 +28,18 @@ export default function PropertySwitcher({
   if (properties.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-2">
+    /*
+      `min-w-0` on both the wrapper and the select is load-bearing (DEV-270).
+      A <select> sizes itself to its longest OPTION, not to its container, so
+      at 375px "Residensi Suasana Damai" pushed this wider than the top bar
+      and the notification bell and the gear ended up drawn on top of it.
+    */
+    <div className="flex min-w-0 items-center gap-2">
       <span className="material-symbols-outlined text-on-surface-variant text-[20px] hidden sm:block">
         domain
       </span>
       <select
-        className={`bg-surface-container-high text-on-surface border border-outline-variant rounded-lg px-3 py-1.5 text-sm font-medium outline-none focus:border-primary transition-all ${
+        className={`w-full min-w-0 truncate rounded-lg border border-outline-variant bg-surface-container-high px-3 py-1.5 text-sm font-medium text-on-surface outline-none transition-all focus:border-primary ${
           isPending ? "opacity-50 cursor-wait" : ""
         }`}
         value={activePropertyId}
