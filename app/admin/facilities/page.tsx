@@ -4,6 +4,8 @@ import { listProperties } from "@/lib/property-management";
 import AdminFacilitiesManager from "@/components/facilities/AdminFacilitiesManager";
 import { getActivePropertyId } from "@/lib/property-context.server";
 import { PageHeader } from "@/components/admin/ui";
+import { OPEN_STATUSES } from "@/lib/ticket-states";
+import prisma from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +30,31 @@ export default async function FacilitiesPage() {
     allProperties = props || [];
   } catch (err) {
     console.error("Error loading facilities data:", err);
+  }
+
+  /*
+   * Open tickets per facility (DEV-267). A ticket does not carry a
+   * facility_id — it carries a `location_detail`, which for a common-area
+   * fault is the facility's own name, because that is what the reporter
+   * picked. Matching on the name is what the data supports; it is exact,
+   * not fuzzy, so a renamed facility simply shows none rather than the
+   * wrong count.
+   */
+  const openByFacility: Record<string, number> = {};
+  if (facilities.length > 0) {
+    const names = facilities.map((f) => f.facility_name).filter(Boolean);
+    const rows = await prisma.ticket.groupBy({
+      by: ["location_detail"],
+      where: {
+        status: { in: OPEN_STATUSES },
+        location_detail: { in: names },
+        ...(propertyId ? { property_id: propertyId } : {}),
+      },
+      _count: { _all: true },
+    });
+    for (const r of rows) {
+      if (r.location_detail) openByFacility[r.location_detail] = r._count._all;
+    }
   }
 
   const activeProperty = propertyId 
@@ -65,6 +92,7 @@ export default async function FacilitiesPage() {
         allProperties={allProperties}
         activeProperty={activeProperty}
         existingTypes={existingTypes}
+        openByFacility={openByFacility}
       />
     </div>
   );

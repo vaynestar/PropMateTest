@@ -3,6 +3,7 @@
 import { useState, useMemo, useTransition, useRef, useEffect, useActionState } from "react";
 import FacilityPhotoField from "./FacilityPhotoField";
 import CoverThumb, { DEFAULT_FACILITY_COVER } from "@/components/ui/CoverThumb";
+import FacilityServiceTable, { serviceState, type ServiceRow } from "./FacilityServiceTable";
 import ExpandableForm from "@/components/layout/ExpandableForm";
 import FacilityTypeCombobox from "@/components/facilities/FacilityTypeCombobox";
 import {
@@ -69,6 +70,8 @@ interface AdminFacilitiesManagerProps {
   allProperties: any[];
   activeProperty?: any;
   existingTypes: string[];
+  /** Open tickets, keyed by facility name — see the note in the page. */
+  openByFacility?: Record<string, number>;
 }
 
 export default function AdminFacilitiesManager({
@@ -76,6 +79,7 @@ export default function AdminFacilitiesManager({
   allProperties,
   activeProperty,
   existingTypes,
+  openByFacility = {},
 }: AdminFacilitiesManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -99,6 +103,14 @@ export default function AdminFacilitiesManager({
     f.image_url && !brokenPhotos.has(f.image_url) ? f.image_url : DEFAULT_FACILITY_COVER;
 
   // Filter States
+  /*
+   * Two views of the same facilities (DEV-267). The schedule is the default,
+   * because the question this page is opened with is "what is overdue" and a
+   * card grid cannot be read down a column. The cards keep the photographs,
+   * so they stay.
+   */
+  const [view, setView] = useState<"schedule" | "cards">("schedule");
+  const [serviceChip, setServiceChip] = useState<"all" | "overdue" | "soon" | "never">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -342,8 +354,171 @@ export default function AdminFacilitiesManager({
     }
   };
 
+  /* The schedule's own rows, and the chip that narrows them. */
+  const toRow = (f: any): ServiceRow => {
+    const last = f.maintenance?.[0] ?? null;
+    return {
+      facility_id: f.facility_id,
+      facility_name: f.facility_name,
+      facility_type: f.facility_type ?? null,
+      facility_status: f.facility_status ?? null,
+      is_bookable: !!f.is_bookable,
+      image_url: f.image_url ?? null,
+      open_time: f.open_time ?? "-",
+      close_time: f.close_time ?? "-",
+      next_maintenance_date: f.next_maintenance_date ?? null,
+      lastServicedOn: last?.performed_on ?? null,
+      lastServicedBy: last?.performed_by ?? last?.creator?.user_name ?? null,
+      openTickets: openByFacility[f.facility_name] ?? 0,
+    };
+  };
+
+  const allRows: ServiceRow[] = facilities.map(toRow);
+
+  const serviceRows: ServiceRow[] = filteredFacilities
+    .map(toRow)
+    .filter((r) => {
+      if (serviceChip === "all") return true;
+      if (serviceChip === "never") return !r.lastServicedOn;
+      return serviceState(r) === (serviceChip === "overdue" ? "overdue" : "soon");
+    })
+    .sort((a, b) => {
+      // Overdue first, then soonest due. A facility with no date goes last:
+      // it is not late, it is simply unplanned.
+      const rank = (r: ServiceRow) =>
+        !r.next_maintenance_date ? 2 : serviceState(r) === "overdue" ? 0 : 1;
+      if (rank(a) !== rank(b)) return rank(a) - rank(b);
+      if (!a.next_maintenance_date) return 0;
+      if (!b.next_maintenance_date) return -1;
+      return +new Date(a.next_maintenance_date) - +new Date(b.next_maintenance_date);
+    });
+
+  const serviceChips = [
+    { key: "all" as const, label: "All", dot: "bg-slate-300", n: allRows.length },
+    {
+      key: "overdue" as const,
+      label: "Overdue for service",
+      dot: "bg-rose-400",
+      n: allRows.filter((r) => serviceState(r) === "overdue").length,
+    },
+    {
+      key: "soon" as const,
+      label: "Due within 30 days",
+      dot: "bg-amber-400",
+      n: allRows.filter((r) => serviceState(r) === "soon").length,
+    },
+    {
+      key: "never" as const,
+      label: "Never serviced",
+      dot: "bg-sky-400",
+      n: allRows.filter((r) => !r.lastServicedOn).length,
+    },
+  ];
+
+  const overdueRows = allRows
+    .filter((r) => serviceState(r) === "overdue")
+    .sort((a, b) => +new Date(a.next_maintenance_date!) - +new Date(b.next_maintenance_date!));
+  const worstOverdue = overdueRows[0];
+  const worstOverdueDays = worstOverdue
+    ? Math.abs(
+        Math.round(
+          (new Date(worstOverdue.next_maintenance_date!).setHours(0, 0, 0, 0) -
+            new Date().setHours(0, 0, 0, 0)) /
+            86_400_000
+        )
+      )
+    : 0;
+
   return (
     <div className="space-y-6">
+      {/* Overdue service is the thing this page exists to surface. */}
+      {worstOverdue && (
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-rose-500/40 bg-rose-500/[0.07] px-4 py-3">
+          <span className="material-symbols-outlined shrink-0 text-[20px] text-rose-300">error</span>
+          <p className="min-w-[320px] flex-[999_1_320px] text-sm leading-relaxed">
+            <span className="font-bold text-rose-200">
+              {worstOverdue.facility_name} is {worstOverdueDays} days overdue for service
+            </span>
+            <span className="text-on-surface-variant">
+              {worstOverdue.openTickets > 0
+                ? ` and carries ${worstOverdue.openTickets} open ticket${
+                    worstOverdue.openTickets === 1 ? "" : "s"
+                  }.`
+                : "."}
+              {overdueRows.length > 1
+                ? ` ${overdueRows.length - 1} other ${
+                    overdueRows.length - 1 === 1 ? "facility is" : "facilities are"
+                  } overdue.`
+                : ""}
+            </span>
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setView("schedule");
+              setServiceChip("overdue");
+            }}
+            className="pressable inline-flex h-10 items-center rounded-xl bg-rose-400 px-4 text-sm font-bold text-[#2a0710] transition-colors hover:bg-rose-300"
+          >
+            Show the overdue
+          </button>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <nav aria-label="Filter by service state" className="flex flex-wrap gap-2">
+          {serviceChips.map((c) => {
+            const on = serviceChip === c.key;
+            return (
+              <button
+                key={c.key}
+                type="button"
+                aria-pressed={on}
+                onClick={() => setServiceChip(c.key)}
+                className={`pressable inline-flex h-10 items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${
+                  on
+                    ? "border-primary bg-primary/15 text-primary"
+                    : "border-outline-variant/60 bg-surface-container text-on-surface-variant hover:text-on-surface"
+                }`}
+              >
+                <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${c.dot}`} />
+                {c.label}
+                <span
+                  className={`rounded-full px-2 py-px text-[11px] font-bold tabular-nums ${
+                    on ? "bg-primary/25 text-primary" : "bg-surface-container-high text-on-surface-variant"
+                  }`}
+                >
+                  {c.n}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div
+          role="group"
+          aria-label="How to show the facilities"
+          className="ml-auto flex items-center gap-1 rounded-xl border border-outline-variant/60 bg-surface-container p-1"
+        >
+          {([
+            { key: "schedule" as const, label: "Schedule", icon: "format_list_bulleted" },
+            { key: "cards" as const, label: "Cards", icon: "grid_view" },
+          ]).map((v) => (
+            <button
+              key={v.key}
+              type="button"
+              aria-pressed={view === v.key}
+              onClick={() => setView(v.key)}
+              className={`pressable inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-semibold transition-colors ${
+                view === v.key ? "bg-primary/15 text-primary" : "text-on-surface-variant hover:text-white"
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">{v.icon}</span>
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </div>
       {/* Toast Notification Banner */}
       {toast && (
         <div
@@ -754,8 +929,27 @@ export default function AdminFacilitiesManager({
         </div>
       </div>
 
+      {/* Service and bookings in one table — see FacilityServiceTable. */}
+      {view === "schedule" && (
+        <FacilityServiceTable
+          rows={serviceRows}
+          onEdit={(id) => {
+            const f = facilities.find((x: any) => x.facility_id === id);
+            if (f) setEditingFacility(f);
+          }}
+          onLogService={(id) => {
+            const f = facilities.find((x: any) => x.facility_id === id);
+            if (f) setLoggingFacility(f);
+          }}
+        />
+      )}
+
       {/* Facilities Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-gutter">
+      <div
+        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-gutter ${
+          view === "schedule" ? "hidden" : ""
+        }`}
+      >
         {filteredFacilities.length === 0 && (
           <div className="col-span-full p-8 text-center text-on-surface-variant glass-card rounded-2xl border border-dashed border-outline-variant/40 space-y-2">
             <span className="material-symbols-outlined text-[36px] opacity-40">filter_alt_off</span>
