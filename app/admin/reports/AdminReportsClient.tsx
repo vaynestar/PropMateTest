@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import ScrollHint from "@/components/ui/ScrollHint";
 import ReportLibrary from "@/components/reports/ReportLibrary";
+import ReportShelf from "@/components/reports/ReportShelf";
 import { RANGE_LABEL } from "@/lib/reports/catalog";
 import { useRouter, useSearchParams } from "next/navigation";
 import OverviewReportView from "@/components/reports/OverviewReportView";
@@ -214,6 +215,18 @@ export default function AdminReportsClient({
           <span>Aggregating analytics records from database...</span>
         </div>
       )}
+
+      {/*
+        The nine printable reports, on the page (DEV-273). They were behind a
+        button and a modal — one click and one dismissal away from the thing
+        the screen is named after. The analysis below is still the analysis;
+        this is the shelf you came for.
+      */}
+      <ReportShelf
+        propertyId={currentPropertyId}
+        dateRange={currentDateRange}
+        rangeLabel={RANGE_LABEL[currentDateRange] ?? currentDateRange}
+      />
 
       {/* Tab Navigation */}
       <ScrollHint className="border-b border-outline-variant/30 pb-1">
