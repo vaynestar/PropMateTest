@@ -16,6 +16,8 @@ export type ThreadMessage = {
   author: string;
   fromOffice: boolean;
   mine: boolean;
+  /** Office-only (DEV-266). Never present in a resident's copy of a thread. */
+  internal: boolean;
   text: string;
   at: string; // "18 Sep 2026, 10:42 pm"
   photos: ThreadPhoto[];
@@ -91,6 +93,7 @@ export async function getTicketThread(
           message_text: true,
           created_at: true,
           user_id: true,
+          is_internal: true,
           author: { select: { user_name: true, role: true } },
           attachments: { select: { attachment_id: true, file_name: true }, orderBy: { created_at: "asc" } },
         },
@@ -118,15 +121,24 @@ export async function getTicketThread(
     reporter: t.reporter?.user_name ?? null,
     photos: t.attachments.map((a) => ({ id: a.attachment_id, name: a.file_name })),
     closed: CLOSED.has(t.status),
-    messages: t.comments.map((c) => ({
-      id: c.comment_id,
-      author: c.author.role === "Admin" ? "Management office" : c.author.user_name,
-      fromOffice: c.author.role === "Admin",
-      mine: c.user_id === viewer.userId,
-      text: c.message_text,
-      at: myStamp(c.created_at),
-      photos: c.attachments.map((a) => ({ id: a.attachment_id, name: a.file_name })),
-    })),
+    /*
+     * Internal notes are filtered out of a non-admin's thread HERE, in the
+     * query result, not in the component (DEV-266). A resident's copy of the
+     * thread must never contain the text at all — a hidden <div> is not
+     * privacy, and this object is serialised to their browser.
+     */
+    messages: t.comments
+      .filter((c) => viewer.role === "Admin" || !c.is_internal)
+      .map((c) => ({
+        id: c.comment_id,
+        author: c.author.role === "Admin" ? "Management office" : c.author.user_name,
+        fromOffice: c.author.role === "Admin",
+        mine: c.user_id === viewer.userId,
+        internal: c.is_internal,
+        text: c.message_text,
+        at: myStamp(c.created_at),
+        photos: c.attachments.map((a) => ({ id: a.attachment_id, name: a.file_name })),
+      })),
   };
 }
 
@@ -136,6 +148,8 @@ export async function addTicketMessage(input: {
   viewer: { userId: string; role: string };
   text: string;
   attachments: FormDataEntryValue[];
+  /** Office-only. Ignored for anybody who is not an admin. */
+  internal?: boolean;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const thread = await getTicketThread(input.ticketId, input.viewer);
   if (!thread) return { ok: false, error: "That request no longer exists." };
@@ -155,6 +169,9 @@ export async function addTicketMessage(input: {
         ticket_id: input.ticketId,
         user_id: input.viewer.userId,
         message_text: text || "(photo)",
+        // Only an admin can write one; a resident asking for it is ignored
+        // rather than trusted.
+        is_internal: input.viewer.role === "Admin" && !!input.internal,
         created_by: input.viewer.userId,
       },
     });

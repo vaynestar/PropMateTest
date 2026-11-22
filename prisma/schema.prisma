@@ -405,6 +405,9 @@ model TicketComment {
   ticket_id    String   @db.Uuid
   user_id      String   @db.Uuid
   message_text String   @db.Text
+  /// An office-only note (DEV-266). The resident's thread filters these out;
+  /// the admin thread shows them, dashed and labelled. Added by raw DDL.
+  is_internal  Boolean  @default(false)
 
   // Audit Trail
   created_at   DateTime @default(now())

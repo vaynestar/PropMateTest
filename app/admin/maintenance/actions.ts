@@ -185,9 +185,13 @@ export async function adminTicketReply(formData: FormData): Promise<{ ok?: boole
     viewer: user,
     text: String(formData.get("message") || ""),
     attachments: formData.getAll("attachment"),
+    // The office chooses before it types (DEV-266): there is no way back
+    // from telling a resident what you meant to write to a colleague.
+    internal: String(formData.get("internal") || "") === "true",
   });
   if (!res.ok) return { error: res.error };
   revalidatePath("/admin/maintenance");
+  revalidatePath(`/admin/maintenance/${String(formData.get("ticket_id") || "")}`);
   revalidatePath("/resident/maintenance");
   return { ok: true };
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import TicketDetailModal from "@/components/maintenance/TicketDetailModal";
 import RowMenu, { type RowMenuItem } from "@/components/admin/RowMenu";
 import { Toast, type ToastState } from "@/components/admin/Toast";
@@ -20,6 +21,7 @@ import {
   updateTicketAction,
 } from "@/app/admin/maintenance/actions";
 import { dayMonth } from "@/lib/short-date";
+import Link from "next/link";
 
 /**
  * The helpdesk queue (rebuilt DEV-256).
@@ -80,6 +82,7 @@ type AdminTicketTableProps = {
 };
 
 export default function AdminTicketTable({ tickets, admins }: AdminTicketTableProps) {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [chip, setChip] = useState<ChipKey>("open");
   const [owner, setOwner] = useState("ANY");
@@ -204,7 +207,7 @@ export default function AdminTicketTable({ tickets, admins }: AdminTicketTablePr
   };
 
   const menuFor = (t: any): RowMenuItem[] => [
-    { label: "Read the whole ticket", onSelect: () => setDetailTicketId(t.ticket_id) },
+    { label: "Open the ticket", onSelect: () => router.push(`/admin/maintenance/${t.ticket_id}`) },
     { label: "Record cost and what was done", onSelect: () => setEditingTicket(t) },
     ...(t.assigned_to
       ? [
@@ -404,12 +407,12 @@ export default function AdminTicketTable({ tickets, admins }: AdminTicketTablePr
                     }`}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <button type="button" onClick={() => setDetailTicketId(t.ticket_id)} className="min-w-0 text-left">
+                      <Link href={`/admin/maintenance/${t.ticket_id}`} className="min-w-0 text-left">
                         <span className="font-mono text-[11px] font-bold tracking-wide text-on-surface-variant">
                           {ticketRef(t)}
                         </span>
                         <span className="mt-0.5 block text-sm font-semibold leading-snug text-white">{t.title}</span>
-                      </button>
+                      </Link>
                       <span
                         className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${
                           PRIORITY_PILL[t.priority] ?? PRIORITY_PILL.Low
@@ -562,13 +565,13 @@ export default function AdminTicketTable({ tickets, admins }: AdminTicketTablePr
                                   timer_off
                                 </span>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => setDetailTicketId(t.ticket_id)}
+                              {/* The ticket has a page now (DEV-266). */}
+                              <Link
+                                href={`/admin/maintenance/${t.ticket_id}`}
                                 className="whitespace-nowrap border-b border-primary/35 pb-px font-mono text-xs font-bold text-on-surface hover:text-primary"
                               >
                                 {ticketRef(t)}
-                              </button>
+                              </Link>
                             </span>
                             <span
                               className={`mt-1.5 inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold ${
