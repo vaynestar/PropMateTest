@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { OPEN_STATUSES } from "@/lib/ticket-states";
 
 export type DashboardStats = {
   totalProperties: number;
@@ -50,6 +51,7 @@ export type DashboardStats = {
   }[];
   openTicketsList: {
     ticket_id: string;
+    ticket_no: string | null;
     title: string;
     status: string;
     priority: string;
@@ -264,11 +266,15 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
       take: 4,
     }),
     prisma.ticket.findMany({
-      where: { ...ticketWhere, status: { in: ["Open", "In Progress"] } },
+      where: { ...ticketWhere, status: { in: OPEN_STATUSES } },
       orderBy: { created_at: "desc" },
       take: 10,
       select: {
         ticket_id: true,
+        // Without this the dashboard queue falls back to the UUID slice and
+        // prints "#D5AC2CF4" next to a list that says PM-0013 everywhere
+        // else (DEV-271).
+        ticket_no: true,
         title: true,
         status: true,
         priority: true,
@@ -424,7 +430,6 @@ export async function getDashboardStats(propertyId?: string): Promise<DashboardS
   activityFeed.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
   // ── Infographic series (DEV-194) ────────────────────────────────────────
-  const OPEN_STATUSES = ["Open", "In Progress", "KIV", "Pending Parts"];
   const sevenDaysAgo = new Date(startOfToday);
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
 

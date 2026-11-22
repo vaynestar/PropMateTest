@@ -26,6 +26,8 @@ export type NavCounts = {
   bookingsToApprove: number;
   openTickets: number;
   visitorsInside: number;
+  /** Open tickets nobody owns — the dashboard says so under the queue. */
+  unownedTickets: number;
   /** The three things on the top bar's "N need you". */
   needsYou: number;
 };
@@ -101,6 +103,7 @@ export async function getNavCounts(propertyId?: string | null): Promise<NavCount
     bookingsToApprove,
     openTickets,
     visitorsInside,
+    unownedTickets,
     needsYou: slipsWaiting + bookingsToApprove + unownedTickets,
   };
 }
