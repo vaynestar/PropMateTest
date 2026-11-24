@@ -27,7 +27,24 @@ export type WeekBooking = {
     unit?: { unit_number?: string } | null;
     tenant?: { user_name?: string } | null;
   } | null;
+  /** Who holds it — the only way to tell an office booking from a stray one. */
+  heldBy?: { user_name?: string | null; role?: string | null } | null;
 };
+
+/**
+ * What to show where a unit number would go (DEV-284).
+ *
+ * A booking with no tenancy is either the office holding the slot on purpose —
+ * an AGM, a contractor, a deep clean — or an older resident row whose lease
+ * link was never set. Calling the second "The office" would be wrong, so the
+ * holder's role decides.
+ */
+function whoFor(b: WeekBooking, short = false): string {
+  const unit = b.lease?.unit?.unit_number;
+  if (unit) return unit;
+  if (b.heldBy?.role === "Admin") return short ? "Office" : "The office";
+  return b.heldBy?.user_name ?? (short ? "—" : "No unit");
+}
 
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -264,7 +281,7 @@ export default function BookingWeek({
                           ? "double-booked"
                           : here.length > 1
                           ? `+${here.length - 1} more`
-                          : here[0].lease?.unit?.unit_number ?? "no unit"}
+                          : whoFor(here[0], true)}
                       </span>
                     </button>
                   );
@@ -323,9 +340,9 @@ export default function BookingWeek({
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-on-surface-variant">
-                    {b.lease?.unit?.unit_number ?? "No unit"}
+                    {whoFor(b)}
                     {b.lease?.tenant?.user_name ? ` · ${b.lease.tenant.user_name}` : ""}
-                    {b.pax_count ? ` · ${b.pax_count} people` : ""}
+                    {b.pax_count ? ` · ${b.pax_count} ${b.pax_count === 1 ? "person" : "people"}` : ""}
                   </p>
                   {b.purpose && (
                     <p className="mt-1 text-xs leading-relaxed text-on-surface-variant/80">

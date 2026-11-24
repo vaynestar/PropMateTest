@@ -21,17 +21,43 @@ export async function adminBookFacility(formData: FormData) {
     const purpose = String(formData.get("purpose") || "").trim();
     const pax_count = Number(formData.get("pax_count") || 1);
 
-    if (!facility_id || !lease_id || !booking_date_str || !start_time_str || !end_time_str) {
+    /*
+     * The office can hold a facility for itself (user, 2026-11-25):
+     * "facilities booking should allowed for admin to book without binding to
+     *  resident ... maybe make an option to choose booking for resident or admin".
+     *
+     * Every booking had to name a tenancy, so an AGM, a contractor's access, a
+     * deep clean or a fire drill could only be recorded by borrowing some
+     * resident's name — which puts a booking on their record that they never
+     * made. `Booking.lease_id` has always been nullable; nothing but this form
+     * required it.
+     *
+     * An office booking is owned by the admin who made it and carries no
+     * lease. Everything else — opening hours, the service date, the overlap
+     * lock, capacity — is unchanged, because it all hangs off the facility.
+     */
+    const bookedFor = formData.get("booked_for") === "office" ? "office" : "resident";
+
+    if (!facility_id || !booking_date_str || !start_time_str || !end_time_str) {
       throw new Error("Missing required fields");
     }
 
-    const lease = await prisma.tenantLease.findUnique({
-      where: { lease_id },
-      select: { user_id: true },
-    });
+    let bookingUserId = user.userId;
+    let bookingLeaseId: string | undefined;
 
-    if (!lease) {
-      throw new Error("Invalid lease selected");
+    if (bookedFor === "resident") {
+      if (!lease_id) {
+        throw new Error("Choose the resident this booking is for.");
+      }
+      const lease = await prisma.tenantLease.findUnique({
+        where: { lease_id },
+        select: { user_id: true },
+      });
+      if (!lease) {
+        throw new Error("Invalid lease selected");
+      }
+      bookingUserId = lease.user_id;
+      bookingLeaseId = lease_id;
     }
 
     /*
@@ -48,8 +74,8 @@ export async function adminBookFacility(formData: FormData) {
     await createBooking(
       {
         facility_id,
-        user_id: lease.user_id,
-        lease_id,
+        user_id: bookingUserId,
+        lease_id: bookingLeaseId,
         booking_date: booking_date_str,
         start_time: start_time_str,
         end_time: end_time_str,

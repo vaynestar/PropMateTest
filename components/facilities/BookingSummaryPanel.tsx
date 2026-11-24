@@ -12,6 +12,25 @@ function clock12(min: number): string {
 }
 
 /**
+ * "1 h 25 min", not "1.4166666666666667 h" (DEV-284).
+ *
+ * The duration was printed as a raw division, so any slot that was not a whole
+ * number of hours showed its floating-point remainder to the resident — a
+ * 12:00–1:25 booking read "(1.4166666666666667 h)". Reported from the admin
+ * booking form on a phone.
+ *
+ * Under an hour reads as minutes alone, because "0 h 45 min" is a worse way to
+ * say "45 min".
+ */
+function humanDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} h`;
+  return `${h} h ${m} min`;
+}
+
+/**
  * The chosen slot, and whether it can be had (DEV-251).
  *
  * Shared by the resident booking sheet and the admin booking form so a clash
@@ -125,7 +144,7 @@ export default function BookingSummaryPanel({
             {shortDate(date)}
             {" · "}
             {clock12(start)} – {clock12(end)}
-            {end > start ? ` (${(end - start) / 60} h)` : ""}
+            {end > start ? ` (${humanDuration(end - start)})` : ""}
           </p>
           {message && (
             <p className="mt-1.5 text-[13px] font-medium leading-snug text-rose-200">{message}</p>

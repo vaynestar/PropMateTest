@@ -82,11 +82,14 @@ export default function AdminFacilityBooking({
   facilities,
   bookings,
   leases,
+  adminName,
   onBooked,
 }: {
   facilities: Facility[];
   bookings: Booking[];
   leases: any[];
+  /** Whose name an office booking is held in. */
+  adminName?: string;
   /** Called once a booking is made and the admin dismisses the receipt. */
   onBooked?: () => void;
 }) {
@@ -150,6 +153,7 @@ export default function AdminFacilityBooking({
             facility={facility}
             bookings={bookings}
             leases={leases}
+            adminName={adminName}
             onBooked={onBooked}
           />
       )}
@@ -161,17 +165,31 @@ function BookingCard({
   facility,
   bookings,
   leases,
+  adminName,
   onBooked,
 }: {
   facility: Facility;
   bookings: Booking[];
   leases: any[];
+  adminName?: string;
   onBooked?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [leaseId, setLeaseId] = useState("");
+
+  /*
+   * Who the booking belongs to (DEV-284; user, 2026-11-25: "facilities booking
+   * should allowed for admin to book without binding to resident").
+   *
+   * Every booking had to name a tenancy, so an AGM, a contractor's visit, a
+   * deep clean or a fire drill could only be recorded by borrowing a
+   * resident's name — putting a booking on their record they never made.
+   * `Booking.lease_id` has always been nullable; only this form insisted.
+   */
+  const [bookedFor, setBookedFor] = useState<"resident" | "office">("resident");
+  const forOffice = bookedFor === "office";
   // The list and table both render purpose and pax, but neither was ever
   // collected: every admin booking was written with pax_count 1 and no purpose.
   const [purpose, setPurpose] = useState("");
@@ -297,12 +315,13 @@ function BookingCard({
     setError(null);
     setSuccess(false);
 
-    if (!leaseId) {
+    if (!forOffice && !leaseId) {
       setModalConfig({
         isOpen: true,
         type: "error",
-        title: "Pick a tenant first",
-        message: "A booking has to be attached to a resident's lease. Choose one under Tenant / Unit.",
+        title: "Pick a resident first",
+        message:
+          "This booking is marked as being for a resident, so it needs a name. Choose one, or switch it to The office.",
         facilityName: facility.facility_name,
       });
       return;
@@ -376,7 +395,8 @@ function BookingCard({
 
     const formData = new FormData();
     formData.append("facility_id", facility.facility_id);
-    formData.append("lease_id", leaseId);
+    formData.append("booked_for", bookedFor);
+    formData.append("lease_id", forOffice ? "" : leaseId);
     formData.append("booking_date", date);
     formData.append("start_time", fmt(start));
     formData.append("end_time", fmt(end));
@@ -442,22 +462,80 @@ function BookingCard({
 
       <form onSubmit={handleSubmit} className="space-y-4 pt-2">
         
-        <label className="flex flex-col gap-1">
+        <div className="flex flex-col gap-2">
           <span className="text-xs font-semibold text-on-surface-variant">
             Step 2 &mdash; who is it for
           </span>
-          {leases.length === 0 ? (
+
+          {/* A resident's booking goes on their record; the office's does not. */}
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                {
+                  key: "resident" as const,
+                  icon: "person",
+                  label: "A resident",
+                  hint: "Goes on their record",
+                },
+                {
+                  key: "office" as const,
+                  icon: "corporate_fare",
+                  label: "The office",
+                  hint: "An AGM, a contractor, a clean",
+                },
+              ]
+            ).map((opt) => {
+              const on = bookedFor === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => setBookedFor(opt.key)}
+                  className={`pressable flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                    on
+                      ? "border-primary bg-primary/10"
+                      : "border-outline-variant/60 bg-surface-container-high hover:border-primary/40"
+                  }`}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={`material-symbols-outlined shrink-0 text-[19px] ${
+                      on ? "text-primary" : "text-on-surface-variant"
+                    }`}
+                  >
+                    {opt.icon}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[13px] font-bold text-on-surface">{opt.label}</span>
+                    <span className="mt-px block text-[11px] leading-snug text-on-surface-variant">
+                      {opt.hint}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {forOffice ? (
+            <p className="rounded-lg border border-outline-variant/60 bg-surface-container px-3 py-2.5 text-[11.5px] leading-relaxed text-on-surface-variant">
+              Held in the building&apos;s name, under <strong className="text-on-surface">{adminName || "the management office"}</strong>.
+              It blocks the slot for everyone and appears in the week grid like any other
+              booking, but it is not charged or tied to a unit.
+            </p>
+          ) : leases.length === 0 ? (
             <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
-              No active leases in this property, so there is nobody to book for. Create a
-              lease first.
+              No active tenancies in this property, so there is nobody to book for. Start a
+              tenancy first &mdash; or hold the slot for <strong>The office</strong>.
             </p>
           ) : (
             <select
+              aria-label="The resident this booking is for"
               value={leaseId}
               onChange={(e) => setLeaseId(e.target.value)}
               className="rounded-lg border border-[#4a4455] bg-[#0c1324] px-3 py-2.5 text-white outline-none focus:border-primary"
             >
-              <option value="">Choose a tenant…</option>
+              <option value="">Choose a resident…</option>
               {leases.map((l) => (
                 <option key={l.lease_id} value={l.lease_id}>
                   Unit {l.unit?.unit_number ?? "—"} — {l.tenant?.user_name ?? "Unnamed"}
@@ -465,7 +543,7 @@ function BookingCard({
               ))}
             </select>
           )}
-        </label>
+        </div>
 
         <BookingCalendarDatePicker
           selectedDate={date}
@@ -642,7 +720,7 @@ function BookingCard({
         <div className="pt-4 flex justify-end">
           <button
             type="submit"
-            disabled={isPending || !!clash || !leaseId}
+            disabled={isPending || !!clash || (!forOffice && !leaseId)}
             className="btn-primary px-6 py-3 rounded-xl font-bold text-white shadow-lg shadow-primary/20 hover:brightness-110 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all pressable w-full sm:w-auto"
           >
             {isPending ? (

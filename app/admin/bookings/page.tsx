@@ -9,7 +9,7 @@ import { PageHeader } from "@/components/admin/ui";
 export const dynamic = "force-dynamic";
 
 export default async function AdminBookingsPage() {
-  await requireUser(["Admin"]);
+  const admin = await requireUser(["Admin"]);
   const propertyId = await getActivePropertyId();
 
   // 2. Fetch all bookable facilities with property relation
@@ -54,6 +54,13 @@ export default async function AdminBookingsPage() {
           tenant: { select: { user_name: true } },
         },
       },
+      /*
+       * Who holds the booking, for the rows that carry no tenancy (DEV-284).
+       * An office booking is deliberately lease-less, but so is one old
+       * resident row from July whose link was never set — "The office" would
+       * be a lie on that one. The role decides which it is.
+       */
+      user: { select: { user_name: true, role: true } },
     },
     orderBy: { start_time: "desc" },
   });
@@ -85,6 +92,7 @@ export default async function AdminBookingsPage() {
     booking_date: b.booking_date.toISOString(),
     start_time: b.start_time.toISOString(),
     end_time: b.end_time.toISOString(),
+    heldBy: b.user ? { user_name: b.user.user_name, role: b.user.role } : null,
     facility: b.facility
       ? {
           facility_id: b.facility.facility_id,
@@ -162,12 +170,13 @@ export default async function AdminBookingsPage() {
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
         title="Bookings"
-        subtitle="What is free, what is taken, and anything that collides. You can also book for a resident who calls or walks in."
+        subtitle="What is free, what is taken, and anything that collides. You can book for a resident who calls or walks in, or hold a slot for the office."
         actions={
           <BookForResidentButton
             facilities={serializedActiveFacilities as any}
             bookings={serializedBookings as any}
             leases={serializedLeases as any}
+            adminName={admin.user_name}
           />
         }
       />

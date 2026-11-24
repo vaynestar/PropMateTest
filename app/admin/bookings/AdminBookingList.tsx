@@ -582,9 +582,23 @@ export default function AdminBookingList({
                         )}
                       </>
                     ) : (
+                      /* No tenancy. Either the office holds it on purpose
+                         (DEV-284) — an AGM, a contractor, a deep clean — or
+                         it is an older resident row whose lease link was
+                         never set, and calling that "The office" would be a
+                         lie. Whose booking it is decides. */
                       <div className="flex items-center gap-1.5 text-on-surface-variant">
-                        <span className="material-symbols-outlined text-[16px]">person_off</span>
-                        <span>Not linked to a lease</span>
+                        <span className="material-symbols-outlined text-[16px]">
+                          {b.heldBy?.role === "Admin" ? "corporate_fare" : "person_off"}
+                        </span>
+                        {b.heldBy?.role === "Admin" ? (
+                          <>
+                            <span className="font-semibold text-on-surface">The office</span>
+                            <span>· no unit billed</span>
+                          </>
+                        ) : (
+                          <span>{b.heldBy?.user_name ?? "No resident on record"} · no unit</span>
+                        )}
                       </div>
                     )}
                   </div>
@@ -707,7 +721,16 @@ export default function AdminBookingList({
                             )}
                           </>
                         ) : (
-                          <span className="text-on-surface-variant">Not linked to a lease</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[15px] text-on-surface-variant">
+                              {b.heldBy?.role === "Admin" ? "corporate_fare" : "person_off"}
+                            </span>
+                            <span className="font-medium text-on-surface">
+                              {b.heldBy?.role === "Admin"
+                                ? "The office"
+                                : b.heldBy?.user_name ?? "No resident on record"}
+                            </span>
+                          </div>
                         )}
                       </td>
                       <td className={TABLE.td}>
