@@ -88,13 +88,29 @@ export function PageHeader({
   children?: ReactNode;
 }) {
   return (
-    <header className="flex flex-col gap-3 border-b border-outline-variant/40 pb-4 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
+    /*
+     * The actions used to be `sm:shrink-0`, so from 640px up they kept their
+     * full width whatever that was and the title block absorbed the whole
+     * shortfall. On the dashboard, whose actions are five quick-action
+     * buttons, that left about 40px for the word "Dashboard" at tablet width:
+     * the heading rendered one letter per line underneath the buttons, which
+     * overlapped it. Fine at 1440, fine on a phone where the header stacks,
+     * broken across the middle (DEV-283).
+     *
+     * Now the title claims the remaining space, the actions wrap rather than
+     * push, and the two only sit side by side from `lg` — below that the
+     * header stacks, which is what it already did on a phone and reads
+     * perfectly well. Side by side from 640px was the optimistic assumption.
+     */
+    <header className="flex flex-col gap-3 border-b border-outline-variant/40 pb-4 lg:flex-row lg:items-start lg:justify-between">
+      <div className="min-w-0 flex-1">
         <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">{title}</h1>
         {subtitle && <p className="mt-1 max-w-2xl text-sm text-on-surface-variant">{subtitle}</p>}
         {children}
       </div>
-      {actions && <div className="flex flex-wrap items-center gap-2 sm:shrink-0">{actions}</div>}
+      {actions && (
+        <div className="flex min-w-0 flex-wrap items-center gap-2 lg:justify-end">{actions}</div>
+      )}
     </header>
   );
 }
