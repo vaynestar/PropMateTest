@@ -55,7 +55,7 @@ function badgeFor(href: string, c?: NavCounts): { text: string; tone: "warn" | "
     case "/admin/facilities":
       return at(c.facilitiesOverdue, `${c.facilitiesOverdue} overdue`, "bad");
     case "/admin/bookings":
-      return at(c.bookingsToApprove, `${c.bookingsToApprove} to approve`);
+      return at(c.bookingsToday, `${c.bookingsToday} today`, "good");
     case "/admin/maintenance":
       return at(c.openTickets, String(c.openTickets));
     case "/admin/visitors":

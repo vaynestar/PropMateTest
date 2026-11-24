@@ -4,6 +4,7 @@ import AdminFacilityBooking from "./AdminFacilityBooking";
 import AdminBookingList from "./AdminBookingList";
 import { getActivePropertyId } from "@/lib/property-context.server";
 import BookForResidentButton from "@/components/bookings/BookForResidentButton";
+import BookingWeek from "@/components/bookings/BookingWeek";
 import { PageHeader } from "@/components/admin/ui";
 
 export const dynamic = "force-dynamic";
@@ -159,7 +160,7 @@ export default async function AdminBookingsPage() {
     <div className="mx-auto max-w-[1400px] space-y-5">
       <PageHeader
         title="Bookings"
-        subtitle="This week's bookings. You can also book for a resident who calls or walks in."
+        subtitle="What is free, what is taken, and anything that collides. You can also book for a resident who calls or walks in."
         actions={
           <BookForResidentButton
             facilities={serializedActiveFacilities as any}
@@ -168,6 +169,15 @@ export default async function AdminBookingsPage() {
           />
         }
       />
+
+      {/*
+        The week, before the list (DEV-268). A booking screen exists so
+        somebody can answer "is the hall free on Saturday" — a question a
+        list sorted by date answers only by being read in full, and one it
+        cannot answer at all for a clash. Both read `serializedBookings`,
+        so the grid costs no extra query and the two cannot disagree.
+      */}
+      <BookingWeek facilities={serializedFacilities} bookings={serializedBookings} />
 
       <AdminBookingList
         bookings={serializedBookings as any}

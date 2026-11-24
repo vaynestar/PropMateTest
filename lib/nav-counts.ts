@@ -23,12 +23,21 @@ export type NavCounts = {
   overdueInvoices: number;
   slipsWaiting: number;
   facilitiesOverdue: number;
-  bookingsToApprove: number;
+  /**
+   * Bookings on today, not bookings awaiting approval (corrected DEV-268).
+   *
+   * DEV-270 counted `booking_status: "Pending"` and badged it "N to approve".
+   * There is no approval step — it was tried and removed by user decision on
+   * 2026-09-06, `createBooking` writes Confirmed, and the census found zero
+   * Pending rows in 54 bookings. So the badge could never appear and the
+   * term it contributed to "N need you" was permanently zero.
+   */
+  bookingsToday: number;
   openTickets: number;
   visitorsInside: number;
   /** Open tickets nobody owns — the dashboard says so under the queue. */
   unownedTickets: number;
-  /** The three things on the top bar's "N need you". */
+  /** The two things on the top bar's "N need you". */
   needsYou: number;
 };
 
@@ -44,7 +53,7 @@ export async function getNavCounts(propertyId?: string | null): Promise<NavCount
     overdueInvoices,
     slipsWaiting,
     facilitiesOverdue,
-    bookingsToApprove,
+    bookingsToday,
     openTickets,
     visitorsInside,
     unownedTickets,
@@ -76,7 +85,8 @@ export async function getNavCounts(propertyId?: string | null): Promise<NavCount
     }),
     prisma.booking.count({
       where: {
-        booking_status: "Pending",
+        booking_status: { not: "Cancelled" },
+        booking_date: { gte: today, lt: new Date(today.getTime() + 86_400_000) },
         ...(propertyId ? { facility: { property_id: propertyId } } : {}),
       },
     }),
@@ -88,11 +98,15 @@ export async function getNavCounts(propertyId?: string | null): Promise<NavCount
   ]);
 
   /*
-   * "N need you" is deliberately narrow: a slip somebody is waiting on, a
-   * booking somebody is waiting on, and a ticket nobody owns. Three things
-   * with a person at the other end. Overdue invoices are not in it — they
-   * are a standing condition, not an item in a queue, and folding them in
-   * would make the number permanently large and therefore ignorable.
+   * "N need you" is deliberately narrow: a slip somebody is waiting on and
+   * a ticket nobody owns. Two things with a person at the other end, each
+   * stuck until an admin acts. Overdue invoices are not in it — they are a
+   * standing condition, not an item in a queue, and folding them in would
+   * make the number permanently large and therefore ignorable.
+   *
+   * Bookings are not in it either (DEV-268). Nothing waits on the office to
+   * approve a booking, so a booking count here would only ever have been
+   * decoration; `bookingsToday` is reported for the sidebar, not for this.
    */
   return {
     vacantUnits,
@@ -100,10 +114,10 @@ export async function getNavCounts(propertyId?: string | null): Promise<NavCount
     overdueInvoices,
     slipsWaiting,
     facilitiesOverdue,
-    bookingsToApprove,
+    bookingsToday,
     openTickets,
     visitorsInside,
     unownedTickets,
-    needsYou: slipsWaiting + bookingsToApprove + unownedTickets,
+    needsYou: slipsWaiting + unownedTickets,
   };
 }
