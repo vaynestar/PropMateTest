@@ -36,6 +36,32 @@ export default async function AdminDashboardPage() {
   ]);
 
   /*
+   * Facilities due a service (user, 2026-11-24): "Dashboard need add for
+   * facilities next maintenance date reminder too".
+   *
+   * The sidebar already badges the overdue count, but a badge says a number
+   * and not which pump, which lift, or by how long. A service that slips is
+   * how a lift becomes an incident, so the dashboard names them.
+   *
+   * Overdue first, then the next fortnight. Anything further out is a diary
+   * entry, not a reminder.
+   */
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const inFourteenDays = new Date(startOfToday.getTime() + 14 * 86_400_000);
+  const facilitiesDue = await prisma.facility.findMany({
+    where: {
+      ...(propertyId ? { property_id: propertyId } : {}),
+      next_maintenance_date: { not: null, lt: inFourteenDays },
+    },
+    select: { facility_id: true, facility_name: true, next_maintenance_date: true },
+    orderBy: { next_maintenance_date: "asc" },
+    take: 6,
+  });
+  const daysFromToday = (d: Date) =>
+    Math.round((new Date(d).setHours(0, 0, 0, 0) - startOfToday.getTime()) / 86_400_000);
+
+  /*
    * The four things an admin opens the laptop to do (DEV-271). Not a tile
    * grid — the sidebar is the navigation, and DEV-215 removed a "Quick
    * actions" grid for exactly that reason. These are verbs, in the header,
@@ -167,6 +193,63 @@ export default async function AdminDashboardPage() {
           />
         </div>
       </div>
+
+      {facilitiesDue.length > 0 && (
+        <section className="overflow-hidden rounded-2xl border border-amber-500/40 bg-amber-500/[0.06]">
+          <div className="flex flex-wrap items-center gap-3 border-b border-amber-500/25 px-4 py-3">
+            <span className="material-symbols-outlined text-[20px] text-amber-400">handyman</span>
+            <h2 className="text-[15px] font-bold text-amber-200">
+              {facilitiesDue.filter((f) => daysFromToday(f.next_maintenance_date!) < 0).length > 0
+                ? "Facilities overdue a service"
+                : "Facilities due a service"}
+            </h2>
+            <Link
+              href="/admin/facilities"
+              className="ml-auto text-xs font-semibold text-primary hover:underline"
+            >
+              The service schedule
+            </Link>
+          </div>
+          <ul className="divide-y divide-amber-500/15">
+            {facilitiesDue.map((f) => {
+              const d = daysFromToday(f.next_maintenance_date!);
+              const late = d < 0;
+              return (
+                <li key={f.facility_id} className="flex flex-wrap items-center gap-3 px-4 py-2.5">
+                  <span className="min-w-0 flex-1 truncate text-sm font-semibold text-on-surface">
+                    {f.facility_name}
+                  </span>
+                  <span className="text-xs tabular-nums text-on-surface-variant">
+                    {new Date(f.next_maintenance_date!).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      timeZone: "Asia/Kuala_Lumpur",
+                    })}
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-bold ${
+                      late
+                        ? "border-rose-500/40 bg-rose-500/10 text-rose-300"
+                        : "border-amber-500/40 bg-amber-500/10 text-amber-300"
+                    }`}
+                  >
+                    {late
+                      ? `${Math.abs(d)} day${Math.abs(d) === 1 ? "" : "s"} overdue`
+                      : d === 0
+                      ? "Today"
+                      : `in ${d} day${d === 1 ? "" : "s"}`}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          {/* The rule this reminder now carries real weight behind. */}
+          <p className="border-t border-amber-500/20 px-4 py-2 text-[11px] text-on-surface-variant">
+            A facility cannot be booked on its service date.
+          </p>
+        </section>
+      )}
 
       {/* Below the fold: reference, not the glance. */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

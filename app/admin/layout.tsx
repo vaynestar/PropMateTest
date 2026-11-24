@@ -13,6 +13,7 @@ import { getAdminNotifications } from "@/lib/notifications";
 import { resolveActivePropertyId } from "@/lib/property-context";
 import NotificationCenter from "@/components/layout/NotificationCenter";
 import CommandSearch from "@/components/layout/CommandSearch";
+import NeedsYouMenu from "@/components/layout/NeedsYouMenu";
 import { getNavCounts } from "@/lib/nav-counts";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -136,18 +137,30 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           */}
           <div className="hidden min-w-0 flex-1 items-center gap-3 md:flex">
             <CommandSearch />
-            {counts.needsYou > 0 && (
-              <Link
-                href="/admin"
-                className="pressable inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20"
-                /* Was "bookings to approve" — there is no approval step, and
-                   that term was removed from the count in DEV-275. */
-                title="Slips waiting to be verified, and repairs nobody owns"
-              >
-                <span className="material-symbols-outlined text-[17px]">warning</span>
-                {counts.needsYou} need{counts.needsYou === 1 ? "s" : ""} you
-              </Link>
-            )}
+            {/*
+              The number opens its own arithmetic now (DEV-281). It used to
+              link to the dashboard, which breaks nothing down, so "18 need
+              you" was a figure with no way to find out what it meant.
+            */}
+            <NeedsYouMenu
+              total={counts.needsYou}
+              items={[
+                {
+                  label: "payment slips to verify",
+                  count: counts.slipsWaiting,
+                  href: "/admin/invoices",
+                  icon: "receipt_long",
+                  how: "A resident has paid and is waiting to be told it landed.",
+                },
+                {
+                  label: "repairs with no owner",
+                  count: counts.unownedTickets,
+                  href: "/admin/maintenance",
+                  icon: "build",
+                  how: "Nobody has picked these up, so nobody is working on them.",
+                },
+              ]}
+            />
           </div>
 
           {/* Top Header Actions: Notifications, Settings & Logout */}

@@ -33,7 +33,6 @@ interface VisitorPassProps {
 
 export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps) {
   useDialogDismiss(true, onClose);
-  const [copied, setCopied] = useState(false);
   /*
    * This pass is opened from the directory on the guardhouse screen, not on the
    * visitor's own phone — so it faces the lobby like everything else here. The
@@ -66,12 +65,6 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
     a.click();
   };
 
-  // Copy Visitor Pass ID
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(visitor.visitor_id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   // Open dedicated print pass window
   // In the in-app viewer, not a new window - an installed PWA has no way back (DEV-190).
@@ -210,16 +203,10 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={handleCopyId}
-            className="w-full py-2 rounded-xl bg-surface-container-lowest border border-outline-variant/60 hover:bg-surface-container-high text-on-surface-variant hover:text-white font-medium text-[11px] flex items-center justify-center gap-1.5 transition-colors pressable"
-          >
-            <span className="material-symbols-outlined text-[15px]">
-              {copied ? "check" : "content_copy"}
-            </span>
-            <span>{copied ? "Copied Pass ID to Clipboard!" : "Copy Pass UUID"}</span>
-          </button>
+          {/* "Copy Pass UUID" removed (user, 2026-11-24): "Remove copy UUID
+              since there is nowhere to paste it". Quite right — the pass is
+              identified by its QR code and by the visitor's name at the gate,
+              and nothing in PropMate accepts a pasted visitor id. */}
         </div>
       </div>
     </div>

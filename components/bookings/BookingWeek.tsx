@@ -21,7 +21,12 @@ export type WeekBooking = {
   booking_date: string;
   start_time: string;
   end_time: string;
-  lease?: { unit?: { unit_number?: string } | null } | null;
+  purpose?: string | null;
+  pax_count?: number | null;
+  lease?: {
+    unit?: { unit_number?: string } | null;
+    tenant?: { user_name?: string } | null;
+  } | null;
 };
 
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -75,6 +80,15 @@ export default function BookingWeek({
 }) {
   const [offset, setOffset] = useState(0);
   const [facilityFilter, setFacilityFilter] = useState("ALL");
+  /*
+   * A booked cell opens (user, 2026-11-24): "the calendar view should allow
+   * user click on the booked slot and pop out to view details". A tooltip
+   * only exists while the mouse is held still, says nothing at all on a
+   * touch screen, and cannot be read aloud.
+   */
+  const [open, setOpen] = useState<{ facility: string; day: Date; rows: WeekBooking[] } | null>(
+    null
+  );
 
   const start = useMemo(() => {
     const m = mondayOf(new Date());
@@ -233,17 +247,14 @@ export default function BookingWeek({
                     ? "border-rose-500/50 bg-rose-500/[0.14] text-rose-200"
                     : "border-primary/45 bg-primary/[0.12] text-primary";
                   return (
-                    <span
+                    <button
                       key={j}
-                      title={here
-                        .map(
-                          (b) =>
-                            `${hhmm(b.start_time)}–${hhmm(b.end_time)} · ${
-                              b.lease?.unit?.unit_number ?? "no unit"
-                            } · ${b.booking_status}`
-                        )
-                        .join("\n")}
-                      className={`min-h-[44px] overflow-hidden rounded-lg border px-1.5 py-1 ${tone}`}
+                      type="button"
+                      onClick={() => setOpen({ facility: f.facility_name, day: d, rows: here })}
+                      aria-label={`${here.length} booking${here.length === 1 ? "" : "s"} for ${
+                        f.facility_name
+                      } on ${d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`}
+                      className={`pressable min-h-[44px] w-full overflow-hidden rounded-lg border px-1.5 py-1 text-left transition-colors hover:brightness-125 ${tone}`}
                     >
                       <span className="block text-[11px] font-bold tabular-nums">
                         {hhmm(here[0].start_time)}–{hhmm(here[0].end_time)}
@@ -255,7 +266,7 @@ export default function BookingWeek({
                           ? `+${here.length - 1} more`
                           : here[0].lease?.unit?.unit_number ?? "no unit"}
                       </span>
-                    </span>
+                    </button>
                   );
                 })}
               </div>
@@ -263,6 +274,76 @@ export default function BookingWeek({
           )}
         </div>
       </div>
+
+      {open && (
+        <div
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-[#060a14]/80 px-4 backdrop-blur-sm"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setOpen(null);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-outline-variant/50 px-4 py-3">
+              <div className="min-w-0">
+                <h3 className="truncate text-[15px] font-bold text-on-surface">{open.facility}</h3>
+                <p className="mt-0.5 text-xs text-on-surface-variant">
+                  {open.day.toLocaleDateString("en-GB", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                  {" · "}
+                  {open.rows.length} booking{open.rows.length === 1 ? "" : "s"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(null)}
+                aria-label="Close"
+                className="pressable inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-outline-variant/60 bg-surface-container-high text-on-surface-variant hover:text-white"
+              >
+                <span className="material-symbols-outlined text-[17px]">close</span>
+              </button>
+            </div>
+
+            <div className="max-h-[52vh] divide-y divide-outline-variant/30 overflow-y-auto">
+              {open.rows.map((b) => (
+                <div key={b.booking_id} className="px-4 py-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm font-bold tabular-nums text-on-surface">
+                      {hhmm(b.start_time)}&ndash;{hhmm(b.end_time)}
+                    </span>
+                    <span className="shrink-0 rounded-full border border-outline-variant/60 bg-surface-container px-2 py-0.5 text-[10.5px] font-bold text-on-surface-variant">
+                      {b.booking_status}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-on-surface-variant">
+                    {b.lease?.unit?.unit_number ?? "No unit"}
+                    {b.lease?.tenant?.user_name ? ` · ${b.lease.tenant.user_name}` : ""}
+                    {b.pax_count ? ` · ${b.pax_count} people` : ""}
+                  </p>
+                  {b.purpose && (
+                    <p className="mt-1 text-xs leading-relaxed text-on-surface-variant/80">
+                      {b.purpose}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {overlaps(open.rows) && (
+              <p className="border-t border-rose-500/30 bg-rose-500/10 px-4 py-2.5 text-xs font-semibold text-rose-300">
+                Two of these overlap in time. One of them has to move.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

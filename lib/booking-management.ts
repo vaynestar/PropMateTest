@@ -116,6 +116,29 @@ export async function createBooking(input: BookingInput, createdBy?: string) {
   const day = input.booking_date.slice(0, 10);
   checkFacilityRules(facility, day, start, end);
 
+  /*
+   * A scheduled service closes the facility for that day (user, 2026-11-24):
+   * "If i set maintenance date, will automatic that day closed for booking?"
+   *
+   * It did not, and that is the wrong answer. `facility_status` had to be
+   * flipped to "Maintenance" by hand to stop bookings, which means the
+   * service date on the schedule was decoration — the hall could be booked
+   * for the morning the contractor is due.
+   *
+   * Only the date itself is closed. The status field still exists for a
+   * facility that is out of action indefinitely.
+   */
+  if (facility.next_maintenance_date) {
+    const serviceDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(
+      facility.next_maintenance_date
+    );
+    if (serviceDay === day) {
+      throw new Error(
+        `${facility.facility_name} is being serviced that day and cannot be booked. Choose another date.`
+      );
+    }
+  }
+
   // A slot in the past can't be booked. Today is fine until its start passes.
   const today = todayMY();
   if (day < today) {
