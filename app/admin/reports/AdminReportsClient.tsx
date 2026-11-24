@@ -5,6 +5,7 @@ import ScrollHint from "@/components/ui/ScrollHint";
 import ReportLibrary from "@/components/reports/ReportLibrary";
 import ReportShelf from "@/components/reports/ReportShelf";
 import { RANGE_LABEL } from "@/lib/reports/catalog";
+import { todayISOMY } from "@/lib/short-date";
 import { useRouter, useSearchParams } from "next/navigation";
 import OverviewReportView from "@/components/reports/OverviewReportView";
 import FinancialsReportView from "@/components/reports/FinancialsReportView";
@@ -72,7 +73,9 @@ export default function AdminReportsClient({
 
   const handleExportCSV = () => {
     let csvContent = "";
-    const timestamp = new Date().toISOString().split("T")[0];
+    // The export is named for the Malaysian day it was run, not the UTC one:
+    // before 8am those differ, and the filename is the evidence (DEV-283).
+    const timestamp = todayISOMY();
     let filename = `PropMate_Report_${activeTab}_${timestamp}.csv`;
 
     if (activeTab === "financials") {

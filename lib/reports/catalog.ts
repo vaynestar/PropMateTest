@@ -45,7 +45,8 @@ export const REPORTS: ReportDef[] = [
     slug: "aged-receivables",
     module: "Billing",
     title: "Aged Receivables",
-    blurb: "Every unit in arrears, bracketed by how long the money has been owed.",
+    // "Arrears" was retired from the interface in DEV-280; this blurb was missed.
+    blurb: "Every unit that owes money, bracketed by how long it has been owed.",
     icon: "running_with_errors",
     basis: "asat",
   },

@@ -4,7 +4,8 @@ import { useState, useMemo, useTransition, useRef, useEffect, useActionState } f
 import FacilityPhotoField from "./FacilityPhotoField";
 import CoverThumb, { DEFAULT_FACILITY_COVER } from "@/components/ui/CoverThumb";
 import FacilityServiceTable, { serviceState, type ServiceRow } from "./FacilityServiceTable";
-import ExpandableForm from "@/components/layout/ExpandableForm";
+import ExpandableForm, { useCloseForm } from "@/components/layout/ExpandableForm";
+import { todayISOMY } from "@/lib/short-date";
 import FacilityTypeCombobox from "@/components/facilities/FacilityTypeCombobox";
 import {
   addFacilityAction,
@@ -13,6 +14,27 @@ import {
   toggleMaintenanceAction,
   logMaintenanceAction,
 } from "@/app/admin/facilities/actions";
+
+/**
+ * Hands the dialog's own close function back up to the manager (DEV-283).
+ *
+ * Creating a facility worked but said nothing: the dialog stayed open, the
+ * fields blanked, and the success toast rendered behind it — so the only
+ * evidence of a save was the form going empty, which reads exactly like a
+ * form that failed. Every other create flow in the panel closes and confirms.
+ *
+ * `useCloseForm` is the mechanism ExpandableForm already provides for this,
+ * but it is a context hook and the form here is inline in the manager rather
+ * than a child component, so it cannot be called where it is needed. This
+ * renders inside the dialog, reads the context there, and passes it out.
+ */
+function CloseBridge({ onReady }: { onReady: (close: () => void) => void }) {
+  const close = useCloseForm();
+  useEffect(() => {
+    onReady(close);
+  }, [close, onReady]);
+  return null;
+}
 
 /*
  * The accent rail used to be a colour hashed from the facility TYPE (DEV-86),
@@ -157,6 +179,9 @@ export default function AdminFacilitiesManager({
     }, 5000);
   };
 
+  /** Set by <CloseBridge /> once the Add Facility dialog has mounted. */
+  const closeAddForm = useRef<() => void>(() => {});
+
   const handleAddSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -167,8 +192,10 @@ export default function AdminFacilitiesManager({
       if (res?.error) {
         showToast(res.error, "error");
       } else if (res?.success) {
-        showToast(res.message, "success");
         formEl.reset();
+        // Close first, so the toast is not drawn behind the open dialog.
+        closeAddForm.current();
+        showToast(res.message, "success");
       }
     });
   };
@@ -546,6 +573,11 @@ export default function AdminFacilitiesManager({
 
       {/* Expandable Form: Add Facility */}
       <ExpandableForm title="Add Facility" buttonLabel="New Facility">
+        <CloseBridge
+          onReady={(close) => {
+            closeAddForm.current = close;
+          }}
+        />
         <form onSubmit={handleAddSubmit} className="grid gap-4 md:grid-cols-2">
           {/* Target Property */}
           {activeProperty ? (
@@ -1397,7 +1429,8 @@ export default function AdminFacilitiesManager({
         (() => {
           const lf = loggingFacility;
           const wasClosed = lf.facility_status === "Maintenance";
-          const todayIso = new Date().toISOString().slice(0, 10);
+          // The Malaysian calendar day — the UTC one is yesterday before 8am (DEV-283).
+          const todayIso = todayISOMY();
           const late = daysOverdue(lf.next_maintenance_date);
           const history = lf.maintenance ?? [];
           const lastDone = history[0] ?? null;

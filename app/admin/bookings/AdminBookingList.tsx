@@ -6,6 +6,7 @@ import StatusBadge from "@/components/dashboard/StatusBadge";
 import { updateBookingStatus } from "./actions";
 import { BTN, StatCard, StatGrid, TABLE } from "@/components/admin/ui";
 import Modal from "@/components/admin/Modal";
+import { isoDateMY, todayISOMY } from "@/lib/short-date";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "30 Sep 2026" in Malaysia time - ICU prints "Sept" (DEV-184). */
@@ -184,18 +185,18 @@ export default function AdminBookingList({
       setPastDateTo("");
     } else if (rangeType === "this-month") {
       const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-      setPastDateFrom(firstDay.toISOString().split("T")[0]);
-      setPastDateTo(today.toISOString().split("T")[0]);
+      setPastDateFrom(isoDateMY(firstDay));
+      setPastDateTo(todayISOMY());
     } else if (rangeType === "30-days") {
       const past30 = new Date();
       past30.setDate(today.getDate() - 30);
-      setPastDateFrom(past30.toISOString().split("T")[0]);
-      setPastDateTo(today.toISOString().split("T")[0]);
+      setPastDateFrom(isoDateMY(past30));
+      setPastDateTo(todayISOMY());
     } else if (rangeType === "90-days") {
       const past90 = new Date();
       past90.setDate(today.getDate() - 90);
-      setPastDateFrom(past90.toISOString().split("T")[0]);
-      setPastDateTo(today.toISOString().split("T")[0]);
+      setPastDateFrom(isoDateMY(past90));
+      setPastDateTo(todayISOMY());
     }
   };
 

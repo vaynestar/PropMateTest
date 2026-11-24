@@ -144,6 +144,9 @@ export default async function AdminBookingsPage() {
     max_capacity: f.max_capacity,
     max_booking_hours: f.max_booking_hours,
     facility_status: f.facility_status,
+    next_maintenance_date: f.next_maintenance_date
+      ? f.next_maintenance_date.toISOString().slice(0, 10)
+      : null,
   }));
 
   // The filter dropdown listed every bookable facility in the portfolio while

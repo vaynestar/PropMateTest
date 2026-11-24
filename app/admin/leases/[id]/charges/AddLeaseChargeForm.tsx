@@ -7,7 +7,7 @@ type ChargeMaster = {
   charge_id: string;
   charge_name: string;
   charge_type: string;
-  default_amount: any;
+  default_amount: number;
 };
 
 export default function AddLeaseChargeForm({
@@ -130,14 +130,16 @@ export default function AddLeaseChargeForm({
           </div>
         </div>
 
-        <p className="text-[11px] text-on-surface-variant/80 italic mt-0.5 leading-relaxed">
-          💡 Charges added here will recur automatically every month when generating bills. For one-off items (e.g. Access Card), add them directly to a specific month's bill under <strong>Billing Details (/admin/invoices)</strong>.
+        <p className="mt-0.5 text-[11px] leading-relaxed text-on-surface-variant">
+          These recur every month, on every bill generated for this tenancy. A
+          one-off item, such as an access card, is added to a single month&apos;s
+          invoice instead, from Invoices.
         </p>
 
         <button
           type="submit"
           disabled={isPending}
-          className="btn-primary py-2.5 mt-2 font-label-md rounded-lg flex justify-center items-center gap-2 pressable disabled:opacity-50"
+          className="bg-primary hover:bg-primary/90 text-on-primary font-bold shadow-md transition-all py-2.5 mt-2 font-label-md rounded-lg flex justify-center items-center gap-2 pressable disabled:opacity-50"
         >
           {isPending ? (
             <span className="material-symbols-outlined animate-spin text-[18px]">

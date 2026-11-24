@@ -21,6 +21,8 @@
  * it was handed, exactly as the visitor and ticket actions used to.
  */
 
+import { todayDateMY } from "@/lib/short-date";
+
 export type AnnouncementStatusKey = "Published" | "Draft" | "Archived";
 
 /** What the reader sees, once the dates are taken into account. */
@@ -96,10 +98,23 @@ export function normaliseAnnouncementStatus(
   return ALIASES[value.trim().toLowerCase()] ?? null;
 }
 
+/**
+ * The Malaysian calendar day, as a `@db.Date` value (DEV-283).
+ *
+ * This was `new Date()` with `setHours(0,0,0,0)` — LOCAL midnight, which in
+ * Malaysia is 16:00Z the previous day. `publish_date` is a `@db.Date`, stored
+ * at UTC midnight of the day written, so a notice published today sat at
+ * 00:00Z today, compared as AFTER local midnight, and the board called it
+ * "Queued to go up" on the very day it went up.
+ *
+ * This is DEV-244 again. `lib/announcements.ts` and `lib/notifications.ts`
+ * were moved onto `todayDateMY` then and this module was missed, so the
+ * resident's app showed the notice while the admin's own board said it had
+ * not gone out yet — the two halves of one feature disagreeing about the same
+ * row. Caught by posting a notice during the UAT walkthrough.
+ */
 function startOfToday(): Date {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return todayDateMY();
 }
 
 /** Where a notice actually stands, combining its status with its dates. */

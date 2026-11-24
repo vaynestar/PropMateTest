@@ -1,6 +1,7 @@
 import "server-only";
 import prisma from "@/lib/prisma";
 import { OPEN_STATUSES } from "@/lib/ticket-states";
+import { todayDateMY } from "@/lib/short-date";
 
 /**
  * Where the work is, for the sidebar (DEV-270).
@@ -43,8 +44,16 @@ export type NavCounts = {
 
 export async function getNavCounts(propertyId?: string | null): Promise<NavCounts> {
   const inProperty = propertyId ? { property_id: propertyId } : {};
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  /*
+   * The Malaysian calendar day, not the server's local midnight (DEV-283).
+   *
+   * `setHours(0,0,0,0)` is midnight where the process runs. Locally that is
+   * Malaysia and looks correct; on Vercel it is UTC, which is 08:00 Malaysian
+   * time, so for the first eight hours of every working day these counts were
+   * drawn against the wrong day. lib/invoice-state.ts records the same fault
+   * being fixed on the resident side (R17); this file never got the change.
+   */
+  const today = todayDateMY();
   const inThirtyDays = new Date(today.getTime() + 30 * 86_400_000);
 
   const [
@@ -69,6 +78,14 @@ export async function getNavCounts(propertyId?: string | null): Promise<NavCount
     prisma.invoice.count({
       where: {
         status: { notIn: ["Paid", "Inactive"] },
+        /*
+         * A draft is not overdue. Nobody has been sent it, so nobody is late
+         * paying it — `issued_at` is what the invoice list itself tests to
+         * draw "Draft, not sent". Without this the sidebar badged a freshly
+         * generated run as overdue the moment its due date passed, while the
+         * Overdue chip on the page it linked to read 0 (DEV-283).
+         */
+        issued_at: { not: null },
         due_date: { lt: today },
         ...(propertyId ? { lease: { unit: { property_id: propertyId } } } : {}),
       },

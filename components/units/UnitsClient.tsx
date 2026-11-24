@@ -492,7 +492,6 @@ export default function UnitsClient({
   const [view, setView] = useState<"list" | "floors">("list");
   const [floorFilter, setFloorFilter] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<"number" | "owed" | "open">("number");
-  const [picked, setPicked] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<UnitItem | null>(null);
@@ -714,14 +713,6 @@ export default function UnitsClient({
       return a.unit_number.localeCompare(b.unit_number, undefined, { numeric: true });
     });
 
-  const togglePick = (id: string) =>
-    setPicked((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
   /** "1 repair · slip to check" — what is actually outstanding on this unit. */
   const openLabel = (id: string) => {
     const o = openByUnit[id];
@@ -923,18 +914,6 @@ export default function UnitsClient({
               Showing <span className="font-semibold tabular-nums text-on-surface">{listRows.length}</span> of{" "}
               <span className="tabular-nums">{totalUnits}</span>
             </span>
-            {picked.size > 0 && (
-              <span className="flex items-center gap-2">
-                <span className="font-semibold text-on-surface">{picked.size} selected</span>
-                <button
-                  type="button"
-                  onClick={() => setPicked(new Set())}
-                  className="font-semibold text-primary hover:underline"
-                >
-                  Clear
-                </button>
-              </span>
-            )}
           </div>
 
           {/* Cards below md. Eight columns do not survive a phone, and a
@@ -1002,9 +981,6 @@ export default function UnitsClient({
               <caption className="sr-only">Unit register</caption>
               <thead>
                 <tr>
-                  <th className={TABLE.th + " w-11"}>
-                    <span className="sr-only">Select</span>
-                  </th>
                   <th className={TABLE.th}>Unit</th>
                   <th className={TABLE.th}>Layout</th>
                   <th className={TABLE.thNum}>Sq ft</th>
@@ -1017,7 +993,7 @@ export default function UnitsClient({
               <tbody>
                 {listRows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-0">
+                    <td colSpan={7} className="p-0">
                       <EmptyState
                         icon="meeting_room"
                         title={totalUnits === 0 ? "No units in this property yet" : "No units match these filters"}
@@ -1034,7 +1010,6 @@ export default function UnitsClient({
                     const activeLease = u.leases?.find((l: any) => l.status === "Active");
                     const owes = owesByUnit[u.unit_id] ?? 0;
                     const open = openLabel(u.unit_id);
-                    const chosen = picked.has(u.unit_id);
                     return (
                       <tr
                         key={u.unit_id}
@@ -1043,19 +1018,8 @@ export default function UnitsClient({
                           () => router.push(`/admin/units/${u.unit_id}`),
                           `Open unit ${u.unit_number}`
                         )}
-                        className={
-                          TABLE.tr + " cursor-pointer" + (chosen ? " bg-primary/[0.06]" : "")
-                        }
+                        className={TABLE.tr + " cursor-pointer"}
                       >
-                        <td className={TABLE.td}>
-                          <input
-                            type="checkbox"
-                            checked={chosen}
-                            onChange={() => togglePick(u.unit_id)}
-                            aria-label={`Select unit ${u.unit_number}`}
-                            className="h-4 w-4 accent-[#d0bcff]"
-                          />
-                        </td>
                         <td className={TABLE.td}>
                           {/* The unit number is the link to the unit, the same
                               one an invoice, a ticket or a booking points at. */}

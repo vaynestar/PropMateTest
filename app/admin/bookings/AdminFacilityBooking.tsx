@@ -19,6 +19,8 @@ type Facility = {
   close_time: string;
   max_booking_hours: number | null;
   facility_status?: string | null;
+  /** "YYYY-MM-DD" or null — the day it is being serviced, which cannot be booked. */
+  next_maintenance_date?: string | null;
 };
 
 type Booking = {
@@ -190,7 +192,18 @@ function BookingCard({
   const DAY_END = toMinutes(facility.close_time);
 
   const openDates = useMemo(() => nextOpenDates(openDays, 14), [openDays]);
-  const [date, setDate] = useState<string>(dateToISO(openDates[0]));
+
+  /*
+   * The service date cannot be booked, so the form must not open on it
+   * (DEV-283). It is greyed out in the calendar below; starting there would
+   * mean the first thing the form shows is a day it will refuse.
+   */
+  const serviceDay = facility.next_maintenance_date
+    ? String(facility.next_maintenance_date).slice(0, 10)
+    : null;
+  const firstBookable =
+    openDates.find((d) => dateToISO(d) !== serviceDay) ?? openDates[0];
+  const [date, setDate] = useState<string>(dateToISO(firstBookable));
 
   const initialStartHour = Math.floor(DAY_START / 60);
   const initialEndHour = Math.floor(Math.min(DAY_START + 60, DAY_END) / 60);
@@ -459,6 +472,13 @@ function BookingCard({
           onSelectDate={(newDate) => setDate(newDate)}
           operationDays={facility.operation_days}
           slotBlocked={!!clash || end <= start}
+          /* createBooking refuses the service date; grey it out rather than
+             let the whole form be filled in first (DEV-283). */
+          closedDates={
+            facility.next_maintenance_date
+              ? [String(facility.next_maintenance_date).slice(0, 10)]
+              : undefined
+          }
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">

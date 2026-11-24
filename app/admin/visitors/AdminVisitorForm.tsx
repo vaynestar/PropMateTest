@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { adminRegisterVisitor } from "./actions";
+import { todayISOMY } from "@/lib/short-date";
 
 interface PropertyOption {
   property_id: string;
@@ -326,7 +327,7 @@ export default function AdminVisitorForm({
               id="visit_date"
               name="visit_date"
               required
-              defaultValue={new Date().toISOString().split("T")[0]}
+              defaultValue={todayISOMY()}
               className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3.5 py-2.5 text-white text-xs focus:outline-none focus:border-primary [color-scheme:dark]"
             />
           </div>

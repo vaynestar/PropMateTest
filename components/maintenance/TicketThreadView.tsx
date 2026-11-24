@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Toast, type ToastState } from "@/components/admin/Toast";
 import { adminTicketReply } from "@/app/admin/maintenance/actions";
-import type { ThreadMessage } from "@/lib/ticket-thread";
+import type { ThreadMessage, ThreadPhoto } from "@/lib/ticket-thread";
+import { PhotoStrip } from "./TicketConversation";
 
 /**
  * The conversation on a ticket (DEV-266).
@@ -22,11 +23,22 @@ export default function TicketThreadView({
   ticketId,
   messages,
   description,
+  photos,
   residentName,
 }: {
   ticketId: string;
   messages: ThreadMessage[];
   description: string;
+  /**
+   * What the resident photographed when they reported it (DEV-283).
+   *
+   * `getTicketThread` has always returned these, on the report and on every
+   * message, and this view dropped them — so a resident could send a picture
+   * of the leak and the office saw only the words. The resident's own copy of
+   * the thread rendered them the whole time, which is how it went unnoticed.
+   * Same `PhotoStrip`, same viewer, same attachment route.
+   */
+  photos: ThreadPhoto[];
   residentName: string;
 }) {
   const router = useRouter();
@@ -93,6 +105,11 @@ export default function TicketThreadView({
               <div className="mt-1.5 rounded-xl border border-outline-variant/50 bg-surface-container-high px-3 py-2.5 text-[13px] leading-relaxed text-on-surface">
                 {description}
               </div>
+              {photos.length > 0 && (
+                <div className="mt-2">
+                  <PhotoStrip photos={photos} size="h-20 w-20" />
+                </div>
+              )}
             </div>
           </li>
 
@@ -126,6 +143,11 @@ export default function TicketThreadView({
                 >
                   {m.text}
                 </div>
+                {m.photos.length > 0 && (
+                  <div className="mt-2">
+                    <PhotoStrip photos={m.photos} />
+                  </div>
+                )}
               </div>
             </li>
           ))}

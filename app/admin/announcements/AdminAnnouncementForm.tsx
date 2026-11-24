@@ -6,6 +6,7 @@ import { FILE_TOO_LARGE_MESSAGE } from "@/lib/upload-limit";
 import Image from "next/image";
 import CoverThumb, { DEFAULT_ANNOUNCEMENT_COVER } from "@/components/ui/CoverThumb";
 import { createAnnouncement, updateAnnouncement } from "./actions";
+import { todayISOMY } from "@/lib/short-date";
 
 interface PropertyOption {
   property_id: string;
@@ -81,7 +82,7 @@ export default function AdminAnnouncementForm({
   const [publishDate, setPublishDate] = useState(
     initialData?.publish_date
       ? new Date(initialData.publish_date).toISOString().split("T")[0]
-      : new Date().toISOString().split("T")[0]
+      : todayISOMY()
   );
 
   const [expiryDate, setExpiryDate] = useState(

@@ -14,9 +14,10 @@ export async function updateTicketAction(formData: FormData) {
   const cost = costStr !== null && String(costStr).trim() !== "" ? parseFloat(String(costStr)) : undefined;
   const assignedTo = formData.get("assigned_to") !== null ? String(formData.get("assigned_to")) : undefined;
   const remark = formData.get("remark") !== null ? String(formData.get("remark")) : undefined;
+  const priority = formData.get("priority") !== null ? String(formData.get("priority")) : undefined;
 
   try {
-    await updateTicketStatus(ticketId, status, user.userId, cost, assignedTo, remark);
+    await updateTicketStatus(ticketId, status, user.userId, cost, assignedTo, remark, priority);
     revalidatePath("/admin/maintenance");
     return { success: true, message: "Ticket updated." };
   } catch (err: any) {

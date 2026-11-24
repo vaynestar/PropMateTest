@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { adminCreateLease } from "@/app/admin/leases/actions";
 import { backdropProps, useDialogDismiss } from "@/components/ui/useDialogDismiss";
+import { todayISOMY } from "@/lib/short-date";
 
 interface AdminLeaseFormModalProps {
   units: {
@@ -186,7 +187,7 @@ export default function AdminLeaseFormModal({
                 <input
                   name="move_in_date"
                   type="date"
-                  defaultValue={new Date().toISOString().split("T")[0]}
+                  defaultValue={todayISOMY()}
                   required
                   className="w-full rounded-xl bg-surface-container-high border border-outline-variant/60 px-3.5 py-2.5 text-xs text-white outline-none focus:border-primary transition-all [color-scheme:dark]"
                 />

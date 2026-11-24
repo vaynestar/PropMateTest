@@ -10,9 +10,20 @@ import {
 
 export async function GET() {
   try {
+    /*
+     * Admin-only, like the POST below (DEV-283).
+     *
+     * This read was gated on "signed in" rather than on the Admin role, so a
+     * resident's own session returned every facility in every property, with its servicing history and the staff name who recorded each visit. Nothing in the app calls it —
+     * the admin screens read through server components — so the check was
+     * never load-bearing, only exposed.
+     */
     const user = await getSessionUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!user || user.role !== "Admin") {
+      return NextResponse.json(
+        { error: "Forbidden: Admin access required" },
+        { status: 403 }
+      );
     }
     const facilities = await listFacilities();
     return NextResponse.json(facilities);

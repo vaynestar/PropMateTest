@@ -25,7 +25,7 @@ type TicketWithRelations = WithoutHash<Prisma.TicketGetPayload<{
   };
 }>>;
 
-const VALID_PRIORITIES = ["Low", "Medium", "High", "Urgent"];
+export const VALID_PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 const VALID_STATUSES = ["Open", "In Progress", "Pending Parts", "KIV", "Resolved", "Closed"];
 
 function requireText(value: unknown, fieldName: string): string {
@@ -210,7 +210,14 @@ export async function updateTicketStatus(
   modifiedBy?: string,
   cost?: number,
   assignedTo?: string,
-  remark?: string
+  remark?: string,
+  /**
+   * Re-rank an open ticket (DEV-283). Priority could be chosen when the
+   * ticket was raised and never again, so a repair that turned out to be
+   * urgent stayed Low for its whole life and sorted below trivia. UAT
+   * criterion 5b asks for exactly this.
+   */
+  priority?: string
 ) {
   const trimmedId = ticketId.trim();
   if (!trimmedId) throw new Error("Ticket ID is required");
@@ -241,6 +248,7 @@ export async function updateTicketStatus(
     cost?: number;
     assigned_to?: string | null;
     remark?: string | null;
+    priority?: string;
   } = {
     status,
     modified_by: modifiedBy,
@@ -248,6 +256,14 @@ export async function updateTicketStatus(
 
   if (cost !== undefined && !isNaN(cost)) {
     data.cost = cost;
+  }
+
+  // Checked here, not only in the form: the value arrives as text.
+  if (priority !== undefined) {
+    if (!VALID_PRIORITIES.includes(priority)) {
+      throw new Error(`Invalid priority: ${priority}`);
+    }
+    data.priority = priority;
   }
 
   // `undefined` tells Prisma "leave this field alone", so clearing the field

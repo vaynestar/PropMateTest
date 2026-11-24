@@ -18,6 +18,30 @@ export function todayDateMY(): Date {
   return new Date(Date.UTC(y, m - 1, d));
 }
 
+/**
+ * Today as `YYYY-MM-DD` on the Malaysian calendar, for a date input's default.
+ *
+ * The sibling of `todayDateMY` above, for the other direction: what a `<input
+ * type="date">` should start on. Every form that wanted "today" wrote
+ * `new Date().toISOString().split("T")[0]`, which is the UTC day — and Malaysia
+ * runs eight hours ahead of UTC, so from midnight until 08:00 local that string
+ * is YESTERDAY.
+ *
+ * Found during the UAT walkthrough at 06:07 on 25 Nov 2026 (DEV-283): the new
+ * tenancy form offered a move-in date of 24 Nov, and the same was true of the
+ * visitor date, the notice publish date and the booking date floor. An office
+ * opening at 8am would mostly have escaped it; anyone working early would file
+ * every record a day late, and a booking screen would offer a date already past.
+ */
+export function todayISOMY(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(new Date());
+}
+
+/** The same, for a given date rather than now. Used to offset from today. */
+export function isoDateMY(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(d);
+}
+
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 

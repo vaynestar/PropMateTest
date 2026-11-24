@@ -112,6 +112,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
             ticketId={ticket.ticket_id}
             messages={thread.messages}
             description={thread.description}
+            photos={thread.photos}
             residentName={ticket.lease?.tenant?.user_name ?? thread.reporter ?? "The resident"}
           />
         </div>
@@ -121,6 +122,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
             ticketId={ticket.ticket_id}
             assignedTo={ticket.assigned_to}
             status={ticket.status}
+            priority={ticket.priority}
             cost={ticket.cost === null || ticket.cost === undefined ? null : Number(ticket.cost)}
             admins={admins}
             daysUnowned={ticket.assigned_to ? 0 : daysOpen}

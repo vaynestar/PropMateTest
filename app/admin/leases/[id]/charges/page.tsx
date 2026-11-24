@@ -30,10 +30,28 @@ export default async function LeaseChargesPage({ params }: { params: Promise<{ i
     return <div className="p-8 text-white">Lease not found</div>;
   }
 
-  const activeCharges = await prisma.chargeMaster.findMany({
+  /*
+   * AGENTS.md Rule 6 — Decimal must not cross into a Client Component.
+   *
+   * These rows went to <AddLeaseChargeForm /> raw, and every page load logged
+   * "Only plain objects can be passed to Client Components" because
+   * default_amount is a Prisma Decimal. Found by the UAT console sweep
+   * (DEV-283). Narrowed to the four fields the form actually reads.
+   */
+  const chargeRows = await prisma.chargeMaster.findMany({
     where: { is_active: true, charge_type: "Recurring" },
-    orderBy: { charge_name: "asc" }
+    orderBy: { charge_name: "asc" },
+    select: {
+      charge_id: true,
+      charge_name: true,
+      charge_type: true,
+      default_amount: true,
+    },
   });
+  const activeCharges = chargeRows.map((c) => ({
+    ...c,
+    default_amount: Number(c.default_amount),
+  }));
 
   return (
     <div className="flex flex-col gap-stack-lg animate-fade-in">

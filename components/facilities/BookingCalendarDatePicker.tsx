@@ -25,6 +25,16 @@ interface BookingCalendarDatePickerProps {
    * clash message a few lines under it (DEV-232).
    */
   slotBlocked?: boolean;
+  /**
+   * Days the facility cannot be booked at all, as "YYYY-MM-DD" (DEV-283).
+   *
+   * `createBooking` already refuses a booking on a facility's service date,
+   * but only on submit — so the calendar called the day "Available Slot",
+   * let the whole form be filled in, and then threw it away. A date that
+   * cannot be booked belongs greyed out next to the days the facility is
+   * closed, which this grid already draws.
+   */
+  closedDates?: string[];
 }
 
 export default function BookingCalendarDatePicker({
@@ -34,8 +44,11 @@ export default function BookingCalendarDatePicker({
   minDate = new Date(),
   maxDaysCount = 90,
   slotBlocked = false,
+  closedDates,
 }: BookingCalendarDatePickerProps) {
   const [viewMode, setViewMode] = useState<"strip" | "calendar">("calendar");
+
+  const closedSet = useMemo(() => new Set(closedDates ?? []), [closedDates]);
 
   // Parse open weekdays set (Mon=1...Sun=7)
   const openDaysSet = useMemo(() => {
@@ -72,13 +85,13 @@ export default function BookingCalendarDatePicker({
     const out: Date[] = [];
     const d = new Date(today);
     while (out.length < 10 && d <= maxAllowedDate) {
-      if (openDaysSet.has(jsDayToMonFirst(d.getDay()))) {
+      if (openDaysSet.has(jsDayToMonFirst(d.getDay())) && !closedSet.has(dateToISO(d))) {
         out.push(new Date(d));
       }
       d.setDate(d.getDate() + 1);
     }
     return out;
-  }, [today, maxAllowedDate, openDaysSet]);
+  }, [today, maxAllowedDate, openDaysSet, closedSet]);
 
   // Calendar Grid Computation for currentMonth
   const calendarDays = useMemo(() => {
@@ -113,7 +126,8 @@ export default function BookingCalendarDatePicker({
       const iso = dateToISO(d);
       const isPast = d < today;
       const isFutureExceeded = d > maxAllowedDate;
-      const isOpen = openDaysSet.has(jsDayToMonFirst(d.getDay()));
+      const isServiceDay = closedSet.has(iso);
+      const isOpen = openDaysSet.has(jsDayToMonFirst(d.getDay())) && !isServiceDay;
       const isDisabled = isPast || isFutureExceeded || !isOpen;
 
       days.push({
@@ -142,7 +156,7 @@ export default function BookingCalendarDatePicker({
     }
 
     return days;
-  }, [currentMonth, today, maxAllowedDate, openDaysSet]);
+  }, [currentMonth, today, maxAllowedDate, openDaysSet, closedSet]);
 
   const handlePrevMonth = () => {
     setCurrentMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));

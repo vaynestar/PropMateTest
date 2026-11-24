@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Toast, type ToastState } from "@/components/admin/Toast";
 import { BTN } from "@/components/admin/ui";
 import { TICKET_STATUS_OPTIONS, ticketStateKey } from "@/lib/ticket-states";
+
+/** Matches VALID_PRIORITIES in lib/maintenance.ts. */
+const PRIORITIES = ["Low", "Medium", "High", "Urgent"];
 import {
   assignTicketsAction,
   setTicketStatusAction,
@@ -26,6 +29,7 @@ export default function TicketWorkRail({
   ticketId,
   assignedTo,
   status,
+  priority,
   cost,
   admins,
   daysUnowned,
@@ -33,6 +37,7 @@ export default function TicketWorkRail({
   ticketId: string;
   assignedTo: string | null;
   status: string;
+  priority: string;
   cost: number | null;
   admins: { user_id: string; user_name: string }[];
   daysUnowned: number;
@@ -62,6 +67,28 @@ export default function TicketWorkRail({
       if (res.error) return setToast({ message: res.error, tone: "error" });
       router.refresh();
       setToast({ message: `Moved to “${TICKET_STATUS_OPTIONS.find((o) => o.value === next)?.label}”.` });
+    });
+  };
+
+  /*
+   * Re-rank the ticket (DEV-283). Priority was fixed at the moment the ticket
+   * was raised — usually by the resident, who cannot know how it ranks against
+   * the rest of the building — and the office had no way to change it. A leak
+   * reported as "Low" stayed Low while it got worse.
+   */
+  const reprioritise = (next: string) => {
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("ticket_id", ticketId);
+      fd.set("status", status);
+      fd.set("priority", next);
+      const res: any = await updateTicketAction(fd);
+      if (res?.error) return setToast({ message: res.error, tone: "error" });
+      router.refresh();
+      setToast({
+        message: `Priority is ${next.toLowerCase()} now.`,
+        detail: "It re-sorts the list and resets the response target.",
+      });
     });
   };
 
@@ -137,6 +164,32 @@ export default function TicketWorkRail({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div>
+            <label htmlFor="rail-priority" className={label}>
+              How urgent
+            </label>
+            <select
+              id="rail-priority"
+              value={PRIORITIES.includes(priority) ? priority : "Medium"}
+              disabled={isPending}
+              onChange={(e) => reprioritise(e.target.value)}
+              className={`h-11 w-full rounded-xl border px-3 text-sm font-semibold outline-none transition-colors ${
+                priority === "Urgent" || priority === "High"
+                  ? "border-rose-400/50 bg-rose-500/10 text-rose-200"
+                  : "border-outline-variant/60 bg-surface-container-high text-on-surface"
+              }`}
+            >
+              {PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1.5 text-[11px] text-on-surface-variant">
+              Sets the response target the list counts against.
+            </p>
           </div>
 
           <div>
