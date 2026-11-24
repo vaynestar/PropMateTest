@@ -166,6 +166,44 @@ html, body {
 
 
 /* ---------------------------------------------------------------------------
+   Dialog height on a phone (DEV-285).
+
+   Reported: "Some form pop out in mobile but unable to press the close
+   button." Every dialog in the app sized itself in `vh` — 90vh, 92vh, 88vh.
+
+   On a mobile browser `vh` resolves against the LARGE viewport: the page
+   height with the address bar and the bottom toolbar retracted. Those bars
+   are on screen most of the time, so the area you can actually see is
+   roughly 100–150px shorter. A sheet 92vh tall is therefore taller than the
+   visible window, and because the mobile layout anchors it to the bottom
+   (`items-end`), the overflow is taken off the TOP — which is where the
+   header and its X button live. The dialog works; its close button is simply
+   above the fold, with nothing to scroll because the body scrolls inside.
+
+   `dvh` tracks the viewport as it actually is right now, toolbars included.
+   The `vh` line stays first as the fallback for anything that does not know
+   `dvh`; a browser that does understand it takes the second declaration.
+
+   One class per height so the intent is named rather than repeated as an
+   arbitrary value in twenty components.
+   --------------------------------------------------------------------------- */
+
+.dialog-h-sm {
+  max-height: 80vh;
+  max-height: 80dvh;
+}
+
+.dialog-h {
+  max-height: 90vh;
+  max-height: 90dvh;
+}
+
+.dialog-h-lg {
+  max-height: 92vh;
+  max-height: 92dvh;
+}
+
+/* ---------------------------------------------------------------------------
    Interaction utilities.
 
    `pressable` (115 usages), `animate-spin-slow` (31) and `hide-scrollbar` were

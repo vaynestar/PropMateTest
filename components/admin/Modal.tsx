@@ -46,7 +46,7 @@ export default function Modal({
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl border border-outline-variant/70 bg-surface-container shadow-2xl sm:rounded-2xl ${width}`}
+        className={`flex dialog-h-lg w-full flex-col overflow-hidden rounded-t-2xl border border-outline-variant/70 bg-surface-container shadow-2xl sm:rounded-2xl ${width}`}
       >
         <header className="flex items-start justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-low px-4 py-3.5 sm:px-5">
           <div className="flex min-w-0 items-center gap-2.5">

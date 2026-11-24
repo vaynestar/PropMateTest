@@ -80,15 +80,18 @@ export default function VisitorPassModal({ visitor, onClose }: VisitorPassProps)
         />
       )}
       <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl w-full max-w-sm p-5 sm:p-6 shadow-2xl relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200 max-h-[90dvh] overflow-y-auto">
-        {/* Close Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant hover:text-white flex items-center justify-center transition-colors"
-          aria-label="Close modal"
-        >
-          <span className="material-symbols-outlined text-[18px]">close</span>
-        </button>
+        {/* Sticky, not absolute: this panel scrolls, so an absolute button
+            scrolled off with the pass (DEV-285). */}
+        <div className="sticky top-0 z-10 flex h-0 w-full justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant/60 bg-surface-container-high text-on-surface-variant shadow-lg transition-colors hover:text-white"
+            aria-label="Close modal"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
 
         {/* Security Badge Header */}
         <div className="flex flex-col items-center gap-1 mb-3">

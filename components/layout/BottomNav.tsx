@@ -99,7 +99,7 @@ export default function BottomNav({
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setSheetOpen(false)}
           />
-          <div className="absolute bottom-0 left-0 w-full bg-surface-container-lowest border-t border-outline-variant rounded-t-2xl animate-slide-up max-h-[80vh] overflow-y-auto">
+          <div className="absolute bottom-0 left-0 w-full bg-surface-container-lowest border-t border-outline-variant rounded-t-2xl animate-slide-up dialog-h-sm overflow-y-auto">
             <div className="flex justify-between items-center px-6 pt-4 pb-2">
               <span className="font-title-lg text-title-lg text-on-surface">
                 More

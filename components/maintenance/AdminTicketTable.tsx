@@ -769,7 +769,7 @@ export default function AdminTicketTable({
               </button>
             </div>
 
-            <form onSubmit={handleUpdateSubmit} className="flex max-h-[80vh] flex-col gap-4 overflow-y-auto p-5">
+            <form onSubmit={handleUpdateSubmit} className="flex dialog-h-sm flex-col gap-4 overflow-y-auto p-5">
               {modalToast && (
                 <div
                   className={`flex items-center gap-2 rounded-lg border p-3 text-xs font-semibold ${

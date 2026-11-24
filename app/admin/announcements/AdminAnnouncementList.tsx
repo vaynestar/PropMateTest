@@ -272,7 +272,7 @@ export default function AdminAnnouncementList({
       {/* CREATE / EDIT FORM POPUP MODAL */}
       {(isCreating || editingItem) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl animate-in zoom-in-95 duration-200 shadow-2xl">
+          <div className="w-full max-w-4xl dialog-h overflow-y-auto rounded-2xl animate-in zoom-in-95 duration-200 shadow-2xl">
             <AdminAnnouncementForm
               properties={properties}
               defaultPropertyId={defaultPropertyId}
@@ -805,15 +805,26 @@ export default function AdminAnnouncementList({
       {/* FULL PREVIEW READER MODAL */}
       {previewItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-2xl relative flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-            {/* Close */}
-            <button
-              type="button"
-              onClick={() => setPreviewItem(null)}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-surface-container-high text-on-surface-variant hover:text-white flex items-center justify-center transition-colors"
-            >
-              <span className="material-symbols-outlined text-[18px]">close</span>
-            </button>
+          <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-3xl w-full max-w-lg p-6 sm:p-7 shadow-2xl relative flex flex-col gap-4 animate-in zoom-in-95 duration-200 dialog-h overflow-y-auto">
+            {/*
+              Sticky, not absolute (DEV-285).
+
+              This panel is its own scroll container, and an absolutely
+              positioned child of a scroll container scrolls with the content —
+              so on a long notice the X left the screen and there was no way
+              out but the backdrop. Sticky keeps it against the top of the
+              scrollport. Zero height so it does not add a gap row.
+            */}
+            <div className="sticky top-0 z-10 flex h-0 justify-end">
+              <button
+                type="button"
+                onClick={() => setPreviewItem(null)}
+                aria-label="Close"
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-outline-variant/60 bg-surface-container-high text-on-surface-variant shadow-lg transition-colors hover:text-white"
+              >
+                <span className="material-symbols-outlined text-[18px]">close</span>
+              </button>
+            </div>
 
             {/* Badges */}
             <div className="flex flex-wrap items-center gap-2 pt-1">

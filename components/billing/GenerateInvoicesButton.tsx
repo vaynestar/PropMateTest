@@ -184,7 +184,7 @@ export default function GenerateInvoicesButton() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex max-h-[88vh] w-full max-w-[720px] flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl"
+            className="flex dialog-h w-full max-w-[720px] flex-col overflow-hidden rounded-2xl border border-outline-variant bg-surface-container-lowest shadow-2xl"
           >
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-outline-variant/50 px-5 py-4">
               <div className="min-w-0">

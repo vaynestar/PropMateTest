@@ -1253,7 +1253,7 @@ export default function AdminFacilitiesManager({
                 role="dialog"
                 aria-modal="true"
                 onClick={(e) => e.stopPropagation()}
-                className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl"
+                className="flex dialog-h w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl"
               >
                 <div className="flex items-start justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-high/40 px-6 py-4">
                   <div className="min-w-0">
@@ -1443,7 +1443,7 @@ export default function AdminFacilitiesManager({
                 role="dialog"
                 aria-modal="true"
                 onClick={(e) => e.stopPropagation()}
-                className="flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl"
+                className="flex dialog-h w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl"
               >
                 <div className="flex items-start justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-high/40 px-6 py-4">
                   <div className="min-w-0">
