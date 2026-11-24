@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import ScrollHint from "@/components/ui/ScrollHint";
 import { SystemSettings } from "@/lib/settings";
 import { saveSettingsAction } from "./actions";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -17,15 +16,48 @@ interface AdminSettingsClientProps {
   currentUserId: string;
 }
 
-const SETTINGS_TABS = [
-  { id: "general", label: "General & Property", icon: "tune" },
-  { id: "billing", label: "Billing & Finance", icon: "payments" },
-  { id: "invoice", label: "Invoice Document", icon: "receipt_long" },
-  { id: "helpdesk", label: "Helpdesk & SLA", icon: "support_agent" },
-  { id: "visitors", label: "Visitors & Security", icon: "badge" },
-  { id: "storage", label: "Cloud & Storage", icon: "cloud" },
-  { id: "accounts", label: "Administrators", icon: "manage_accounts" },
+/*
+ * Grouped by consequence, not by subsystem (DEV-278, batch-4 `Settings`).
+ *
+ * Seven equal tabs in a row — General & Property, Billing & Finance, Invoice
+ * Document, Helpdesk & SLA, Visitors & Security, Cloud & Storage,
+ * Administrators — said nothing about which of them an admin should be
+ * careful with. Changing the late fee and changing the storage bucket label
+ * looked like the same kind of act.
+ *
+ * **Two groups: things that change what residents are charged, and things
+ * that do not.** The names are what the setting does, not what module it
+ * belongs to.
+ */
+type SettingsGroup = {
+  heading: string;
+  note: string;
+  items: { id: string; label: string; icon: string; dot: string }[];
+};
+
+const SETTINGS_GROUPS: SettingsGroup[] = [
+  {
+    heading: "Costs money",
+    note: "Changing these changes what a resident owes.",
+    items: [
+      { id: "billing", label: "What residents are charged", icon: "payments", dot: "bg-amber-400" },
+      { id: "invoice", label: "The invoice document", icon: "receipt_long", dot: "bg-amber-400" },
+    ],
+  },
+  {
+    heading: "Costs nothing",
+    note: "Wording, targets and access. Nobody is billed differently.",
+    items: [
+      { id: "general", label: "The property itself", icon: "tune", dot: "bg-slate-400" },
+      { id: "helpdesk", label: "Repair response targets", icon: "support_agent", dot: "bg-slate-400" },
+      { id: "visitors", label: "The gate", icon: "badge", dot: "bg-slate-400" },
+      { id: "accounts", label: "Who can sign in as an admin", icon: "manage_accounts", dot: "bg-slate-400" },
+      { id: "storage", label: "Plumbing", icon: "cloud", dot: "bg-emerald-400" },
+    ],
+  },
 ];
+
+const ALL_TABS = SETTINGS_GROUPS.flatMap((g) => g.items);
 
 export default function AdminSettingsClient({
   settings,
@@ -34,7 +66,9 @@ export default function AdminSettingsClient({
   admins,
   currentUserId,
 }: AdminSettingsClientProps) {
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState("billing");
+  /** A tab the admin asked for while this one still has unsaved edits. */
+  const [leavingTo, setLeavingTo] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -99,9 +133,46 @@ export default function AdminSettingsClient({
     setChanged(diff);
   };
 
+  /*
+   * Re-taken per panel, not once on mount. The panels unmount, so a baseline
+   * captured on the first render describes fields that are no longer there
+   * and misses every field that now is.
+   */
   useEffect(() => {
-    if (formRef.current && !initial.current) initial.current = snapshot(formRef.current);
-  }, []);
+    if (formRef.current) {
+      initial.current = snapshot(formRef.current);
+      setChanged([]);
+    }
+  }, [activeTab]);
+
+  /*
+   * Switching away discards, so say so (DEV-278).
+   *
+   * The form renders one panel at a time and the others are unmounted, so
+   * their inputs are not in the DOM and `saveSettingsAction` deliberately
+   * skips any key it was not sent. That is coherent — each panel owns a
+   * disjoint set of keys — but it meant an edit made here and abandoned by
+   * clicking another panel vanished with no word said. DEV-274's "unsaved
+   * changes" bar could not warn about it either: it diffs the same FormData,
+   * so once the panel unmounts the change is invisible to it too.
+   *
+   * The switch is now a decision rather than a silent loss.
+   */
+  const askToLeave = (next: string) => {
+    if (next === activeTab) return;
+    if (changed.length > 0) setLeavingTo(next);
+    else setActiveTab(next);
+  };
+
+  const discardAndLeave = () => {
+    const next = leavingTo;
+    setLeavingTo(null);
+    setChanged([]);
+    // The panel unmounts on the next render, so the baseline is re-taken
+    // from whatever the new panel shows.
+    initial.current = null;
+    if (next) setActiveTab(next);
+  };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -153,36 +224,65 @@ export default function AdminSettingsClient({
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-outline-variant/40">
+      <div className="flex flex-col gap-4 border-b border-outline-variant/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-            System & Operations Settings
-          </h1>
-          <p className="text-xs text-on-surface-variant mt-0.5">
-            Configure system parameters, SLA turnaround guidelines, and gate security policies
+          <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">Settings</h1>
+          <p className="mt-0.5 text-xs text-on-surface-variant">
+            Each of these changes what residents are charged, told or allowed — so each one says
+            which.
           </p>
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <ScrollHint className="border-b border-outline-variant/30 pb-1"><div className="flex items-center gap-1">
-        {SETTINGS_TABS.map((t) => (
-          <button
-            type="button"
-            key={t.id}
-            onClick={() => setActiveTab(t.id)}
-            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shrink-0 transition-all ${
-              activeTab === t.id
-                ? "bg-primary text-on-primary shadow-sm"
-                : "text-on-surface-variant hover:text-white hover:bg-surface-container"
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
-            <span>{t.label}</span>
-          </button>
-        ))}
-      </div></ScrollHint>
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
+        {/*
+          A rail grouped by consequence, not a row of seven equal tabs
+          (DEV-278). Money first and separated, because that is the group
+          where a wrong digit reaches a resident's bill.
+        */}
+        <nav
+          aria-label="Settings groups"
+          className="flex w-full shrink-0 flex-col gap-4 lg:w-[256px]"
+        >
+          {SETTINGS_GROUPS.map((group) => (
+            <div key={group.heading}>
+              <p className="mb-1 px-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70">
+                {group.heading}
+              </p>
+              <p className="mb-2 px-0.5 text-[11px] leading-snug text-on-surface-variant/60">
+                {group.note}
+              </p>
+              <div className="flex flex-col gap-1">
+                {group.items.map((t) => {
+                  const on = activeTab === t.id;
+                  return (
+                    <button
+                      type="button"
+                      key={t.id}
+                      onClick={() => askToLeave(t.id)}
+                      aria-current={on ? "page" : undefined}
+                      className={`pressable flex min-h-[42px] w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-xs transition-colors ${
+                        on
+                          ? "border-primary/40 bg-primary/12 font-bold text-primary"
+                          : "border-transparent font-medium text-on-surface-variant hover:bg-surface-container hover:text-white"
+                      }`}
+                    >
+                      <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${t.dot}`} />
+                      <span className="min-w-0 flex-1 truncate">{t.label}</span>
+                      {on && changed.length > 0 && (
+                        <span className="shrink-0 rounded-full border border-amber-500/35 bg-amber-500/15 px-1.5 py-px text-[10px] font-bold tabular-nums text-amber-300">
+                          {changed.length}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
 
+        <div className="min-w-0 flex-1">
       {/* Settings Form Container */}
       {activeTab === "accounts" && (
         <div className="p-6 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-lg">
@@ -672,17 +772,72 @@ export default function AdminSettingsClient({
           <button
             type="submit"
             disabled={isPending}
-            className="btn-primary px-6 py-2.5 rounded-xl text-white text-xs font-bold shadow-md hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-50 pressable"
+            /* AGENTS.md Rule 4 / DEV-253: flat fill, not the `.btn-primary`
+               gradient the rest of the admin panel stopped using. */
+            className="pressable flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-xs font-bold text-on-primary shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
             {isPending ? (
-              <LoadingSpinner size="xs" className="text-white" />
+              <LoadingSpinner size="xs" className="text-on-primary" />
             ) : (
               <span className="material-symbols-outlined text-[16px]">save</span>
             )}
-            <span>{isPending ? "Saving Parameters..." : "Save Settings"}</span>
+            <span>{isPending ? "Saving…" : "Save these settings"}</span>
           </button>
         </div>
       </form>
+        </div>
+      </div>
+
+      {/*
+        Leaving this panel throws the edits away, because the panels unmount
+        and the save action is only sent the fields that were on screen. The
+        loss used to be silent (DEV-278).
+      */}
+      {leavingTo && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-[#060a14]/80 px-4 backdrop-blur-sm"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setLeavingTo(null);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md rounded-2xl border border-outline-variant bg-surface-container-lowest p-5 shadow-2xl"
+          >
+            <h2 className="text-[15px] font-bold text-on-surface">
+              {changed.length} unsaved change{changed.length === 1 ? "" : "s"} on this panel
+            </h2>
+            <p className="mt-1.5 text-xs leading-relaxed text-on-surface-variant">
+              <span className="font-semibold text-amber-200">
+                {changed.slice(0, 4).join(", ")}
+                {changed.length > 4 ? ` and ${changed.length - 4} more` : ""}
+              </span>{" "}
+              will be thrown away if you move to{" "}
+              <span className="font-semibold text-on-surface">
+                {ALL_TABS.find((t) => t.id === leavingTo)?.label}
+              </span>
+              . Only the panel you are looking at is saved.
+            </p>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setLeavingTo(null)}
+                className="pressable inline-flex h-10 items-center rounded-xl px-3.5 text-xs font-semibold text-on-surface-variant transition-colors hover:text-white"
+              >
+                Stay and save
+              </button>
+              <button
+                type="button"
+                onClick={discardAndLeave}
+                className="pressable inline-flex h-10 items-center rounded-xl border border-rose-500/40 bg-rose-500/10 px-3.5 text-xs font-bold text-rose-300 transition-colors hover:bg-rose-500/20"
+              >
+                Throw them away
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
