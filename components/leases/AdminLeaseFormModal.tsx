@@ -29,12 +29,31 @@ export default function AdminLeaseFormModal({
 }: AdminLeaseFormModalProps) {
   useDialogDismiss(isOpen, onClose);
   const [state, formAction, isPending] = useActionState(adminCreateLease, null);
-  const [selectedUnitId, setSelectedUnitId] = useState(units[0]?.unit_id || "");
+  /*
+   * Nothing is pre-selected, and that is the whole point (DEV-279).
+   *
+   * These two used to start at `units[0]` and `users[0]`. A tenancy is an
+   * assignment of a person to a home: a default answer to "who?" is not a
+   * convenience, it is a wrong answer waiting to be saved by somebody who
+   * never looked at the field.
+   *
+   * It was: on 22 Nov an admin created the resident John Lee and then made
+   * five tenancies in six minutes. **All five went to Ahmad Resident**, the
+   * first name in the list, and John Lee ended the afternoon with none. The
+   * admin reported it as "the tenancy never saved" — it saved perfectly,
+   * against the wrong person, five times, silently.
+   *
+   * The unit default was broken in a second way: it seeded from `units[0]`
+   * while the list rendered `vacantUnits`. When the first unit was occupied
+   * the state held an id that no option carried, so the browser displayed
+   * the first vacant unit while the form held something else.
+   */
+  const [selectedUnitId, setSelectedUnitId] = useState("");
 
   // Only vacant units can take a new lease — createLease() rejects anything
   // else, so offering occupied units just produced an error after submitting.
   const vacantUnits = units.filter((u) => u.status === "Vacant");
-  const [selectedUserId, setSelectedUserId] = useState(users[0]?.user_id || "");
+  const [selectedUserId, setSelectedUserId] = useState("");
 
   // It used to close itself 800ms after saving, which threw away the one
   // moment the admin is looking for what comes next. The dialog now waits and
@@ -119,9 +138,11 @@ export default function AdminLeaseFormModal({
                 required
                 className="w-full rounded-xl bg-surface-container-high border border-outline-variant/60 px-3.5 py-2.5 text-xs text-white outline-none focus:border-primary transition-all"
               >
-                {vacantUnits.length === 0 && (
-                  <option value="">No vacant units in this property</option>
-                )}
+                <option value="">
+                  {vacantUnits.length === 0
+                    ? "No vacant units in this property"
+                    : "Choose a unit…"}
+                </option>
                 {vacantUnits.map((u) => (
                   <option key={u.unit_id} value={u.unit_id} className="bg-surface-container-high text-white">
                     {u.unit_number}
@@ -144,6 +165,9 @@ export default function AdminLeaseFormModal({
                 required
                 className="w-full rounded-xl bg-surface-container-high border border-outline-variant/60 px-3.5 py-2.5 text-xs text-white outline-none focus:border-primary transition-all"
               >
+                <option value="">
+                  {users.length === 0 ? "No residents yet — add one first" : "Choose a resident…"}
+                </option>
                 {users.map((u) => (
                   <option key={u.user_id} value={u.user_id} className="bg-surface-container-high text-white">
                     {u.user_name} ({u.user_email})
@@ -181,9 +205,28 @@ export default function AdminLeaseFormModal({
               </div>
             </div>
 
+            {/*
+              Say back who is about to be housed where. The select shows the
+              chosen name only while it has focus; this is on screen when the
+              admin's hand is on Save.
+            */}
             <div className="p-3 rounded-xl bg-surface-container-high/60 border border-outline-variant/40 text-xs text-on-surface-variant">
-              Saving marks the unit <strong className="text-emerald-300">Occupied</strong>. Rent and other
-              recurring charges are set up afterwards, under Charges &amp; Billing on the lease.
+              {selectedUserId && selectedUnitId ? (
+                <>
+                  <strong className="text-white">
+                    {users.find((u) => u.user_id === selectedUserId)?.user_name}
+                  </strong>{" "}
+                  moves into{" "}
+                  <strong className="text-white">
+                    {vacantUnits.find((u) => u.unit_id === selectedUnitId)?.unit_number}
+                  </strong>
+                  , and the unit becomes <strong className="text-emerald-300">Occupied</strong>. Rent and
+                  other recurring charges are set up afterwards, under Charges &amp; Billing on the lease.
+                </>
+              ) : (
+                <>Choose a unit and a resident. Saving marks the unit{" "}
+                <strong className="text-emerald-300">Occupied</strong>.</>
+              )}
             </div>
           </form>
         </div>
