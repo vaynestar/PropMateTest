@@ -276,6 +276,16 @@ export default function AdminVisitorForm({
               className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3.5 py-2.5 text-white text-xs font-mono placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary"
               placeholder="e.g. 900101-14-5566"
             />
+            {/*
+              AGENTS.md Rule 3 — this is a consequence, not a restated label.
+              The column is optional precisely because a resident registering
+              a guest cannot know it and the guard takes it at the gate
+              (DEV-240). At this counter the visitor is standing in front of
+              you, so it is required here and the field should say why.
+            */}
+            <p className="text-[11px] leading-snug text-on-surface-variant">
+              They are in front of you, so take it now — otherwise the guard has to ask at the gate.
+            </p>
           </div>
 
           {/* Contact Phone */}
@@ -360,12 +370,29 @@ export default function AdminVisitorForm({
           </div>
         </div>
 
+        {/*
+          What the button actually produces. Nothing on this form said a pass
+          with a QR code comes out of it, so the one thing to do next — print
+          it, or let the visitor keep it on their phone — had to be learned.
+        */}
+        <div className="flex items-start gap-2.5 rounded-xl border border-outline-variant/60 bg-surface-container px-3.5 py-3">
+          <span className="material-symbols-outlined mt-px shrink-0 text-[17px] text-on-surface-variant">
+            qr_code_2
+          </span>
+          <p className="text-[12px] leading-relaxed text-on-surface-variant">
+            A pass with a QR code is produced. Print it for the windscreen, or the guard can scan it
+            from the visitor&rsquo;s phone at the gate.
+          </p>
+        </div>
+
         {/* SUBMIT BUTTON */}
         <div className="pt-2 flex justify-end">
           <button
             type="submit"
             disabled={isPending}
-            className="btn-primary px-6 py-2.5 rounded-xl text-white font-semibold text-xs shadow-lg hover:brightness-110 transition-all flex items-center gap-2 disabled:opacity-50 pressable"
+            /* AGENTS.md Rule 4 / DEV-253: flat fill, not the 135deg `.btn-primary`
+               gradient that the rest of the admin panel stopped using. */
+            className="pressable flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 text-xs font-bold text-on-primary shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
           >
             {isPending ? (
               <span className="material-symbols-outlined text-[18px] animate-spin-slow">

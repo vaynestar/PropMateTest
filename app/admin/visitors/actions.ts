@@ -235,3 +235,88 @@ export async function adminUpdateVisitor(visitorId: string, formData: FormData) 
     return { error: error.message as string };
   }
 }
+
+/**
+ * Close a visit the gate never scanned out (DEV-276).
+ *
+ * `updateVisitorStatus(id, "Checked Out")` exists, but it is the button a
+ * guard presses as somebody walks past the counter: it stamps
+ * `check_out_time = now` and logs a gate crossing. Used on a pass that has
+ * been open since August, it records that the visitor left **today**, which
+ * is a false movement in a log the committee and the police read.
+ *
+ * This does the honest version of the same thing. The pass is closed, the
+ * movement is marked as an office correction, and the note says so —
+ * `VisitorMovement.note` has existed for exactly this since the model was
+ * written and nothing had ever used it.
+ *
+ * `closedAt` is the *last* moment the visit could plausibly have ended — the
+ * end of the visit date, or the check-in time if that is later — never now.
+ */
+export async function closeOpenVisits(visitorIds: string[], reason?: string) {
+  try {
+    const user = await getSessionUser();
+    if (!user || user.role !== "Admin") return { error: "Unauthorized" };
+    if (visitorIds.length === 0) return { error: "Nothing was selected." };
+
+    const visitors = await prisma.visitor.findMany({
+      where: { visitor_id: { in: visitorIds } },
+      select: {
+        visitor_id: true,
+        visitor_name: true,
+        status: true,
+        visit_date: true,
+        check_in_time: true,
+      },
+    });
+
+    const open = visitors.filter((v) => normaliseVisitorStatus(v.status) === "Checked In");
+    if (open.length === 0) {
+      return { error: "None of those passes are still open." };
+    }
+
+    const note =
+      reason?.trim() ||
+      "Closed by the office — the gate scan was missed, not a recorded departure.";
+
+    await prisma.$transaction(
+      open.flatMap((v) => {
+        // End of the visit day, in Malaysia. Falling back to the check-in
+        // moment keeps the log monotonic when a pass carries no visit date.
+        const base = v.visit_date ? new Date(v.visit_date) : v.check_in_time;
+        const endOfDay = base ? new Date(new Date(base).getTime() + 86_399_000) : null;
+        const inAt = v.check_in_time ? new Date(v.check_in_time) : null;
+        let closedAt =
+          endOfDay && inAt ? (endOfDay > inAt ? endOfDay : inAt) : endOfDay ?? inAt ?? new Date();
+        // Never stamp a departure in the future.
+        if (closedAt > new Date()) closedAt = new Date();
+
+        return [
+          prisma.visitor.update({
+            where: { visitor_id: v.visitor_id },
+            data: {
+              status: "Checked Out",
+              check_out_time: closedAt,
+              modified_by: user.userId,
+            },
+          }),
+          prisma.visitorMovement.create({
+            data: {
+              visitor_id: v.visitor_id,
+              direction: "Out",
+              occurred_at: closedAt,
+              method: "Manual",
+              note,
+              recorded_by: user.userId,
+            },
+          }),
+        ];
+      })
+    );
+
+    revalidatePath("/admin/visitors");
+    return { success: true, closed: open.length };
+  } catch (error: any) {
+    return { error: error.message };
+  }
+}

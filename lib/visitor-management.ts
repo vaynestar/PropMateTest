@@ -36,6 +36,10 @@ export async function getAllVisitors(propertyId?: string) {
       orderBy: [{ visit_date: "desc" }, { created_at: "desc" }],
       include: {
         property: { select: { property_id: true, property_name: true } },
+        // Who put this pass in the system. A resident pre-registering a guest
+        // and a guard logging a walk-in produce identical rows otherwise, and
+        // the difference decides whether a missing IC is normal (DEV-276).
+        creator: { select: { user_name: true, role: true } },
         // The gate log. The columns on Visitor say where someone is now; this
         // says what happened and who recorded it, and survives corrections.
         movements: {
