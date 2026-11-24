@@ -16,6 +16,7 @@ import RowMenu from "@/components/admin/RowMenu";
 import { Toast, type ToastState } from "@/components/admin/Toast";
 import { updateVisitorStatus, closeOpenVisits } from "./actions";
 import { EmptyState, FIELD, SearchField, StatCard, StatGrid, TABLE } from "@/components/admin/ui";
+import { rowOpenProps } from "@/components/admin/rowLink";
 
 /**
  * The gate log (DEV-276, to the batch-3 `Visitors` artboard).
@@ -511,7 +512,15 @@ export default function AdminVisitorList({
                       return (
                         <tr
                           key={v.visitor_id}
-                          className={`${TABLE.tr} ${stale ? "bg-amber-500/[0.045]" : ""}`}
+                          /* The row opens the pass. The named action and the
+                             ⋯ menu keep their own clicks (DEV-280). */
+                          {...rowOpenProps(
+                            () => setViewingPassVisitor(v),
+                            `Open ${v.visitor_name}'s pass`
+                          )}
+                          className={`${TABLE.tr} cursor-pointer ${
+                            stale ? "bg-amber-500/[0.045]" : ""
+                          }`}
                         >
                           <td className={TABLE.td}>
                             <div className="font-bold text-white">{v.visitor_name}</div>

@@ -18,7 +18,11 @@ export async function adminRegisterVisitor(state: any, formData: FormData) {
     const visitor_name = (formData.get("visitor_name") as string)?.trim();
     const visitor_ic_no = (formData.get("visitor_ic_no") as string)?.trim();
     const contact_no = (formData.get("contact_no") as string)?.trim() || null;
-    const vehicle_plate = (formData.get("vehicle_plate") as string)?.trim() || null;
+    // A plate is read off a windscreen — it is capitals, always
+    // (user, 2026-11-24). Normalised on the way in so the stored value
+    // matches, not just the CSS on the input.
+    const vehicle_plate =
+      (formData.get("vehicle_plate") as string)?.trim().toUpperCase().replace(/\s+/g, " ") || null;
     const destination = (formData.get("destination") as string)?.trim() || null;
     const visit_purpose = (formData.get("visit_purpose") as string)?.trim() || null;
     const visit_date_str = (formData.get("visit_date") as string) || null;

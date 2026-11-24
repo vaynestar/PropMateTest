@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { adminEndLease } from "@/app/admin/leases/actions";
+import { rowOpenProps } from "@/components/admin/rowLink";
 import AdminLeaseFormModal from "./AdminLeaseFormModal";
 import AdminLeaseEditModal from "./AdminLeaseEditModal";
 import RowMenu, { type RowMenuItem } from "@/components/admin/RowMenu";
@@ -349,8 +350,15 @@ export default function LeasesClient({
                   return (
                     <tr
                       key={l.lease_id}
+                      /* The row opens the tenancy's charges — what it is billed
+                         is the thing an admin opens a tenancy to see (DEV-280). */
+                      {...rowOpenProps(
+                        () => router.push(`/admin/leases/${l.lease_id}/charges`),
+                        `Open the tenancy for ${l.unit?.unit_number ?? "this unit"}`
+                      )}
                       className={
                         TABLE.tr +
+                        " cursor-pointer" +
                         (nothing ? " bg-amber-500/[0.05]" : "") +
                         (l.status !== "Active" ? " opacity-65" : "")
                       }

@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { rowOpenProps } from "@/components/admin/rowLink";
 import { BTN, CARD, EmptyState, FIELD, Money, TABLE } from "@/components/admin/ui";
 import RowMenu, { type RowMenuItem } from "@/components/admin/RowMenu";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
@@ -387,7 +388,7 @@ export default function InvoiceBatchList({
           title: `Move ${inv.invoice_no} back to unpaid?`,
           body: (
             <p>
-              {asMoney} is owed by unit {unit} again and it will start counting as arrears from its due date,{" "}
+              {asMoney} is owed by unit {unit} again and it will start counting as overdue from its due date,{" "}
               {formatDate(inv.due_date)}.
             </p>
           ),
@@ -612,7 +613,14 @@ export default function InvoiceBatchList({
                     const action = primaryAction(inv, key);
                     const slip = key === "slip" ? inv.transactions[0] : null;
                     return (
-                      <tr key={inv.invoice_id} className={key === "void" ? `${TABLE.tr} opacity-55` : TABLE.tr}>
+                      <tr
+                        key={inv.invoice_id}
+                        /* The row opens the invoice (DEV-280). */
+                        {...rowOpenProps(() => setPdfInvoice(inv), `Open invoice ${inv.invoice_no}`)}
+                        className={
+                          (key === "void" ? `${TABLE.tr} opacity-55` : TABLE.tr) + " cursor-pointer"
+                        }
+                      >
                         <td className="pl-4 align-top pt-4">
                           <input
                             type="checkbox"

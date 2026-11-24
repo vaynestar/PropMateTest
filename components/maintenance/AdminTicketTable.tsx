@@ -6,6 +6,7 @@ import TicketDetailModal from "@/components/maintenance/TicketDetailModal";
 import RowMenu, { type RowMenuItem } from "@/components/admin/RowMenu";
 import { Toast, type ToastState } from "@/components/admin/Toast";
 import { EmptyState, FIELD, SearchField, TABLE, Toolbar } from "@/components/admin/ui";
+import { rowOpenProps } from "@/components/admin/rowLink";
 import {
   TICKET_STATE_DOT,
   TICKET_STATE_TONE,
@@ -79,10 +80,27 @@ type AdminTicketTableProps = {
   admins: any[];
   properties?: { property_id: string; property_name: string }[];
   defaultPropertyId?: string;
+  /** Tickets in the other properties, for an honest empty state (DEV-280). */
+  ticketsElsewhere?: number;
 };
 
-export default function AdminTicketTable({ tickets, admins }: AdminTicketTableProps) {
+export default function AdminTicketTable({
+  tickets,
+  admins,
+  ticketsElsewhere = 0,
+}: AdminTicketTableProps) {
   const router = useRouter();
+  const [refreshing, setRefreshing] = useState(false);
+  /*
+   * An empty list has two very different causes and they must not read the
+   * same: your filters hid everything, or the work is in another building.
+   */
+  const emptyHint =
+    ticketsElsewhere > 0
+      ? `Try clearing the search or choosing another chip. ${ticketsElsewhere} ticket${
+          ticketsElsewhere === 1 ? " is" : "s are"
+        } in another property — switch it at the top of the sidebar.`
+      : "Try clearing the search or choosing another chip.";
   const [search, setSearch] = useState("");
   const [chip, setChip] = useState<ChipKey>("open");
   const [owner, setOwner] = useState("ANY");
@@ -324,6 +342,32 @@ export default function AdminTicketTable({ tickets, admins }: AdminTicketTablePr
               </option>
             ))}
           </select>
+          {/*
+            A helpdesk is read while the phone is ringing, and this page is
+            server-rendered — a ticket raised a minute ago is simply not in
+            the HTML you are looking at. Asking an admin to reload the whole
+            browser tab to find out is not an answer.
+          */}
+          <button
+            type="button"
+            onClick={() => {
+              setRefreshing(true);
+              router.refresh();
+              // The refresh is a transition with no completion callback here;
+              // this is long enough to read as "it did something".
+              setTimeout(() => setRefreshing(false), 900);
+            }}
+            disabled={refreshing}
+            className="pressable inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-outline-variant/60 bg-surface-container-high px-3 text-xs font-semibold text-on-surface transition-colors hover:text-white disabled:opacity-50"
+            title="Look for tickets raised since this page loaded"
+          >
+            <span
+              className={`material-symbols-outlined text-[17px] ${refreshing ? "animate-spin-slow" : ""}`}
+            >
+              refresh
+            </span>
+            {refreshing ? "Checking…" : "Check for new"}
+          </button>
         </Toolbar>
 
         {picked.size > 0 && (
@@ -389,7 +433,7 @@ export default function AdminTicketTable({ tickets, admins }: AdminTicketTablePr
               <EmptyState
                 icon="search_off"
                 title="No tickets match these filters"
-                hint="Try clearing the search or choosing another chip."
+                hint={emptyHint}
               />
             ) : (
               visible.map((t: any) => {
@@ -522,7 +566,7 @@ export default function AdminTicketTable({ tickets, admins }: AdminTicketTablePr
                         <EmptyState
                           icon="search_off"
                           title="No tickets match these filters"
-                          hint="Try clearing the search or choosing another chip."
+                          hint={emptyHint}
                         />
                       </td>
                     </tr>
@@ -532,7 +576,18 @@ export default function AdminTicketTable({ tickets, admins }: AdminTicketTablePr
                       const unassigned = isOpenStatus(t.status) && !t.assigned_to;
                       const busy = busyId === t.ticket_id;
                       return (
-                        <tr key={t.ticket_id} className={TABLE.tr + (unassigned ? " bg-rose-500/[0.035]" : "")}>
+                        <tr
+                          key={t.ticket_id}
+                          {...rowOpenProps(
+                            () => router.push(`/admin/maintenance/${t.ticket_id}`),
+                            `Open ${ticketRef(t)}`
+                          )}
+                          className={
+                            TABLE.tr +
+                            " cursor-pointer" +
+                            (unassigned ? " bg-rose-500/[0.035]" : "")
+                          }
+                        >
                           <td className={TABLE.td}>
                             {isOpenStatus(t.status) && (
                               <input

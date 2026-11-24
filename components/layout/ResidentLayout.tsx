@@ -22,14 +22,25 @@ const PRIMARY: NavItem[] = [
    * or figure caption breaks.
    */
   { label: "Home", href: "/resident", icon: "home" },
-  { label: "Bills", href: "/resident/invoices", icon: "receipt_long" },
+  /*
+   * Visitors sits in the bar and Bills moves to More (user, 2026-11-24):
+   *
+   *   "swap Visitor and Billing placement in navigation bar, received
+   *    feedback that home already have redirection to Billing, and visitor
+   *    should occur more often then viewing billing"
+   *
+   * Which is right. The home screen already carries what is owed, with a
+   * link straight to it, so Bills had two front doors and registering a
+   * guest — the thing a resident does weekly — had none.
+   */
+  { label: "Visitors", href: "/resident/visitors", icon: "person_search" },
   { label: "Repairs", href: "/resident/maintenance", icon: "build_circle" },
   { label: "Book", href: "/resident/facilities", icon: "pool" },
 ];
 
 const MORE: NavItem[] = [
+  { label: "Bills", href: "/resident/invoices", icon: "receipt_long" },
   { label: "Notices", href: "/resident/announcements", icon: "campaign" },
-  { label: "Visitors", href: "/resident/visitors", icon: "person_search" },
   // The bell is a popover; this is the way back to an update after it has
   // been dismissed or scrolled past (DEV-244).
   { label: "Notifications", href: "/resident/notifications", icon: "notifications" },

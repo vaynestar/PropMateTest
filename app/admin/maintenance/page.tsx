@@ -49,6 +49,20 @@ export default async function MaintenancePage() {
     getOperationalSettings(),
   ]);
 
+
+  /*
+   * How many tickets are sitting in the OTHER properties (DEV-280).
+   *
+   * A resident raised two tickets on 22 Nov and the admin reported they
+   * "never showed, even after refresh". They had saved perfectly — into
+   * Residensi Suasana Damai, while the top bar was on Residensi Mutiara UAT.
+   * An empty table that says "no tickets match these filters" is a lie by
+   * omission when the reason is the property you are standing in.
+   */
+  const ticketsElsewhere = propertyId
+    ? await prisma.ticket.count({ where: { property_id: { not: propertyId } } })
+    : 0;
+
   const activeProperty = properties.find((p) => p.property_id === propertyId) || properties[0];
   const activePropId = activeProperty?.property_id || propertyId;
   const activePropName = activeProperty?.property_name || "Active Property";
@@ -242,6 +256,7 @@ export default async function MaintenancePage() {
         admins={admins}
         properties={properties}
         defaultPropertyId={activePropId}
+        ticketsElsewhere={ticketsElsewhere}
       />
     </div>
   );

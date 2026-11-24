@@ -6,6 +6,7 @@ import TenantFormModal from "./TenantFormModal";
 import TenantEditModal from "./TenantEditModal";
 import TenantDeleteModal from "./TenantDeleteModal";
 import RowMenu, { type RowMenuItem } from "@/components/admin/RowMenu";
+import { rowOpenProps } from "@/components/admin/rowLink";
 import { BTN, EmptyState, FIELD, Money, SearchField, TABLE, Toolbar } from "@/components/admin/ui";
 
 interface Lease {
@@ -137,7 +138,7 @@ export default function TenantsClient({
     { key: "all", label: "Everyone", dot: "bg-slate-300" },
     { key: "notenancy", label: "No tenancy", dot: "bg-amber-400" },
     { key: "never", label: "Never signed in", dot: "bg-sky-400" },
-    { key: "arrears", label: "In arrears", dot: "bg-rose-400" },
+    { key: "arrears", label: "Owes money", dot: "bg-rose-400" },
   ];
 
   const rows = initialTenants.filter((t) => {
@@ -361,7 +362,12 @@ export default function TenantsClient({
                   const portal = portalOf(t);
                   const owes = t.owes ?? 0;
                   return (
-                    <tr key={t.user_id} className={TABLE.tr}>
+                    <tr
+                      key={t.user_id}
+                      /* The row opens the resident (DEV-280). */
+                      {...rowOpenProps(() => setEditingTenant(t), `Open ${t.user_name}`)}
+                      className={TABLE.tr + " cursor-pointer"}
+                    >
                       <td className={TABLE.td + " align-top"}>
                         <span className="flex items-center gap-3">
                           <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-outline-variant bg-surface-container-high text-[11px] font-extrabold text-on-surface-variant">

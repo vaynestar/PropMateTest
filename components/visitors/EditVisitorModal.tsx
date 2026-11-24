@@ -197,7 +197,7 @@ export default function EditVisitorModal({
           </Field>
 
           {error && (
-            <p className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300">
+            <p className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-300 uppercase placeholder:normal-case">
               <span className="material-symbols-outlined text-[16px] leading-none">error</span>
               {error}
             </p>

@@ -311,7 +311,7 @@ export default function AdminVisitorForm({
               type="text"
               id="vehicle_plate"
               name="vehicle_plate"
-              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3.5 py-2.5 text-white text-xs font-mono placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary"
+              className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3.5 py-2.5 text-white text-xs font-mono placeholder:text-on-surface-variant/50 focus:outline-none focus:border-primary uppercase placeholder:normal-case"
               placeholder="e.g. WXY 1234"
             />
           </div>

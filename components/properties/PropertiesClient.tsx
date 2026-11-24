@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { rowOpenProps } from "@/components/admin/rowLink";
 import Link from "next/link";
 import { PropertyData } from "./PropertyCard";
 import PropertyFormModal from "./PropertyFormModal";
@@ -170,7 +171,14 @@ export default function PropertiesClient({
                   const isActive = p.property_id === activePropertyId;
 
                   return (
-                    <tr key={p.property_id} className={TABLE.tr + (p.is_archived ? " opacity-60" : "")}>
+                    <tr
+                      key={p.property_id}
+                      /* The row opens the property (DEV-280). */
+                      {...rowOpenProps(() => setEditingProperty(p), `Open ${p.property_name}`)}
+                      className={
+                        TABLE.tr + " cursor-pointer" + (p.is_archived ? " opacity-60" : "")
+                      }
+                    >
                       <td className={TABLE.td + " align-top"}>
                         <span className="flex flex-wrap items-baseline gap-2">
                           <button

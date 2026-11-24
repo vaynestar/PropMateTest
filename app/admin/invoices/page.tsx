@@ -137,7 +137,7 @@ export default async function InvoicesDetailPage({
                 calls router.refresh(), so the button only ever reloaded data
                 that was current — it was reassurance, not a function. */}
             <Link href="/admin/billing/arrears" className={BTN.secondary}>
-              Chase arrears
+              Chase payment
             </Link>
             <ManualInvoiceButton />
             <GenerateInvoicesButton />

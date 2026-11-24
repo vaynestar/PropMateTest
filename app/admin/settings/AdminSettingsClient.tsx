@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import ScrollHint from "@/components/ui/ScrollHint";
 import { SystemSettings } from "@/lib/settings";
 import { saveSettingsAction } from "./actions";
 import LoadingSpinner from "@/components/ui/LoadingSpinner";
@@ -17,47 +18,34 @@ interface AdminSettingsClientProps {
 }
 
 /*
- * Grouped by consequence, not by subsystem (DEV-278, batch-4 `Settings`).
+ * One tab per module, in the original wording (reverted 2026-11-25).
  *
- * Seven equal tabs in a row — General & Property, Billing & Finance, Invoice
- * Document, Helpdesk & SLA, Visitors & Security, Cloud & Storage,
- * Administrators — said nothing about which of them an admin should be
- * careful with. Changing the late fee and changing the storage bucket label
- * looked like the same kind of act.
+ * DEV-278 regrouped these into "Costs money" / "Costs nothing". The user
+ * rejected it:
  *
- * **Two groups: things that change what residents are charged, and things
- * that do not.** The names are what the setting does, not what module it
- * belongs to.
+ *   "i still prefer old design wording, the current seem so casual and not
+ *    understandable to user, not direct meaning, should not divide into cost
+ *    and no cost, just based on each module"
+ *
+ * Which is fair. "The property itself" and "Plumbing" are a writer's labels,
+ * not an administrator's, and somebody looking for the storage bucket does
+ * not think "costs nothing" — they think Cloud & Storage. The module names
+ * match the sidebar, so the word you arrive with is the word you find.
+ *
+ * What DEV-278 got right is kept: the unsaved-change count on the tab, and
+ * the guard that stops a panel switch throwing edits away silently.
  */
-type SettingsGroup = {
-  heading: string;
-  note: string;
-  items: { id: string; label: string; icon: string; dot: string }[];
-};
-
-const SETTINGS_GROUPS: SettingsGroup[] = [
-  {
-    heading: "Costs money",
-    note: "Changing these changes what a resident owes.",
-    items: [
-      { id: "billing", label: "What residents are charged", icon: "payments", dot: "bg-amber-400" },
-      { id: "invoice", label: "The invoice document", icon: "receipt_long", dot: "bg-amber-400" },
-    ],
-  },
-  {
-    heading: "Costs nothing",
-    note: "Wording, targets and access. Nobody is billed differently.",
-    items: [
-      { id: "general", label: "The property itself", icon: "tune", dot: "bg-slate-400" },
-      { id: "helpdesk", label: "Repair response targets", icon: "support_agent", dot: "bg-slate-400" },
-      { id: "visitors", label: "The gate", icon: "badge", dot: "bg-slate-400" },
-      { id: "accounts", label: "Who can sign in as an admin", icon: "manage_accounts", dot: "bg-slate-400" },
-      { id: "storage", label: "Plumbing", icon: "cloud", dot: "bg-emerald-400" },
-    ],
-  },
+const SETTINGS_TABS = [
+  { id: "general", label: "General & Property", icon: "tune" },
+  { id: "billing", label: "Billing & Finance", icon: "payments" },
+  { id: "invoice", label: "Invoice Document", icon: "receipt_long" },
+  { id: "helpdesk", label: "Helpdesk & SLA", icon: "support_agent" },
+  { id: "visitors", label: "Visitors & Security", icon: "badge" },
+  { id: "storage", label: "Cloud & Storage", icon: "cloud" },
+  { id: "accounts", label: "Administrators", icon: "manage_accounts" },
 ];
 
-const ALL_TABS = SETTINGS_GROUPS.flatMap((g) => g.items);
+const ALL_TABS = SETTINGS_TABS;
 
 export default function AdminSettingsClient({
   settings,
@@ -66,7 +54,7 @@ export default function AdminSettingsClient({
   admins,
   currentUserId,
 }: AdminSettingsClientProps) {
-  const [activeTab, setActiveTab] = useState("billing");
+  const [activeTab, setActiveTab] = useState("general");
   /** A tab the admin asked for while this one still has unsaved edits. */
   const [leavingTo, setLeavingTo] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -226,63 +214,45 @@ export default function AdminSettingsClient({
       {/* Header */}
       <div className="flex flex-col gap-4 border-b border-outline-variant/40 pb-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">Settings</h1>
+          <h1 className="text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+            System &amp; Operations Settings
+          </h1>
           <p className="mt-0.5 text-xs text-on-surface-variant">
-            Each of these changes what residents are charged, told or allowed — so each one says
-            which.
+            Configure system parameters, SLA turnaround guidelines, and gate security policies
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
-        {/*
-          A rail grouped by consequence, not a row of seven equal tabs
-          (DEV-278). Money first and separated, because that is the group
-          where a wrong digit reaches a resident's bill.
-        */}
-        <nav
-          aria-label="Settings groups"
-          className="flex w-full shrink-0 flex-col gap-4 lg:w-[256px]"
-        >
-          {SETTINGS_GROUPS.map((group) => (
-            <div key={group.heading}>
-              <p className="mb-1 px-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.1em] text-on-surface-variant/70">
-                {group.heading}
-              </p>
-              <p className="mb-2 px-0.5 text-[11px] leading-snug text-on-surface-variant/60">
-                {group.note}
-              </p>
-              <div className="flex flex-col gap-1">
-                {group.items.map((t) => {
-                  const on = activeTab === t.id;
-                  return (
-                    <button
-                      type="button"
-                      key={t.id}
-                      onClick={() => askToLeave(t.id)}
-                      aria-current={on ? "page" : undefined}
-                      className={`pressable flex min-h-[42px] w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left text-xs transition-colors ${
-                        on
-                          ? "border-primary/40 bg-primary/12 font-bold text-primary"
-                          : "border-transparent font-medium text-on-surface-variant hover:bg-surface-container hover:text-white"
-                      }`}
-                    >
-                      <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${t.dot}`} />
-                      <span className="min-w-0 flex-1 truncate">{t.label}</span>
-                      {on && changed.length > 0 && (
-                        <span className="shrink-0 rounded-full border border-amber-500/35 bg-amber-500/15 px-1.5 py-px text-[10px] font-bold tabular-nums text-amber-300">
-                          {changed.length}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
+      {/* Tab Navigation */}
+      <ScrollHint className="border-b border-outline-variant/30 pb-1">
+        <div className="flex items-center gap-1">
+          {SETTINGS_TABS.map((t) => {
+            const on = activeTab === t.id;
+            return (
+              <button
+                type="button"
+                key={t.id}
+                onClick={() => askToLeave(t.id)}
+                className={`flex shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                  on
+                    ? "bg-primary text-on-primary shadow-sm"
+                    : "text-on-surface-variant hover:bg-surface-container hover:text-white"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[16px]">{t.icon}</span>
+                <span>{t.label}</span>
+                {on && changed.length > 0 && (
+                  <span className="rounded-full bg-on-primary/20 px-1.5 py-px text-[10px] font-bold tabular-nums">
+                    {changed.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </ScrollHint>
 
-        <div className="min-w-0 flex-1">
+      <div>
       {/* Settings Form Container */}
       {activeTab === "accounts" && (
         <div className="p-6 rounded-2xl bg-surface-container border border-outline-variant/60 shadow-lg">
@@ -785,7 +755,6 @@ export default function AdminSettingsClient({
           </button>
         </div>
       </form>
-        </div>
       </div>
 
       {/*

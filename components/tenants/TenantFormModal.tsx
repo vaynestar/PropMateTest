@@ -146,8 +146,17 @@ export default function TenantFormModal({ isOpen, onClose }: TenantFormModalProp
                 />
               </Field>
 
-              <Field label="NRIC / passport no." hint="Optional">
-                <input name="ic_number" placeholder="e.g. 900101-14-5566" className={fieldClass} />
+              {/* Required now (user, 2026-11-24). A resident record with no
+                  identity number cannot be matched against a strata roll, a
+                  share-unit register or an access card, and the office has the
+                  person or their documents in front of it at this point. */}
+              <Field label="NRIC / passport no." hint="Required — it identifies the owner on the strata roll">
+                <input
+                  name="ic_number"
+                  required
+                  placeholder="e.g. 900101-14-5566"
+                  className={`${fieldClass} uppercase placeholder:normal-case`}
+                />
               </Field>
 
               <Field label="Email">
@@ -171,7 +180,11 @@ export default function TenantFormModal({ isOpen, onClose }: TenantFormModalProp
                 </Field>
 
                 <Field label="Vehicle plate" hint="Optional">
-                  <input name="vehicle_plate" placeholder="e.g. WXY 1234" className={fieldClass} />
+                  <input
+                    name="vehicle_plate"
+                    placeholder="e.g. WXY 1234"
+                    className={`${fieldClass} uppercase placeholder:normal-case`}
+                  />
                 </Field>
               </div>
 

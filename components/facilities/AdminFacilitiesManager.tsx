@@ -1007,22 +1007,13 @@ export default function AdminFacilitiesManager({
                 }}
               />
 
-              {/* The thumbnail the wash could never be. At 30% opacity behind
-                  a headline you cannot tell a pool from a surau; this is the
-                  same photo, sharp, at a size where the facility is
-                  recognisable. It sits at the top of the header rather than
-                  beside the name, because a tile in the title row cost the
-                  name a third of its width and "EV Fast Charging Station Hub"
-                  wrapped onto three lines. */}
-              <CoverThumb
-                src={f.image_url}
-                alt={f.facility_name || "Facility"}
-                fallback={DEFAULT_FACILITY_COVER}
-                sizes="96px"
-                className="absolute left-3 top-3 z-10 h-12 w-16 rounded-lg border border-outline-variant/70 shadow-lg"
-              />
+              {/* The sharp top-left thumbnail is gone (user, 2026-11-24):
+                  "Remove the thumbnail at left top for facilities". The 30%
+                  wash above stays — that was agreed separately — so the card
+                  still carries the photo, just without the inset tile sitting
+                  on top of it. The header no longer reserves room for it. */}
 
-              <div className="relative flex min-h-[116px] shrink-0 items-end p-3 pt-16">
+              <div className="relative flex min-h-[116px] shrink-0 items-end p-3 pt-10">
                 <div className="flex w-full items-end justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <h4 className="text-base font-bold leading-tight text-white" title={f.facility_name}>

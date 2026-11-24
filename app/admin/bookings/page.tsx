@@ -1,6 +1,5 @@
 import { requireUser } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import AdminFacilityBooking from "./AdminFacilityBooking";
 import AdminBookingList from "./AdminBookingList";
 import { getActivePropertyId } from "@/lib/property-context.server";
 import BookForResidentButton from "@/components/bookings/BookForResidentButton";

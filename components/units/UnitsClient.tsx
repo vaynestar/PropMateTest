@@ -1,11 +1,14 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 import { useState, useMemo, useEffect, useActionState } from "react";
 import Link from "next/link";
 import UnitFormModal from "./UnitFormModal";
 import UnitEditModal from "./UnitEditModal";
 import UnitDeleteModal from "./UnitDeleteModal";
 import { updateUnitStatusAction, updateUnitRemarkAction } from "@/app/admin/units/actions";
+import { rowOpenProps } from "@/components/admin/rowLink";
 import { setActiveProperty } from "@/app/actions/property-actions";
 import {
   unitStatus,
@@ -477,6 +480,7 @@ export default function UnitsClient({
   owesByUnit?: Record<string, number>;
   openByUnit?: Record<string, { repairs: number; slips: number; unbilled: boolean }>;
 }) {
+  const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   /*
    * Two ways to look at the same units (DEV-262). The list answers "which
@@ -670,7 +674,7 @@ export default function UnitsClient({
     })),
     {
       key: "ARREARS",
-      label: "In arrears",
+      label: "Owes money",
       count: arrearsCount,
       dot: "bg-rose-400",
       activeClass: "border border-rose-500/40 bg-rose-500/15 text-rose-300",
@@ -1034,7 +1038,14 @@ export default function UnitsClient({
                     return (
                       <tr
                         key={u.unit_id}
-                        className={TABLE.tr + (chosen ? " bg-primary/[0.06]" : "")}
+                        /* The row opens the unit file (DEV-280). */
+                        {...rowOpenProps(
+                          () => router.push(`/admin/units/${u.unit_id}`),
+                          `Open unit ${u.unit_number}`
+                        )}
+                        className={
+                          TABLE.tr + " cursor-pointer" + (chosen ? " bg-primary/[0.06]" : "")
+                        }
                       >
                         <td className={TABLE.td}>
                           <input

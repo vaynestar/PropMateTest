@@ -28,7 +28,7 @@ export default function BookForResidentButton(props: React.ComponentProps<typeof
           size="xl"
           onClose={() => setOpen(false)}
         >
-          <AdminFacilityBooking {...props} />
+          <AdminFacilityBooking {...props} onBooked={() => setOpen(false)} />
         </Modal>
       )}
     </>

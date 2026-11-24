@@ -83,7 +83,7 @@ export default function AdminReportsClient({
       csvContent += `Aging 0-30 Days,Current Overdue,${data.financial.agingReceivables.current}\n`;
       csvContent += `Aging 31-60 Days,Mid Overdue,${data.financial.agingReceivables.days30}\n`;
       csvContent += `Aging 61-90 Days,Late Overdue,${data.financial.agingReceivables.days60}\n`;
-      csvContent += `Aging 90+ Days,Severe Arrears,${data.financial.agingReceivables.days90Plus}\n\n`;
+      csvContent += `Aging 90+ Days,Owing over 90 days,${data.financial.agingReceivables.days90Plus}\n\n`;
 
       csvContent += "Top Outstanding Defaulters\nUnit,Resident,Property,Overdue Amount (RM),Max Days Overdue\n";
       data.financial.topDefaulters?.forEach((d: any) => {

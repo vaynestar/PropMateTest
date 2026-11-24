@@ -1,3 +1,14 @@
+/*
+ * "Arrears" is retired from the interface (user, 2026-11-24).
+ *
+ *   "Rename arrears to chase payment, remove usage of arrears"
+ *
+ * It is an accounting word. The screen is called **Chasing payment**, the
+ * filters read **Owes money**, and an unpaid invoice is **overdue**. The
+ * identifiers in this file keep the old name on purpose — renaming the type
+ * and the route would break links and teach nobody anything — but nothing
+ * here should reach a user's eye saying "arrears".
+ */
 /**
  * The escalation ladder, shared by the server query and the client screen
  * (DEV-254).

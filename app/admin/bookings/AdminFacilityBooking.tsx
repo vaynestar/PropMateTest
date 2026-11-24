@@ -80,10 +80,13 @@ export default function AdminFacilityBooking({
   facilities,
   bookings,
   leases,
+  onBooked,
 }: {
   facilities: Facility[];
   bookings: Booking[];
   leases: any[];
+  /** Called once a booking is made and the admin dismisses the receipt. */
+  onBooked?: () => void;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const facility = facilities.find((f) => f.facility_id === selectedId) ?? null;
@@ -140,13 +143,29 @@ export default function AdminFacilityBooking({
       </div>
 
       {facility && (
-        <BookingCard key={facility.facility_id} facility={facility} bookings={bookings} leases={leases} />
+        <BookingCard
+            key={facility.facility_id}
+            facility={facility}
+            bookings={bookings}
+            leases={leases}
+            onBooked={onBooked}
+          />
       )}
     </div>
   );
 }
 
-function BookingCard({ facility, bookings, leases }: { facility: Facility; bookings: Booking[]; leases: any[] }) {
+function BookingCard({
+  facility,
+  bookings,
+  leases,
+  onBooked,
+}: {
+  facility: Facility;
+  bookings: Booking[];
+  leases: any[];
+  onBooked?: () => void;
+}) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -619,7 +638,26 @@ function BookingCard({ facility, bookings, leases }: { facility: Facility; booki
       {modalConfig && (
         <BookingResultModal
           isOpen={modalConfig.isOpen}
-          onClose={() => setModalConfig(null)}
+          /*
+           * Dismissing the receipt after a SUCCESS has to leave the form
+           * (DEV-280).
+           *
+           * It used to just hide the receipt. The form was still underneath
+           * with the same facility, date and time selected — and the
+           * availability strip, correctly refreshed, now reported that slot
+           * as taken. So the last thing an admin saw after booking was a red
+           * "Someone already has this facility from 10:00 AM to 11:00 AM",
+           * about the booking they had just made themselves. Reported as
+           * "unable to book facilities".
+           *
+           * An error receipt still returns to the form, which is the point of
+           * an error: pick another slot.
+           */
+          onClose={() => {
+            const wasSuccess = modalConfig.type === "success";
+            setModalConfig(null);
+            if (wasSuccess) onBooked?.();
+          }}
           type={modalConfig.type}
           title={modalConfig.title}
           message={modalConfig.message}
