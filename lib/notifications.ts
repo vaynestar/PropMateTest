@@ -273,6 +273,57 @@ export async function getResidentNotificationsFor(userId: string): Promise<Notif
       });
     });
 
+    /*
+     * 1b. The office replied (DEV-286).
+     *
+     * Reported: "i try writing comment for tickets, i wrote using admin, but
+     * resident tan wei jie never received notification for admin replied to
+     * your ticket." Correct — nothing produced one.
+     *
+     * This feed is derived, not stored: `getResidentNotificationsFor` builds
+     * every item from a record, and the only ticket records it read were the
+     * STATUS ones above and the resolved ones below. A reply that did not
+     * also move the status therefore notified nobody — while the admin's
+     * composer said, in as many words, "The resident is notified in the app."
+     *
+     * Internal notes are excluded here as well as in the thread query. A note
+     * the office writes to itself must not announce itself to the resident,
+     * and a notification carrying its title would leak it even if the body
+     * never did.
+     */
+    const replies = await prisma.ticketComment.findMany({
+      where: {
+        is_internal: false,
+        user_id: { not: user.userId },
+        author: { role: "Admin" },
+        created_at: { gte: days(14) },
+        ticket: { OR: [{ requester_id: user.userId }, { lease_id: { in: leaseIds } }] },
+      },
+      orderBy: { created_at: "desc" },
+      take: 5,
+      select: {
+        comment_id: true,
+        message_text: true,
+        created_at: true,
+        ticket: { select: { ticket_id: true, title: true } },
+      },
+    });
+    replies.forEach((c) => {
+      const body = c.message_text.trim();
+      items.push({
+        id: `tktmsg-${c.comment_id}`,
+        type: "TICKET",
+        title: `The office replied: ${c.ticket.title}`,
+        // The reply itself, trimmed — a notification saying only "you have a
+        // reply" makes the resident open the app to learn nothing.
+        message: body.length > 140 ? `${body.slice(0, 139)}…` : body,
+        timestamp: c.created_at,
+        isRead: false,
+        href: "/resident/maintenance",
+        urgency: "NORMAL",
+      });
+    });
+
     // 1. Tickets they raised that have been dealt with
     const resolved = await prisma.ticket.findMany({
       where: {

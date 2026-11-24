@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { NotificationItem } from "@/lib/notifications";
 import ScrollHint from "@/components/ui/ScrollHint";
@@ -103,6 +104,26 @@ export default function NotificationCenter({
   const copy = COPY[portal];
   const storageKey = `propmate:notif-read:${portal}`;
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const popRef = useRef<HTMLDivElement | null>(null);
+  const bellRef = useRef<HTMLButtonElement | null>(null);
+
+  /*
+   * Where the panel sits (DEV-286).
+   *
+   * It was `absolute right-0` on the bell with `w-[calc(100vw-1.5rem)]`, so
+   * its right edge lined up with the BELL's right edge — and on a phone the
+   * settings and logout buttons sit to the bell's right, leaving ~120px of
+   * screen beyond it. A panel almost a full viewport wide, hung from that
+   * point, ran off the LEFT of the screen: the title read "ional Alerts" and
+   * every unit number lost its first characters.
+   *
+   * Measured against the viewport instead, and rendered in a portal on the
+   * body. The portal matters: the admin header is backdrop-blurred, and
+   * `backdrop-filter` makes a containing block for fixed descendants
+   * (DEV-159 hit this with the dismiss overlay), so `fixed` inside the header
+   * is not fixed to the viewport at all.
+   */
+  const [anchor, setAnchor] = useState<{ top: number; right: number; left?: number } | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
   const [notifications] = useState<NotificationItem[]>(initialNotifications);
@@ -156,7 +177,10 @@ export default function NotificationCenter({
   useEffect(() => {
     if (!isOpen) return;
     const onDown = (e: MouseEvent | TouchEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setIsOpen(false);
+      const t = e.target as Node;
+      // The panel is portalled, so rootRef no longer contains it.
+      if (rootRef.current?.contains(t) || popRef.current?.contains(t)) return;
+      setIsOpen(false);
     };
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setIsOpen(false);
     document.addEventListener("mousedown", onDown);
@@ -166,6 +190,31 @@ export default function NotificationCenter({
       document.removeEventListener("mousedown", onDown);
       document.removeEventListener("touchstart", onDown);
       document.removeEventListener("keydown", onKey);
+    };
+  }, [isOpen]);
+
+  /* Measure on open, and keep up with a resize or a scroll behind it. */
+  useEffect(() => {
+    if (!isOpen) return;
+    const place = () => {
+      const r = bellRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const GAP = 8;
+      const EDGE = 12;
+      // Below `sm` the panel spans the screen; above it, it hangs from the bell.
+      const narrow = window.innerWidth < 640;
+      setAnchor({
+        top: r.bottom + GAP,
+        right: narrow ? EDGE : Math.max(EDGE, window.innerWidth - r.right),
+        left: narrow ? EDGE : undefined,
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
     };
   }, [isOpen]);
 
@@ -191,6 +240,7 @@ export default function NotificationCenter({
     <div ref={rootRef} className="relative">
       {/* Bell Trigger Button */}
       <button
+        ref={bellRef}
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="relative flex h-11 w-11 items-center justify-center text-on-surface-variant hover:text-white hover:bg-surface-variant rounded-full transition-all"
@@ -205,10 +255,14 @@ export default function NotificationCenter({
         )}
       </button>
 
-      {/* Notification Dropdown Popover */}
-      {isOpen && (
-        <>
-          <div className="absolute right-0 top-12 z-50 max-h-[70dvh] w-[calc(100vw-1.5rem)] overflow-y-auto rounded-2xl bg-surface-container border border-outline-variant/80 shadow-2xl sm:w-96 animate-in fade-in slide-in-from-top-2">
+      {/* Notification Dropdown Popover — portalled; see the note on `anchor`. */}
+      {isOpen && typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={popRef}
+            style={anchor ? { top: anchor.top, right: anchor.right, left: anchor.left } : undefined}
+            className="fixed z-[130] max-h-[70dvh] overflow-y-auto rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl animate-in fade-in slide-in-from-top-2 sm:w-96"
+          >
             {/* Popover Header */}
             <div className="p-4 border-b border-outline-variant/40 flex items-center justify-between bg-surface-container-high/50">
               <div className="flex items-center gap-2">
@@ -409,9 +463,9 @@ export default function NotificationCenter({
                 <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
               </Link>
             </div>
-          </div>
-        </>
-      )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
