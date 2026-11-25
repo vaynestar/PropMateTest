@@ -38,8 +38,38 @@ export default async function AdminLeasesPage(props: {
       urlUnitNumber
     ),
     listUnits(activePropertyId || undefined),
+    /*
+     * The residents this property could sensibly lease to (DEV-287).
+     *
+     * This asked for every resident in the database, while `listUnits` beside
+     * it was scoped — so on a 12-unit building the picker offered all 36
+     * people, 30 of them tenants of another property entirely. User:
+     * "tenancy > choose resident should based on current property not from
+     * all property". It is also the surface where DEV-279's wrong-tenant bug
+     * happened, and a shorter list is a smaller target.
+     *
+     * Two groups qualify, not one:
+     *   · anyone who already holds a tenancy here, past or present — a
+     *     renewal or a second unit;
+     *   · anyone with no tenancy anywhere, because a resident is tied to a
+     *     property only THROUGH a tenancy. Scoping on the property alone
+     *     would hide the person you just registered, which is precisely who
+     *     you came here to lease to.
+     *
+     * Only residents who belong solely to other properties are dropped.
+     */
     prisma.user.findMany({
-      where: { role: "Resident" },
+      where: {
+        role: "Resident",
+        ...(activePropertyId
+          ? {
+              OR: [
+                { tenant_leases: { some: { unit: { property_id: activePropertyId } } } },
+                { tenant_leases: { none: {} } },
+              ],
+            }
+          : {}),
+      },
       select: { user_id: true, user_name: true, user_email: true },
       orderBy: { user_name: "asc" },
     }),

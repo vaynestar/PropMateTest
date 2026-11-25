@@ -14,6 +14,7 @@ import { Toast, type ToastState } from "@/components/admin/Toast";
 import { BTN, EmptyState, Money, TABLE } from "@/components/admin/ui";
 import { setActiveProperty } from "@/app/actions/property-actions";
 import { archiveProperty } from "@/app/admin/properties/actions";
+import RefreshButton from "@/components/admin/RefreshButton";
 
 /**
  * Properties (rebuilt DEV-262, to the batch-2 `Properties` artboard).
@@ -123,10 +124,15 @@ export default function PropertiesClient({
             </label>
           )}
         </div>
-        <button type="button" onClick={() => setIsAddModalOpen(true)} className={BTN.primary}>
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          Add a property
-        </button>
+        {/* Grouped: the row is justify-between, so a loose third child
+            would be spread into the middle of it. */}
+        <div className="flex items-center gap-2">
+          <RefreshButton title="Look for properties added since this page loaded" />
+          <button type="button" onClick={() => setIsAddModalOpen(true)} className={BTN.primary}>
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            Add a property
+          </button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-outline-variant/60 bg-surface-container">

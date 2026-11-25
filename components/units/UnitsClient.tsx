@@ -19,6 +19,7 @@ import {
 import ScrollHint from "@/components/ui/ScrollHint";
 import { EmptyState, Money, TABLE } from "@/components/admin/ui";
 import StatusBadge from "@/components/dashboard/StatusBadge";
+import RefreshButton from "@/components/admin/RefreshButton";
 
 interface UnitItem {
   unit_id: string;
@@ -891,6 +892,11 @@ export default function UnitsClient({
                 {allCollapsed ? "Expand all" : "Collapse all"}
               </button>
             )}
+
+            <RefreshButton
+              className="h-auto py-2"
+              title="Look for units added since this page loaded"
+            />
 
             <button
               type="button"

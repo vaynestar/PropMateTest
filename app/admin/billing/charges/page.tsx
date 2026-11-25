@@ -4,6 +4,7 @@ import Link from "next/link";
 import ChargeTable from "./ChargeTable";
 import AddChargeForm from "./AddChargeForm";
 import { PageHeader } from "@/components/admin/ui";
+import RefreshButton from "@/components/admin/RefreshButton";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,7 @@ export default async function ChargesPage() {
       <PageHeader
         title="Charge types"
         subtitle="The catalogue every invoice line comes from. Change one here and it applies to the next run, never to an invoice already raised."
+        actions={<RefreshButton title="Look for charge types added since this page loaded" />}
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">

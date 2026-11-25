@@ -8,6 +8,7 @@ import TenantDeleteModal from "./TenantDeleteModal";
 import RowMenu, { type RowMenuItem } from "@/components/admin/RowMenu";
 import { rowOpenProps } from "@/components/admin/rowLink";
 import { BTN, EmptyState, FIELD, Money, SearchField, TABLE, Toolbar } from "@/components/admin/ui";
+import RefreshButton from "@/components/admin/RefreshButton";
 
 interface Lease {
   lease_id: string;
@@ -220,10 +221,13 @@ export default function TenantsClient({
 
       <Toolbar
         right={
+          <>
+          <RefreshButton title="Look for residents added since this page loaded" />
           <button type="button" onClick={() => setIsAddModalOpen(true)} className={BTN.primary}>
             <span className="material-symbols-outlined text-[18px]">add</span>
             Add a resident
           </button>
+          </>
         }
       >
         <SearchField

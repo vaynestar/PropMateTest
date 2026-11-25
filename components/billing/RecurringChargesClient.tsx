@@ -5,6 +5,7 @@ import ScrollHint from "@/components/ui/ScrollHint";
 import Link from "next/link";
 import { saveLeaseChargesAction } from "@/app/admin/billing/recurring-charges/actions";
 import { RENT_CHARGE_NAME } from "@/lib/charge-type";
+import RefreshButton from "@/components/admin/RefreshButton";
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("en-MY", { style: "currency", currency: "MYR" }).format(value);
@@ -190,6 +191,7 @@ export default function RecurringChargesClient({
               className="w-full pl-10 pr-4 py-2 rounded-lg bg-surface-container border border-outline-variant text-sm focus:border-primary outline-none transition-colors text-on-surface"
             />
           </div>
+          <RefreshButton title="Look for tenancies added since this page loaded" />
         </div>
       </div>
 

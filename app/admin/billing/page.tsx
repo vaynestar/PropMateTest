@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { listInvoices } from "@/lib/billing";
 import { BTN, EmptyState, Money, PageHeader, SectionCard, StatCard, StatGrid, TABLE } from "@/components/admin/ui";
 import GenerateInvoicesButton from "@/components/billing/GenerateInvoicesButton";
+import RefreshButton from "@/components/admin/RefreshButton";
 import BillingMonthlyBarChart from "@/components/billing/BillingMonthlyBarChart";
 import { getActivePropertyId } from "@/lib/property-context.server";
 import { getSetupProgress } from "@/lib/setup-progress";
@@ -154,6 +155,7 @@ export default async function BillingPage() {
             <Link href="/admin/invoices" className={BTN.secondary}>
               All invoices
             </Link>
+            <RefreshButton title="Re-read the billing figures from the server" />
             <GenerateInvoicesButton />
           </>
         }

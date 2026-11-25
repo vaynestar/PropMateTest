@@ -12,6 +12,7 @@ import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { Toast, type ToastState } from "@/components/admin/Toast";
 import { BTN, EmptyState, Money, SearchField, TABLE, Toolbar } from "@/components/admin/ui";
 import { dayMonth } from "@/lib/short-date";
+import RefreshButton from "@/components/admin/RefreshButton";
 
 export interface LeaseItem {
   /** Billing history — decides whether this lease may be deleted or reassigned. */
@@ -225,10 +226,13 @@ export default function LeasesClient({
 
       <Toolbar
         right={
-          <button type="button" onClick={() => setIsAddModalOpen(true)} className={BTN.primary}>
-            <span className="material-symbols-outlined text-[18px]">add</span>
-            Start a tenancy
-          </button>
+          <>
+            <RefreshButton title="Look for tenancies added since this page loaded" />
+            <button type="button" onClick={() => setIsAddModalOpen(true)} className={BTN.primary}>
+              <span className="material-symbols-outlined text-[18px]">add</span>
+              Start a tenancy
+            </button>
+          </>
         }
       >
         <SearchField placeholder="Unit, resident or email" value={searchQuery} onChange={setSearchQuery} />

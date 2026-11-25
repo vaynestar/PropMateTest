@@ -8,6 +8,7 @@ import InvoiceBatchList from "@/components/billing/InvoiceBatchList";
 import prisma from "@/lib/prisma";
 
 import { BTN, PageHeader } from "@/components/admin/ui";
+import RefreshButton from "@/components/admin/RefreshButton";
 import { getActivePropertyId } from "@/lib/property-context.server";
 
 export const dynamic = "force-dynamic";
@@ -133,9 +134,17 @@ export default async function InvoicesDetailPage({
         }
         actions={
           <>
-            {/* "Refresh" went in DEV-253. Every action on this page already
-                calls router.refresh(), so the button only ever reloaded data
-                that was current — it was reassurance, not a function. */}
+            {/*
+              Refresh is back (DEV-287), having been removed in DEV-253 on the
+              grounds that every action on this page already calls
+              router.refresh() so the button only reloaded current data.
+              That reasoning was about this page's OWN actions. It said
+              nothing about an invoice raised in another tab, by another
+              member of staff, or before this tab was left open — which is
+              the case the user actually hit: "i added a new entry but it
+              wont reflect".
+            */}
+            <RefreshButton title="Look for invoices raised since this page loaded" />
             <Link href="/admin/billing/arrears" className={BTN.secondary}>
               Chase payment
             </Link>

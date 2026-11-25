@@ -5,6 +5,7 @@ import { getActivePropertyId } from "@/lib/property-context.server";
 import prisma from "@/lib/prisma";
 import { BTN, Money, PageHeader } from "@/components/admin/ui";
 import ArrearsClient, { type ArrearsRowView } from "@/components/billing/ArrearsClient";
+import RefreshButton from "@/components/admin/RefreshButton";
 
 export const dynamic = "force-dynamic";
 
@@ -84,6 +85,7 @@ export default async function ArrearsPage() {
             <Link href="/admin/invoices" className={BTN.secondary}>
               All invoices
             </Link>
+            <RefreshButton title="Re-read what is owed from the server" />
           </>
         }
       />
