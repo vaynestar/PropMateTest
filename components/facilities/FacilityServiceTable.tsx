@@ -2,6 +2,7 @@
 
 import CoverThumb, { DEFAULT_FACILITY_COVER } from "@/components/ui/CoverThumb";
 import { EmptyState, TABLE } from "@/components/admin/ui";
+import { closureLabel, hasClosure } from "@/lib/facility-closure";
 
 /**
  * Facilities as a service schedule (DEV-267, to the batch-3 `Facilities`
@@ -24,6 +25,12 @@ export type ServiceRow = {
   facility_type: string | null;
   facility_status: string | null;
   is_bookable: boolean;
+  /** Temporary closure window (DEV-289). */
+  closed_from?: Date | string | null;
+  closed_until?: Date | string | null;
+  closed_start_time?: string | null;
+  closed_end_time?: string | null;
+  closure_reason?: string | null;
   image_url: string | null;
   open_time: string;
   close_time: string;
@@ -132,6 +139,18 @@ export default function FacilityServiceTable({
                           <span className="mt-0.5 block text-[11px] text-on-surface-variant">
                             {r.facility_type || "Facility"}
                           </span>
+                          {/* Temporarily closed, with its window (DEV-289). */}
+                          {hasClosure(r) && (
+                            <span className="mt-1 inline-flex max-w-full flex-wrap items-center gap-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-200">
+                              <span className="material-symbols-outlined text-[12px] leading-none">
+                                event_busy
+                              </span>
+                              Temporarily closed
+                              <span className="font-mono font-normal text-amber-100/80">
+                                {closureLabel(r)}
+                              </span>
+                            </span>
+                          )}
                         </span>
                       </span>
                     </td>

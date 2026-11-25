@@ -14,7 +14,9 @@ import {
   toggleMaintenanceAction,
   logMaintenanceAction,
   scheduleNextServiceAction,
+  setFacilityClosureAction,
 } from "@/app/admin/facilities/actions";
+import { closureLabel, closedNow, hasClosure } from "@/lib/facility-closure";
 
 /**
  * Hands the dialog's own close function back up to the manager (DEV-283).
@@ -158,6 +160,20 @@ export default function AdminFacilitiesManager({
     scheduleNextServiceAction,
     null
   );
+
+  /** Facility whose temporary closure is being set (DEV-289). */
+  const [closingFacility, setClosingFacility] = useState<any | null>(null);
+  const [closureState, closureFormAction, isClosing] = useActionState(
+    setFacilityClosureAction,
+    null
+  );
+
+  useEffect(() => {
+    if (closureState?.success) {
+      setClosingFacility(null);
+      showToast(closureState.message, "success");
+    }
+  }, [closureState]);
 
   useEffect(() => {
     if (logState?.success) {
@@ -1103,6 +1119,24 @@ export default function AdminFacilitiesManager({
                   </div>
                 )}
 
+                {/* Temporarily closed, with its window and its reason (DEV-289). */}
+                {hasClosure(f) && (
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <span className="material-symbols-outlined text-[15px] leading-none">
+                        event_busy
+                      </span>
+                      Temporarily closed
+                    </span>
+                    <span className="mt-0.5 block font-mono text-[10.5px] text-amber-100/90">
+                      {closureLabel(f)}
+                    </span>
+                    {f.closure_reason && (
+                      <span className="mt-0.5 block text-amber-200/80">{f.closure_reason}</span>
+                    )}
+                  </div>
+                )}
+
                 {/* The booking rules as chips. They were six label-on-the-left,
                     value-on-the-right rows - a form printout, not a card. */}
                 {f.is_bookable ? (
@@ -1228,6 +1262,25 @@ export default function AdminFacilitiesManager({
                 >
                   <span className="material-symbols-outlined text-[16px] leading-none">edit</span>
                   Edit details
+                </button>
+
+                {/* Temporary closure (DEV-289) — bounded and explained, unlike
+                    "Close for maintenance" below, which has no end date. */}
+                <button
+                  type="button"
+                  onClick={() => setClosingFacility(f)}
+                  disabled={isPending || isUpdatingThis || isDeletingThis}
+                  title="Close this facility for a stretch of days"
+                  className={`pressable col-span-2 flex items-center justify-center gap-1.5 rounded-lg border py-1.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                    hasClosure(f)
+                      ? "border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20"
+                      : "border-outline-variant/60 bg-surface-container-high text-on-surface hover:text-white"
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[16px] leading-none">
+                    event_busy
+                  </span>
+                  {hasClosure(f) ? "Change the closure" : "Close temporarily"}
                 </button>
               </div>
 
@@ -1444,6 +1497,158 @@ export default function AdminFacilitiesManager({
       {/* Maintenance: the history and the form to add to it, in one place.
           Edit details is configuration - name, type, hours, capacity - and
           service records are operational, so they do not belong together. */}
+      {/*
+        Temporary closure (DEV-289). Its own dialog, not a section of the
+        maintenance one: a closure can be "or any other reason" - a burst
+        pipe, a private function, a police matter - and burying it under
+        "Maintenance" would misname half its uses.
+      */}
+      {closingFacility &&
+        (() => {
+          const cf = closingFacility;
+          const iso = (d: Date | string | null | undefined) =>
+            d ? String(typeof d === "string" ? d : d.toISOString()).slice(0, 10) : "";
+          return (
+            <div
+              className="animate-fade-in fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+              onClick={() => setClosingFacility(null)}
+            >
+              <div
+                role="dialog"
+                aria-modal="true"
+                onClick={(e) => e.stopPropagation()}
+                className="flex dialog-h w-full max-w-md flex-col overflow-hidden rounded-2xl border border-outline-variant/80 bg-surface-container shadow-2xl"
+              >
+                <div className="flex items-start justify-between gap-3 border-b border-outline-variant/40 bg-surface-container-high/40 px-6 py-4">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-bold text-white">Temporarily closed</h3>
+                    <p className="truncate text-xs text-on-surface-variant">{cf.facility_name}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setClosingFacility(null)}
+                    aria-label="Close"
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-surface-variant hover:text-white"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">close</span>
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto px-6 py-5 text-xs">
+                  <p className="rounded-xl border border-outline-variant/40 bg-surface-container-high/40 px-4 py-3 leading-relaxed text-on-surface-variant">
+                    It stays on the list and keeps its bookings, but shows as closed and
+                    refuses new ones in these hours. Leave both times empty to close the
+                    whole day.
+                  </p>
+
+                  <form action={closureFormAction} className="mt-5 space-y-4">
+                    <input type="hidden" name="facility_id" value={cf.facility_id} />
+
+                    {closureState?.error && (
+                      <p className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-rose-300">
+                        <span className="material-symbols-outlined text-[16px] leading-none">
+                          error
+                        </span>
+                        {closureState.error}
+                      </p>
+                    )}
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="space-y-1">
+                        <span className="font-semibold text-on-surface-variant">
+                          First day closed
+                        </span>
+                        <input
+                          type="date"
+                          name="closed_from"
+                          required
+                          defaultValue={iso(cf.closed_from)}
+                          className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 font-mono text-sm text-on-surface outline-none focus:border-primary"
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="font-semibold text-on-surface-variant">
+                          Last day closed
+                        </span>
+                        <input
+                          type="date"
+                          name="closed_until"
+                          required
+                          defaultValue={iso(cf.closed_until)}
+                          className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 font-mono text-sm text-on-surface outline-none focus:border-primary"
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="font-semibold text-on-surface-variant">Closed from</span>
+                        <input
+                          type="time"
+                          name="closed_start_time"
+                          defaultValue={cf.closed_start_time ?? ""}
+                          className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 font-mono text-sm text-on-surface outline-none focus:border-primary"
+                        />
+                      </label>
+                      <label className="space-y-1">
+                        <span className="font-semibold text-on-surface-variant">Closed until</span>
+                        <input
+                          type="time"
+                          name="closed_end_time"
+                          defaultValue={cf.closed_end_time ?? ""}
+                          className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 font-mono text-sm text-on-surface outline-none focus:border-primary"
+                        />
+                      </label>
+                    </div>
+                    <p className="text-[11px] text-on-surface-variant">
+                      Each day in the range, between these hours. Outside them it can still be
+                      booked.
+                    </p>
+
+                    <label className="block space-y-1">
+                      <span className="font-semibold text-on-surface-variant">
+                        Reason &mdash; residents see this
+                      </span>
+                      <input
+                        type="text"
+                        name="closure_reason"
+                        defaultValue={cf.closure_reason ?? ""}
+                        placeholder="e.g. Court resurfacing"
+                        className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 text-sm text-on-surface outline-none focus:border-primary"
+                      />
+                    </label>
+
+                    <div className="flex flex-wrap items-center justify-end gap-2 border-t border-outline-variant/40 pt-4">
+                      {hasClosure(cf) && (
+                        <button
+                          type="submit"
+                          name="clear"
+                          value="true"
+                          disabled={isClosing}
+                          className="pressable mr-auto rounded-lg border border-outline-variant/60 bg-surface-container-high px-4 py-2 text-xs font-semibold text-on-surface transition-colors hover:text-white disabled:opacity-50"
+                        >
+                          Reopen it
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setClosingFacility(null)}
+                        className="rounded-lg px-4 py-2 text-xs font-semibold text-on-surface-variant transition-colors hover:text-white"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isClosing}
+                        className="pressable rounded-lg bg-primary px-4 py-2 text-xs font-bold text-on-primary shadow-md transition-colors hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        {isClosing ? "Saving..." : "Close it"}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
       {loggingFacility &&
         (() => {
           const lf = loggingFacility;

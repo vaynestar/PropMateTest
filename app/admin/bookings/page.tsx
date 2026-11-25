@@ -152,6 +152,13 @@ export default async function AdminBookingsPage() {
     max_capacity: f.max_capacity,
     max_booking_hours: f.max_booking_hours,
     facility_status: f.facility_status,
+    // Temporary closure (DEV-289) — the picker greys the facility and the
+    // calendar greys whole closed days.
+    closed_from: f.closed_from ? f.closed_from.toISOString().slice(0, 10) : null,
+    closed_until: f.closed_until ? f.closed_until.toISOString().slice(0, 10) : null,
+    closed_start_time: f.closed_start_time,
+    closed_end_time: f.closed_end_time,
+    closure_reason: f.closure_reason,
     next_maintenance_date: f.next_maintenance_date
       ? f.next_maintenance_date.toISOString().slice(0, 10)
       : null,

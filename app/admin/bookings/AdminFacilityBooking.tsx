@@ -7,6 +7,7 @@ import BookingCalendarDatePicker from "@/components/facilities/BookingCalendarDa
 import BookingResultModal from "@/components/facilities/BookingResultModal";
 import BookingSummaryPanel, { type ClashKind } from "@/components/facilities/BookingSummaryPanel";
 import { useLiveSlots, checkedLabel } from "@/components/facilities/useLiveSlots";
+import { closedDayList, closureLabel, hasClosure } from "@/lib/facility-closure";
 
 type Facility = {
   facility_id: string;
@@ -21,6 +22,12 @@ type Facility = {
   facility_status?: string | null;
   /** "YYYY-MM-DD" or null — the day it is being serviced, which cannot be booked. */
   next_maintenance_date?: string | null;
+  /** Temporary closure window (DEV-289). */
+  closed_from?: string | null;
+  closed_until?: string | null;
+  closed_start_time?: string | null;
+  closed_end_time?: string | null;
+  closure_reason?: string | null;
 };
 
 type Booking = {
@@ -140,6 +147,20 @@ export default function AdminFacilityBooking({
                   <p className="text-xs text-on-surface-variant">
                     {closed ? "Closed for maintenance" : f.facility_type}
                   </p>
+                  {/*
+                    Temporarily closed (DEV-289). Not disabled: the closure is
+                    a daily window, so the facility is still bookable outside
+                    those hours and on days outside the range. Saying so beats
+                    hiding it, and createBooking refuses anything inside it.
+                  */}
+                  {hasClosure(f) && (
+                    <p className="mt-1 rounded-md border border-amber-500/40 bg-amber-500/10 px-1.5 py-1 text-[10px] font-semibold leading-snug text-amber-200">
+                      Temporarily closed
+                      <span className="mt-px block font-mono font-normal text-amber-100/80">
+                        {closureLabel(f)}
+                      </span>
+                    </p>
+                  )}
                 </div>
               </div>
             </button>
@@ -552,11 +573,14 @@ function BookingCard({
           slotBlocked={!!clash || end <= start}
           /* createBooking refuses the service date; grey it out rather than
              let the whole form be filled in first (DEV-283). */
-          closedDates={
-            facility.next_maintenance_date
+          closedDates={[
+            ...(facility.next_maintenance_date
               ? [String(facility.next_maintenance_date).slice(0, 10)]
-              : undefined
-          }
+              : []),
+            // Only WHOLE-day closures remove a date; a window that leaves the
+            // evening open must stay pickable (DEV-289).
+            ...closedDayList(facility),
+          ]}
         />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 min-w-0">

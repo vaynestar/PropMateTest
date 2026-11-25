@@ -578,6 +578,24 @@ model Facility {
   close_time      String   @default("22:00") @db.VarChar // HH:MM daily closing
   next_maintenance_date DateTime? @db.Date
 
+  /// Temporarily closed, as a DAILY WINDOW (DEV-289).
+  ///
+  /// Shut between closed_start_time and closed_end_time on every day from
+  /// closed_from to closed_until inclusive, and bookable outside those hours —
+  /// a court closed for resurfacing in working hours can still be taken at
+  /// seven in the evening. Both times NULL means whole days.
+  ///
+  /// Distinct from the two things that already existed and could not say this:
+  /// facility_status = 'Maintenance' is closed indefinitely with no dates and
+  /// no reason, and next_maintenance_date is one day meaning "a service is
+  /// due". All five NULL is "not closed", which is every existing row.
+  /// Times are 'HH:MM' to match open_time/close_time above.
+  closed_from       DateTime? @db.Date
+  closed_until      DateTime? @db.Date
+  closed_start_time String?   @db.VarChar
+  closed_end_time   String?   @db.VarChar
+  closure_reason    String?   @db.VarChar
+
   // Audit Trail
   created_at   DateTime @default(now())
   created_by   String?  @db.Uuid

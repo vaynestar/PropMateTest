@@ -1,4 +1,5 @@
 import prisma from "@/lib/prisma";
+import { closureBlocks, closureLabel } from "@/lib/facility-closure";
 import type { BookingStatusKey } from "@/lib/booking-status";
 import { bookingInstant, toMinutes, todayMY, weekdayMY } from "@/lib/booking-time";
 
@@ -128,6 +129,23 @@ export async function createBooking(input: BookingInput, createdBy?: string) {
    * Only the date itself is closed. The status field still exists for a
    * facility that is out of action indefinitely.
    */
+  /*
+   * A temporary closure blocks the hours it covers (DEV-289).
+   *
+   * Checked here, in createBooking, and not only in the form: the admin form
+   * and the resident sheet both grey the facility out, but a form is not a
+   * guard — the same reasoning that routed adminBookFacility through this
+   * function in the first place. A stale tab would otherwise book a court
+   * that is shut.
+   */
+  if (closureBlocks(facility, day, start, end)) {
+    throw new Error(
+      `${facility.facility_name} is temporarily closed (${closureLabel(facility)})${
+        facility.closure_reason ? ` — ${facility.closure_reason}` : ""
+      }. Choose another time.`
+    );
+  }
+
   if (facility.next_maintenance_date) {
     const serviceDay = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kuala_Lumpur" }).format(
       facility.next_maintenance_date

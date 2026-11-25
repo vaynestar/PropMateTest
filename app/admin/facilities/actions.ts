@@ -8,6 +8,7 @@ import {
   deleteFacility,
 } from "@/lib/facility-management";
 import { revalidatePath } from "next/cache";
+import { closureLabel } from "@/lib/facility-closure";
 import prisma from "@/lib/prisma";
 import { dayMonth } from "@/lib/short-date";
 
@@ -231,6 +232,104 @@ export async function scheduleNextServiceAction(prevState: any, formData: FormDa
     };
   } catch (error: any) {
     return { error: error?.message || "Could not save the date." };
+  }
+}
+
+/**
+ * Close a facility for a stretch of days, or reopen it (DEV-289).
+ *
+ * Separate from `toggleMaintenanceAction`, which flips `facility_status` to
+ * "Maintenance" and means *closed until somebody remembers to undo it* — no
+ * dates, no reason, and nothing a resident can be told. This one is bounded
+ * and explains itself.
+ *
+ * A daily window: shut between the two times on every day in the range, open
+ * outside them. Leave both times empty for whole days.
+ */
+export async function setFacilityClosureAction(prevState: any, formData: FormData) {
+  try {
+    const user = await requireUser(["Admin"]);
+    const facility_id = String(formData.get("facility_id") || "").trim();
+    if (!facility_id) return { error: "Facility is missing." };
+
+    const facility = await prisma.facility.findUnique({
+      where: { facility_id },
+      select: { facility_name: true },
+    });
+    if (!facility) return { error: "That facility no longer exists." };
+
+    // "Reopen it" posts the same form with the dates cleared.
+    if (formData.get("clear") === "true") {
+      await prisma.facility.update({
+        where: { facility_id },
+        data: {
+          closed_from: null,
+          closed_until: null,
+          closed_start_time: null,
+          closed_end_time: null,
+          closure_reason: null,
+          modified_by: user.userId,
+        },
+      });
+      revalidatePath("/admin/facilities");
+      revalidatePath("/admin/bookings");
+      revalidatePath("/resident/facilities");
+      return { success: true, message: `${facility.facility_name} is open again.` };
+    }
+
+    const from = String(formData.get("closed_from") || "").trim();
+    const until = String(formData.get("closed_until") || "").trim();
+    const startTime = String(formData.get("closed_start_time") || "").trim();
+    const endTime = String(formData.get("closed_end_time") || "").trim();
+    const reason = String(formData.get("closure_reason") || "").trim();
+
+    if (!from || !until) return { error: "Give both the first and the last day it is closed." };
+    const fromDate = new Date(from);
+    const untilDate = new Date(until);
+    if (isNaN(fromDate.getTime()) || isNaN(untilDate.getTime())) {
+      return { error: "Those dates are not valid." };
+    }
+    if (untilDate < fromDate) return { error: "The last day cannot be before the first." };
+
+    // Either both times or neither: one alone cannot describe a window, and
+    // silently treating it as a whole-day closure would shut more than asked.
+    if (!!startTime !== !!endTime) {
+      return {
+        error: "Give both a start and an end time, or leave both empty to close the whole day.",
+      };
+    }
+    if (startTime && endTime && endTime <= startTime) {
+      return { error: "The closing window must end after it starts." };
+    }
+
+    await prisma.facility.update({
+      where: { facility_id },
+      data: {
+        closed_from: fromDate,
+        closed_until: untilDate,
+        closed_start_time: startTime || null,
+        closed_end_time: endTime || null,
+        closure_reason: reason || null,
+        modified_by: user.userId,
+      },
+    });
+
+    revalidatePath("/admin/facilities");
+    revalidatePath("/admin/bookings");
+    revalidatePath("/resident/facilities");
+
+    const label = closureLabel({
+      closed_from: fromDate,
+      closed_until: untilDate,
+      closed_start_time: startTime || null,
+      closed_end_time: endTime || null,
+    });
+    return {
+      success: true,
+      message: `${facility.facility_name} is closed ${label}. Bookings in those hours are refused.`,
+    };
+  } catch (error: any) {
+    return { error: error?.message || "Could not save the closure." };
   }
 }
 
