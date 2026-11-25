@@ -314,33 +314,68 @@ export async function generateInvoicesForLeases(
     }
   });
 
-  const existingCount = await prisma.invoice.count({
-    where: { invoice_no: { startsWith: invoiceNoPrefix } },
-  });
-
   /*
-   * Which of these leases is already billed for this month (DEV-221).
+   * One run at a time, per billing month (DEV-290).
    *
-   * There was no such check: `existingCount` only continued the invoice
-   * NUMBER sequence. Running the same month twice - two people on the same
-   * property, or one person clicking twice - silently wrote a second invoice
-   * for every lease, and the tenant owed it twice.
+   * DEV-221 added the duplicate check below, but it reads and then writes
+   * outside any transaction - a check-then-act race. Two admins generating
+   * the same month both read "not billed yet" before either inserts, and both
+   * insert. The UAT puts five administrators on the same property with a
+   * "generate the monthly invoices" task, which is exactly the shape that
+   * loses this race.
+   *
+   * Two things go wrong when it is lost, and the database already shows both:
+   *
+   *   - a lease billed twice for one month. Four lease+month pairs currently
+   *     hold two live invoices each.
+   *   - a repeated invoice NUMBER. `existingCount` continues the sequence, so
+   *     two concurrent runs count the same total and mint the same
+   *     `INV-YYYYMM-NNN`. Seven numbers are currently shared by two invoices.
+   *
+   * A unique index would be the stronger fix and is not available: the rows
+   * above already violate it, and one of them (`INV-202609-810`) is a UAT
+   * fixture that must not be deleted. So the guarantee is taken in the
+   * database instead, with the same `pg_advisory_xact_lock` this codebase
+   * already uses to settle the booking-overlap race in `createBooking`.
+   *
+   * The lock is keyed on the billing month, not the property: the invoice
+   * number sequence is global to the month, so two different properties
+   * running November concurrently would still collide on numbers.
+   *
+   * Everything that reads, decides and writes now happens inside the
+   * transaction, after the lock. A second run waits, then sees the first
+   * run's invoices and reports them as already billed - which is the correct
+   * answer, not an error.
    */
-  const alreadyBilled = new Set(
-    (
-      await prisma.invoice.findMany({
-        where: { lease_id: { in: leaseIds }, invoice_no: { startsWith: invoiceNoPrefix } },
-        select: { lease_id: true },
-      })
-    ).map((i) => i.lease_id)
-  );
+  const lockKey = `invoice-run:${invoiceNoPrefix}`;
 
-  let counter = existingCount;
-  let created = 0;
-  const skipped: { lease_id: string; label: string }[] = [];
-  const duplicates: { lease_id: string; label: string }[] = [];
+  const { created, skipped, duplicates } = await prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))`;
 
-  for (const lease of leases) {
+      const existingCount = await tx.invoice.count({
+        where: { invoice_no: { startsWith: invoiceNoPrefix } },
+      });
+
+      /*
+       * Which of these leases is already billed for this month (DEV-221).
+       * Re-read inside the lock, so it reflects any run that just finished.
+       */
+      const alreadyBilled = new Set(
+        (
+          await tx.invoice.findMany({
+            where: { lease_id: { in: leaseIds }, invoice_no: { startsWith: invoiceNoPrefix } },
+            select: { lease_id: true },
+          })
+        ).map((i) => i.lease_id)
+      );
+
+      let counter = existingCount;
+      let created = 0;
+      const skipped: { lease_id: string; label: string }[] = [];
+      const duplicates: { lease_id: string; label: string }[] = [];
+
+      for (const lease of leases) {
     if (alreadyBilled.has(lease.lease_id)) {
       duplicates.push({ lease_id: lease.lease_id, label: `Unit ${lease.unit.unit_number}` });
       continue;
@@ -397,7 +432,7 @@ export async function generateInvoicesForLeases(
     counter += 1;
     const invoiceNo = `${invoiceNoPrefix}-${String(counter).padStart(3, "0")}`;
 
-    await prisma.invoice.create({
+    await tx.invoice.create({
       data: {
         lease_id: lease.lease_id,
         invoice_no: invoiceNo,
@@ -411,6 +446,13 @@ export async function generateInvoicesForLeases(
     });
     created += 1;
   }
+
+      return { created, skipped, duplicates };
+    },
+    // A run covers every active tenancy in a property - thirty on the UAT
+    // property - and each invoice writes its detail lines too.
+    { timeout: 60_000, maxWait: 20_000 }
+  );
 
   /*
    * This used to return `leaseIds.length` - the number of leases *selected* -
