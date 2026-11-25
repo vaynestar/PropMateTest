@@ -1,0 +1,28 @@
+-- DEV-291 — changing a password signs every other device out.
+--
+-- User: "After change password, should logout all user session and force user
+-- to enter again".
+--
+-- It could not. A session here is a stateless JWT in the `propmate_session`
+-- cookie with a sliding 7-day life: nothing is stored server-side, so there
+-- was nothing to revoke. Change the password on a laptop and a phone still
+-- holding a valid token stayed signed in for up to a week — which is the
+-- opposite of what changing a password is for. Someone changing it *because*
+-- another person has their account would not have shut that person out.
+--
+-- A sessions table would be the textbook answer and is far more than this
+-- needs. Every token already carries `iat`, the second it was issued, and
+-- getSessionUser already re-reads the user row on every request to check
+-- `is_active`. One timestamp on the user is therefore enough: a token issued
+-- BEFORE the password changed is refused, everywhere, on its next request.
+-- No new table, no extra query, and it revokes every device at once.
+--
+-- NULL means "never changed since this column existed", and every existing
+-- row is NULL — so no session in flight is invalidated by the migration
+-- itself. Only a password change from here on starts enforcing it.
+--
+-- Applied with `npx prisma db execute --file ... --schema prisma/schema.prisma`
+-- (`prisma db push` is blocked by the duplicate created_by relation on
+-- announcements, since DEV-23).
+
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "password_changed_at" TIMESTAMP;

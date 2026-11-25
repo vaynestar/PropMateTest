@@ -1,6 +1,6 @@
 "use server";
 
-import { requireUser, hashPassword, verifyPassword } from "@/lib/auth";
+import { requireUser, hashPassword, verifyPassword, destroySession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -37,11 +37,30 @@ export async function changeAdminPassword(state: any, formData: FormData) {
       where: { user_id: user.userId },
       data: {
         password_hash,
+        /*
+         * Signs every device out (DEV-291). getSessionUser refuses any token
+         * issued before this moment, so another browser still holding a valid
+         * session is dead on its next request — including this one, which is
+         * the point: everyone signs in again with the new password.
+         */
+        password_changed_at: new Date(),
+        // A password change clears a lockout: the person has just proved they
+        // know the current password, so stale failed attempts are history.
+        failed_login_count: 0,
+        locked_until: null,
       },
     });
 
+    // Drop this device's cookie too, so the redirect lands on the login page
+    // rather than on a page that is about to reject the token anyway.
+    await destroySession();
+
     revalidatePath("/admin/profile");
-    return { success: true, message: "Password updated successfully!" };
+    return {
+      success: true,
+      signedOut: true,
+      message: "Password changed. You have been signed out everywhere — sign in again with the new password.",
+    };
   } catch (error: any) {
     return { error: error.message || "Failed to update password." };
   }

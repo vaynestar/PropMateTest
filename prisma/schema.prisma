@@ -102,6 +102,16 @@ model User {
   // the Residents screen has to show, and the reason it must not be
   // backfilled. Added by raw DDL; see prisma/manual-migrations.
   last_login_at      DateTime?
+  /// When this password was last changed (DEV-291).
+  ///
+  /// Sessions are stateless JWTs, so there was nothing to revoke: changing a
+  /// password left every other device signed in for up to a week. Every token
+  /// carries `iat`, and getSessionUser already re-reads this row each request,
+  /// so one timestamp revokes every device at once — a token issued before
+  /// this moment is refused. NULL means never changed since the column
+  /// existed, which is every pre-existing row, so no session in flight was
+  /// invalidated by adding it.
+  password_changed_at DateTime?
 
   // Resident details for Malaysian strata management (DEV-134).
   // NRIC/MyKad (or passport for non-citizens) is the identifier used for access

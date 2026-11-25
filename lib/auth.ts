@@ -74,7 +74,13 @@ export type SessionUser = {
 const getActiveUser = cache(async (userId: string) => {
   return prisma.user.findUnique({
     where: { user_id: userId },
-    select: { is_active: true, user_name: true, role: true, user_email: true },
+    select: {
+      is_active: true,
+      user_name: true,
+      role: true,
+      user_email: true,
+      password_changed_at: true,
+    },
   });
 });
 
@@ -88,6 +94,24 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   // Verify user is active and pull current profile details directly from the database
   const activeUser = await getActiveUser(token.userId);
   if (!activeUser?.is_active) return null;
+
+  /*
+   * A token minted before the password changed is dead (DEV-291).
+   *
+   * Sessions are stateless JWTs, so there was nothing to revoke: changing a
+   * password on a laptop left a phone signed in for up to a week. Someone
+   * changing it *because* another person had their account would not have
+   * shut that person out — the one case where it matters most.
+   *
+   * `iat` is the second the token was issued, so a token is refused the
+   * moment it predates the change. This also signs out the device that made
+   * the change, which is the intent: everyone signs in again with the new
+   * password, no exceptions carved out for the current browser.
+   */
+  if (activeUser.password_changed_at) {
+    const issuedAtMs = (token.iat ?? 0) * 1000;
+    if (issuedAtMs < activeUser.password_changed_at.getTime()) return null;
+  }
 
   // Sliding Session Window: If active session token is > 24 hours old, silently issue a fresh 7-day token!
   if (token.iat) {
