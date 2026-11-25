@@ -13,6 +13,7 @@ import {
   deleteFacilityAction,
   toggleMaintenanceAction,
   logMaintenanceAction,
+  scheduleNextServiceAction,
 } from "@/app/admin/facilities/actions";
 
 /**
@@ -147,12 +148,30 @@ export default function AdminFacilitiesManager({
   const [loggingFacility, setLoggingFacility] = useState<any | null>(null);
   const [logState, logAction, isLogging] = useActionState(logMaintenanceAction, null);
 
+  /*
+   * Scheduling is a separate action from recording (DEV-288). Setting the
+   * next-due date used to run through logMaintenanceAction, which demands a
+   * date done and a description and writes a history row — so putting a
+   * first service in the diary meant inventing one that had happened.
+   */
+  const [scheduleState, scheduleAction, isScheduling] = useActionState(
+    scheduleNextServiceAction,
+    null
+  );
+
   useEffect(() => {
     if (logState?.success) {
       setLoggingFacility(null);
       showToast(logState.message, "success");
     }
   }, [logState]);
+
+  useEffect(() => {
+    if (scheduleState?.success) {
+      setLoggingFacility(null);
+      showToast(scheduleState.message, "success");
+    }
+  }, [scheduleState]);
 
   // Maintenance Date Filter States (Similar to Billing date filter)
   const [dateFilterShortcut, setDateFilterShortcut] = useState<"ALL" | "OVERDUE" | "30" | "60" | "90" | "CUSTOM">("ALL");
@@ -1504,13 +1523,80 @@ export default function AdminFacilitiesManager({
                     )}
                   </div>
 
-                  {/* Record a service */}
+                  {/*
+                    Scheduling comes first, and stands alone (DEV-288).
+                    Putting a date in the diary says nothing about work having
+                    been done, so it must not require a service record — which
+                    is what it used to, on a facility that had never been
+                    serviced at all.
+                  */}
+                  <form
+                    action={scheduleAction}
+                    className="mt-5 space-y-3 border-t border-outline-variant/40 pt-5"
+                  >
+                    <div>
+                      <h4 className="text-xs font-bold text-white">When is it next due?</h4>
+                      <p className="mt-1 text-[11px] leading-relaxed text-on-surface-variant">
+                        Just the date. Nothing needs to have been serviced before — the
+                        facility cannot be booked on the day you pick.
+                      </p>
+                    </div>
+                    <input type="hidden" name="facility_id" value={lf.facility_id} />
+
+                    {scheduleState?.error && (
+                      <p className="flex items-start gap-2 rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-rose-300">
+                        <span className="material-symbols-outlined text-[16px] leading-none">
+                          error
+                        </span>
+                        {scheduleState.error}
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="min-w-[150px] flex-1 space-y-1">
+                        <span className="font-semibold text-on-surface-variant">
+                          Next service due
+                        </span>
+                        <input
+                          type="date"
+                          name="next_due"
+                          defaultValue={
+                            lf.next_maintenance_date
+                              ? String(lf.next_maintenance_date).slice(0, 10)
+                              : ""
+                          }
+                          className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 text-on-surface outline-none focus:border-primary"
+                        />
+                      </label>
+                      <button
+                        type="submit"
+                        disabled={isScheduling}
+                        className="pressable inline-flex h-[38px] items-center gap-1.5 rounded-lg bg-primary px-4 text-xs font-bold text-on-primary shadow-md transition-colors hover:bg-primary/90 disabled:opacity-50"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">event_upcoming</span>
+                        {isScheduling ? "Saving…" : "Save the date"}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-on-surface-variant">
+                      Leave it empty and save to take it off the schedule.
+                    </p>
+                  </form>
+
+                  {/* Record a service that has actually happened. */}
                   <form
                     id="log-maintenance-form"
                     action={logAction}
                     className="mt-5 space-y-4 border-t border-outline-variant/40 pt-5"
                   >
-                    <h4 className="text-xs font-bold text-white">Record a service</h4>
+                    <div>
+                      <h4 className="text-xs font-bold text-white">
+                        Record a service that has been done
+                      </h4>
+                      <p className="mt-1 text-[11px] leading-relaxed text-on-surface-variant">
+                        Only when work has actually happened. It goes on the facility&apos;s
+                        history and in Reports.
+                      </p>
+                    </div>
                     <input type="hidden" name="facility_id" value={lf.facility_id} />
 
                     {logState?.error && (
@@ -1535,14 +1621,20 @@ export default function AdminFacilitiesManager({
                         />
                       </div>
                       <div className="space-y-1">
+                        {/* Distinguished from the scheduling block above, which
+                            is the same column on the same row (DEV-288). Here it
+                            is the follow-on from the visit being recorded. */}
                         <span className="font-semibold text-on-surface-variant">
-                          Next service due
+                          And due again on
                         </span>
                         <input
                           type="date"
                           name="next_due"
                           className="w-full rounded-lg border border-outline-variant bg-surface-container-high px-3 py-2 font-mono text-sm text-on-surface outline-none focus:border-primary"
                         />
+                        <span className="block text-[11px] text-on-surface-variant">
+                          Optional — replaces the date above.
+                        </span>
                       </div>
                     </div>
 

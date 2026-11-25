@@ -178,6 +178,62 @@ export async function toggleMaintenanceAction(facilityId: string, currentStatus:
  * Reopening the facility is part of the same act when it was closed for the
  * work: finishing the job and leaving it shut is never what you meant.
  */
+/**
+ * Set when the next service is due, without claiming one has happened (DEV-288).
+ *
+ * `logMaintenanceAction` below is the only way the next-due date could be set,
+ * and it requires `performed_on` and `description` and writes a
+ * `facilityMaintenance` row. So scheduling the first service on a facility
+ * that has never been serviced meant inventing a service visit — user:
+ * "if i never need mainteance before, i cant just log a service by today, i
+ * just want to set nexct mainteance date".
+ *
+ * That is not only awkward, it falsifies the record: the service history
+ * feeds the schedule, the facilities report and "Last serviced", and a
+ * fabricated row corrupts all three. Scheduling and recording are two
+ * different claims, so they are two different actions. This one touches the
+ * facility and writes no history.
+ *
+ * Clearing the date is allowed — an empty value means "not scheduled", which
+ * is a real answer and the state every new facility starts in.
+ */
+export async function scheduleNextServiceAction(prevState: any, formData: FormData) {
+  try {
+    const user = await requireUser(["Admin"]);
+    const facility_id = String(formData.get("facility_id") || "").trim();
+    const next_due = String(formData.get("next_due") || "").trim();
+    if (!facility_id) return { error: "Facility is missing." };
+
+    let nextDueDate: Date | null = null;
+    if (next_due) {
+      nextDueDate = new Date(next_due);
+      if (isNaN(nextDueDate.getTime())) return { error: "That date is not valid." };
+    }
+
+    const facility = await prisma.facility.findUnique({
+      where: { facility_id },
+      select: { facility_name: true },
+    });
+    if (!facility) return { error: "That facility no longer exists." };
+
+    await prisma.facility.update({
+      where: { facility_id },
+      data: { next_maintenance_date: nextDueDate, modified_by: user.userId },
+    });
+
+    revalidatePath("/admin/facilities");
+    revalidatePath("/admin");
+    return {
+      success: true,
+      message: nextDueDate
+        ? `${facility.facility_name} is next due ${dayMonth(nextDueDate, true)}. It cannot be booked that day.`
+        : `${facility.facility_name} has no service scheduled.`,
+    };
+  } catch (error: any) {
+    return { error: error?.message || "Could not save the date." };
+  }
+}
+
 export async function logMaintenanceAction(prevState: any, formData: FormData) {
   try {
     const user = await requireUser(["Admin"]);
